@@ -1,5 +1,9 @@
-import * as React from "react";
+import Editor from "@/components/Editor";
 
 export function App() {
-  return <div>Hello world!</div>;
+  return (
+    <div className="p-2">
+      <Editor />
+    </div>
+  );
 }

@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -27,7 +28,7 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem
+    --radius: 0.5rem;
   }
   .dark {
     --background: 222.2 84% 4.9%;
@@ -53,9 +54,10 @@
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%
+    --chart-5: 340 75% 55%;
   }
 }
+
 @layer base {
   * {
     @apply border-border;
@@ -63,4 +65,36 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.ProseMirror {
+  @apply space-y-2 text-slate-800;
+}
+
+.ProseMirror p a {
+  @apply text-gray-400 underline underline-offset-0;
+}
+
+.ProseMirror ul {
+  @apply list-outside list-disc space-y-2 pl-6;
+}
+
+.ProseMirror ol {
+  @apply list-outside list-decimal space-y-2 pl-6;
+}
+
+.ProseMirror h1 {
+  @apply pt-4 pb-2 text-3xl font-bold;
+}
+
+.ProseMirror h2 {
+  @apply pt-3 pb-1 text-2xl font-semibold;
+}
+
+.ProseMirror h3 {
+  @apply pt-2 pb-1 text-xl font-semibold;
+}
+
+.ProseMirror blockquote {
+  @apply border-l-4 border-slate-800 py-1 pl-4;
 }
