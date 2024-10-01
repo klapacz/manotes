@@ -16,7 +16,11 @@ export default defineConfig({
     },
   }),
 
-  integrations: [tailwind({
-    applyBaseStyles: false,
-  }), react()],
+  integrations: [
+    tailwind({
+      applyBaseStyles: false,
+    }),
+    // Exclude .ts files because they may include decorators which are not supported by astro
+    react({ include: ["**/*.tsx"] }),
+  ],
 });

@@ -1,12 +1,13 @@
 import "remirror/styles/all.css";
 
 import { useCallback } from "react";
-import { ExtensionPriority } from "remirror";
+import { ExtensionPriority, KeymapExtension } from "remirror";
 import {
   BlockquoteExtension,
   BoldExtension,
   BulletListExtension,
   CodeExtension,
+  DocExtension,
   HardBreakExtension,
   HeadingExtension,
   ItalicExtension,
@@ -24,7 +25,8 @@ import {
   ThemeProvider,
   useRemirror,
 } from "@remirror/react";
-import { ToggleListItemExtension } from "./toggleable";
+import { ToggleTodoItemExtension } from "@/lib/remirror/toggle-todo-item-extension";
+import { TabVoidExtension } from "@/lib/remirror/tab-void-extension";
 
 /**
  * The editor which is used to create the annotation. Supports formatting.
@@ -32,6 +34,9 @@ import { ToggleListItemExtension } from "./toggleable";
 export function Editor() {
   const extensions = useCallback(
     () => [
+      new DocExtension({
+        content: "heading block+",
+      }),
       new LinkExtension({ autoLink: true }),
       // new PlaceholderExtension({ placeholder }),
       new BoldExtension({}),
@@ -47,7 +52,7 @@ export function Editor() {
         enableCollapsible: true,
       }),
       new TaskListExtension(),
-      new ToggleListItemExtension(),
+      new ToggleTodoItemExtension(),
 
       new CodeExtension(),
       new TrailingNodeExtension({}),
@@ -57,6 +62,9 @@ export function Editor() {
        * e.g. in a list item
        */
       new HardBreakExtension(),
+      new TabVoidExtension({
+        priority: ExtensionPriority.Lowest,
+      }),
     ],
     []
   );

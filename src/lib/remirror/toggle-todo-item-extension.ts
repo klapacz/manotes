@@ -7,11 +7,7 @@ import {
   type ProsemirrorNode,
 } from "remirror";
 
-function isListItemNode(node: ProsemirrorNode): boolean {
-  return !!node.type.spec.group?.includes(ExtensionTag.ListItemNode);
-}
-
-export class ToggleListItemExtension extends PlainExtension {
+export class ToggleTodoItemExtension extends PlainExtension {
   readonly name = "toggleListItem";
 
   createKeymap(): KeyBindings {
@@ -40,4 +36,8 @@ export class ToggleListItemExtension extends PlainExtension {
 
     return false;
   }
+}
+
+function isListItemNode(node: ProsemirrorNode): boolean {
+  return !!node.type.spec.group?.includes(ExtensionTag.ListItemNode);
 }
