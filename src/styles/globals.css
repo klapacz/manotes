@@ -67,34 +67,17 @@
   }
 }
 
-.ProseMirror {
-  @apply space-y-2 text-slate-800;
-}
+.remirror-editor {
+  @apply text-slate-800;
 
-.ProseMirror p a {
-  @apply text-gray-400 underline underline-offset-0;
-}
+  ul,
+  ol {
+    @apply pl-8;
+  }
 
-.ProseMirror ul {
-  @apply list-outside list-disc space-y-2 pl-6;
-}
+  /* bring back the ol styling */
 
-.ProseMirror ol {
-  @apply list-outside list-decimal space-y-2 pl-6;
-}
-
-.ProseMirror h1 {
-  @apply pt-4 pb-2 text-3xl font-bold;
-}
-
-.ProseMirror h2 {
-  @apply pt-3 pb-1 text-2xl font-semibold;
-}
-
-.ProseMirror h3 {
-  @apply pt-2 pb-1 text-xl font-semibold;
-}
-
-.ProseMirror blockquote {
-  @apply border-l-4 border-slate-800 py-1 pl-4;
+  ol {
+    @apply list-decimal;
+  }
 }
