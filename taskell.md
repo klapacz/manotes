@@ -1,10 +1,11 @@
 ## To Do
 
-- Read the manual - Mapping
-- Create the todo list
+- Add eslint - plugins: astro, react, react-query
 
 ## Doing
 
 
 ## Done
 
+- Read the manual - Mapping
+- Create the todo list
