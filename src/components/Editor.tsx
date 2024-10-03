@@ -1,6 +1,6 @@
 import "remirror/styles/all.css";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { ExtensionPriority, type RemirrorJSON } from "remirror";
 import {
   BlockquoteExtension,
@@ -24,15 +24,18 @@ import {
   OnChangeJSON,
   Remirror,
   ThemeProvider,
+  useDocChanged,
+  useHelpers,
   useRemirror,
 } from "@remirror/react";
 import { ToggleTodoItemExtension } from "@/lib/remirror/toggle-todo-item-extension";
 import { TabVoidExtension } from "@/lib/remirror/tab-void-extension";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { db } from "@/sqlocal/client";
+import { Node } from "@remirror/pm/model";
 
 export function Editor(props: { noteId: number }) {
-  const { data: note, isSuccess } = useQuery({
+  const query = useQuery({
     queryKey: ["note", props.noteId],
     queryFn: async () => {
       return await db
@@ -41,14 +44,18 @@ export function Editor(props: { noteId: number }) {
         .select(["notes.content"])
         .executeTakeFirstOrThrow();
     },
-    staleTime: Infinity,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
-  if (!isSuccess) {
-    return <div></div>;
+  if (!query.isSuccess) {
+    return null;
   }
 
-  return <EditorInner content={note.content} noteId={props.noteId} />;
+  return <EditorInner content={query.data.content} noteId={props.noteId} />;
 }
 
 /**
@@ -106,26 +113,55 @@ const EditorContent = React.memo<{ initialContent: string; noteId: number }>(
       stringHandler: "markdown",
     });
 
-    // TODO: race condition
-    // TODO: debaunce
-    // TODO: extract note title from RemirrorJSON
-    async function onChange(json: RemirrorJSON) {
-      await db
-        .updateTable("notes")
-        .where("id", "=", props.noteId)
-        .set({
-          content: JSON.stringify(json),
-        })
-        .execute();
-    }
-
     return (
       <Remirror manager={manager} initialContent={props.initialContent}>
         <EditorComponent />
-        <OnChangeJSON onChange={onChange} />
+        <OnDocChanged noteId={props.noteId} />
       </Remirror>
     );
   }
 );
 
 EditorContent.displayName = "EditorContent";
+
+function OnDocChanged({ noteId }: { noteId: number }) {
+  const { getJSON } = useHelpers();
+
+  // TODO: race condition
+  // TODO: debaunce
+  useDocChanged(
+    useCallback(
+      async (props) => {
+        const json = getJSON(props.state);
+        const firstHeading = getFirstHeadingContent(props.state.doc);
+
+        await db
+          .updateTable("notes")
+          .where("id", "=", noteId)
+          .set({
+            content: JSON.stringify(json),
+            title: firstHeading ?? "Untitled",
+          })
+          .execute();
+
+        const end = performance.now();
+      },
+      [getJSON, noteId]
+    )
+  );
+
+  return null;
+}
+
+function getFirstHeadingContent(doc: Node): string | null {
+  let headingContent: string | null = null;
+
+  doc.descendants((node, pos) => {
+    if (node.type.name === "heading") {
+      headingContent = node.textContent;
+      return false; // Stop traversing
+    }
+  });
+
+  return headingContent;
+}

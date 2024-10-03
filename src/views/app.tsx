@@ -1,22 +1,32 @@
-import { Editor } from "@/components/Editor";
 import {
   QueryClient,
   QueryClientProvider,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { Suspense, type PropsWithChildren } from "react";
+import { Suspense, useState, type PropsWithChildren } from "react";
 import { migrator } from "@/sqlocal/migrator";
 import { NotesList } from "@/components/notes-list";
+import { Button } from "@/components/ui/button";
+import { Studio } from "@/components/studio";
 
 const queryClient = new QueryClient();
 
 export function App() {
+  const [show, setShow] = useState<"notes" | "studio">("notes");
   return (
     <div className="p-2">
       <QueryClientProvider client={queryClient}>
         <Suspense>
           <MigrationsProvider>
-            <NotesList />
+            <Button
+              onClick={() =>
+                setShow((current) => (current === "notes" ? "studio" : "notes"))
+              }
+            >
+              {show === "notes" ? "Studio" : "Notes"}
+            </Button>
+            {show === "notes" && <NotesList />}
+            {show === "studio" && <Studio />}
           </MigrationsProvider>
         </Suspense>
       </QueryClientProvider>
