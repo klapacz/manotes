@@ -4,8 +4,9 @@ import {
   QueryClientProvider,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import type { PropsWithChildren } from "react";
+import { Suspense, type PropsWithChildren } from "react";
 import { migrator } from "@/sqlocal/migrator";
+import { NotesList } from "@/components/notes-list";
 
 const queryClient = new QueryClient();
 
@@ -13,9 +14,11 @@ export function App() {
   return (
     <div className="p-2">
       <QueryClientProvider client={queryClient}>
-        <MigrationsProvider>
-          <Editor />
-        </MigrationsProvider>
+        <Suspense>
+          <MigrationsProvider>
+            <NotesList />
+          </MigrationsProvider>
+        </Suspense>
       </QueryClientProvider>
     </div>
   );
