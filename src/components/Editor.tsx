@@ -1,38 +1,34 @@
 import "remirror/styles/all.css";
+import "prosemirror-flat-list/style.css";
 
 import React, { useCallback, useRef, useState } from "react";
-import { ExtensionPriority, type RemirrorJSON } from "remirror";
+import { ExtensionPriority } from "remirror";
 import {
   BlockquoteExtension,
   BoldExtension,
-  BulletListExtension,
   CodeExtension,
   DocExtension,
   HardBreakExtension,
   HeadingExtension,
   ItalicExtension,
   LinkExtension,
-  ListItemExtension,
   MarkdownExtension,
-  OrderedListExtension,
   StrikeExtension,
-  TaskListExtension,
   TrailingNodeExtension,
 } from "remirror/extensions";
 import {
   EditorComponent,
-  OnChangeJSON,
   Remirror,
   ThemeProvider,
   useDocChanged,
   useHelpers,
   useRemirror,
 } from "@remirror/react";
-import { ToggleTodoItemExtension } from "@/lib/remirror/toggle-todo-item-extension";
 import { TabVoidExtension } from "@/lib/remirror/tab-void-extension";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { db } from "@/sqlocal/client";
 import { Node } from "@remirror/pm/model";
+import { ListExtension } from "@/lib/remirror/list-extensions";
 
 export function Editor(props: { noteId: number }) {
   const query = useQuery({
@@ -84,14 +80,7 @@ const EditorContent = React.memo<{ initialContent: string; noteId: number }>(
         new HeadingExtension({}),
         new BlockquoteExtension(),
 
-        new BulletListExtension({ enableSpine: true }),
-        new OrderedListExtension(),
-        new ListItemExtension({
-          priority: ExtensionPriority.High,
-          enableCollapsible: true,
-        }),
-        new TaskListExtension(),
-        new ToggleTodoItemExtension(),
+        new ListExtension(),
 
         new CodeExtension(),
         new TrailingNodeExtension({}),

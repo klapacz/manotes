@@ -1,7 +1,7 @@
 ## To Do
 
 - Add eslint - plugins: astro, react, react-query
-- Extract the Title node to get content
+- Extract the first hedding to get documentTitle
 
 ## Doing
 
