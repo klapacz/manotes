@@ -4,6 +4,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Node } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
+import { FlatListNode } from "@/lib/tiptap/flat-list-extension";
 
 export function Editor(props: { noteId: number }) {
   const query = useQuery({
@@ -43,6 +44,7 @@ const Document = Node.create({
 function EditorInner(props: { content: any; noteId: number }) {
   const editor = useEditor({
     extensions: [
+      FlatListNode,
       StarterKit.configure({
         listItem: false,
         bulletList: false,
