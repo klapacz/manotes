@@ -3,12 +3,12 @@ import Layout from '../layouts/Layout.astro';
 import { App } from '@/views/app';
 import '@/styles/globals.css'
 
-Astro.response.headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
-Astro.response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
 
+Astro.response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
+Astro.response.headers.set("Cross-Origin-Embedder-Policy", "require-corp");
 ---
 
 
-<Layout title="Welcome to Astro.">
+<Layout title="Mano">
 	<App client:only="react"  />
 </Layout>
