@@ -96,10 +96,6 @@
       }
     }
 
-    &[data-list-kind="bullet"] {
-      list-style: disc;
-    }
-
     &[data-list-kind="ordered"] {
       /*
       Ensure that the counters in children don't escape, so that the sub lists
@@ -162,7 +158,7 @@
       }
     }
 
-    &[data-list-kind="toggle"] {
+    &[data-list-kind="bullet"] {
       & > .list-marker {
         position: absolute;
         right: 100%;

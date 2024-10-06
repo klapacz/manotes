@@ -1,5 +1,5 @@
+import type { JSONContent } from "@tiptap/core";
 import type { ColumnType, Generated } from "kysely";
-import type { RemirrorJSON } from "remirror";
 
 export type Database = {
   notes: NotesTable;
@@ -8,5 +8,5 @@ export type Database = {
 export type NotesTable = {
   id: Generated<number>;
   title: ColumnType<string, string | undefined>;
-  content: ColumnType<RemirrorJSON, string, string>;
+  content: ColumnType<JSONContent, string, string>;
 };

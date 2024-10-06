@@ -2,7 +2,6 @@ import {
   createParseDomRules,
   listToDOM,
   listKeymap,
-  createListPlugins,
   createIndentListCommand,
   type IndentListOptions,
   type ListAttributes,
@@ -20,14 +19,23 @@ import {
   enterCommand,
   backspaceCommand,
   deleteCommand,
+  handleListMarkerMouseDown,
+  defaultListClickHandler,
+  createListRenderingPlugin,
+  createListClipboardPlugin,
+  createSafariInputMethodWorkaroundPlugin,
+  flatListGroup,
 } from "prosemirror-flat-list";
 
 import { Node } from "@tiptap/core";
-import type { NodeRange } from "@tiptap/pm/model";
+import type {
+  NodeRange,
+  Schema,
+  Node as ProseMirrorNode,
+} from "@tiptap/pm/model";
+import { Plugin } from "@tiptap/pm/state";
 import { listInputRules } from "./input-rule";
 import { convertCommand } from "./utils";
-
-export const flatListGroup = "flatList";
 
 export const FlatListNode = Node.create({
   name: "list",
@@ -55,8 +63,21 @@ export const FlatListNode = Node.create({
     };
   },
 
-  renderHTML(node) {
-    return listToDOM(node);
+  renderHTML({ node }) {
+    const attrs = node.attrs as ListAttributes;
+
+    // Return a marker for the bullet list, to make it collapsable
+    if (attrs.kind === "bullet") {
+      return listToDOM({
+        node,
+        getMarkers: () => {
+          // Return an empty array to render an empty marker container element.
+          return [];
+        },
+      });
+    }
+
+    return listToDOM({ node });
   },
 
   parseHTML() {
@@ -64,7 +85,7 @@ export const FlatListNode = Node.create({
   },
 
   addProseMirrorPlugins() {
-    return createListPlugins({
+    return customCreateListPlugins({
       schema: this.editor.schema,
     });
   },
@@ -189,6 +210,42 @@ export const FlatListNode = Node.create({
     return listInputRules;
   },
 });
+
+function customCreateListPlugins({ schema }: { schema: Schema }) {
+  return [
+    customCreateListEventPlugin(),
+    createListRenderingPlugin(),
+    createListClipboardPlugin(schema),
+    createSafariInputMethodWorkaroundPlugin(),
+  ];
+}
+
+function customCreateListEventPlugin() {
+  return new Plugin({
+    props: {
+      handleDOMEvents: {
+        mousedown: (view, event) =>
+          handleListMarkerMouseDown({
+            view,
+            event,
+            onListClick: customListClickHandler,
+          }),
+      },
+    },
+  });
+}
+
+function customListClickHandler(node: ProseMirrorNode) {
+  const attrs = node.attrs as ListAttributes;
+  if (attrs.kind !== "bullet") {
+    return defaultListClickHandler(node);
+  }
+
+  // make the bullet list collapsable
+  const collapsable = node.childCount >= 2;
+  const collapsed = collapsable ? !attrs.collapsed : false;
+  return { ...attrs, collapsed };
+}
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {

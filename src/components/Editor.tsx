@@ -2,9 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { db } from "@/sqlocal/client";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { Node as ProseMirrorNode } from "@tiptap/pm/model";
-import { Node } from "@tiptap/core";
+import { Node, type JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { FlatListNode } from "@/lib/tiptap/flat-list-extension";
+import { Link } from "@tiptap/extension-link";
 
 export function Editor(props: { noteId: number }) {
   const query = useQuery({
@@ -50,6 +51,7 @@ function EditorInner(props: { content: any; noteId: number }) {
         orderedList: false,
         document: false,
       }),
+      Link,
       FlatListNode,
       Document,
     ],
@@ -64,16 +66,14 @@ function EditorInner(props: { content: any; noteId: number }) {
       const json = editor.getJSON();
       const firstHeading = getFirstHeadingContent(editor.$doc.node);
 
-      console.log(json, firstHeading);
-      // TODO: update the note in the database
-      // await db
-      //   .updateTable("notes")
-      //   .where("id", "=", props.noteId)
-      //   .set({
-      //     content: JSON.stringify(json),
-      //     title: firstHeading ?? "Untitled",
-      //   })
-      //   .execute();
+      await db
+        .updateTable("notes")
+        .where("id", "=", props.noteId)
+        .set({
+          content: JSON.stringify(json),
+          title: firstHeading ?? "Untitled",
+        })
+        .execute();
     },
   });
 

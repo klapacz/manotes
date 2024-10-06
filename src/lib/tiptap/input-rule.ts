@@ -28,11 +28,6 @@ export type ListInputRuleAttributesGetter<
 }) => T;
 
 /**
- * Build an input rule for automatically wrapping a textblock into a list node
- * when a given string is typed.
- *
- * @public @group Input Rules
- *
  * Copied from https://github.com/ocavue/prosemirror-flat-list/blob/a9fd037ff7471a09d88a59f4289c000dd7d959a6/packages/core/src/input-rule.ts
  */
 export function wrappingListInputRule<
@@ -94,9 +89,7 @@ export function wrappingListInputRule<
 }
 
 /**
- * All input rules for lists.
- *
- * @public @group Input Rules
+ * This list does not include rules for the toggle list ">>", because the "bullet" list is collapsable.
  */
 export const listInputRules: InputRule[] = [
   wrappingListInputRule<ListAttributes>(/^\s?([*-])\s$/, {
@@ -117,8 +110,5 @@ export const listInputRules: InputRule[] = [
       checked: ["x", "X"].includes(match[1]),
       collapsed: false,
     };
-  }),
-  wrappingListInputRule<ListAttributes>(/^\s?>>\s$/, {
-    kind: "toggle",
   }),
 ];
