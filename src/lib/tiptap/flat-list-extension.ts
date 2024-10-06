@@ -115,10 +115,54 @@ export const FlatListNode = Node.create({
     };
   },
 
-  // TODO: Tab and Shift-Tab
   addKeyboardShortcuts() {
     listKeymap;
     return {
+      // TODO: this was AI generated, I guess it can be simplified
+      "Mod-Enter": ({ editor }) => {
+        // Get the current editor state and view
+        const { state, view } = editor;
+        const { selection } = state;
+        // Get the block range from the current selection
+        const range = selection.$from.blockRange(selection.$to);
+        // If there's no valid range, exit the command
+        if (!range) return false;
+
+        // Get the list node type from the schema
+        const listType = this.type.schema.nodes.list;
+        // Resolve the position at the start of the range
+        const $pos = state.doc.resolve(range.start);
+        // Get the node at the current depth (should be a list item)
+        const listNode = $pos.node($pos.depth);
+
+        // Check if the current node is a task list item
+        if (listNode.type === listType && listNode.attrs.kind === "task") {
+          // Create a new transaction
+          const tr = state.tr;
+          // Create new attributes, toggling the checked state
+          const newAttrs = {
+            ...listNode.attrs,
+            checked: !listNode.attrs.checked,
+          };
+          // Set the new attributes for the list item
+          // Note: range.start - 1 is used because the list item is one level up from the content
+          tr.setNodeMarkup(range.start - 1, null, newAttrs);
+          // Dispatch the transaction to update the editor state
+          view.dispatch(tr);
+          return true;
+        }
+
+        // If not a task list item, don't handle the command
+        return false;
+      },
+
+      "Alt-ArrowUp": () => {
+        return this.editor.commands.moveList("up");
+      },
+      "Alt-ArrowDown": () => {
+        return this.editor.commands.moveList("down");
+      },
+
       Enter: () => {
         return this.editor.commands.listEnter();
       },
@@ -128,16 +172,19 @@ export const FlatListNode = Node.create({
       Delete: () => {
         return this.editor.commands.listDelete();
       },
-      "Mod-]": () => {
-        return this.editor.commands.dedentList();
+
+      // We always return true, to prevent the browsers default "Tab" behavior
+      "Shift-Tab": () => {
+        this.editor.commands.dedentList();
+        return true;
       },
-      "Mod-[": () => {
-        return this.editor.commands.indentList();
+      Tab: () => {
+        this.editor.commands.indentList();
+        return true;
       },
     };
   },
 
-  // TODO
   addInputRules() {
     return listInputRules;
   },
@@ -164,82 +211,3 @@ declare module "@tiptap/core" {
     };
   }
 }
-
-// /**
-//  * A Remirror extension for creating lists. It's a simple wrapper around the API from `prosemirror-flat-list`.
-//  *
-//  * @public
-//  */
-// export class ListExtension extends NodeExtension {
-//   static disableExtraAttributes = true;
-
-//   get name() {
-//     return "list" as const;
-//   }
-
-//   createTags() {
-//     return [ExtensionTag.Block];
-//   }
-
-//   createNodeSpec(): NodeExtensionSpec {
-//     // @ts-expect-error: incompatible type
-//     return createListSpec();
-//   }
-
-//   createKeymap(): KeyBindings {
-//     const bindings: KeyBindings = {};
-//     for (const [key, command] of Object.entries(listKeymap)) {
-//       bindings[key] = convertCommand(command);
-//     }
-//     bindings["Tab"] = alwaysTrue(bindings["Mod-]"]);
-//     bindings["Shift-Tab"] = alwaysTrue(bindings["Mod-["]);
-//     return bindings;
-//   }
-
-//   createExternalPlugins(): ProsemirrorPlugin[] {
-//     return createListPlugins({ schema: this.store.schema });
-//   }
-
-//   createInputRules(): InputRule[] {
-//     return listInputRules;
-//   }
-
-//   createCommands() {
-//     return {
-//       indentList: (props?: IndentListOptions) => {
-//         return convertCommand(createIndentListCommand(props));
-//       },
-//       dedentList: (props?: DedentListOptions) => {
-//         return convertCommand(createDedentListCommand(props));
-//       },
-
-//       unwrapList: (options?: UnwrapListOptions) => {
-//         return convertCommand(createUnwrapListCommand(options));
-//       },
-
-//       wrapInList: (
-//         getAttrs: ListAttributes | ((range: NodeRange) => ListAttributes | null)
-//       ) => {
-//         return convertCommand(
-//           createWrapInListCommand<ListAttributes>(getAttrs)
-//         );
-//       },
-
-//       moveList: (direction: "up" | "down") => {
-//         return convertCommand(createMoveListCommand(direction));
-//       },
-
-//       splitList: () => convertCommand(createSplitListCommand()),
-
-//       protectCollapsed: () => convertCommand(protectCollapsed),
-
-//       toggleCollapsed: (props?: ToggleCollapsedOptions) => {
-//         return convertCommand(createToggleCollapsedCommand(props));
-//       },
-
-//       toggleList: (attrs: ListAttributes) => {
-//         return convertCommand(createToggleListCommand(attrs));
-//       },
-//     } as const;
-//   }
-// }

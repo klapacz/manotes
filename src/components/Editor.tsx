@@ -44,20 +44,20 @@ const Document = Node.create({
 function EditorInner(props: { content: any; noteId: number }) {
   const editor = useEditor({
     extensions: [
-      FlatListNode,
       StarterKit.configure({
         listItem: false,
         bulletList: false,
         orderedList: false,
         document: false,
       }),
+      FlatListNode,
       Document,
     ],
     content: props.content,
     editorProps: {
       attributes: {
         class:
-          "rounded-sm border-2 prose p-4 focus:outline-none focus:border-slate-400",
+          "rounded-sm border-2 tiptap-editor p-4 focus:outline-none focus:border-slate-400",
       },
     },
     async onUpdate({ editor }) {
@@ -83,8 +83,6 @@ function EditorInner(props: { content: any; noteId: number }) {
     </>
   );
 }
-
-const Tiptap = () => {};
 
 function getFirstHeadingContent(doc: ProseMirrorNode): string | null {
   let headingContent: string | null = null;
