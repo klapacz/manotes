@@ -1,34 +1,9 @@
-import "remirror/styles/all.css";
-import "prosemirror-flat-list/style.css";
-
-import React, { useCallback, useRef, useState } from "react";
-import { ExtensionPriority } from "remirror";
-import {
-  BlockquoteExtension,
-  BoldExtension,
-  CodeExtension,
-  DocExtension,
-  HardBreakExtension,
-  HeadingExtension,
-  ItalicExtension,
-  LinkExtension,
-  MarkdownExtension,
-  StrikeExtension,
-  TrailingNodeExtension,
-} from "remirror/extensions";
-import {
-  EditorComponent,
-  Remirror,
-  ThemeProvider,
-  useDocChanged,
-  useHelpers,
-  useRemirror,
-} from "@remirror/react";
-import { TabVoidExtension } from "@/lib/remirror/tab-void-extension";
 import { useQuery } from "@tanstack/react-query";
 import { db } from "@/sqlocal/client";
-import { Node } from "@remirror/pm/model";
-import { ListExtension } from "@/lib/remirror/list-extensions";
+import { useEditor, EditorContent } from "@tiptap/react";
+import { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { Node } from "@tiptap/core";
+import StarterKit from "@tiptap/starter-kit";
 
 export function Editor(props: { noteId: number }) {
   const query = useQuery({
@@ -40,6 +15,7 @@ export function Editor(props: { noteId: number }) {
         .select(["notes.content"])
         .executeTakeFirstOrThrow();
     },
+    // Refetch only on mount, and do not cache the result
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: "always",
@@ -54,95 +30,61 @@ export function Editor(props: { noteId: number }) {
   return <EditorInner content={query.data.content} noteId={props.noteId} />;
 }
 
+const Document = Node.create({
+  name: "doc",
+  topNode: true,
+  // The document must always have a heading
+  content: "heading block+",
+});
+
 /**
  * The editor which is used to create the annotation. Supports formatting.
  */
 function EditorInner(props: { content: any; noteId: number }) {
-  return (
-    <ThemeProvider>
-      <EditorContent initialContent={props.content} noteId={props.noteId} />
-    </ThemeProvider>
-  );
-}
-
-const EditorContent = React.memo<{ initialContent: string; noteId: number }>(
-  (props) => {
-    const extensions = useCallback(
-      () => [
-        new DocExtension({
-          content: "heading block+",
-        }),
-        new LinkExtension({ autoLink: true }),
-        // new PlaceholderExtension({ placeholder }),
-        new BoldExtension({}),
-        new StrikeExtension(),
-        new ItalicExtension(),
-        new HeadingExtension({}),
-        new BlockquoteExtension(),
-
-        new ListExtension(),
-
-        new CodeExtension(),
-        new TrailingNodeExtension({}),
-        new MarkdownExtension({ copyAsMarkdown: false }),
-        /**
-         * `HardBreakExtension` allows us to create a newline inside paragraphs.
-         * e.g. in a list item
-         */
-        new HardBreakExtension(),
-        new TabVoidExtension({
-          priority: ExtensionPriority.Lowest,
-        }),
-      ],
-      []
-    );
-
-    const { manager } = useRemirror({
-      extensions,
-      stringHandler: "markdown",
-    });
-
-    return (
-      <Remirror manager={manager} initialContent={props.initialContent}>
-        <EditorComponent />
-        <OnDocChanged noteId={props.noteId} />
-      </Remirror>
-    );
-  }
-);
-
-EditorContent.displayName = "EditorContent";
-
-function OnDocChanged({ noteId }: { noteId: number }) {
-  const { getJSON } = useHelpers();
-
-  // TODO: race condition
-  // TODO: debaunce
-  useDocChanged(
-    useCallback(
-      async (props) => {
-        const json = getJSON(props.state);
-        const firstHeading = getFirstHeadingContent(props.state.doc);
-
-        await db
-          .updateTable("notes")
-          .where("id", "=", noteId)
-          .set({
-            content: JSON.stringify(json),
-            title: firstHeading ?? "Untitled",
-          })
-          .execute();
-
-        const end = performance.now();
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        listItem: false,
+        bulletList: false,
+        orderedList: false,
+        document: false,
+      }),
+      Document,
+    ],
+    content: props.content,
+    editorProps: {
+      attributes: {
+        class:
+          "rounded-sm border-2 prose p-4 focus:outline-none focus:border-slate-400",
       },
-      [getJSON, noteId]
-    )
-  );
+    },
+    async onUpdate({ editor }) {
+      const json = editor.getJSON();
+      const firstHeading = getFirstHeadingContent(editor.$doc.node);
 
-  return null;
+      console.log(json, firstHeading);
+      // TODO: update the note in the database
+      // await db
+      //   .updateTable("notes")
+      //   .where("id", "=", props.noteId)
+      //   .set({
+      //     content: JSON.stringify(json),
+      //     title: firstHeading ?? "Untitled",
+      //   })
+      //   .execute();
+    },
+  });
+
+  return (
+    <>
+      <EditorContent editor={editor} />
+    </>
+  );
 }
 
-function getFirstHeadingContent(doc: Node): string | null {
+const Tiptap = () => {};
+
+function getFirstHeadingContent(doc: ProseMirrorNode): string | null {
   let headingContent: string | null = null;
 
   doc.descendants((node, pos) => {

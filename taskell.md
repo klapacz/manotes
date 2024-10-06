@@ -1,7 +1,8 @@
 ## To Do
 
 - Add eslint - plugins: astro, react, react-query
-- Extract the first hedding to get documentTitle
+- Migrate to tiptap - add the prosemirror-flat-list
+- Rename the repository and push to github
 
 ## Doing
 
@@ -10,3 +11,4 @@
 
 - Read the manual - Mapping
 - Create the todo list
+- Configure the Document extension to include at least one heading

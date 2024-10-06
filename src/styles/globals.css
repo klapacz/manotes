@@ -66,18 +66,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-.remirror-editor {
-  @apply text-slate-800;
-
-  ul,
-  ol {
-    @apply pl-8;
-  }
-
-  /* bring back the ol styling */
-
-  ol {
-    @apply list-decimal;
-  }
-}

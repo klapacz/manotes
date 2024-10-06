@@ -6,7 +6,6 @@ import {
 } from "@tanstack/react-query";
 import { Editor } from "./Editor";
 import { Button } from "./ui/button";
-import { Separator } from "./ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +18,6 @@ import {
 import { useRef, useState } from "react";
 import { Input } from "./ui/input";
 import { migrator } from "@/sqlocal/migrator";
-import { sql } from "kysely";
 
 export function NotesList() {
   const queryClient = useQueryClient();
@@ -63,11 +61,11 @@ export function NotesList() {
           <ImportDatabaseButton />
         </div>
       </div>
-      <ul>
+      <div className="space-y-4">
         {notes.map((note) => (
           <Editor key={note.id} noteId={note.id} />
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
