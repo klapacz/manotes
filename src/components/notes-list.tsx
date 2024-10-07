@@ -18,6 +18,7 @@ import {
 import { useRef, useState } from "react";
 import { Input } from "./ui/input";
 import { migrator } from "@/sqlocal/migrator";
+import { nanoid } from "nanoid";
 
 export function NotesList() {
   const queryClient = useQueryClient();
@@ -43,6 +44,7 @@ export function NotesList() {
         .insertInto("notes")
         .values({
           content: "",
+          id: nanoid(),
         })
         .execute();
     },
@@ -61,7 +63,7 @@ export function NotesList() {
           <ImportDatabaseButton />
         </div>
       </div>
-      <div className="space-y-4">
+      <div className="space-y-4 pb-72">
         {notes.map((note) => (
           <Editor key={note.id} noteId={note.id} />
         ))}
@@ -78,8 +80,16 @@ function ImportDatabaseButton() {
   const importDatabase = useMutation({
     mutationFn: async (file: File) => {
       await sqlocal.overwriteDatabaseFile(file);
-      await migrator.migrateToLatest();
+      const { error } = await migrator.migrateToLatest();
+
+      if (error) {
+        throw error;
+      }
+
       queryClient.invalidateQueries({ queryKey: ["notes"] });
+    },
+    onError: (error) => {
+      console.log(error);
     },
     onSuccess: () => {
       setOpen(false);

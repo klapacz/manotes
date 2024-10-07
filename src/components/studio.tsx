@@ -6,15 +6,16 @@ import { sqlocal, type RawResultData } from "@/sqlocal/client";
 export function Studio() {
   const submit = useMutation({
     async mutationFn({ query }: { query: string }) {
-      console.log("foobar");
       const result = await sqlocal.execSQL(query, []);
       return result;
+    },
+    onError(err) {
+      console.error(err);
     },
   });
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-      console.log("executing");
       event.preventDefault();
       submit.mutate({ query: event.currentTarget.value });
     }
@@ -25,7 +26,7 @@ export function Studio() {
       <Textarea
         className="font-mono"
         onKeyDown={handleKeyDown}
-        defaultValue="SELECT * FROM NOTES;"
+        defaultValue="SELECT * FROM notes;"
       />
       {submit.data && <ResultTable data={submit.data} />}
     </div>

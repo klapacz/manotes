@@ -6,8 +6,9 @@ import { Node, type JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { FlatListNode } from "@/lib/tiptap/flat-list-extension";
 import { Link } from "@tiptap/extension-link";
+import { Backlink } from "@/lib/tiptap/backlink/backlink";
 
-export function Editor(props: { noteId: number }) {
+export function Editor(props: { noteId: string }) {
   const query = useQuery({
     queryKey: ["note", props.noteId],
     queryFn: async () => {
@@ -42,7 +43,7 @@ const Document = Node.create({
 /**
  * The editor which is used to create the annotation. Supports formatting.
  */
-function EditorInner(props: { content: any; noteId: number }) {
+function EditorInner(props: { content: any; noteId: string }) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -51,6 +52,7 @@ function EditorInner(props: { content: any; noteId: number }) {
         orderedList: false,
         document: false,
       }),
+      Backlink,
       Link,
       FlatListNode,
       Document,
@@ -65,6 +67,25 @@ function EditorInner(props: { content: any; noteId: number }) {
     async onUpdate({ editor }) {
       const json = editor.getJSON();
       const firstHeading = getFirstHeadingContent(editor.$doc.node);
+
+      const backlinks = findAllBacklinks(editor.$doc.node);
+
+      await db
+        .deleteFrom("backlinks")
+        .where("source_id", "=", props.noteId)
+        .execute();
+
+      if (backlinks.length) {
+        await db
+          .insertInto("backlinks")
+          .values(
+            backlinks.map((backlink) => ({
+              source_id: props.noteId,
+              target_id: backlink,
+            }))
+          )
+          .execute();
+      }
 
       await db
         .updateTable("notes")
@@ -82,6 +103,19 @@ function EditorInner(props: { content: any; noteId: number }) {
       <EditorContent editor={editor} />
     </>
   );
+}
+
+function findAllBacklinks(doc: ProseMirrorNode): string[] {
+  const backlinksSet = new Set<string>();
+
+  doc.descendants((node) => {
+    if (node.type.name === "backlink") {
+      // TODO: protect against invalid backlinks
+      backlinksSet.add(node.attrs.id);
+    }
+  });
+
+  return Array.from(backlinksSet);
 }
 
 function getFirstHeadingContent(doc: ProseMirrorNode): string | null {

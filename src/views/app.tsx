@@ -46,6 +46,7 @@ function MigrationsProvider(props: PropsWithChildren) {
 
       return results;
     },
+    retry: false,
     staleTime: Infinity, // The data will never become stale
     gcTime: Infinity, // The data will never be removed from the cache
     refetchOnMount: false, // Prevent refetching when the component mounts

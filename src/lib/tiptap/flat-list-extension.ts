@@ -66,7 +66,7 @@ export const FlatListNode = Node.create({
   renderHTML({ node }) {
     const attrs = node.attrs as ListAttributes;
 
-    // Return a marker for the bullet list, to make it collapsable
+    // Return a marker for the bullet list, to make it collapsible
     if (attrs.kind === "bullet") {
       return listToDOM({
         node,
