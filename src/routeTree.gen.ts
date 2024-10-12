@@ -13,6 +13,7 @@ import { createFileRoute } from '@tanstack/react-router'
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as NotesNoteIdImport } from './routes/notes.$noteId'
 
 // Create Virtual Routes
 
@@ -30,6 +31,11 @@ const IndexLazyRoute = IndexLazyImport.update({
   path: '/',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+
+const NotesNoteIdRoute = NotesNoteIdImport.update({
+  path: '/notes/$noteId',
+  getParentRoute: () => rootRoute,
+} as any)
 
 // Populate the FileRoutesByPath interface
 
@@ -49,6 +55,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioLazyImport
       parentRoute: typeof rootRoute
     }
+    '/notes/$noteId': {
+      id: '/notes/$noteId'
+      path: '/notes/$noteId'
+      fullPath: '/notes/$noteId'
+      preLoaderRoute: typeof NotesNoteIdImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -57,36 +70,41 @@ declare module '@tanstack/react-router' {
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
   '/studio': typeof StudioLazyRoute
+  '/notes/$noteId': typeof NotesNoteIdRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
   '/studio': typeof StudioLazyRoute
+  '/notes/$noteId': typeof NotesNoteIdRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexLazyRoute
   '/studio': typeof StudioLazyRoute
+  '/notes/$noteId': typeof NotesNoteIdRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/studio'
+  fullPaths: '/' | '/studio' | '/notes/$noteId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/studio'
-  id: '__root__' | '/' | '/studio'
+  to: '/' | '/studio' | '/notes/$noteId'
+  id: '__root__' | '/' | '/studio' | '/notes/$noteId'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
   StudioLazyRoute: typeof StudioLazyRoute
+  NotesNoteIdRoute: typeof NotesNoteIdRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
   StudioLazyRoute: StudioLazyRoute,
+  NotesNoteIdRoute: NotesNoteIdRoute,
 }
 
 export const routeTree = rootRoute
@@ -102,7 +120,8 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/studio"
+        "/studio",
+        "/notes/$noteId"
       ]
     },
     "/": {
@@ -110,6 +129,9 @@ export const routeTree = rootRoute
     },
     "/studio": {
       "filePath": "studio.lazy.tsx"
+    },
+    "/notes/$noteId": {
+      "filePath": "notes.$noteId.tsx"
     }
   }
 }
