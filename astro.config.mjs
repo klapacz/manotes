@@ -6,6 +6,8 @@ import tailwind from "@astrojs/tailwind";
 
 import react from "@astrojs/react";
 
+import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
+
 // https://astro.build/config
 export default defineConfig({
   output: "server",
@@ -32,6 +34,7 @@ export default defineConfig({
   ],
 
   vite: {
+    plugins: [TanStackRouterVite()],
     optimizeDeps: {
       exclude: ["sqlocal"], // https://sqlocal.dallashoffman.com/guide/setup#vite-configuration
     },
