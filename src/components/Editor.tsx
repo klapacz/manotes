@@ -1,4 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { db } from "@/sqlocal/client";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { Node as ProseMirrorNode } from "@tiptap/pm/model";
@@ -30,8 +34,9 @@ export function Editor(props: { noteId: string }) {
   if (!query.isSuccess) {
     return null;
   }
-
-  return <EditorInner content={query.data.content} noteId={props.noteId} />;
+  return (
+    <EditorWithDateInput content={query.data.content} noteId={props.noteId} />
+  );
 }
 
 const Document = Node.create({
@@ -44,6 +49,54 @@ const Document = Node.create({
 /**
  * The editor which is used to create the annotation. Supports formatting.
  */
+
+function EditorWithDateInput(props: { content: any; noteId: string }) {
+  const [date, setDate] = useState("");
+
+  const updateDailyAtMutation = useMutation({
+    mutationFn: async (date: string) => {
+      if (!date) {
+        throw new Error("Date is required");
+      }
+      await db
+        .updateTable("notes")
+        .set({ daily_at: date })
+        .where("id", "=", props.noteId)
+        .execute();
+    },
+    onSuccess: () => {
+      // TODO: Handle success
+      console.log("Successfully updated daily at");
+    },
+    onError: () => {
+      // TODO: Handle error
+      console.log("Error updating daily at");
+    },
+  });
+
+  const handleSubmit = () => {
+    updateDailyAtMutation.mutate(date);
+  };
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center gap-2">
+        <Input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="w-auto"
+        />
+        <Button onClick={handleSubmit} variant="outline">
+          Submit
+        </Button>
+      </div>
+      <EditorInner content={props.content} noteId={props.noteId} />
+    </div>
+  );
+}
+
+// TODO: add content type
 function EditorInner(props: { content: any; noteId: string }) {
   const editor = useEditor({
     extensions: [

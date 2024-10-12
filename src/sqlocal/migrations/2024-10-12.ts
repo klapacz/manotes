@@ -21,10 +21,15 @@ export const Migration20241012: Migration = {
       ])
       .addPrimaryKeyConstraint("notes_tags_pk", ["note_id", "tag_id"])
       .execute();
+
+    // add notes.daily_at column
+    await db.schema.alterTable("notes").addColumn("daily_at", "date").execute();
   },
 
   async down(db: Kysely<any>) {
     await db.schema.dropTable("tags").execute();
     await db.schema.dropTable("notes_tags").execute();
+
+    await db.schema.alterTable("notes").dropColumn("daily_at").execute();
   },
 };

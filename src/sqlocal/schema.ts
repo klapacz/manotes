@@ -12,6 +12,7 @@ export type NotesTable = {
   id: ColumnType<string, string, never>;
   title: ColumnType<string, string | undefined>;
   content: ColumnType<JSONContent, string, string>;
+  daily_at: ColumnType<string | null>;
 };
 
 export type BacklinksTable = {
