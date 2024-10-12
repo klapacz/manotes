@@ -4,6 +4,8 @@ import type { ColumnType } from "kysely";
 export type Database = {
   notes: NotesTable;
   backlinks: BacklinksTable;
+  tags: TagsTable;
+  notes_tags: NotesTagsTable;
 };
 
 export type NotesTable = {
@@ -15,4 +17,14 @@ export type NotesTable = {
 export type BacklinksTable = {
   source_id: ColumnType<string, string, never>;
   target_id: ColumnType<string, string, never>;
+};
+
+export type TagsTable = {
+  id: ColumnType<string, string, never>;
+  name: ColumnType<string>;
+};
+
+export type NotesTagsTable = {
+  note_id: ColumnType<string, string, never>;
+  tag_id: ColumnType<string, string, never>;
 };

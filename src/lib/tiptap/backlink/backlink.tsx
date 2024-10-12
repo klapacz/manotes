@@ -1,6 +1,6 @@
 import Mention from "@tiptap/extension-mention";
 import { backlinkSuggestion } from "./suggestion";
-import { mergeAttributes, type NodeViewProps } from "@tiptap/core";
+import { type NodeViewProps } from "@tiptap/core";
 import { Link } from "@tanstack/react-router";
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
 

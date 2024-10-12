@@ -7,6 +7,7 @@ import StarterKit from "@tiptap/starter-kit";
 import { FlatListNode } from "@/lib/tiptap/flat-list-extension";
 import { Link } from "@tiptap/extension-link";
 import { Backlink } from "@/lib/tiptap/backlink/backlink";
+import { Tag } from "@/lib/tiptap/tags/tag";
 
 export function Editor(props: { noteId: string }) {
   const query = useQuery({
@@ -53,6 +54,7 @@ function EditorInner(props: { content: any; noteId: string }) {
         document: false,
       }),
       Backlink,
+      Tag,
       Link,
       FlatListNode,
       Document,
@@ -70,6 +72,7 @@ function EditorInner(props: { content: any; noteId: string }) {
 
       const backlinks = findAllBacklinks(editor.$doc.node);
 
+      // backlinks
       await db
         .deleteFrom("backlinks")
         .where("source_id", "=", props.noteId)
@@ -86,6 +89,28 @@ function EditorInner(props: { content: any; noteId: string }) {
           )
           .execute();
       }
+
+      // tags
+      const tags = findAllTags(editor.$doc.node);
+
+      await db
+        .deleteFrom("notes_tags")
+        .where("note_id", "=", props.noteId)
+        .execute();
+
+      if (tags.length) {
+        await db
+          .insertInto("notes_tags")
+          .values(
+            tags.map((tag) => ({
+              note_id: props.noteId,
+              tag_id: tag,
+            }))
+          )
+          .execute();
+      }
+
+      // note
 
       await db
         .updateTable("notes")
@@ -116,6 +141,19 @@ function findAllBacklinks(doc: ProseMirrorNode): string[] {
   });
 
   return Array.from(backlinksSet);
+}
+
+function findAllTags(doc: ProseMirrorNode): string[] {
+  const tagsSet = new Set<string>();
+
+  doc.descendants((node) => {
+    if (node.type.name === "tag") {
+      // TODO: protect against invalid tags
+      tagsSet.add(node.attrs.id);
+    }
+  });
+
+  return Array.from(tagsSet);
 }
 
 function getFirstHeadingContent(doc: ProseMirrorNode): string | null {
