@@ -68,6 +68,8 @@
 }
 
 .tiptap-editor {
+  @apply text-slate-800;
+
   p {
     @apply mb-4;
   }
