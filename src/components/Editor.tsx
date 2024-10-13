@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { db } from "@/sqlocal/client";
 import { useEditor, EditorContent } from "@tiptap/react";
-import { Editor as TiptapEditor, Node } from "@tiptap/core";
+import { Editor as TiptapEditor, Node, mergeAttributes } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { FlatListNode } from "@/lib/tiptap/flat-list-extension";
 import { Link } from "@tiptap/extension-link";
@@ -12,8 +12,9 @@ import { NoteService } from "@/services/note.service";
 import type { NotesTable } from "@/sqlocal/schema";
 import type { Selectable } from "kysely";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-
+import { Heading } from "@tiptap/extension-heading";
 import React, { useCallback, useEffect } from "react";
+import { format, parse } from "date-fns";
 
 type EditorProps = {
   noteId: string;
@@ -56,6 +57,28 @@ type EditorInnerProps = {
   className?: string;
 };
 
+// TODO: move to @/lib/tiptap
+const CustomHeading = Heading.extend({
+  renderHTML({ node, HTMLAttributes }) {
+    const hasLevel = this.options.levels.includes(node.attrs.level);
+    const level = hasLevel ? node.attrs.level : this.options.levels[0];
+
+    let text = node.textContent;
+    let content: string | number = 0;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+      const date = parse(text, "yyyy-MM-dd", new Date());
+      content = format(date, "EEE, MMMM do, yyyy");
+    }
+
+    return [
+      `h${level}`,
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      content,
+    ];
+  },
+});
+
 function EditorInner(props: EditorInnerProps) {
   const editor = useEditor({
     extensions: [
@@ -64,7 +87,9 @@ function EditorInner(props: EditorInnerProps) {
         bulletList: false,
         orderedList: false,
         document: false,
+        heading: false,
       }),
+      CustomHeading,
       Backlink,
       Tag,
       Link,
@@ -75,7 +100,7 @@ function EditorInner(props: EditorInnerProps) {
     editorProps: {
       attributes: {
         class: cn(
-          "tiptap-editor p-10 focus:outline-none focus:border-slate-400",
+          "tiptap-editor p-10 focus:outline-none focus:border-slate-400 focus:shadow-inner",
           props.className,
         ),
       },
