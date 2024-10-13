@@ -6,7 +6,10 @@ export namespace ProseUtils {
 
     node.descendants((node, pos) => {
       if (node.type.name === "backlink") {
-        backlinks.push(node.attrs.href);
+        if (!node.attrs.id) {
+          throw new Error("Backlink node has no id", {});
+        }
+        backlinks.push(node.attrs.id);
       }
     });
 

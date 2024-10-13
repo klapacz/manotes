@@ -63,7 +63,7 @@ function NotesListInner(props: NotesListProps) {
   });
 
   return (
-    <div className="space-y-4 pb-72 divide-y divide-slate-100">
+    <div className="space-y-4 pb-[100vh] divide-y divide-slate-100">
       {notes.map((note) => (
         <Editor key={note.id} noteId={note.id} />
       ))}

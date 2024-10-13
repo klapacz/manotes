@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { db } from "@/sqlocal/client";
 import { useEditor, EditorContent } from "@tiptap/react";
-import { Node, type JSONContent } from "@tiptap/core";
+import { Editor as TiptapEditor, Node } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { FlatListNode } from "@/lib/tiptap/flat-list-extension";
 import { Link } from "@tiptap/extension-link";
@@ -9,6 +9,11 @@ import { Backlink } from "@/lib/tiptap/backlink/backlink";
 import { Tag } from "@/lib/tiptap/tags/tag";
 import { cn } from "@/lib/utils";
 import { NoteService } from "@/services/note.service";
+import type { NotesTable } from "@/sqlocal/schema";
+import type { Selectable } from "kysely";
+import { useLocation, useNavigate } from "@tanstack/react-router";
+
+import React, { useCallback, useEffect } from "react";
 
 type EditorProps = {
   noteId: string;
@@ -22,7 +27,7 @@ export function Editor(props: EditorProps) {
       return await db
         .selectFrom("notes")
         .where("notes.id", "=", props.noteId)
-        .select(["notes.content", "id"])
+        .selectAll("notes")
         .executeTakeFirstOrThrow();
     },
     // Refetch only on mount, and do not cache the result
@@ -36,13 +41,7 @@ export function Editor(props: EditorProps) {
   if (!query.isSuccess) {
     return null;
   }
-  return (
-    <EditorInner
-      content={query.data.content}
-      noteId={query.data.id}
-      className={props.className}
-    />
-  );
+  return <EditorInner note={query.data} className={props.className} />;
 }
 
 const Document = Node.create({
@@ -53,8 +52,7 @@ const Document = Node.create({
 });
 
 type EditorInnerProps = {
-  content: JSONContent;
-  noteId: string;
+  note: Selectable<NotesTable>;
   className?: string;
 };
 
@@ -73,19 +71,81 @@ function EditorInner(props: EditorInnerProps) {
       FlatListNode,
       Document,
     ],
-    content: props.content,
+    content: props.note.content,
     editorProps: {
       attributes: {
         class: cn(
           "tiptap-editor p-10 focus:outline-none focus:border-slate-400",
-          props.className
+          props.className,
         ),
       },
     },
     async onUpdate({ editor }) {
-      NoteService.update({ editor, noteId: props.noteId });
+      NoteService.update({ editor, noteId: props.note.id });
     },
   });
 
+  useEditorFocus(editor, props.note);
+
   return <EditorContent editor={editor} />;
+}
+
+/**
+ * Hook to manage editor focus behavior and scrolling
+ * @param editor The Tiptap editor instance
+ * @param note The note object being edited
+ */
+function useEditorFocus(
+  editor: TiptapEditor | null,
+  note: Selectable<NotesTable>,
+) {
+  const navigate = useNavigate();
+  const currentDate = useLocation({
+    select: ({ search }) => search.date,
+  });
+
+  // Flag to track if date change was triggered by editor focus
+  const dateChangeByFocus = React.useRef(false);
+
+  useEffect(() => {
+    // If the editor exists, the note has a daily date, and it matches the current date
+    if (editor && note.daily_at && currentDate === note.daily_at) {
+      // Focus the editor at the end without scrolling
+      editor.commands.focus("end", { scrollIntoView: false });
+      const editorElement = editor.view.dom;
+      // If the editor element exists and the date change wasn't by focus, scroll it into view
+      if (editorElement && !dateChangeByFocus.current) {
+        editorElement.scrollIntoView({ block: "start" });
+      }
+      // Reset the flag after handling
+      dateChangeByFocus.current = false;
+    }
+  }, [currentDate, editor, note.daily_at]);
+
+  // Handler for editor focus event
+  const handleFocus = useCallback(() => {
+    // If the note has a daily date and it's different from the current date
+    if (note.daily_at && currentDate !== note.daily_at) {
+      // Navigate to the note's date
+      navigate({
+        to: "/",
+        search: {
+          date: note.daily_at,
+        },
+      });
+      // Set the flag to indicate date change was triggered by focus
+      dateChangeByFocus.current = true;
+    }
+  }, [currentDate, note.daily_at]);
+
+  useEffect(() => {
+    // If editor exists, add the focus event listener
+    if (editor) {
+      editor.on("focus", handleFocus);
+      // Cleanup function to remove the event listener
+      return () => {
+        editor.off("focus", handleFocus);
+      };
+    }
+  }, [editor, handleFocus]);
 }

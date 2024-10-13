@@ -20,6 +20,7 @@ export namespace NoteService {
     await db.deleteFrom("backlinks").where("source_id", "=", noteId).execute();
 
     if (backlinks.length) {
+      console.log(backlinks);
       await db
         .insertInto("backlinks")
         .values(
