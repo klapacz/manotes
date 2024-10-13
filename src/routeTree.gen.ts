@@ -13,98 +13,123 @@ import { createFileRoute } from '@tanstack/react-router'
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as IndexImport } from './routes/index'
-import { Route as NotesNoteIdImport } from './routes/notes.$noteId'
+import { Route as AppImport } from './routes/_app'
+import { Route as AppIndexImport } from './routes/_app/index'
+import { Route as AppNotesNoteIdImport } from './routes/_app/notes.$noteId'
 
 // Create Virtual Routes
 
-const StudioLazyImport = createFileRoute('/studio')()
+const AppStudioLazyImport = createFileRoute('/_app/studio')()
 
 // Create/Update Routes
 
-const StudioLazyRoute = StudioLazyImport.update({
-  path: '/studio',
-  getParentRoute: () => rootRoute,
-} as any).lazy(() => import('./routes/studio.lazy').then((d) => d.Route))
-
-const IndexRoute = IndexImport.update({
-  path: '/',
+const AppRoute = AppImport.update({
+  id: '/_app',
   getParentRoute: () => rootRoute,
 } as any)
 
-const NotesNoteIdRoute = NotesNoteIdImport.update({
+const AppIndexRoute = AppIndexImport.update({
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+
+const AppStudioLazyRoute = AppStudioLazyImport.update({
+  path: '/studio',
+  getParentRoute: () => AppRoute,
+} as any).lazy(() => import('./routes/_app/studio.lazy').then((d) => d.Route))
+
+const AppNotesNoteIdRoute = AppNotesNoteIdImport.update({
   path: '/notes/$noteId',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => AppRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AppImport
       parentRoute: typeof rootRoute
     }
-    '/studio': {
-      id: '/studio'
+    '/_app/studio': {
+      id: '/_app/studio'
       path: '/studio'
       fullPath: '/studio'
-      preLoaderRoute: typeof StudioLazyImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof AppStudioLazyImport
+      parentRoute: typeof AppImport
     }
-    '/notes/$noteId': {
-      id: '/notes/$noteId'
+    '/_app/': {
+      id: '/_app/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AppIndexImport
+      parentRoute: typeof AppImport
+    }
+    '/_app/notes/$noteId': {
+      id: '/_app/notes/$noteId'
       path: '/notes/$noteId'
       fullPath: '/notes/$noteId'
-      preLoaderRoute: typeof NotesNoteIdImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof AppNotesNoteIdImport
+      parentRoute: typeof AppImport
     }
   }
 }
 
 // Create and export the route tree
 
+interface AppRouteChildren {
+  AppStudioLazyRoute: typeof AppStudioLazyRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppNotesNoteIdRoute: typeof AppNotesNoteIdRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppStudioLazyRoute: AppStudioLazyRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppNotesNoteIdRoute: AppNotesNoteIdRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/studio': typeof StudioLazyRoute
-  '/notes/$noteId': typeof NotesNoteIdRoute
+  '': typeof AppRouteWithChildren
+  '/studio': typeof AppStudioLazyRoute
+  '/': typeof AppIndexRoute
+  '/notes/$noteId': typeof AppNotesNoteIdRoute
 }
 
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/studio': typeof StudioLazyRoute
-  '/notes/$noteId': typeof NotesNoteIdRoute
+  '/studio': typeof AppStudioLazyRoute
+  '/': typeof AppIndexRoute
+  '/notes/$noteId': typeof AppNotesNoteIdRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
-  '/': typeof IndexRoute
-  '/studio': typeof StudioLazyRoute
-  '/notes/$noteId': typeof NotesNoteIdRoute
+  '/_app': typeof AppRouteWithChildren
+  '/_app/studio': typeof AppStudioLazyRoute
+  '/_app/': typeof AppIndexRoute
+  '/_app/notes/$noteId': typeof AppNotesNoteIdRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/studio' | '/notes/$noteId'
+  fullPaths: '' | '/studio' | '/' | '/notes/$noteId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/studio' | '/notes/$noteId'
-  id: '__root__' | '/' | '/studio' | '/notes/$noteId'
+  to: '/studio' | '/' | '/notes/$noteId'
+  id: '__root__' | '/_app' | '/_app/studio' | '/_app/' | '/_app/notes/$noteId'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  StudioLazyRoute: typeof StudioLazyRoute
-  NotesNoteIdRoute: typeof NotesNoteIdRoute
+  AppRoute: typeof AppRouteWithChildren
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  StudioLazyRoute: StudioLazyRoute,
-  NotesNoteIdRoute: NotesNoteIdRoute,
+  AppRoute: AppRouteWithChildren,
 }
 
 export const routeTree = rootRoute
@@ -119,19 +144,28 @@ export const routeTree = rootRoute
     "__root__": {
       "filePath": "__root.tsx",
       "children": [
-        "/",
-        "/studio",
-        "/notes/$noteId"
+        "/_app"
       ]
     },
-    "/": {
-      "filePath": "index.tsx"
+    "/_app": {
+      "filePath": "_app.tsx",
+      "children": [
+        "/_app/studio",
+        "/_app/",
+        "/_app/notes/$noteId"
+      ]
     },
-    "/studio": {
-      "filePath": "studio.lazy.tsx"
+    "/_app/studio": {
+      "filePath": "_app/studio.lazy.tsx",
+      "parent": "/_app"
     },
-    "/notes/$noteId": {
-      "filePath": "notes.$noteId.tsx"
+    "/_app/": {
+      "filePath": "_app/index.tsx",
+      "parent": "/_app"
+    },
+    "/_app/notes/$noteId": {
+      "filePath": "_app/notes.$noteId.tsx",
+      "parent": "/_app"
     }
   }
 }

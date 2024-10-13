@@ -11,7 +11,7 @@ type SidebarProps = {
 
 export function Sidebar(props: SidebarProps) {
   return (
-    <div className={cn("p-4", props.className)}>
+    <div className={cn("p-4 w-[280px]", props.className)}>
       <div className="mx-auto">
         <CalendarNavigation />
       </div>

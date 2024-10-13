@@ -4,7 +4,7 @@ import { Editor } from "./Editor";
 import { Suspense, useMemo } from "react";
 import { ScrollArea } from "./ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { Route } from "@/routes";
+import { Route } from "@/routes/_app/index";
 import { addMonths, formatISO, startOfMonth } from "date-fns";
 
 type NotesListProps = {
@@ -64,12 +64,10 @@ function NotesListInner(props: NotesListProps) {
   });
 
   return (
-    <ScrollArea className={cn("h-screen px-4", props.className)}>
-      <div className="space-y-4 pb-72">
-        {notes.map((note) => (
-          <Editor key={note.id} noteId={note.id} />
-        ))}
-      </div>
-    </ScrollArea>
+    <div className="space-y-4 pb-72">
+      {notes.map((note) => (
+        <Editor key={note.id} noteId={note.id} />
+      ))}
+    </div>
   );
 }
