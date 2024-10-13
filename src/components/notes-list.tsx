@@ -1,9 +1,9 @@
-import { db } from "@/sqlocal/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Editor } from "./Editor";
-import { Suspense, useMemo } from "react";
+import { Fragment, Suspense, useMemo } from "react";
 import { Route } from "@/routes/_app/index";
-import { addMonths, formatISO, startOfMonth } from "date-fns";
+import { formatISO, startOfMonth } from "date-fns";
+import { NoteService } from "@/services/note.service";
 
 type NotesListProps = {
   className?: string;
@@ -25,7 +25,7 @@ function NotesListFallback(props: NotesListProps) {
 function NotesListInner(props: NotesListProps) {
   const { date } = Route.useSearch();
 
-  const month = useMemo(() => {
+  const monthStartISO = useMemo(() => {
     // get start of the month from the date using date-fns
     const start = formatISO(startOfMonth(date), {
       representation: "date",
@@ -34,24 +34,10 @@ function NotesListInner(props: NotesListProps) {
     return start;
   }, [date]);
 
-  const { data: notes } = useSuspenseQuery({
-    queryKey: ["notes", month],
+  const { data: days } = useSuspenseQuery({
+    queryKey: ["notes", monthStartISO],
     queryFn: async () => {
-      const nextMonth = formatISO(addMonths(month, 1), {
-        representation: "date",
-      });
-
-      return await db
-        .selectFrom("notes")
-        .orderBy("notes.title", "asc")
-        .select(["notes.id", "notes.title"])
-        .where((eb) => {
-          return eb.and([
-            eb("daily_at", ">=", month),
-            eb("daily_at", "<", nextMonth),
-          ]);
-        })
-        .execute();
+      return NoteService.listInMonth(monthStartISO);
     },
 
     // Refetch only on mount, and do not cache the result
@@ -64,8 +50,10 @@ function NotesListInner(props: NotesListProps) {
 
   return (
     <div className="space-y-4 pb-[100vh] divide-y divide-slate-100">
-      {notes.map((note) => (
-        <Editor key={note.id} noteId={note.id} />
+      {days.map(({ day, note }) => (
+        <Fragment key={day}>
+          <Editor noteId={note.id} />
+        </Fragment>
       ))}
     </div>
   );

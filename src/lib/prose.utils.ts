@@ -7,7 +7,8 @@ export namespace ProseUtils {
     node.descendants((node, pos) => {
       if (node.type.name === "backlink") {
         if (!node.attrs.id) {
-          throw new Error("Backlink node has no id", {});
+          // TODO: more debugging info
+          throw new Error("Backlink node has no id");
         }
         backlinks.push(node.attrs.id);
       }
@@ -21,11 +22,20 @@ export namespace ProseUtils {
 
     node.descendants((node, pos) => {
       if (node.type.name === "tag") {
-        tags.push(node.attrs.href);
+        if (!node.attrs.id) {
+          // TODO: more debugging info
+          throw new Error("Tag node has no id");
+        }
+        tags.push(node.attrs.id);
       }
     });
 
     return tags;
+  }
+
+  export function isNoteEmpty(node: ProsemirrorNode, title: string) {
+    console.log(node.textContent);
+    return node.textContent.trim() === title.trim();
   }
 
   export function getFirstHeadingContent(node: ProsemirrorNode) {
