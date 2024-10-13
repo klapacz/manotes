@@ -18,9 +18,5 @@ export const Route = createFileRoute("/_app/")({
 });
 
 function Index() {
-  return (
-    <div className="p-4">
-      <NotesList />
-    </div>
-  );
+  return <NotesList />;
 }

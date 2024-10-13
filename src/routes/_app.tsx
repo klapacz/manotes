@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   return (
-    <div className="flex">
+    <div className="flex divide-x divide-slate-100">
       <ScrollArea className={"h-screen flex-grow"}>
         <Outlet />
       </ScrollArea>

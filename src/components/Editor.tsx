@@ -8,15 +8,21 @@ import { FlatListNode } from "@/lib/tiptap/flat-list-extension";
 import { Link } from "@tiptap/extension-link";
 import { Backlink } from "@/lib/tiptap/backlink/backlink";
 import { Tag } from "@/lib/tiptap/tags/tag";
+import { cn } from "@/lib/utils";
 
-export function Editor(props: { noteId: string }) {
+type EditorProps = {
+  noteId: string;
+  className?: string;
+};
+
+export function Editor(props: EditorProps) {
   const query = useQuery({
     queryKey: ["note", props.noteId],
     queryFn: async () => {
       return await db
         .selectFrom("notes")
         .where("notes.id", "=", props.noteId)
-        .select(["notes.content"])
+        .select(["notes.content", "id"])
         .executeTakeFirstOrThrow();
     },
     // Refetch only on mount, and do not cache the result
@@ -30,7 +36,13 @@ export function Editor(props: { noteId: string }) {
   if (!query.isSuccess) {
     return null;
   }
-  return <EditorInner content={query.data.content} noteId={props.noteId} />;
+  return (
+    <EditorInner
+      content={query.data.content}
+      noteId={query.data.id}
+      className={props.className}
+    />
+  );
 }
 
 const Document = Node.create({
@@ -40,7 +52,13 @@ const Document = Node.create({
   content: "heading block+",
 });
 
-function EditorInner(props: { content: JSONContent; noteId: string }) {
+type EditorInnerProps = {
+  content: JSONContent;
+  noteId: string;
+  className?: string;
+};
+
+function EditorInner(props: EditorInnerProps) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -58,8 +76,10 @@ function EditorInner(props: { content: JSONContent; noteId: string }) {
     content: props.content,
     editorProps: {
       attributes: {
-        class:
-          "rounded-sm border-2 tiptap-editor p-4 focus:outline-none focus:border-slate-400",
+        class: cn(
+          "tiptap-editor p-10 focus:outline-none focus:border-slate-400",
+          props.className
+        ),
       },
     },
     async onUpdate({ editor }) {

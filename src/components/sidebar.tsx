@@ -11,14 +11,18 @@ type SidebarProps = {
 
 export function Sidebar(props: SidebarProps) {
   return (
-    <div className={cn("p-4 w-[280px]", props.className)}>
+    <div
+      className={cn("p-4 w-[280px] h-screen bg-slate-50/50", props.className)}
+    >
       <div className="mx-auto">
         <CalendarNavigation />
       </div>
 
       <div className="space-y-1 pt-5">
         <Button variant="secondary" size="sm" className="w-full" asChild>
-          <Link to="/studio">Studio</Link>
+          <Link to="/studio" activeProps={{ className: "shadow-md" }}>
+            Studio
+          </Link>
         </Button>
       </div>
 

@@ -2,8 +2,6 @@ import { db } from "@/sqlocal/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Editor } from "./Editor";
 import { Suspense, useMemo } from "react";
-import { ScrollArea } from "./ui/scroll-area";
-import { cn } from "@/lib/utils";
 import { Route } from "@/routes/_app/index";
 import { addMonths, formatISO, startOfMonth } from "date-fns";
 
@@ -19,8 +17,9 @@ export function NotesList(props: NotesListProps) {
   );
 }
 
+// TODO: block navigation until the query is done instead of using a fallback
 function NotesListFallback(props: NotesListProps) {
-  return <div className={cn("h-screen", props.className)}></div>;
+  return <div></div>;
 }
 
 function NotesListInner(props: NotesListProps) {
@@ -64,7 +63,7 @@ function NotesListInner(props: NotesListProps) {
   });
 
   return (
-    <div className="space-y-4 pb-72">
+    <div className="space-y-4 pb-72 divide-y divide-slate-100">
       {notes.map((note) => (
         <Editor key={note.id} noteId={note.id} />
       ))}
