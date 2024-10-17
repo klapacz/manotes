@@ -9,6 +9,24 @@ import { nanoid } from "nanoid";
 export namespace NoteService {
   type Record = Selectable<NotesTable>;
 
+  type CreateParams = {
+    title: string;
+  };
+  export async function create(params: CreateParams): Promise<Record> {
+    const note = await db
+      .insertInto("notes")
+      .values({
+        id: nanoid(),
+        title: params.title,
+        content: JSON.stringify(getEmptyNoteJSON(params.title)),
+        daily_at: null,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return note;
+  }
+
   export type UpdateParams = {
     editor: EditorEvents["update"]["editor"];
     noteId: string;

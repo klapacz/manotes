@@ -1,3 +1,4 @@
+import { NotesSearchCommandDialog } from "@/components/notes-search";
 import { Sidebar } from "@/components/sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
@@ -9,6 +10,7 @@ export const Route = createFileRoute("/_app")({
 function AppLayout() {
   return (
     <div className="flex divide-x divide-slate-100">
+      <NotesSearchCommandDialog />
       <ScrollArea className={"h-screen flex-grow"}>
         <Outlet />
       </ScrollArea>
