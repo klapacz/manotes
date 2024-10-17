@@ -1,8 +1,10 @@
-import { NotesList } from "@/components/notes-list";
+import { Fragment } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { formatISO } from "date-fns";
+import { formatISO, startOfMonth } from "date-fns";
 import { z } from "zod";
 import { zodSearchValidator } from "@tanstack/router-zod-adapter";
+import { NoteService } from "@/services/note.service";
+import { Editor } from "@/components/Editor";
 
 export const indexSearchSchema = z.object({
   date: z
@@ -15,8 +17,28 @@ export const indexSearchSchema = z.object({
 export const Route = createFileRoute("/_app/")({
   component: Index,
   validateSearch: zodSearchValidator(indexSearchSchema),
+  loaderDeps: ({ search: { date } }) => {
+    const monthStartISO = formatISO(startOfMonth(date), {
+      representation: "date",
+    });
+    return { monthStartISO };
+  },
+  loader: async ({ deps }) => {
+    return NoteService.listInMonth(deps.monthStartISO);
+  },
+  staleTime: 0,
 });
 
 function Index() {
-  return <NotesList />;
+  const days = Route.useLoaderData();
+
+  return (
+    <div className="space-y-4 pb-[100vh] divide-y divide-slate-100">
+      {days.map(({ day, note }) => (
+        <Fragment key={day}>
+          <Editor note={note} />
+        </Fragment>
+      ))}
+    </div>
+  );
 }

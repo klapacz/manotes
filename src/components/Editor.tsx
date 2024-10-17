@@ -1,5 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
-import { db } from "@/sqlocal/client";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { Editor as TiptapEditor, Node, mergeAttributes } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -17,32 +15,12 @@ import React, { useCallback, useEffect } from "react";
 import { format, parse } from "date-fns";
 
 type EditorProps = {
-  noteId: string;
+  note: NoteService.Record;
   className?: string;
 };
 
 export function Editor(props: EditorProps) {
-  const query = useQuery({
-    queryKey: ["note", props.noteId],
-    queryFn: async () => {
-      return await db
-        .selectFrom("notes")
-        .where("notes.id", "=", props.noteId)
-        .selectAll("notes")
-        .executeTakeFirstOrThrow();
-    },
-    // Refetch only on mount, and do not cache the result
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnMount: "always",
-    refetchOnReconnect: false,
-    refetchOnWindowFocus: false,
-  });
-
-  if (!query.isSuccess) {
-    return null;
-  }
-  return <EditorInner note={query.data} className={props.className} />;
+  return <EditorInner note={props.note} className={props.className} />;
 }
 
 const Document = Node.create({
@@ -53,7 +31,7 @@ const Document = Node.create({
 });
 
 type EditorInnerProps = {
-  note: Selectable<NotesTable>;
+  note: NoteService.Record;
   className?: string;
 };
 

@@ -7,7 +7,7 @@ import type { Insertable, Selectable } from "kysely";
 import { nanoid } from "nanoid";
 
 export namespace NoteService {
-  type Record = Selectable<NotesTable>;
+  export type Record = Selectable<NotesTable>;
 
   type CreateParams = {
     title: string;
