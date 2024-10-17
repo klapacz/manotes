@@ -27,7 +27,7 @@ import {
   flatListGroup,
 } from "prosemirror-flat-list";
 
-import { Node } from "@tiptap/core";
+import { Editor, Node } from "@tiptap/core";
 import type {
   NodeRange,
   Schema,
@@ -36,6 +36,7 @@ import type {
 import { Plugin } from "@tiptap/pm/state";
 import { listInputRules } from "./input-rule";
 import { convertCommand } from "./utils";
+import { findParentNode } from "@tiptap/core";
 
 export const FlatListNode = Node.create({
   name: "list",
@@ -112,10 +113,12 @@ export const FlatListNode = Node.create({
         return convertCommand(createUnwrapListCommand(options));
       },
       wrapInList: (
-        getAttrs: ListAttributes | ((range: NodeRange) => ListAttributes | null)
+        getAttrs:
+          | ListAttributes
+          | ((range: NodeRange) => ListAttributes | null),
       ) => {
         return convertCommand(
-          createWrapInListCommand<ListAttributes>(getAttrs)
+          createWrapInListCommand<ListAttributes>(getAttrs),
         );
       },
       moveList: (direction) => {
@@ -139,42 +142,15 @@ export const FlatListNode = Node.create({
   addKeyboardShortcuts() {
     listKeymap;
     return {
-      // TODO: this was AI generated, I guess it can be simplified
+      //
       "Mod-Enter": ({ editor }) => {
-        // Get the current editor state and view
-        const { state, view } = editor;
-        const { selection } = state;
-        // Get the block range from the current selection
-        const range = selection.$from.blockRange(selection.$to);
-        // If there's no valid range, exit the command
-        if (!range) return false;
-
-        // Get the list node type from the schema
-        const listType = this.type.schema.nodes.list;
-        // Resolve the position at the start of the range
-        const $pos = state.doc.resolve(range.start);
-        // Get the node at the current depth (should be a list item)
-        const listNode = $pos.node($pos.depth);
-
-        // Check if the current node is a task list item
-        if (listNode.type === listType && listNode.attrs.kind === "task") {
-          // Create a new transaction
-          const tr = state.tr;
-          // Create new attributes, toggling the checked state
-          const newAttrs = {
-            ...listNode.attrs,
-            checked: !listNode.attrs.checked,
-          };
-          // Set the new attributes for the list item
-          // Note: range.start - 1 is used because the list item is one level up from the content
-          tr.setNodeMarkup(range.start - 1, null, newAttrs);
-          // Dispatch the transaction to update the editor state
-          view.dispatch(tr);
+        const toggled = toggleChecked(editor);
+        if (toggled) {
           return true;
         }
 
-        // If not a task list item, don't handle the command
-        return false;
+        // If not a task list item, try to toggle the collapsed attribute
+        return toggleCollapsed(editor);
       },
 
       "Alt-ArrowUp": () => {
@@ -210,6 +186,52 @@ export const FlatListNode = Node.create({
     return listInputRules;
   },
 });
+
+/** Toggle checked attribute of task list item */
+function toggleChecked(editor: Editor): boolean {
+  const findTask = findParentNode(
+    (node) => node.type.name === "list" && node.attrs.kind === "task",
+  );
+
+  // Find task list item, if not found, report not handled
+  const found = findTask(editor.state.selection);
+  if (!found) {
+    return false;
+  }
+
+  // Update the checked attribute
+  const newAttrs = {
+    ...found.node.attrs,
+    checked: !found.node.attrs.checked,
+  };
+  const tr = editor.state.tr.setNodeMarkup(found.pos, null, newAttrs);
+  editor.view.dispatch(tr);
+
+  return true; // Report handled
+}
+
+/** Toggle collapsed attribute of bullet list item */
+function toggleCollapsed(editor: Editor): boolean {
+  const findBullet = findParentNode(
+    (node) => node.type.name === "list" && node.attrs.kind === "bullet",
+  );
+
+  // Find bullet list item, if not found, report not handled
+  const found = findBullet(editor.state.selection);
+  if (!found) {
+    return false;
+  }
+
+  // Update the checked attribute
+  const newAttrs = {
+    ...found.node.attrs,
+    collapsed: !found.node.attrs.collapsed,
+  };
+  const tr = editor.state.tr.setNodeMarkup(found.pos, null, newAttrs);
+  editor.view.dispatch(tr);
+
+  return true; // Report handled
+}
 
 function customCreateListPlugins({ schema }: { schema: Schema }) {
   return [
@@ -258,7 +280,9 @@ declare module "@tiptap/core" {
       dedentList: (props?: DedentListOptions) => ReturnType;
       unwrapList: (options?: UnwrapListOptions) => ReturnType;
       wrapInList: (
-        getAttrs: ListAttributes | ((range: NodeRange) => ListAttributes | null)
+        getAttrs:
+          | ListAttributes
+          | ((range: NodeRange) => ListAttributes | null),
       ) => ReturnType;
       moveList: (direction: "up" | "down") => ReturnType;
       splitList: () => ReturnType;
