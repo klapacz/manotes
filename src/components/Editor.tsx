@@ -88,6 +88,11 @@ function EditorInner(props: EditorInnerProps) {
     },
   });
 
+  // On notes.$noteId route, when the note id change we need to manually set the content
+  useEffect(() => {
+    editor?.commands.setContent(props.note.content);
+  }, [props.note.content]);
+
   useEditorFocus(editor, props.note);
 
   return <EditorContent editor={editor} />;
