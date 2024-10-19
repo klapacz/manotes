@@ -9,17 +9,17 @@ import {
 } from "./ui/command";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { noteSearchOptions } from "@/lib/query/notes";
-import { useNavigate } from "@tanstack/react-router";
 import { NoteService } from "@/services/note.service";
 import { DialogTitle } from "./ui/dialog";
+import { useNavigateToNote } from "@/hooks/use-navigate-to-note";
 
 export function NotesSearchCommandDialog() {
+  const navigateToNote = useNavigateToNote();
+
   const [open, setOpen] = React.useState(false);
-  const [search, setSearch] = React.useState("");
+  const [query, setQuery] = React.useState("");
 
-  const navigate = useNavigate();
-
-  const { data } = useQuery(noteSearchOptions(search));
+  const { data } = useQuery(noteSearchOptions(query));
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -33,35 +33,31 @@ export function NotesSearchCommandDialog() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  /**
-   * This is used to preselect the first item in the list, when the items array change.
-   */
   const [value, setValue] = React.useState<string>();
+
+  /**
+   * Preselect the first item in the list, when the items array change.
+   */
   React.useEffect(() => {
-    setValue(data?.[0]?.id);
-  }, [data]);
+    if (data?.length ?? 0 > 0) {
+      setValue(data?.[0]?.id);
+    } else {
+      setValue(":add:");
+    }
+  }, [data, query]);
 
   function cleanup() {
     setOpen(false);
-    setSearch("");
+    setQuery("");
   }
 
   const createNoteMutation = useMutation({
     mutationFn: async (title: string) => {
-      if (!title.trim()) {
-        throw new Error("Note must have title");
-      }
       const note = await NoteService.create({ title: title.trim() });
       return note;
     },
     onSuccess: (note) => {
-      navigate({
-        to: "/notes/$noteId",
-        params: {
-          noteId: note.id,
-        },
-      });
-
+      navigateToNote(note);
       cleanup();
     },
     onError(error) {
@@ -82,8 +78,8 @@ export function NotesSearchCommandDialog() {
       <DialogTitle className="sr-only">Search notes</DialogTitle>
       <CommandInput
         placeholder="Type a command or search..."
-        value={search}
-        onValueChange={setSearch}
+        value={query}
+        onValueChange={setQuery}
       />
       <CommandList>
         <CommandGroup heading="Notes">
@@ -93,22 +89,7 @@ export function NotesSearchCommandDialog() {
               key={note.id}
               value={note.id}
               onSelect={() => {
-                if (note.daily_at) {
-                  navigate({
-                    to: "/",
-                    search: {
-                      date: note.daily_at,
-                    },
-                  });
-                } else {
-                  navigate({
-                    to: "/notes/$noteId",
-                    params: {
-                      noteId: note.id,
-                    },
-                  });
-                }
-
+                navigateToNote(note);
                 cleanup();
               }}
             >
@@ -119,10 +100,11 @@ export function NotesSearchCommandDialog() {
         <CommandGroup heading="Actions">
           <CommandItem
             onSelect={() => {
-              createNoteMutation.mutate(search);
+              createNoteMutation.mutate(query);
             }}
+            value=":add:"
           >
-            Create new note {search.trim() ? <>'{search.trim()}'</> : null}
+            Create new note {query.trim() ? <>'{query.trim()}'</> : null}
           </CommandItem>
         </CommandGroup>
       </CommandList>

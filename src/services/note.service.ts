@@ -10,15 +10,17 @@ export namespace NoteService {
   export type Record = Selectable<NotesTable>;
 
   type CreateParams = {
-    title: string;
+    title?: string;
   };
   export async function create(params: CreateParams): Promise<Record> {
+    const title = params.title?.trim() ? params.title.trim() : "Untitled";
+
     const note = await db
       .insertInto("notes")
       .values({
         id: nanoid(),
-        title: params.title,
-        content: JSON.stringify(getEmptyNoteJSON(params.title)),
+        title: title,
+        content: JSON.stringify(getEmptyNoteJSON(title)),
         daily_at: null,
       })
       .returningAll()

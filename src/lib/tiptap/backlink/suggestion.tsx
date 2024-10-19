@@ -21,7 +21,12 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import type { MentionNodeAttrs } from "@tiptap/extension-mention";
+
+import { NoteService } from "@/services/note.service";
+
 import { db } from "@/sqlocal/client";
+
+import { useMutation } from "@tanstack/react-query";
 
 type NoteSearchRecord = {
   id: string;
@@ -31,6 +36,7 @@ type NoteSearchRecord = {
 interface BacklinkListProps {
   items: NoteSearchRecord[];
   command: (item: NoteSearchRecord) => void;
+  query: string;
 }
 
 interface BacklinkListRef {
@@ -40,6 +46,21 @@ interface BacklinkListRef {
 const BacklinkList = forwardRef<BacklinkListRef, BacklinkListProps>(
   (props, ref) => {
     const commandRef = useRef<HTMLDivElement>(null);
+
+    const addMutation = useMutation({
+      mutationFn: async () => {
+        const note = await NoteService.create({
+          title: props.query.trim(),
+        });
+        return { id: note.id, label: note.title };
+      },
+      onSuccess: (note) => {
+        props.command(note);
+      },
+      onError: (error) => {
+        console.error(error);
+      },
+    });
 
     useImperativeHandle(ref, () => ({
       // TODO: refactor, now it allows for the ctrl-n and ctrl-p to work
@@ -62,7 +83,7 @@ const BacklinkList = forwardRef<BacklinkListRef, BacklinkListProps>(
             newKey = event.shiftKey ? "ArrowUp" : "ArrowDown";
 
           commandRef.current?.dispatchEvent(
-            new KeyboardEvent("keydown", { key: newKey, bubbles: true })
+            new KeyboardEvent("keydown", { key: newKey, bubbles: true }),
           );
           return true;
         }
@@ -71,12 +92,20 @@ const BacklinkList = forwardRef<BacklinkListRef, BacklinkListProps>(
     }));
 
     /**
-     * This is used to preselect the first item in the list, when the items array change.
+     * Preselect the first item in the list, when the items array change.
      */
     const [value, setValue] = useState<string>();
     useEffect(() => {
-      setValue(props.items[0]?.id);
+      if (props.items.length > 0) {
+        setValue(props.items[0]?.id);
+      } else {
+        setValue(":add:");
+      }
     }, [props.items]);
+
+    function onAddNewNote() {
+      addMutation.mutate();
+    }
 
     return (
       <div className="dropdown-menu shadow-md">
@@ -99,13 +128,21 @@ const BacklinkList = forwardRef<BacklinkListRef, BacklinkListProps>(
                   {item.label}
                 </CommandItem>
               ))}
+              <CommandItem
+                onSelect={() => onAddNewNote()}
+                value=":add:"
+                disabled={!props.query?.trim()}
+              >
+                Create new note{" "}
+                {props.query?.trim() ? <>'{props.query.trim()}'</> : null}
+              </CommandItem>
             </CommandGroup>
           </CommandList>
         </Command>
         {}
       </div>
     );
-  }
+  },
 );
 
 export const backlinkSuggestion: Omit<

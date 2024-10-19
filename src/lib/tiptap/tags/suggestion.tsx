@@ -60,7 +60,7 @@ const TagList = forwardRef<TagListRef, TagListProps>((props, ref) => {
           newKey = event.shiftKey ? "ArrowUp" : "ArrowDown";
 
         commandRef.current?.dispatchEvent(
-          new KeyboardEvent("keydown", { key: newKey, bubbles: true })
+          new KeyboardEvent("keydown", { key: newKey, bubbles: true }),
         );
         return true;
       }
@@ -80,6 +80,7 @@ const TagList = forwardRef<TagListRef, TagListProps>((props, ref) => {
     }
   }, [props.items, props.query]);
 
+  // TODO: create a tags service
   const addMutation = useMutation({
     mutationFn: async () => {
       if (!props.query.trim()) {
