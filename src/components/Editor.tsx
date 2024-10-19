@@ -12,7 +12,11 @@ import type { Selectable } from "kysely";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Heading } from "@tiptap/extension-heading";
 import React, { useCallback, useEffect } from "react";
+
 import { format, parse } from "date-fns";
+import { Button } from "./ui/button";
+import { ClipboardCopyIcon } from "lucide-react";
+import { toast } from "sonner";
 
 type EditorProps = {
   note: NoteService.Record;
@@ -95,7 +99,48 @@ function EditorInner(props: EditorInnerProps) {
 
   useEditorFocus(editor, props.note);
 
-  return <EditorContent editor={editor} />;
+  return (
+    <div className="relative group">
+      <EditorContent editor={editor} />
+      <CopyButton
+        editor={editor}
+        className="opacity-0 group-hover:opacity-100 transition-all"
+      />
+    </div>
+  );
+}
+
+type CopyButtonProps = React.ComponentProps<typeof Button> & {
+  editor: TiptapEditor | null;
+};
+
+function CopyButton({ editor, className, ...props }: CopyButtonProps) {
+  const handleCopy = () => {
+    if (editor) {
+      const content = JSON.stringify(editor.getJSON());
+      navigator.clipboard
+        .writeText(content)
+        .then(() => {
+          toast("Content copied to clipboard!");
+        })
+        .catch((err) => {
+          console.error(err);
+          toast.error("Failed to copy");
+        });
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleCopy}
+      size="icon"
+      className={cn("absolute top-2 right-2", className)}
+      variant="outline"
+      {...props}
+    >
+      <ClipboardCopyIcon />
+    </Button>
+  );
 }
 
 /**

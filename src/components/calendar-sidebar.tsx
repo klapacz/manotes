@@ -1,3 +1,4 @@
+import { FileDownIcon, FileUpIcon } from "lucide-react";
 import { CalendarNavigation } from "./calendar-navigation";
 import { ExportDatabaseDialog } from "./export-database-dialog";
 import { ImportDatabaseDialog } from "./import-database-dialog";
@@ -39,7 +40,10 @@ function CalendarSidebarActions() {
         <SidebarMenu>
           <SidebarMenuItem>
             <ImportDatabaseDialog>
-              <SidebarMenuButton>Import database</SidebarMenuButton>
+              <SidebarMenuButton>
+                <FileUpIcon />
+                Import database
+              </SidebarMenuButton>
             </ImportDatabaseDialog>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -47,7 +51,10 @@ function CalendarSidebarActions() {
         <SidebarMenu>
           <SidebarMenuItem>
             <ExportDatabaseDialog>
-              <SidebarMenuButton>Export database</SidebarMenuButton>
+              <SidebarMenuButton>
+                <FileDownIcon />
+                Export database
+              </SidebarMenuButton>
             </ExportDatabaseDialog>
           </SidebarMenuItem>
         </SidebarMenu>
