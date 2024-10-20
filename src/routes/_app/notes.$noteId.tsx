@@ -132,7 +132,7 @@ function BacklinkEditor({
 
   return (
     <div className="py-4">
-      <LinkNote className="block pb-2 text-blue-600" note={backlink} />
+      <LinkNote className="block pb-4 text-link-foreground" note={backlink} />
       <EditorContent editor={editor} className="tiptap-editor" />
     </div>
   );
