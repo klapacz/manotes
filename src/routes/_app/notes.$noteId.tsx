@@ -15,6 +15,7 @@ import { Backlink } from "@/lib/tiptap/backlink/backlink";
 import React from "react";
 import { BacklinkContext } from "@/lib/pm/backlinks-context";
 import { HeadingExtension } from "@/lib/tiptap/heading/heading";
+import { LinkNote } from "@/components/link-note";
 
 export const Route = createFileRoute("/_app/notes/$noteId")({
   component: NotePage,
@@ -53,17 +54,23 @@ function NotePage() {
   const note = Route.useLoaderData();
 
   return (
-    <div className="p-4">
-      <Editor note={note} />
+    <div>
+      <Editor note={note} className="p-8" />
 
-      <h1 className="text-2xl font-medium">Backlinks</h1>
-      {note.backlinks.map((backlink) => (
-        <BacklinkEditor
-          key={backlink.id}
-          backlink={backlink}
-          targetNoteId={note.id}
-        />
-      ))}
+      <div className="p-8">
+        <h1 className="text-sm font-medium text-muted-foreground pb-2">
+          Backlinks
+        </h1>
+        <div className="divide-y">
+          {note.backlinks.map((backlink) => (
+            <BacklinkEditor
+              key={backlink.id}
+              backlink={backlink}
+              targetNoteId={note.id}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -115,17 +122,9 @@ function BacklinkEditor({
   }
 
   return (
-    <div className="mt-4 p-4 bg-gray-100 rounded-lg shadow-md">
-      <Link
-        className="text-xl font-medium mb-2"
-        to="/notes/$noteId"
-        params={{ noteId: backlink.id }}
-      >
-        {backlink.title}
-      </Link>
-      <div className="border border-gray-300 bg-white p-3 rounded">
-        <EditorContent editor={editor} className="tiptap-editor" />
-      </div>
+    <div className="py-4">
+      <LinkNote className="block pb-2 text-blue-600" note={backlink} />
+      <EditorContent editor={editor} className="tiptap-editor" />
     </div>
   );
 }

@@ -100,7 +100,8 @@
 
   .prosemirror-flat-list {
     & {
-      @apply p-0 m-0 ml-8 relative list-item list-none;
+      @apply p-0 m-0 relative list-item list-none;
+      margin-left: 21px;
     }
 
     &.ProseMirror-selectednode {

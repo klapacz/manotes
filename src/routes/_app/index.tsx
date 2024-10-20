@@ -36,7 +36,7 @@ function Index() {
     <div className="space-y-4 pb-[100vh] divide-y divide-slate-100">
       {days.map(({ day, note }) => (
         <Fragment key={day}>
-          <Editor note={note} />
+          <Editor note={note} className="p-8" />
         </Fragment>
       ))}
     </div>
