@@ -1,5 +1,5 @@
 import { useEditor, EditorContent } from "@tiptap/react";
-import { Editor as TiptapEditor, Node, mergeAttributes } from "@tiptap/core";
+import { Editor as TiptapEditor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { FlatListNode } from "@/lib/tiptap/flat-list-extension";
 import { Link } from "@tiptap/extension-link";
@@ -10,13 +10,14 @@ import { NoteService } from "@/services/note.service";
 import type { NotesTable } from "@/sqlocal/schema";
 import type { Selectable } from "kysely";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { Heading } from "@tiptap/extension-heading";
 import React, { useCallback, useEffect } from "react";
 
-import { format, parse } from "date-fns";
 import { Button } from "./ui/button";
 import { ClipboardCopyIcon } from "lucide-react";
 import { toast } from "sonner";
+
+import { HeadingExtension } from "@/lib/tiptap/heading/heading";
+import { DocExtension } from "@/lib/tiptap/doc/doc";
 
 type EditorProps = {
   note: NoteService.Record;
@@ -27,39 +28,10 @@ export function Editor(props: EditorProps) {
   return <EditorInner note={props.note} className={props.className} />;
 }
 
-const Document = Node.create({
-  name: "doc",
-  topNode: true,
-  // The document must always have a heading
-  content: "heading block+",
-});
-
 type EditorInnerProps = {
   note: NoteService.Record;
   className?: string;
 };
-
-// TODO: move to @/lib/tiptap
-const CustomHeading = Heading.extend({
-  renderHTML({ node, HTMLAttributes }) {
-    const hasLevel = this.options.levels.includes(node.attrs.level);
-    const level = hasLevel ? node.attrs.level : this.options.levels[0];
-
-    let text = node.textContent;
-    let content: string | number = 0;
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-      const date = parse(text, "yyyy-MM-dd", new Date());
-      content = format(date, "EEE, MMMM do, yyyy");
-    }
-
-    return [
-      `h${level}`,
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
-      content,
-    ];
-  },
-});
 
 function EditorInner(props: EditorInnerProps) {
   const editor = useEditor({
@@ -71,12 +43,12 @@ function EditorInner(props: EditorInnerProps) {
         document: false,
         heading: false,
       }),
-      CustomHeading,
+      HeadingExtension,
       Tag,
       Link,
       FlatListNode,
       Backlink,
-      Document,
+      DocExtension,
     ],
     content: props.note.content,
     editorProps: {
@@ -91,6 +63,16 @@ function EditorInner(props: EditorInnerProps) {
       NoteService.update({ editor, noteId: props.note.id });
     },
   });
+
+  useEffect(() => {
+    (async () => {
+      if (import.meta.env.DEV && editor) {
+        // @ts-ignore
+        const applyDevTools = await import("prosemirror-dev-tools");
+        applyDevTools.default(editor.view);
+      }
+    })();
+  }, [editor]);
 
   // On notes.$noteId route, when the note id change we need to manually set the content
   useEffect(() => {
