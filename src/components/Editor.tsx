@@ -59,25 +59,21 @@ function EditorInner(props: EditorInnerProps) {
         ),
       },
     },
+
     async onUpdate({ editor }) {
       NoteService.update({ editor, noteId: props.note.id });
     },
   });
 
-  useEffect(() => {
-    (async () => {
-      if (import.meta.env.DEV && editor) {
-        // @ts-ignore
-        const applyDevTools = await import("prosemirror-dev-tools");
-        applyDevTools.default(editor.view);
-      }
-    })();
-  }, [editor]);
-
-  // On notes.$noteId route, when the note id change we need to manually set the content
-  useEffect(() => {
-    editor?.commands.setContent(props.note.content);
-  }, [props.note.content]);
+  // useEffect(() => {
+  //   (async () => {
+  //     if (import.meta.env.DEV && editor) {
+  //       // @ts-ignore
+  //       const applyDevTools = await import("prosemirror-dev-tools");
+  //       applyDevTools.default(editor.view);
+  //     }
+  //   })();
+  // }, [editor]);
 
   useEditorFocus(editor, props.note);
 

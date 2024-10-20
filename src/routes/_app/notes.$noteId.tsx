@@ -55,13 +55,22 @@ function NotePage() {
 
   return (
     <div>
-      <Editor note={note} className="p-8" />
+      <Editor
+        note={note}
+        className="p-8"
+        // The editor should rerender when the note changes
+        key={note.id}
+      />
 
       <div className="p-8">
         <h1 className="text-sm font-medium text-muted-foreground pb-2">
           Backlinks
         </h1>
-        <div className="divide-y">
+        <div
+          className="divide-y"
+          // Rerender the backlinks when the note changes
+          key={note.id}
+        >
           {note.backlinks.map((backlink) => (
             <BacklinkEditor
               key={backlink.id}
