@@ -1,4 +1,4 @@
-import type { Node, ResolvedPos } from "@tiptap/pm/model";
+import { Fragment, type Node, type ResolvedPos } from "@tiptap/pm/model";
 import { findParentNode } from "./find-parent-node";
 
 export namespace BacklinkContext {
@@ -120,5 +120,29 @@ export namespace BacklinkContext {
       higherLevelParentList.node.attrs,
       contextContent,
     );
+  }
+
+  /**
+   * Recursively processes the node tree and creates new nodes with the 'collapsed' attribute set to false for all list nodes.
+   *
+   * @param node The node to process
+   * @returns A new node with 'collapsed' attribute set to false for all list nodes
+   */
+  export function uncollapseLists(node: Node): Node {
+    if (node.type.name === "list") {
+      const newAttrs = { ...node.attrs, collapsed: false };
+      const newContent: Node[] = [];
+      node.content.forEach((child) => {
+        newContent.push(uncollapseLists(child));
+      });
+      return node.type.create(newAttrs, Fragment.from(newContent));
+    } else if (node.content.size > 0) {
+      const newContent: Node[] = [];
+      node.content.forEach((child) => {
+        newContent.push(uncollapseLists(child));
+      });
+      return node.copy(Fragment.from(newContent));
+    }
+    return node;
   }
 }

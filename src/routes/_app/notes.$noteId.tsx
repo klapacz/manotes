@@ -115,11 +115,13 @@ function BacklinkEditor({
       const doc = editor.schema.nodeFromJSON(backlink.content);
       const backlinkInfo = BacklinkContext.findBacklinkNode(doc, targetNoteId);
       if (backlinkInfo) {
-        const context = BacklinkContext.extractBacklinkContext(
+        const contextExtracted = BacklinkContext.extractBacklinkContext(
           doc,
           backlinkInfo,
         );
-        editor.commands.setContent(context.toJSON());
+        const contextUncollapsed =
+          BacklinkContext.uncollapseLists(contextExtracted);
+        editor.commands.setContent(contextUncollapsed.toJSON());
       } else {
         editor.commands.setContent(backlink.content);
       }
