@@ -47,6 +47,7 @@ export const FlatListNode = Node.create({
   // definingForContent: true,
   // definingAsContext: false,
 
+  // TODO: createListSpec?
   addAttributes() {
     return {
       kind: {
