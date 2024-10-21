@@ -26,7 +26,13 @@ export const Route = createFileRoute("/_app/")({
   loader: async ({ deps }) => {
     return NoteService.listInMonth(deps.monthStartISO);
   },
+
+  // Set staleTime to 0 to consider data stale immediately after loading
   staleTime: 0,
+  // Set gcTime to 0 to remove data from cache as soon as it's not actively used
+  gcTime: 0,
+  // Force reload on every navigation to this route
+  shouldReload: () => true,
 });
 
 function Index() {

@@ -35,6 +35,7 @@ export const Route = createFileRoute("/_app/notes/$noteId")({
               "source_notes.id",
               "backlinks.source_id",
             )
+            .orderBy("source_notes.daily_at", "desc")
             .select([
               "source_notes.id",
               "source_notes.title",
@@ -47,7 +48,13 @@ export const Route = createFileRoute("/_app/notes/$noteId")({
 
     return note;
   },
+
+  // Set staleTime to 0 to consider data stale immediately after loading
   staleTime: 0,
+  // Set gcTime to 0 to remove data from cache as soon as it's not actively used
+  gcTime: 0,
+  // Force reload on every navigation to this route
+  shouldReload: () => true,
 });
 
 function NotePage() {
