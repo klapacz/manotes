@@ -47,10 +47,11 @@ describe("BacklinkContext.extractContext", () => {
       ),
     );
 
-    const backlinkInfo = BacklinkContext.findBacklinkNode(
+    const backlinksInfo = BacklinkContext.findBacklinkNodes(
       initialDoc,
       "test-id",
-    )!;
+    );
+    const backlinkInfo = backlinksInfo[0]!;
     const context = BacklinkContext.extractBacklinkContext(
       initialDoc,
       backlinkInfo,
@@ -78,15 +79,91 @@ describe("BacklinkContext.extractContext", () => {
       " Text after backlink",
     );
 
-    const backlinkInfo = BacklinkContext.findBacklinkNode(
+    const backlinksInfo = BacklinkContext.findBacklinkNodes(
       initialDoc,
       "test-id",
-    )!;
+    );
+    const backlinkInfo = backlinksInfo[0]!;
     const context = BacklinkContext.extractBacklinkContext(
       initialDoc,
       backlinkInfo,
     );
     expect(context).toEqualProsemirrorNode(expectedDoc);
+  });
+});
+
+/**
+ * Note: In a real-world scenario, all backlinks with the same ID should also have the same label.
+ * The labels are different in these tests only for the purpose of distinguishing between multiple backlinks
+ * and verifying the correct order. This is not representative of how backlinks would be used in practice.
+ */
+describe("BacklinkContext.findBacklinkNodes", () => {
+  it("should find all backlinks with the specified target ID", () => {
+    const { b } = setupEditor();
+
+    const doc = b.doc(
+      b.p("Text before"),
+      b.p(
+        "Paragraph with ",
+        b.backlink({ id: "test-id", label: "First Backlink" }),
+        " a backlink",
+      ),
+      b.p("Text between"),
+      b.p(
+        "Another paragraph with ",
+        b.backlink({ id: "test-id", label: "Second Backlink" }),
+        " another backlink",
+      ),
+      b.p(
+        "Paragraph with different ID ",
+        b.backlink({ id: "different-id", label: "Different Backlink" }),
+      ),
+    );
+
+    const backlinks = BacklinkContext.findBacklinkNodes(doc, "test-id");
+
+    expect(backlinks).toHaveLength(2);
+    expect(backlinks[0].node.attrs.label).toBe("First Backlink");
+    expect(backlinks[1].node.attrs.label).toBe("Second Backlink");
+  });
+
+  it("should return an empty array when no backlinks are found", () => {
+    const { b } = setupEditor();
+
+    const doc = b.doc(b.p("Text without backlinks"), b.p("Another paragraph"));
+
+    const backlinks = BacklinkContext.findBacklinkNodes(doc, "non-existent-id");
+
+    expect(backlinks).toHaveLength(0);
+  });
+
+  it("should sort backlinks by their position in the document", () => {
+    const { b } = setupEditor();
+
+    const doc = b.doc(
+      b.p(
+        "First ",
+        b.backlink({ id: "test-id", label: "First Backlink" }),
+        " backlink",
+      ),
+      b.p(
+        "Second ",
+        b.backlink({ id: "test-id", label: "Second Backlink" }),
+        " backlink",
+      ),
+      b.p(
+        "Third ",
+        b.backlink({ id: "test-id", label: "Third Backlink" }),
+        " backlink",
+      ),
+    );
+
+    const backlinks = BacklinkContext.findBacklinkNodes(doc, "test-id");
+
+    expect(backlinks).toHaveLength(3);
+    expect(backlinks[0].node.attrs.label).toBe("First Backlink");
+    expect(backlinks[1].node.attrs.label).toBe("Second Backlink");
+    expect(backlinks[2].node.attrs.label).toBe("Third Backlink");
   });
 });
 

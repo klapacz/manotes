@@ -51,11 +51,11 @@ export namespace NoteService {
     // backlinks
     await db.deleteFrom("backlinks").where("source_id", "=", noteId).execute();
 
-    if (backlinks.length) {
+    if (backlinks.size > 0) {
       await db
         .insertInto("backlinks")
         .values(
-          backlinks.map((backlink) => ({
+          Array.from(backlinks).map((backlink) => ({
             source_id: noteId,
             target_id: backlink,
           })),
@@ -68,11 +68,11 @@ export namespace NoteService {
 
     await db.deleteFrom("notes_tags").where("note_id", "=", noteId).execute();
 
-    if (tags.length) {
+    if (tags.size > 0) {
       await db
         .insertInto("notes_tags")
         .values(
-          tags.map((tag) => ({
+          Array.from(tags).map((tag) => ({
             note_id: noteId,
             tag_id: tag,
           })),

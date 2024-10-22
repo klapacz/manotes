@@ -4,18 +4,20 @@ import { findParentNode } from "./find-parent-node";
 export namespace BacklinkContext {
   type BlockInfo = { node: Node; pos: number };
 
-  export function findBacklinkNode(
-    doc: Node,
-    targetId: string,
-  ): BlockInfo | null {
-    let result: BlockInfo | null = null;
+  /**
+   * Finds all backlink nodes in the document that match the given target ID.
+   * @param doc The document node to search
+   * @param targetId The ID of the backlink to find
+   * @returns An array of BlockInfo objects, sorted by their position in the document
+   */
+  export function findBacklinkNodes(doc: Node, targetId: string): BlockInfo[] {
+    const results: BlockInfo[] = [];
     doc.descendants((node, pos) => {
       if (node.type.name === "backlink" && node.attrs.id === targetId) {
-        result = { node, pos };
-        return false; // Stop traversal
+        results.push({ node, pos });
       }
     });
-    return result;
+    return results.sort((a, b) => a.pos - b.pos);
   }
 
   /**
@@ -23,7 +25,7 @@ export namespace BacklinkContext {
    * @param fullDocument The entire document node
    * @param backlinkInfo Information about the backlink node, including its position
    * @returns A Node representing the smallest meaningful subset of the document that includes the backlink and its surrounding structure.
-   *          This can be a list structure, a heading, a paragraph, or the entire document if no specific context is found.
+   *          This can be a list structure, a heading, or the immediate parent node of the backlink.
    */
   export function extractBacklinkContext(
     fullDocument: Node,
@@ -52,18 +54,18 @@ export namespace BacklinkContext {
       return parentHeading.node;
     }
 
-    // If not in a heading, check if it's in a paragraph
-    const parentParagraph = findParentNode(
-      (node) => node.type.name === "paragraph",
+    // If not in a heading or list, return the immediate parent node
+    const immediateParent = findParentNode(
+      (node) => node.type.isBlock,
       backlinkPosition,
     );
 
-    if (parentParagraph) {
-      return parentParagraph.node;
+    if (immediateParent) {
+      return immediateParent.node;
     }
 
-    // If no specific context is found, return the entire document
-    return fullDocument;
+    // If no parent node is found (which should be rare), return the backlink node itself
+    return backlinkInfo.node;
   }
 
   /**

@@ -61,7 +61,12 @@ function EditorInner(props: EditorInnerProps) {
     },
 
     async onUpdate({ editor }) {
-      NoteService.update({ editor, noteId: props.note.id });
+      try {
+        await NoteService.update({ editor, noteId: props.note.id });
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to update note");
+      }
     },
   });
 

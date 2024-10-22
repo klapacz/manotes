@@ -1,8 +1,11 @@
 import { Node as ProsemirrorNode } from "@tiptap/pm/model";
 
 export namespace ProseUtils {
-  export function findAllBacklinks(node: ProsemirrorNode) {
-    const backlinks: string[] = [];
+  /**
+   * @returns Set of backlink ids
+   */
+  export function findAllBacklinks(node: ProsemirrorNode): Set<string> {
+    const backlinks = new Set<string>();
 
     node.descendants((node, pos) => {
       if (node.type.name === "backlink") {
@@ -10,15 +13,18 @@ export namespace ProseUtils {
           // TODO: more debugging info
           throw new Error("Backlink node has no id");
         }
-        backlinks.push(node.attrs.id);
+        backlinks.add(node.attrs.id);
       }
     });
 
     return backlinks;
   }
 
-  export function findAllTags(node: ProsemirrorNode) {
-    const tags: string[] = [];
+  /**
+   * @returns Set of tag ids
+   */
+  export function findAllTags(node: ProsemirrorNode): Set<string> {
+    const tags = new Set<string>();
 
     node.descendants((node, pos) => {
       if (node.type.name === "tag") {
@@ -26,7 +32,7 @@ export namespace ProseUtils {
           // TODO: more debugging info
           throw new Error("Tag node has no id");
         }
-        tags.push(node.attrs.id);
+        tags.add(node.attrs.id);
       }
     });
 

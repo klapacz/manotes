@@ -1,4 +1,4 @@
-import { Editor } from "@/components/Editor";
+import { Editor } from "@/components/editor";
 import { db } from "@/sqlocal/client";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
@@ -118,21 +118,31 @@ function BacklinkEditor({
   });
 
   React.useEffect(() => {
-    if (editor) {
-      const doc = editor.schema.nodeFromJSON(backlink.content);
-      const backlinkInfo = BacklinkContext.findBacklinkNode(doc, targetNoteId);
-      if (backlinkInfo) {
-        const contextExtracted = BacklinkContext.extractBacklinkContext(
-          doc,
-          backlinkInfo,
-        );
-        const contextUncollapsed =
-          BacklinkContext.uncollapseLists(contextExtracted);
-        editor.commands.setContent(contextUncollapsed.toJSON());
-      } else {
-        editor.commands.setContent(backlink.content);
-      }
+    // TODO: move to a function
+    if (!editor) {
+      return;
     }
+
+    const doc = editor.schema.nodeFromJSON(backlink.content);
+    const backlinkInfos = BacklinkContext.findBacklinkNodes(doc, targetNoteId);
+
+    if (backlinkInfos.length === 0) {
+      console.error(`No incoming backlinks found in note ${backlink.id}`);
+      editor.commands.setContent(backlink.content);
+      return;
+    }
+
+    const contextNodes = backlinkInfos.map((backlinkInfo) =>
+      BacklinkContext.extractBacklinkContext(doc, backlinkInfo),
+    );
+
+    const newDoc = editor.schema.node(
+      "doc",
+      {},
+      contextNodes.map((node) => BacklinkContext.uncollapseLists(node)),
+    );
+
+    editor.commands.setContent(newDoc.toJSON());
   }, [editor, backlink.content, targetNoteId]);
 
   if (!editor) {

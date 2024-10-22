@@ -4,7 +4,7 @@ import { formatISO, startOfMonth } from "date-fns";
 import { z } from "zod";
 import { zodSearchValidator } from "@tanstack/router-zod-adapter";
 import { NoteService } from "@/services/note.service";
-import { Editor } from "@/components/Editor";
+import { Editor } from "@/components/editor";
 
 export const indexSearchSchema = z.object({
   date: z
