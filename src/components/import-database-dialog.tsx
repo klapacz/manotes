@@ -12,6 +12,7 @@ import { useState, useRef, type PropsWithChildren } from "react";
 import { DialogHeader, DialogFooter } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { toast } from "sonner";
 
 type ImportDatabaseDialogProps = {
   /** Dialog trigger */
@@ -35,6 +36,7 @@ export function ImportDatabaseDialog({ children }: ImportDatabaseDialogProps) {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
     },
     onError: (error) => {
+      toast.error("Importing database failed");
       console.log(error);
     },
     onSuccess: () => {
@@ -64,7 +66,7 @@ export function ImportDatabaseDialog({ children }: ImportDatabaseDialogProps) {
         <form onSubmit={handleSubmit}>
           <Input
             type="file"
-            accept=".sqlite3"
+            accept=".sqlite3,.db"
             ref={fileInputRef}
             disabled={importDatabase.isPending}
           />
