@@ -54,7 +54,7 @@ function EditorInner(props: EditorInnerProps) {
     editorProps: {
       attributes: {
         class: cn(
-          "tiptap-editor focus:outline-none focus:border-slate-400",
+          "tiptap-editor focus:outline-hidden focus:border-slate-400",
           props.className,
         ),
       },

@@ -2,7 +2,7 @@ import { defineConfig } from "astro/config";
 
 import cloudflare from "@astrojs/cloudflare";
 
-import tailwind from "@astrojs/tailwind";
+import tailwindcss from "@tailwindcss/vite";
 
 import react from "@astrojs/react";
 
@@ -26,15 +26,14 @@ export default defineConfig({
   }),
 
   integrations: [
-    tailwind({
-      applyBaseStyles: false,
-    }),
-    // Exclude .ts files because they may include decorators which are not supported by astro
+            // Exclude .ts files because they may include decorators which are not supported by astro
     react({ include: ["**/*.tsx"] }),
   ],
 
   vite: {
-    plugins: [TanStackRouterVite()],
+    plugins: [TanStackRouterVite(),
+        tailwindcss(),
+],
     optimizeDeps: {
       exclude: ["sqlocal"], // https://sqlocal.dallashoffman.com/guide/setup#vite-configuration
     },
