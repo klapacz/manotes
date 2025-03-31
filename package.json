@@ -78,6 +78,7 @@
     "@tanstack/router-plugin": "^1.114.30",
     "jest-prosemirror": "^3.0.0",
     "jsdom": "^25.0.1",
+    "prettier": "^3.5.3",
     "prosemirror-dev-tools": "^4.2.0",
     "tsx": "^4.19.3",
     "vitest": "^2.1.9",

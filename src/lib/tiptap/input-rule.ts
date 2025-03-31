@@ -14,7 +14,7 @@ import {
  * @public @group Input Rules
  */
 export type ListInputRuleAttributesGetter<
-  T extends ListAttributes = ListAttributes
+  T extends ListAttributes = ListAttributes,
 > = (options: {
   /**
    * The match result of the regular expression.
@@ -31,7 +31,7 @@ export type ListInputRuleAttributesGetter<
  * Copied from https://github.com/ocavue/prosemirror-flat-list/blob/a9fd037ff7471a09d88a59f4289c000dd7d959a6/packages/core/src/input-rule.ts
  */
 export function wrappingListInputRule<
-  T extends ListAttributes = ListAttributes
+  T extends ListAttributes = ListAttributes,
 >(regexp: RegExp, getAttrs: T | ListInputRuleAttributesGetter<T>): InputRule {
   return new InputRule({
     find: regexp,
@@ -76,7 +76,7 @@ export function wrappingListInputRule<
       const wrapping = findWrapping(
         range,
         getListType(opts.state.schema),
-        newAttrs
+        newAttrs,
       );
       if (!wrapping) {
         return null;

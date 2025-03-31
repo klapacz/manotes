@@ -26,14 +26,12 @@ export default defineConfig({
   }),
 
   integrations: [
-            // Exclude .ts files because they may include decorators which are not supported by astro
+    // Exclude .ts files because they may include decorators which are not supported by astro
     react({ include: ["**/*.tsx"] }),
   ],
 
   vite: {
-    plugins: [TanStackRouterVite(),
-        tailwindcss(),
-],
+    plugins: [TanStackRouterVite(), tailwindcss()],
     optimizeDeps: {
       exclude: ["sqlocal"], // https://sqlocal.dallashoffman.com/guide/setup#vite-configuration
     },

@@ -5,7 +5,7 @@ import type { EditorView } from "@tiptap/pm/view";
 export type ProsemirrorCommandFunction = (
   state: EditorState,
   dispatch: DispatchFunction | undefined,
-  view: EditorView | undefined
+  view: EditorView | undefined,
 ) => boolean;
 
 /**
@@ -21,7 +21,7 @@ export type DispatchFunction = (tr: Transaction) => void;
  * TODO: the original function was using the chainableEditorState - I should take a look at this.
  */
 export function convertCommand(
-  commandFunction: ProsemirrorCommandFunction
+  commandFunction: ProsemirrorCommandFunction,
 ): TiptapCommand {
   return ({ state, dispatch, view }) => commandFunction(state, dispatch, view);
 }

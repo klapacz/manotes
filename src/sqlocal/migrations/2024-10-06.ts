@@ -38,13 +38,13 @@ export const Migration20241006: Migration = {
         "backlinks_source_id_fk",
         ["source_id"],
         "notes",
-        ["id"]
+        ["id"],
       )
       .addForeignKeyConstraint(
         "backlinks_target_id_fk",
         ["target_id"],
         "notes",
-        ["id"]
+        ["id"],
       )
       .addPrimaryKeyConstraint("backlinks_pk", ["source_id", "target_id"])
       .execute();
