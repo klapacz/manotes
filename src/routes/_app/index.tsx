@@ -5,6 +5,7 @@ import { z } from "zod";
 import { zodSearchValidator } from "@tanstack/router-zod-adapter";
 import { NoteService } from "@/services/note.service";
 import { Editor } from "@/components/editor";
+import { MobileNav, useDisplayMobileNav } from "@/components/mobile-nav";
 
 export const indexSearchSchema = z.object({
   date: z
@@ -37,9 +38,11 @@ export const Route = createFileRoute("/_app/")({
 
 function Index() {
   const days = Route.useLoaderData();
+  const displayMobileNav = useDisplayMobileNav();
 
   return (
     <div className="space-y-4 pb-[100vh] divide-y">
+      {displayMobileNav ? <MobileNav /> : null}
       {days.map(({ day, note }) => (
         <Fragment key={day}>
           <Editor note={note} className="p-8" />

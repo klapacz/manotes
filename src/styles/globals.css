@@ -6,6 +6,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --spacing-mobile-nav: var(--mobile-nav-height);
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -75,6 +77,8 @@
 }
 
 :root {
+  --mobile-nav-height: --spacing(17);
+
   --background: hsl(0 0% 100%);
   --foreground: hsl(240 10% 3.9%);
   --card: hsl(0 0% 100%);

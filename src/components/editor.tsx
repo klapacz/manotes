@@ -18,6 +18,7 @@ import { toast } from "sonner";
 
 import { HeadingExtension } from "@/lib/tiptap/heading/heading";
 import { DocExtension } from "@/lib/tiptap/doc/doc";
+import { mobileNavEditorClass, useDisplayMobileNav } from "./mobile-nav";
 
 type EditorProps = {
   note: NoteService.Record;
@@ -34,6 +35,8 @@ type EditorInnerProps = {
 };
 
 function EditorInner(props: EditorInnerProps) {
+  const displayMobileNav = useDisplayMobileNav();
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -55,6 +58,7 @@ function EditorInner(props: EditorInnerProps) {
       attributes: {
         class: cn(
           "tiptap-editor focus:outline-hidden focus:border-slate-400",
+          displayMobileNav && mobileNavEditorClass,
           props.className,
         ),
       },
