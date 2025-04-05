@@ -1,6 +1,38 @@
 import { Node as ProsemirrorNode } from "@tiptap/pm/model";
+import StarterKit from "@tiptap/starter-kit";
+import { FlatListNode } from "@/lib/tiptap/flat-list-extension";
+import { Link } from "@tiptap/extension-link";
+import { Backlink } from "@/lib/tiptap/backlink/backlink";
+import { Tag } from "@/lib/tiptap/tags/tag";
+
+import { HeadingExtension } from "@/lib/tiptap/heading/heading";
+import { DocExtension } from "@/lib/tiptap/doc/doc";
+import { Editor } from "@tiptap/react";
 
 export namespace ProseUtils {
+  export function getEditorShema() {
+    const editor = new Editor({
+      extensions: [
+        StarterKit.configure({
+          listItem: false,
+          bulletList: false,
+          orderedList: false,
+          document: false,
+          heading: false,
+          history: false,
+        }),
+        HeadingExtension,
+        Tag,
+        Link,
+        FlatListNode,
+        Backlink,
+        DocExtension,
+      ],
+    });
+
+    return editor.schema;
+  }
+
   /**
    * @returns Set of backlink ids
    */

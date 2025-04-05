@@ -24,6 +24,14 @@ export default defineConfig({
         });
       },
     },
+    {
+      name: "vite-plugin-raw-sql",
+      transform(code, id) {
+        if (id.endsWith(".sql")) {
+          return `export default ${JSON.stringify(code)};`;
+        }
+      },
+    },
   ],
   optimizeDeps: {
     exclude: ["sqlocal"], // https://sqlocal.dallashoffman.com/guide/setup#vite-configuration

@@ -10,7 +10,7 @@ import { NoteService } from "@/services/note.service";
 import type { NotesTable } from "@/sqlocal/schema";
 import type { Selectable } from "kysely";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 
 import { Button } from "./ui/button";
 import { ClipboardCopyIcon } from "lucide-react";
@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import { HeadingExtension } from "@/lib/tiptap/heading/heading";
 import { DocExtension } from "@/lib/tiptap/doc/doc";
 import { mobileNavEditorClass, useDisplayMobileNav } from "./mobile-nav";
+import { Collaboration } from "@/lib/tiptap/collaboration-extension";
+import { YjsUtils } from "@/lib/yjs.utils";
 
 type EditorProps = {
   note: NoteService.Record;
@@ -34,8 +36,30 @@ type EditorInnerProps = {
   className?: string;
 };
 
+// Import our custom WebSocket provider
+import { useWsStore } from "@/routes/-ws-provider";
+
 function EditorInner(props: EditorInnerProps) {
   const displayMobileNav = useDisplayMobileNav();
+  const addProvider = useWsStore((store) => store.addProvider);
+  const removeProvider = useWsStore((store) => store.removeProvider);
+  const noteProvider = useWsStore((store) =>
+    store.providers.get(props.note.id),
+  );
+
+  const ydoc = useMemo(() => {
+    const ydoc = YjsUtils.createDocFromUpdate(props.note.content);
+
+    return ydoc;
+  }, [props.note.content, props.note.id]);
+
+  useEffect(() => {
+    addProvider(props.note.id, ydoc);
+    return () => {
+      console.log("Running cleanup");
+      removeProvider(props.note.id, ydoc);
+    };
+  }, [ydoc, addProvider, removeProvider]);
 
   const editor = useEditor({
     extensions: [
@@ -45,6 +69,7 @@ function EditorInner(props: EditorInnerProps) {
         orderedList: false,
         document: false,
         heading: false,
+        history: false,
       }),
       HeadingExtension,
       Tag,
@@ -52,8 +77,13 @@ function EditorInner(props: EditorInnerProps) {
       FlatListNode,
       Backlink,
       DocExtension,
+      Collaboration.extend().configure({
+        fragment: ydoc.getXmlFragment("prosemirror"),
+      }),
     ],
-    content: props.note.content,
+    onFocus: () => {
+      noteProvider?.sendUpdate();
+    },
     editorProps: {
       attributes: {
         class: cn(
@@ -62,15 +92,6 @@ function EditorInner(props: EditorInnerProps) {
           props.className,
         ),
       },
-    },
-
-    async onUpdate({ editor }) {
-      try {
-        await NoteService.update({ editor, noteId: props.note.id });
-      } catch (err) {
-        console.error(err);
-        toast.error("Failed to update note");
-      }
     },
   });
 

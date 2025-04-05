@@ -11,7 +11,8 @@
     "cf-typegen": "wrangler types",
     "test": "vitest",
     "shadcn": "pnpx shadcn@latest",
-    "db": "drizzle-kit"
+    "db": "drizzle-kit",
+    "db:graph-do": "drizzle-kit --config=drizzle.graph-do.config.ts"
   },
   "dependencies": {
     "@date-fns/utc": "^2.1.0",
@@ -52,7 +53,9 @@
     "cmdk": "1.1.1",
     "date-fns": "^4.1.0",
     "drizzle-orm": "^0.38.4",
+    "es-toolkit": "^1.34.1",
     "hono": "^4.7.5",
+    "input-otp": "^1.4.2",
     "kysely": "^0.27.6",
     "lucide-react": "^0.486.0",
     "nanoid": "^5.1.5",
@@ -63,6 +66,8 @@
     "react-day-picker": "8.10.1",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.55.0",
+    "resend": "^4.2.0",
+    "rxjs": "^7.8.2",
     "sonner": "^1.7.4",
     "sqlocal": "^0.11.4",
     "tailwind-merge": "^3.1.0",
@@ -71,15 +76,18 @@
     "tw-animate-css": "^1.2.5",
     "typescript": "^5.8.2",
     "usehooks-ts": "^3.1.1",
-    "zod": "^3.24.2"
+    "y-prosemirror": "^1.3.0",
+    "yjs": "^13.6.24",
+    "zod": "^3.24.2",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.0.1",
-    "@cloudflare/workers-types": "^4.20250407.0",
     "@tailwindcss/typography": "^0.5.16",
     "@tailwindcss/vite": "^4.0.17",
     "@tanstack/router-devtools": "^1.114.29",
     "@tanstack/router-plugin": "^1.114.30",
+    "@types/node": "^22.14.0",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",

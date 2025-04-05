@@ -1,0 +1,1 @@
+ALTER TABLE `note` ADD `vector_clock` text NOT NULL;

@@ -10,16 +10,38 @@
   "assets": {
     "not_found_handling": "single-page-application",
   },
+  "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,
   },
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "GraphDurableObject",
+        "name": "GRAPH_DO",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["GraphDurableObject"],
+    },
+  ],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "mano-test-1",
       "database_id": "2fd21612-2b9d-44ce-8181-5955b75de925",
-      "migrations_dir": "./migrations",
+      "migrations_dir": "./migrations/d1",
+    },
+  ],
+  "rules": [
+    {
+      "type": "Text",
+      "globs": ["**/*.sql"],
+      "fallthrough": true,
     },
   ],
   /**

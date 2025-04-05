@@ -1,0 +1,43 @@
+/* Editor styling with focus on mobile responsiveness */
+
+.tiptap-editor {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+  white-space: pre-wrap !important;
+}
+
+/* Ensure all content inside the editor wraps properly */
+.tiptap-editor * {
+  max-width: 100% !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  white-space: pre-wrap !important;
+}
+
+/* Additional styles for code blocks, pre elements, etc. */
+.tiptap-editor pre,
+.tiptap-editor code {
+  white-space: pre-wrap !important;
+  overflow-x: auto !important;
+  max-width: 100% !important;
+}
+
+/* Ensure nested elements don't overflow */
+.tiptap-editor p,
+.tiptap-editor h1,
+.tiptap-editor h2,
+.tiptap-editor h3,
+.tiptap-editor h4,
+.tiptap-editor h5,
+.tiptap-editor h6,
+.tiptap-editor ul,
+.tiptap-editor ol,
+.tiptap-editor li {
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+  max-width: 100% !important;
+}

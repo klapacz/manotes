@@ -5,7 +5,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
-import { jsonArrayFrom } from "kysely/helpers/sqlite";
 import type { NoteService } from "@/services/note.service";
 import { Tag } from "@/lib/tiptap/tags/tag";
 import LinkExtension from "@tiptap/extension-link";
@@ -16,37 +15,35 @@ import React from "react";
 import { BacklinkContext } from "@/lib/pm/backlinks-context";
 import { HeadingExtension } from "@/lib/tiptap/heading/heading";
 import { LinkNote } from "@/components/link-note";
+import { YjsUtils } from "@/lib/yjs.utils";
+import * as Y from "yjs";
+import { yXmlFragmentToProseMirrorRootNode } from "y-prosemirror";
 
 export const Route = createFileRoute("/_app/notes/$noteId")({
   component: NotePage,
   loader: async ({ params }) => {
     // TODO: use repo
-    const note = await db
-      .selectFrom("notes")
-      .where("notes.id", "=", params.noteId)
-      .selectAll("notes")
-      .select((eb) => [
-        jsonArrayFrom(
-          eb
-            .selectFrom("backlinks")
-            .where("backlinks.target_id", "=", eb.ref("notes.id"))
-            .innerJoin(
-              "notes as source_notes",
-              "source_notes.id",
-              "backlinks.source_id",
-            )
-            .orderBy("source_notes.daily_at", "desc")
-            .select([
-              "source_notes.id",
-              "source_notes.title",
-              "source_notes.daily_at",
-              "source_notes.content",
-            ]),
-        ).as("backlinks"),
-      ])
-      .executeTakeFirstOrThrow();
+    const [note, backlinks] = await Promise.all([
+      db
+        .selectFrom("notes")
+        .where("notes.id", "=", params.noteId)
+        .selectAll("notes")
+        .selectAll("notes")
+        .executeTakeFirstOrThrow(),
+      db
+        .selectFrom("backlinks")
+        .where("backlinks.target_id", "=", params.noteId)
+        .innerJoin(
+          "notes as source_notes",
+          "source_notes.id",
+          "backlinks.source_id",
+        )
+        .orderBy("source_notes.daily_at", "desc")
+        .selectAll("source_notes")
+        .execute(),
+    ]);
 
-    return note;
+    return { note, backlinks };
   },
 
   // Set staleTime to 0 to consider data stale immediately after loading
@@ -58,7 +55,7 @@ export const Route = createFileRoute("/_app/notes/$noteId")({
 });
 
 function NotePage() {
-  const note = Route.useLoaderData();
+  const { note, backlinks } = Route.useLoaderData();
 
   return (
     <div>
@@ -78,7 +75,7 @@ function NotePage() {
           // Rerender the backlinks when the note changes
           key={note.id}
         >
-          {note.backlinks.map((backlink) => (
+          {backlinks.map((backlink) => (
             <BacklinkEditor
               key={backlink.id}
               backlink={backlink}
@@ -123,7 +120,10 @@ function BacklinkEditor({
       return;
     }
 
-    const doc = editor.schema.nodeFromJSON(backlink.content);
+    const ydoc = YjsUtils.createDocFromUpdate(backlink.content);
+    const yXmlFragment = ydoc.get("prosemirror", Y.XmlFragment);
+    const doc = yXmlFragmentToProseMirrorRootNode(yXmlFragment, editor.schema);
+
     const backlinkInfos = BacklinkContext.findBacklinkNodes(doc, targetNoteId);
 
     if (backlinkInfos.length === 0) {
@@ -136,13 +136,17 @@ function BacklinkEditor({
       BacklinkContext.extractBacklinkContext(doc, backlinkInfo),
     );
 
-    const newDoc = editor.schema.node(
-      "doc",
-      {},
-      contextNodes.map((node) => BacklinkContext.uncollapseLists(node)),
+    const uncollapsedNodes = contextNodes.map((node) =>
+      BacklinkContext.uncollapseLists(node),
     );
 
-    editor.commands.setContent(newDoc.toJSON());
+    try {
+      const newDoc = editor.schema.node("doc", {}, uncollapsedNodes);
+      editor.commands.setContent(newDoc.toJSON());
+    } catch (error) {
+      debugger;
+      throw error;
+    }
   }, [editor, backlink.content, targetNoteId]);
 
   if (!editor) {

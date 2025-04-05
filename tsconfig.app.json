@@ -29,7 +29,13 @@
     },
 
     /* TOOD: maybe I should create tsconfig.test.json */
-    "types": ["vitest/globals", "jest-prosemirror"]
+    "types": [
+      "vitest/globals",
+      "jest-prosemirror",
+      "./worker-configuration.d.ts"
+    ],
+
+    "allowJs": true
   },
 
   "include": ["src"]

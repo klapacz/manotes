@@ -1,9 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
-import { type KeyboardEvent } from "react";
+import { useRef, type KeyboardEvent } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { sqlocal, type RawResultData } from "@/sqlocal/client";
+import { Button } from "./ui/button";
 
 export function Studio() {
+  const ref = useRef<HTMLTextAreaElement>(null);
   const submit = useMutation({
     async mutationFn({ query }: { query: string }) {
       const result = await sqlocal.execSQL(query, []);
@@ -23,11 +25,24 @@ export function Studio() {
 
   return (
     <div className="mt-2">
-      <Textarea
-        className="font-mono"
-        onKeyDown={handleKeyDown}
-        defaultValue="SELECT * FROM notes;"
-      />
+      <div className="grid gap-2">
+        <Textarea
+          className="font-mono"
+          onKeyDown={handleKeyDown}
+          defaultValue="SELECT * FROM notes;"
+          ref={ref}
+        />
+        <div>
+          <Button
+            disabled={submit.isPending}
+            onClick={() =>
+              ref.current && submit.mutate({ query: ref.current.value })
+            }
+          >
+            Run
+          </Button>
+        </div>
+      </div>
       {submit.data && <ResultTable data={submit.data} />}
     </div>
   );

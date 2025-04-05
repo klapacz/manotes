@@ -1,5 +1,5 @@
-import type { JSONContent } from "@tiptap/core";
 import type { ColumnType } from "kysely";
+import { VectorClock } from "worker/do/schema";
 
 export type Database = {
   notes: NotesTable;
@@ -11,7 +11,8 @@ export type Database = {
 export type NotesTable = {
   id: ColumnType<string, string, never>;
   title: ColumnType<string, string | undefined>;
-  content: ColumnType<JSONContent, string, string>;
+  vector_clock: ColumnType<VectorClock, string, string>;
+  content: ColumnType<Uint8Array, Uint8Array, Uint8Array>; // Binary YDoc state
   daily_at: ColumnType<string | null>;
 };
 

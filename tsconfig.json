@@ -6,7 +6,6 @@
     { "path": "./tsconfig.worker.json" }
   ],
   "compilerOptions": {
-    "types": ["@cloudflare/workers-types/2023-07-01"],
     // TODO: baseUrl and paths should not be here but are required for shadcn cli to work
     "baseUrl": ".",
     "paths": {

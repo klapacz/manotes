@@ -37,11 +37,20 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
   const loginMutation = useMutation({
     mutationFn: async (values: FormValues) => {
-      const { data, error } = await authClient.signIn.email(values);
+      const { data, error } = await authClient.emailOtp.sendVerificationOtp({
+        email: "user-email@email.com",
+        type: "sign-in", // or "email-verification", "forget-password"
+      });
 
-      if (error) {
+      if (data) {
         throw error;
       }
+
+      // later on in another mutation do this:
+      const { data, error } = await authClient.signIn.emailOtp({
+        email: "user-email@email.com",
+        otp: "123456", // otp is provided
+      });
 
       return data;
     },

@@ -22,6 +22,20 @@
       "when": 1744070605035,
       "tag": "0002_supreme_the_hunter",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1744111631954,
+      "tag": "0003_loud_thor",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1744127088377,
+      "tag": "0004_stormy_nighthawk",
+      "breakpoints": true
     }
   ]
 }

@@ -1,9 +1,10 @@
 import { NotesSearchCommandDialog } from "@/components/notes-search";
 import { CalendarSidebar } from "@/components/calendar-sidebar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { createFileRoute, Navigate, Outlet } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
+import { MobileNav, useDisplayMobileNav } from "@/components/mobile-nav";
+import { WsStoreProvider } from "./-ws-provider";
 
 export const Route = createFileRoute("/_app")({
   component: () => <AppLayout />,
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   const { isPending, data } = authClient.useSession();
+  const displayMobileNav = useDisplayMobileNav();
 
   if (isPending) {
     return null;
@@ -22,15 +24,14 @@ function AppLayout() {
 
   return (
     <SidebarProvider>
-      <NotesSearchCommandDialog />
-      <SidebarInset>
-        <ScrollArea>
-          <main className="max-h-[100svh]">
-            <Outlet />
-          </main>
-        </ScrollArea>
-      </SidebarInset>
-      <CalendarSidebar side="right" className="border-l" />
+      <WsStoreProvider>
+        <NotesSearchCommandDialog />
+        <SidebarInset>
+          {displayMobileNav ? <MobileNav /> : null}
+          <Outlet />
+        </SidebarInset>
+        <CalendarSidebar side="right" className="border-l" />
+      </WsStoreProvider>
     </SidebarProvider>
   );
 }
