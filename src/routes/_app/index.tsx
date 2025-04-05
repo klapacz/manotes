@@ -1,11 +1,12 @@
 import { Fragment } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { formatISO, startOfMonth } from "date-fns";
 import { z } from "zod";
 import { zodSearchValidator } from "@tanstack/router-zod-adapter";
 import { NoteService } from "@/services/note.service";
 import { Editor } from "@/components/editor";
 import { MobileNav, useDisplayMobileNav } from "@/components/mobile-nav";
+import { authClient } from "@/lib/auth-client";
 
 export const indexSearchSchema = z.object({
   date: z
@@ -25,6 +26,12 @@ export const Route = createFileRoute("/_app/")({
     return { monthStartISO };
   },
   loader: async ({ deps }) => {
+    const session = await authClient.getSession();
+    if (!session.data) {
+      throw redirect({
+        to: "/login",
+      });
+    }
     return NoteService.listInMonth(deps.monthStartISO);
   },
 
