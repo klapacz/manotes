@@ -13,8 +13,11 @@ import { createFileRoute } from '@tanstack/react-router'
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as AuthImport } from './routes/_auth'
 import { Route as AppImport } from './routes/_app'
 import { Route as AppIndexImport } from './routes/_app/index'
+import { Route as AuthSignupImport } from './routes/_auth/signup'
+import { Route as AuthLoginImport } from './routes/_auth/login'
 import { Route as AppNotesNoteIdImport } from './routes/_app/notes.$noteId'
 
 // Create Virtual Routes
@@ -22,6 +25,11 @@ import { Route as AppNotesNoteIdImport } from './routes/_app/notes.$noteId'
 const AppStudioLazyImport = createFileRoute('/_app/studio')()
 
 // Create/Update Routes
+
+const AuthRoute = AuthImport.update({
+  id: '/_auth',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const AppRoute = AppImport.update({
   id: '/_app',
@@ -40,6 +48,18 @@ const AppStudioLazyRoute = AppStudioLazyImport.update({
   getParentRoute: () => AppRoute,
 } as any).lazy(() => import('./routes/_app/studio.lazy').then((d) => d.Route))
 
+const AuthSignupRoute = AuthSignupImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => AuthRoute,
+} as any)
+
+const AuthLoginRoute = AuthLoginImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AuthRoute,
+} as any)
+
 const AppNotesNoteIdRoute = AppNotesNoteIdImport.update({
   id: '/notes/$noteId',
   path: '/notes/$noteId',
@@ -56,6 +76,27 @@ declare module '@tanstack/react-router' {
       fullPath: ''
       preLoaderRoute: typeof AppImport
       parentRoute: typeof rootRoute
+    }
+    '/_auth': {
+      id: '/_auth'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AuthImport
+      parentRoute: typeof rootRoute
+    }
+    '/_auth/login': {
+      id: '/_auth/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof AuthLoginImport
+      parentRoute: typeof AuthImport
+    }
+    '/_auth/signup': {
+      id: '/_auth/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof AuthSignupImport
+      parentRoute: typeof AuthImport
     }
     '/_app/studio': {
       id: '/_app/studio'
@@ -97,14 +138,31 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface AuthRouteChildren {
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthSignupRoute: typeof AuthSignupRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthLoginRoute: AuthLoginRoute,
+  AuthSignupRoute: AuthSignupRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 export interface FileRoutesByFullPath {
-  '': typeof AppRouteWithChildren
+  '': typeof AuthRouteWithChildren
+  '/login': typeof AuthLoginRoute
+  '/signup': typeof AuthSignupRoute
   '/studio': typeof AppStudioLazyRoute
   '/': typeof AppIndexRoute
   '/notes/$noteId': typeof AppNotesNoteIdRoute
 }
 
 export interface FileRoutesByTo {
+  '': typeof AuthRouteWithChildren
+  '/login': typeof AuthLoginRoute
+  '/signup': typeof AuthSignupRoute
   '/studio': typeof AppStudioLazyRoute
   '/': typeof AppIndexRoute
   '/notes/$noteId': typeof AppNotesNoteIdRoute
@@ -113,6 +171,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/_app': typeof AppRouteWithChildren
+  '/_auth': typeof AuthRouteWithChildren
+  '/_auth/login': typeof AuthLoginRoute
+  '/_auth/signup': typeof AuthSignupRoute
   '/_app/studio': typeof AppStudioLazyRoute
   '/_app/': typeof AppIndexRoute
   '/_app/notes/$noteId': typeof AppNotesNoteIdRoute
@@ -120,19 +181,29 @@ export interface FileRoutesById {
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '' | '/studio' | '/' | '/notes/$noteId'
+  fullPaths: '' | '/login' | '/signup' | '/studio' | '/' | '/notes/$noteId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/studio' | '/' | '/notes/$noteId'
-  id: '__root__' | '/_app' | '/_app/studio' | '/_app/' | '/_app/notes/$noteId'
+  to: '' | '/login' | '/signup' | '/studio' | '/' | '/notes/$noteId'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/_auth'
+    | '/_auth/login'
+    | '/_auth/signup'
+    | '/_app/studio'
+    | '/_app/'
+    | '/_app/notes/$noteId'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  AuthRoute: typeof AuthRouteWithChildren
 }
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  AuthRoute: AuthRouteWithChildren,
 }
 
 export const routeTree = rootRoute
@@ -145,7 +216,8 @@ export const routeTree = rootRoute
     "__root__": {
       "filePath": "__root.tsx",
       "children": [
-        "/_app"
+        "/_app",
+        "/_auth"
       ]
     },
     "/_app": {
@@ -155,6 +227,21 @@ export const routeTree = rootRoute
         "/_app/",
         "/_app/notes/$noteId"
       ]
+    },
+    "/_auth": {
+      "filePath": "_auth.tsx",
+      "children": [
+        "/_auth/login",
+        "/_auth/signup"
+      ]
+    },
+    "/_auth/login": {
+      "filePath": "_auth/login.tsx",
+      "parent": "/_auth"
+    },
+    "/_auth/signup": {
+      "filePath": "_auth/signup.tsx",
+      "parent": "/_auth"
     },
     "/_app/studio": {
       "filePath": "_app/studio.lazy.tsx",

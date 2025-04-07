@@ -5,14 +5,17 @@ import { ImportDatabaseDialog } from "./import-database-dialog";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
   SidebarSeparator,
 } from "./ui/sidebar";
+import { NavUser } from "./nav-user";
 
 export function CalendarSidebar({
   ...props
@@ -26,6 +29,10 @@ export function CalendarSidebar({
 
         <CalendarSidebarActions />
       </SidebarContent>
+      <SidebarFooter>
+        <NavUser />
+      </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }
@@ -35,7 +42,6 @@ function CalendarSidebarActions() {
     <SidebarGroup>
       <SidebarGroupLabel>Actions</SidebarGroupLabel>
       <SidebarGroupContent>
-        {/* Import database */}
         <SidebarMenu>
           <SidebarMenuItem>
             <ImportDatabaseDialog>
@@ -45,9 +51,6 @@ function CalendarSidebarActions() {
               </SidebarMenuButton>
             </ImportDatabaseDialog>
           </SidebarMenuItem>
-        </SidebarMenu>
-        {/* Export database */}
-        <SidebarMenu>
           <SidebarMenuItem>
             <ExportDatabaseDialog>
               <SidebarMenuButton>
