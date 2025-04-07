@@ -2,13 +2,7 @@ import { ProseUtils } from "@/lib/prose.utils";
 import { db } from "@/sqlocal/client";
 import type { NotesTable } from "@/sqlocal/schema";
 import type { EditorEvents, JSONContent } from "@tiptap/core";
-import {
-  formatISO,
-  endOfMonth,
-  eachDayOfInterval,
-  parse,
-  format,
-} from "date-fns";
+import { formatISO, endOfMonth, eachDayOfInterval, format } from "date-fns";
 import type { Insertable, Selectable } from "kysely";
 import { nanoid } from "nanoid";
 

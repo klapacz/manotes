@@ -1,12 +1,13 @@
 import { RouterProvider, createRouter } from "@tanstack/react-router";
+import { createRoot } from "react-dom/client";
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Suspense } from "react";
+import { StrictMode, Suspense } from "react";
 import { MigrationsProvider } from "./providers/migratios-provider";
-
 const queryClient = new QueryClient();
+import "@/styles/globals.css";
 
 // Create a new router instance
 const router = createRouter({
@@ -35,3 +36,9 @@ export function App() {
     </QueryClientProvider>
   );
 }
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

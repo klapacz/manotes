@@ -7,7 +7,7 @@ export namespace ProseUtils {
   export function findAllBacklinks(node: ProsemirrorNode): Set<string> {
     const backlinks = new Set<string>();
 
-    node.descendants((node, pos) => {
+    node.descendants((node) => {
       if (node.type.name === "backlink") {
         if (!node.attrs.id) {
           // TODO: more debugging info
@@ -26,7 +26,7 @@ export namespace ProseUtils {
   export function findAllTags(node: ProsemirrorNode): Set<string> {
     const tags = new Set<string>();
 
-    node.descendants((node, pos) => {
+    node.descendants((node) => {
       if (node.type.name === "tag") {
         if (!node.attrs.id) {
           // TODO: more debugging info
@@ -47,7 +47,7 @@ export namespace ProseUtils {
   export function getFirstHeadingContent(node: ProsemirrorNode) {
     let content: string | undefined;
 
-    node.descendants((node, pos) => {
+    node.descendants((node) => {
       if (node.type.name === "heading") {
         content = node.textContent;
       }

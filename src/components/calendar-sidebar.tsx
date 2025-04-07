@@ -12,7 +12,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-  SidebarTrigger,
 } from "./ui/sidebar";
 
 export function CalendarSidebar({

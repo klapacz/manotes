@@ -47,7 +47,7 @@ export function CalendarNavigation() {
             });
             navigate({
               to: "/",
-              search: (prev) => ({ date: dateString }),
+              search: { date: dateString },
             });
           }}
           className="[&_[role=gridcell]]:w-[33px]"

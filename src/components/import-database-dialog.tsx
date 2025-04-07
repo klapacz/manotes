@@ -8,7 +8,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { useState, useRef, type PropsWithChildren } from "react";
+import { useState, useRef } from "react";
 import { DialogHeader, DialogFooter } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";

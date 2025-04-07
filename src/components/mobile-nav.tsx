@@ -12,7 +12,7 @@ export function MobileNav() {
   return (
     <div className="border-grid sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 h-mobile-nav flex justify-center">
       <div className="grid grid-cols-7 gap-2 items-center justify-center px-2">
-        {daysInCurrentWeek.map((day, i) => (
+        {daysInCurrentWeek.map((day) => (
           <Button variant="secondary" asChild className="h-auto flex-col gap-0">
             <Link
               to="/"

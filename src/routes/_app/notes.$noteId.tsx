@@ -1,6 +1,6 @@
 import { Editor } from "@/components/editor";
 import { db } from "@/sqlocal/client";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";

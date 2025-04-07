@@ -50,7 +50,7 @@ export const Migration20241006: Migration = {
       .execute();
   },
 
-  async down(db: Kysely<any>) {
+  async down() {
     throw new Error("Downgrade not supported");
   },
 };
