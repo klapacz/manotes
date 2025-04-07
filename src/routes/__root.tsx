@@ -1,3 +1,4 @@
+import { trpcClient } from "@/lib/trpc";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import React from "react";
@@ -17,6 +18,7 @@ const TanStackRouterDevtools =
 
 interface MyRouterContext {
   queryClient: QueryClient;
+  trpcClient: typeof trpcClient;
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({

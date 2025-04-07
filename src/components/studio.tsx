@@ -1,9 +1,12 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { type KeyboardEvent } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { sqlocal, type RawResultData } from "@/sqlocal/client";
+import { trpc } from "@/lib/trpc";
 
 export function Studio() {
+  const healthCheck = useQuery(trpc.todo.getAll.queryOptions());
+
   const submit = useMutation({
     async mutationFn({ query }: { query: string }) {
       const result = await sqlocal.execSQL(query, []);
@@ -23,6 +26,13 @@ export function Studio() {
 
   return (
     <div className="mt-2">
+      <div>
+        {healthCheck.isLoading
+          ? "Checking..."
+          : healthCheck.data
+            ? "Connected"
+            : "Disconnected"}
+      </div>
       <Textarea
         className="font-mono"
         onKeyDown={handleKeyDown}
