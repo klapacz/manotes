@@ -10,16 +10,25 @@ import {
   validateNoteUpdateMessageSchema,
   createNoteUpdateDownstreamMessage,
 } from "../../src/schemas/ws";
+import { baseLogger } from "../lib/logger";
+import { LogLayer } from "loglayer";
 
 export class GraphDurableObject extends DurableObject {
   storage: DurableObjectStorage;
   db: DrizzleSqliteDODatabase<any>;
+  log: LogLayer;
+
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.storage = ctx.storage;
     this.db = drizzle(this.storage, { logger: false });
     ctx.blockConcurrencyWhile(async () => {
       await this._migrate();
+    });
+
+    this.log = baseLogger.withContext({
+      durableObjectId: ctx.id.toString(),
+      service: "GraphDurableObject",
     });
   }
 
@@ -142,17 +151,20 @@ export class GraphDurableObject extends DurableObject {
   }
 
   async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string) {
-    console.log({
-      event: "GraphDurableObject.webSocketMessage",
-      connectedWebSockets: this.ctx.getWebSockets().length,
-    });
+    const log = this.log.withContext({ method: "webSocketMessage" });
+    log
+      .withMetadata({ connectedWebSockets: this.ctx.getWebSockets().length })
+      .info("Received message");
+
     if (typeof message !== "string") {
-      console.error("Invalid message type", message);
+      log.withMetadata({ input: message }).error("Invalid message type");
       return;
     }
     const result = validateNoteUpdateMessageSchema(message);
     if (!result.success) {
-      console.error("Invalid message schema", { message, error: result.error });
+      log
+        .withMetadata({ input: message, error: result.error })
+        .error("Invalid message schema");
       return;
     }
     const input = result.data;
@@ -176,9 +188,13 @@ export class GraphDurableObject extends DurableObject {
         serverNote.vectorClock,
         inputNote.vectorClock,
       );
-      console.log(
-        `Merging server note, onlyClientChanged: ${result}, equal: ${equal}`,
-      );
+
+      log
+        .withMetadata({
+          onlyClientChanged: result,
+          equal,
+        })
+        .info("Merging server note,");
 
       if (!equal && !result) {
         const updateDownstreamMessage = createNoteUpdateDownstreamMessage({
@@ -191,7 +207,8 @@ export class GraphDurableObject extends DurableObject {
 
         ws.send(updateDownstreamMessage);
 
-        throw new Error("Server note has changed since last seen");
+        log.error("Server note has changed since last seen");
+        return;
       }
     }
 
@@ -240,10 +257,6 @@ export class GraphDurableObject extends DurableObject {
   ) {
     // If the client closes the connection, the runtime will invoke the webSocketClose() handler.
     ws.close(code, "Durable Object is closing WebSocket");
-  }
-
-  async webSocketError(ws: WebSocket, error: unknown) {
-    console.log(`[GraphDO.webSocketError]`, error);
   }
 
   async _migrate() {
