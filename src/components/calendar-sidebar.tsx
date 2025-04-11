@@ -3,10 +3,13 @@ import {
   FileDownIcon,
   FileUpIcon,
   FolderSyncIcon,
+  SearchIcon,
 } from "lucide-react";
+import { useNotesSearchDialog } from "@/contexts/notes-search-dialog-context";
 import { CalendarNavigation } from "./calendar-navigation";
 import { ExportDatabaseDialog } from "./export-database-dialog";
 import { ImportDatabaseDialog } from "./import-database-dialog";
+import { PurgeDatabaseDialog } from "./purge-database-dialog";
 import {
   Sidebar,
   SidebarContent,
@@ -22,9 +25,6 @@ import {
 } from "./ui/sidebar";
 import { NavUser } from "./nav-user";
 import { NoteService } from "@/services/note.service";
-import { useMutation } from "@tanstack/react-query";
-import { trpc } from "@/lib/trpc";
-import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { useWsStore } from "@/routes/-ws-provider";
 
@@ -53,20 +53,20 @@ export function CalendarSidebar({
 }
 
 function CalendarSidebarActions() {
-  const purgeDatabase = useMutation(
-    trpc.note.purge.mutationOptions({
-      onSuccess: () => {
-        localStorage.removeItem("lastSync");
-        toast("Database purged successfully");
-      },
-    }),
-  );
+  const { setOpen } = useNotesSearchDialog();
 
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Actions</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={() => setOpen(true)}>
+              <SearchIcon />
+              Search notes
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
           {/* Import database */}
           <SidebarMenuItem>
             <ImportDatabaseDialog>
@@ -95,15 +95,14 @@ function CalendarSidebarActions() {
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          {/* Sync database */}
+          {/* Purge database */}
           <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => purgeDatabase.mutate()}
-              disabled={purgeDatabase.isPending}
-            >
-              <FolderSyncIcon />
-              Purge database
-            </SidebarMenuButton>
+            <PurgeDatabaseDialog>
+              <SidebarMenuButton>
+                <FolderSyncIcon />
+                Purge database
+              </SidebarMenuButton>
+            </PurgeDatabaseDialog>
           </SidebarMenuItem>
 
           <SidebarMenuItem>

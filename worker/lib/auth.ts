@@ -44,7 +44,6 @@ export const auth = betterAuth({
   },
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
-      // TODO: must reimplement this
       if (ctx.path !== "/email-otp/send-verification-otp") {
         return;
       }

@@ -5,6 +5,7 @@ import { createFileRoute, Navigate, Outlet } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { MobileNav, useDisplayMobileNav } from "@/components/mobile-nav";
 import { WsStoreProvider } from "./-ws-provider";
+import { NotesSearchDialogProvider } from "@/contexts/notes-search-dialog-context";
 
 export const Route = createFileRoute("/_app")({
   component: () => <AppLayout />,
@@ -24,14 +25,16 @@ function AppLayout() {
 
   return (
     <SidebarProvider>
-      <WsStoreProvider>
-        <NotesSearchCommandDialog />
-        <SidebarInset>
-          {displayMobileNav ? <MobileNav /> : null}
-          <Outlet />
-        </SidebarInset>
-        <CalendarSidebar side="right" className="border-l" />
-      </WsStoreProvider>
+      <NotesSearchDialogProvider>
+        <WsStoreProvider>
+          <NotesSearchCommandDialog />
+          <SidebarInset>
+            {displayMobileNav ? <MobileNav /> : null}
+            <Outlet />
+          </SidebarInset>
+          <CalendarSidebar side="right" className="border-l" />
+        </WsStoreProvider>
+      </NotesSearchDialogProvider>
     </SidebarProvider>
   );
 }

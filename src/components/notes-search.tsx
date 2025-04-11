@@ -12,11 +12,11 @@ import { noteSearchOptions } from "@/lib/query/notes";
 import { NoteService } from "@/services/note.service";
 import { DialogTitle } from "./ui/dialog";
 import { useNavigateToNote } from "@/hooks/use-navigate-to-note";
+import { useNotesSearchDialog } from "@/contexts/notes-search-dialog-context";
 
 export function NotesSearchCommandDialog() {
   const navigateToNote = useNavigateToNote();
-
-  const [open, setOpen] = React.useState(false);
+  const { open, setOpen } = useNotesSearchDialog();
   const [query, setQuery] = React.useState("");
 
   const { data } = useQuery(noteSearchOptions(query));
@@ -31,7 +31,7 @@ export function NotesSearchCommandDialog() {
 
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
-  }, []);
+  }, [setOpen]);
 
   const [value, setValue] = React.useState<string>();
 
