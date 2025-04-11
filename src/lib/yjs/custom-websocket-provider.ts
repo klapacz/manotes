@@ -4,9 +4,9 @@ import {
   createNoteUpdateMessage,
   NoteUpdateDownstreamMessage,
 } from "@/schemas/ws";
-import { debounce } from "es-toolkit";
 import { NoteService } from "@/services/note.service";
 import { YjsUtils } from "../yjs.utils";
+import { AsyncDebouncer } from "@tanstack/react-pacer";
 
 /**
  * A custom YJS provider that integrates with our existing WebSocket connection
@@ -25,6 +25,7 @@ export class CustomWebsocketProvider {
   private _destroyed: boolean = false;
   // Unsubscribe function for YDoc update listener
   private destroyListeners: (() => void) | undefined;
+  public sendUpdate: AsyncDebouncer<() => Promise<void>, []>;
 
   /**
    * Create a new CustomWebsocketProvider that integrates with the existing WebSocket
@@ -36,20 +37,25 @@ export class CustomWebsocketProvider {
 
     // Setup listeners
     this.setupListeners();
+
+    this.sendUpdate = new AsyncDebouncer(
+      async () => {
+        await this._sendUpdate();
+      },
+      { wait: 1000 },
+    );
   }
 
   /**
    * Set up the necessary event listeners
    */
   private setupListeners() {
-    const debounceSendUpdate = debounce(this.sendUpdate.bind(this), 500);
-
     // Listen for YDoc updates to send to the server
-    const updateHandler = (update: Uint8Array, origin: any) => {
+    const updateHandler = (_update: Uint8Array, origin: any) => {
       // Only send updates if they originated locally (not from remote syncs)
       if ((!origin || origin.source !== "remote") && !this.isSyncing) {
         // Debounce updates to avoid flooding the server
-        debounceSendUpdate();
+        this.sendUpdate.maybeExecute();
       }
     };
     this.ydoc.on("update", updateHandler);
@@ -63,7 +69,7 @@ export class CustomWebsocketProvider {
   /**
    * Send the current YDoc state to the server
    */
-  public async sendUpdate() {
+  private async _sendUpdate() {
     try {
       const { vector_clock } = await NoteService.get({ id: this.noteId });
 
@@ -111,7 +117,6 @@ export class CustomWebsocketProvider {
    * This would typically be called when processing a WebSocket message
    */
   public async applyRemoteUpdate(remoteNote: NoteUpdateDownstreamMessage) {
-    const debounceSendUpdate = debounce(this.sendUpdate.bind(this), 500);
     // Mark that we're syncing to prevent loops
     this.isSyncing = true;
 
@@ -149,7 +154,7 @@ export class CustomWebsocketProvider {
       });
 
       if (!equalSnapshots) {
-        debounceSendUpdate();
+        this.sendUpdate.maybeExecute();
       }
     } catch (err) {
       console.error(
@@ -172,6 +177,9 @@ export class CustomWebsocketProvider {
     if (this.destroyListeners) {
       this.destroyListeners();
     }
+    this.sendUpdate.setOptions({
+      enabled: false,
+    });
 
     // Mark as destroyed
     this._destroyed = true;

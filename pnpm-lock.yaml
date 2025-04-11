@@ -62,6 +62,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.1.8
         version: 1.1.8(@types/react-dom@19.0.4(@types/react@19.0.12))(@types/react@19.0.12)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@tanstack/react-pacer':
+        specifier: ^0.1.0
+        version: 0.1.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@tanstack/react-query':
         specifier: ^5.71.1
         version: 5.71.1(react@19.1.0)
@@ -2123,8 +2126,19 @@ packages:
     resolution: {integrity: sha512-OTRMhwidScQSA0xsc5OCtm3K/oAChe47jy1e4OY3VpXUnKrI7C8iwfQ9XDRdpdsRASH2xi6P5I0+7ksFBehaQQ==}
     engines: {node: '>=12'}
 
+  '@tanstack/pacer@0.1.0':
+    resolution: {integrity: sha512-QVzkGO5clvGj/qdX8H2wUj0QCXCLZ/pwPMnfSqhoYfpzDRkRHDj+3D+VzdcehBIVnE+GCd1D/P1tGMzfjmfrzQ==}
+    engines: {node: '>=18'}
+
   '@tanstack/query-core@5.71.1':
     resolution: {integrity: sha512-4+ZswCHOfJX+ikhXNoocamTUmJcHtB+Ljjz/oJkC7/eKB5IrzEwR4vEwZUENiPi+wISucJHR5TUbuuJ26w3kdQ==}
+
+  '@tanstack/react-pacer@0.1.0':
+    resolution: {integrity: sha512-5I3hMy/acyKCMIG+2Qt84cHwFzKPZKDlELgaJm3wMNSI9LVRlOu+4ZumgiuXnBMuqD8X55BPrCLqPlqg1fwVyw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      react: '>=16.8'
+      react-dom: '>=16.8'
 
   '@tanstack/react-query@5.71.1':
     resolution: {integrity: sha512-6BTkaSIGT58MroI4kIGXNdx/NhirXPU+75AJObLq+WBa39WmoxhzSk0YX+hqWJ/bvqZJFxslbEU4qIHaRZq+8Q==}
@@ -6330,7 +6344,15 @@ snapshots:
 
   '@tanstack/history@1.114.29': {}
 
+  '@tanstack/pacer@0.1.0': {}
+
   '@tanstack/query-core@5.71.1': {}
+
+  '@tanstack/react-pacer@0.1.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@tanstack/pacer': 0.1.0
+      react: 19.1.0
+      react-dom: 19.1.0(react@19.1.0)
 
   '@tanstack/react-query@5.71.1(react@19.1.0)':
     dependencies:
