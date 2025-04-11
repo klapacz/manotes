@@ -7,6 +7,7 @@ import {
 import { NoteService } from "@/services/note.service";
 import { YjsUtils } from "../yjs.utils";
 import { AsyncDebouncer } from "@tanstack/react-pacer";
+import { WsStore } from "@/routes/-ws-provider";
 
 /**
  * A custom YJS provider that integrates with our existing WebSocket connection
@@ -16,7 +17,7 @@ export class CustomWebsocketProvider {
   // The YJS document this provider is attached to
   public ydoc: Y.Doc;
   // The WebSocket connection
-  private ws: WebSocket;
+  private store: WsStore;
   // The note ID this provider is for
   private noteId: string;
   // A flag to track if we're currently syncing (to avoid loops)
@@ -30,10 +31,10 @@ export class CustomWebsocketProvider {
   /**
    * Create a new CustomWebsocketProvider that integrates with the existing WebSocket
    */
-  constructor(noteId: string, ydoc: Y.Doc, ws: WebSocket) {
+  constructor(noteId: string, ydoc: Y.Doc, store: WsStore) {
     this.noteId = noteId;
     this.ydoc = ydoc;
-    this.ws = ws;
+    this.store = store;
 
     // Setup listeners
     this.setupListeners();
@@ -80,8 +81,10 @@ export class CustomWebsocketProvider {
         shouldIncrementVectorClock: true,
       });
 
+      const ws = this.store.getState().ws;
+
       // Don't send updates if we're disconnected
-      if (this.ws.readyState !== WebSocket.OPEN) {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
         return;
       }
 
@@ -106,7 +109,7 @@ export class CustomWebsocketProvider {
       });
 
       // Send the update
-      this.ws.send(message);
+      ws.send(message);
     } catch (err) {
       console.error("[CustomWebsocketProvider] Failed to send update:", err);
     }

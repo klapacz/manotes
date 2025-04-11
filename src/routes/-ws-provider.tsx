@@ -5,23 +5,22 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { createStore, StoreApi, useStore } from "zustand";
 import * as Y from "yjs";
 
-type StoreContextValue = StoreApi<WsStoreState>;
-const StoreContext = createContext<StoreContextValue | null>(null);
+export type WsStore = StoreApi<WsStoreState>;
+const StoreContext = createContext<WsStore | null>(null);
 
-type WsStoreState = {
+export type WsStoreState = {
+  ws: WebSocket | null;
   providers: Map<string, CustomWebsocketProvider>;
   addProvider: (noteId: string, ydoc: Y.Doc) => void;
   removeProvider: (noteId: string, ydoc: Y.Doc) => void;
 };
 
 export const WsStoreProvider = ({ children }: React.PropsWithChildren) => {
-  const [storeRef, setStoreRef] = useState<StoreContextValue>();
+  const [storeRef, setStoreRef] = useState<WsStore>();
 
   useEffect(() => {
-    // Create a single WebSocket connection to be shared across the app
-    const socket = new WebSocket("/ws");
-
     const store = createStore<WsStoreState>((set) => ({
+      ws: null,
       providers: new Map<string, CustomWebsocketProvider>(),
       addProvider: (noteId: string, ydoc: Y.Doc) =>
         set((state) => {
@@ -40,7 +39,7 @@ export const WsStoreProvider = ({ children }: React.PropsWithChildren) => {
             ...state,
             providers: new Map(state.providers).set(
               noteId,
-              new CustomWebsocketProvider(noteId, ydoc, socket),
+              new CustomWebsocketProvider(noteId, ydoc, store),
             ),
           };
         }),
@@ -69,39 +68,97 @@ export const WsStoreProvider = ({ children }: React.PropsWithChildren) => {
         }),
     }));
 
-    // Listen for messages and route them to the appropriate provider
-    socket.addEventListener("message", async (event) => {
-      const result = parseNoteUpdateDownstreamMessage(event.data);
-      if (!result.success) {
-        console.log("Failed to parse message", event.data, result.error);
-        return;
-      }
+    const setWs = (ws: WebSocket | null) => {
+      store.setState((state) => ({
+        ...state,
+        ws: ws,
+      }));
+    };
 
-      const activeProviders = store.getState().providers;
+    function join() {
+      let destroyed = false;
+      const ws = new WebSocket("/ws");
+      // If we are running via wrangler dev, use ws:
+      let rejoined = false;
+      let startTime = Date.now();
 
-      const remoteNote = result.data;
-      console.log(`Received update for note: ${remoteNote.id}`);
+      const rejoin = async () => {
+        if (!rejoined && !destroyed) {
+          rejoined = true;
+          setWs(null);
 
-      // If we have a provider for this note, let it handle the update directly
-      const provider = activeProviders.get(remoteNote.id);
-      if (provider) {
+          // Don't try to reconnect too rapidly.
+          let timeSinceLastJoin = Date.now() - startTime;
+          if (timeSinceLastJoin < 10000) {
+            // Less than 10 seconds elapsed since last join. Pause a bit.
+            await new Promise((resolve) =>
+              setTimeout(resolve, 10000 - timeSinceLastJoin),
+            );
+          }
+
+          // OK, reconnect now!
+          join();
+        }
+      };
+
+      ws.addEventListener("open", () => {
+        console.log("WebSocket opened");
+        setWs(ws);
+      });
+
+      ws.addEventListener("close", (event) => {
         console.log(
-          `Provider found for note ${remoteNote.id}, applying update directly`,
+          "WebSocket closed, reconnecting:",
+          event.code,
+          event.reason,
         );
-        await provider.applyRemoteUpdate(remoteNote);
-      } else {
-        // Otherwise use the regular sync mechanism
-        console.log(
-          `No provider for note ${remoteNote.id}, using NoteService.syncSingle`,
-        );
-        await NoteService.syncSingle(remoteNote);
-      }
-    });
+        rejoin();
+      });
+      ws.addEventListener("error", (event) => {
+        console.log("WebSocket error, reconnecting:", event);
+        rejoin();
+      });
 
+      // Listen for messages and route them to the appropriate provider
+      ws.addEventListener("message", async (event) => {
+        const result = parseNoteUpdateDownstreamMessage(event.data);
+        if (!result.success) {
+          console.log("Failed to parse message", event.data, result.error);
+          return;
+        }
+
+        const activeProviders = store.getState().providers;
+
+        const remoteNote = result.data;
+        console.log(`Received update for note: ${remoteNote.id}`);
+
+        // If we have a provider for this note, let it handle the update directly
+        const provider = activeProviders.get(remoteNote.id);
+        if (provider) {
+          console.log(
+            `Provider found for note ${remoteNote.id}, applying update directly`,
+          );
+          await provider.applyRemoteUpdate(remoteNote);
+        } else {
+          // Otherwise use the regular sync mechanism
+          console.log(
+            `No provider for note ${remoteNote.id}, using NoteService.syncSingle`,
+          );
+          await NoteService.syncSingle(remoteNote);
+        }
+      });
+
+      return function clenup() {
+        destroyed = true;
+        ws.close();
+      };
+    }
+
+    const cleanup = join();
     setStoreRef(store);
 
     return () => {
-      socket.close();
+      cleanup();
 
       // Cleanup any active providers
       store.getState().providers.forEach((provider) => provider.destroy());

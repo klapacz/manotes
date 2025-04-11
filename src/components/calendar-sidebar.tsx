@@ -32,6 +32,8 @@ export function CalendarSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
   const activeEditors = useWsStore((store) => store.providers.size);
+  const isOnline = useWsStore((store) => !!store.ws);
+
   return (
     <Sidebar {...props}>
       <SidebarContent>
@@ -42,8 +44,11 @@ export function CalendarSidebar({
         <CalendarSidebarActions />
       </SidebarContent>
       <SidebarFooter>
-        <span className="text-xs text-muted-foreground text-center">
+        <span className="text-xs text-muted-foreground flex justify-center items-baseline gap-2">
           {activeEditors} editors active
+          <span
+            className={`h-2 w-2 block rounded-full ${isOnline ? "bg-green-500" : "bg-red-500"}`}
+          />
         </span>
         <NavUser />
       </SidebarFooter>

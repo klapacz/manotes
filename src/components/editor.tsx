@@ -82,7 +82,7 @@ function EditorInner(props: EditorInnerProps) {
       }),
     ],
     onFocus: () => {
-      noteProvider?.sendUpdate();
+      noteProvider?.sendUpdate.maybeExecute();
     },
     editorProps: {
       attributes: {
