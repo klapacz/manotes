@@ -2,4 +2,4 @@
 
 My notes app
 
-[Preview](https://mano-9fk.pages.dev/)
+[Preview](https://manotes.dev/)
