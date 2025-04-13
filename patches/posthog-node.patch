@@ -1,0 +1,26 @@
+diff --git a/lib/index.cjs.js b/lib/index.cjs.js
+index 098aceb0b4f870c3e582014c4aa473595e144586..af6ad212f5f071182986bd14beaeca0d61b2c65a 100644
+--- a/lib/index.cjs.js
++++ b/lib/index.cjs.js
+@@ -3196,7 +3196,7 @@ function nodeStackLineParser(getModule) {
+ }
+ const defaultStackParser = createStackParser(nodeStackLineParser(createGetModuleFromFilename()));
+ /** Creates a function that gets the module name from a filename */
+-function createGetModuleFromFilename(basePath = process.argv[1] ? node_path.dirname(process.argv[1]) : process.cwd(), isWindows = node_path.sep === '\\') {
++function createGetModuleFromFilename(basePath = "", isWindows = node_path.sep === '\\') {
+   const normalizedBase = isWindows ? normalizeWindowsPath(basePath) : basePath;
+   return filename => {
+     if (!filename) {
+diff --git a/lib/index.esm.js b/lib/index.esm.js
+index 1ad039142b3026a812398969ea77ff590ca78b94..f748ee11509d282357679b7a17d2bb0656bff318 100644
+--- a/lib/index.esm.js
++++ b/lib/index.esm.js
+@@ -3174,7 +3174,7 @@ function nodeStackLineParser(getModule) {
+ }
+ const defaultStackParser = createStackParser(nodeStackLineParser(createGetModuleFromFilename()));
+ /** Creates a function that gets the module name from a filename */
+-function createGetModuleFromFilename(basePath = process.argv[1] ? dirname(process.argv[1]) : process.cwd(), isWindows = sep === '\\') {
++function createGetModuleFromFilename(basePath = "", isWindows = sep === '\\') {
+   const normalizedBase = isWindows ? normalizeWindowsPath(basePath) : basePath;
+   return filename => {
+     if (!filename) {

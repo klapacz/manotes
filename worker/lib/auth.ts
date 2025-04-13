@@ -3,12 +3,8 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../db";
 import * as schema from "../db/schema/auth";
 import { createAuthMiddleware, APIError } from "better-auth/api";
-import { env } from "cloudflare:workers";
 import { emailOTP } from "better-auth/plugins";
-import { Resend } from "resend";
-import { AuthService } from "../service";
-
-const resend = new Resend(env.RESEND_API_KEY);
+import { AuthService, EmailService } from "../service";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -25,16 +21,9 @@ export const auth = betterAuth({
           });
         }
 
-        const subject = "Your login code for Manotes";
-        const messageText = `Your verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request this code, you can safely ignore this email.\n\nThanks,\nManotes Team`;
-        const messageHtml = `<p>Your verification code is: <strong>${otp}</strong></p>\n<p>This code will expire in 10 minutes.</p>\n<p>If you didn't request this code, you can safely ignore this email.</p>\n<p>Thanks,<br>Manotes Team</p>`;
-
-        await resend.emails.send({
-          from: "Manotes <no-reply@manotes.dev>",
-          to: [email],
-          subject: subject,
-          text: messageText,
-          html: messageHtml,
+        await EmailService.sendVerificationOTP({
+          email,
+          otp,
         });
       },
     }),

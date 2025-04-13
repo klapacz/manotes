@@ -128,7 +128,7 @@ export class GraphDurableObject extends DurableObject {
     this.db.delete(tables.note).run();
   }
 
-  async fetch(request: Request): Promise<Response> {
+  async fetch(): Promise<Response> {
     // Creates two ends of a WebSocket connection.
     const webSocketPair = new WebSocketPair();
     const [client, server] = Object.values(webSocketPair);
@@ -252,8 +252,8 @@ export class GraphDurableObject extends DurableObject {
   async webSocketClose(
     ws: WebSocket,
     code: number,
-    reason: string,
-    wasClean: boolean,
+    // reason: string,
+    // wasClean: boolean,
   ) {
     // If the client closes the connection, the runtime will invoke the webSocketClose() handler.
     ws.close(code, "Durable Object is closing WebSocket");

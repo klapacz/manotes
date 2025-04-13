@@ -303,7 +303,6 @@ export namespace NoteService {
     const { mergedYDoc, equalSnaphosts } = YjsUtils.mergeDocs({
       localContent: localNote.content,
       remoteContent: new Uint8Array(remoteNote.content),
-      remoteSV: new Uint8Array(remoteNote.sv),
     });
 
     return await update({

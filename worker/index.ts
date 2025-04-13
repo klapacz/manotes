@@ -1,14 +1,19 @@
 import { trpcServer } from "@hono/trpc-server";
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { auth } from "./lib/auth";
 import { createContext } from "./lib/context";
 import { appRouter } from "./routers/index";
+import { phClient } from "./lib/posthog";
 
 const app = new Hono<{
   Bindings: Cloudflare.Env;
 }>();
+
+app.use(async (ctx, next) => {
+  await next();
+  ctx.executionCtx.waitUntil(phClient.shutdown());
+});
 
 app.use(logger());
 

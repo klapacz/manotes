@@ -45,6 +45,12 @@ createRoot(document.getElementById("root")!).render(
       apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
       options={{
         api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+        loaded: function (ph) {
+          if (import.meta.env.DEV) {
+            ph.opt_out_capturing(); // opts a user out of event capture
+            ph.set_config({ disable_session_recording: true });
+          }
+        },
       }}
     >
       <App />
