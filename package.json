@@ -63,6 +63,7 @@
     "lucide-react": "^0.486.0",
     "nanoid": "^5.1.5",
     "next-themes": "^0.4.6",
+    "posthog-js": "^1.235.6",
     "prosemirror-flat-list": "^0.5.4",
     "prosemirror-test-builder": "^1.1.1",
     "react": "^19.1.0",

@@ -29,6 +29,8 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
+import { CircleCheckIcon } from "lucide-react";
+import type { AuthService } from "../../worker/service";
 
 // Email form schema
 const emailFormSchema = z.object({
@@ -55,11 +57,11 @@ export function OtpLoginForm({
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="text-xl">
-            {!userEmail ? "Sign in to your account" : "Enter verification code"}
+            {!userEmail ? "Sign in or join the waitlist" : "Enter verification code"}
           </CardTitle>
           <CardDescription>
             {!userEmail
-              ? "Enter your email to sign in"
+              ? "Enter your email to sign in. If you don't have access yet, you'll be added to the waitlist"
               : `We've sent a code to ${userEmail}`}
           </CardDescription>
         </CardHeader>
@@ -79,17 +81,71 @@ export function OtpLoginForm({
   );
 }
 
-async function sendOtpMutationFn(values: EmailFormValues) {
-  const { data, error } = await authClient.emailOtp.sendVerificationOtp({
-    email: values.email,
-    type: "sign-in",
-  });
+type SendOtpStandardResult = {
+  success: boolean;
+};
+type SendOtpWaitlistResult = {
+  code: AuthService.ProtectSigninResponseCode;
+  message: string;
+};
+type SendOtpResult = SendOtpStandardResult | SendOtpWaitlistResult;
+const protectSigninResponseCodes: AuthService.ProtectSigninResponseCode[] = [
+  "WAITLIST_FOUND",
+  "WAITLIST_CREATED",
+];
 
-  if (error) {
-    throw error;
+function isWaitlistResult(
+  result: SendOtpResult,
+): result is SendOtpWaitlistResult {
+  return "code" in result && protectSigninResponseCodes.includes(result.code);
+}
+
+type UseSendOtpMutationOpts = {
+  setUserEmail: (email: string) => void;
+};
+
+function useSendOtpMutation(opts: UseSendOtpMutationOpts) {
+  return useMutation({
+    mutationFn: async (values: EmailFormValues) => {
+      const { data, error } = await authClient.emailOtp.sendVerificationOtp({
+        email: values.email,
+        type: "sign-in",
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      return data as SendOtpResult;
+    },
+    onSuccess: (response, values) => {
+      if (isWaitlistResult(response)) {
+        return;
+      }
+
+      // Reset OTP form when switching to OTP step
+      opts.setUserEmail(values.email);
+    },
+  });
+}
+
+function SendOtpDataAlert({ data }: { data: SendOtpResult | undefined }) {
+  if (!data || !isWaitlistResult(data)) {
+    return;
   }
 
-  return data;
+  return (
+    <div className="rounded-md border border-emerald-500/50 px-4 py-3 text-emerald-600">
+      <p className="text-sm">
+        <CircleCheckIcon
+          className="me-3 -mt-0.5 inline-flex opacity-60"
+          size={16}
+          aria-hidden="true"
+        />
+        {data.message}
+      </p>
+    </div>
+  );
 }
 
 function EmailForm({
@@ -98,18 +154,13 @@ function EmailForm({
   setUserEmail: (email: string) => void;
 }) {
   // Send OTP mutation
-  const sendOtpMutation = useMutation({
-    mutationFn: sendOtpMutationFn,
+  const sendOtpMutation = useSendOtpMutation({
+    setUserEmail,
   });
 
   // Handle email form submission
   function onEmailSubmit(values: EmailFormValues) {
-    sendOtpMutation.mutateAsync(values, {
-      onSuccess: () => {
-        // Reset OTP form when switching to OTP step
-        setUserEmail(values.email);
-      },
-    });
+    sendOtpMutation.mutateAsync(values);
   }
 
   // Email form
@@ -135,6 +186,8 @@ function EmailForm({
               </AlertDescription>
             </Alert>
           ) : null}
+
+          <SendOtpDataAlert data={sendOtpMutation.data} />
 
           <FormField
             control={emailForm.control}
@@ -178,8 +231,8 @@ function OTPForm({
   setUserEmail: (email: string | undefined) => void;
 }) {
   // Send OTP mutation
-  const sendOtpMutation = useMutation({
-    mutationFn: sendOtpMutationFn,
+  const sendOtpMutation = useSendOtpMutation({
+    setUserEmail,
   });
 
   // OTP form

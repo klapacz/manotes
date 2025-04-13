@@ -6,6 +6,7 @@ import { createAuthMiddleware, APIError } from "better-auth/api";
 import { env } from "cloudflare:workers";
 import { emailOTP } from "better-auth/plugins";
 import { Resend } from "resend";
+import { AuthService } from "../service";
 
 const resend = new Resend(env.RESEND_API_KEY);
 
@@ -47,14 +48,10 @@ export const auth = betterAuth({
       if (ctx.path !== "/email-otp/send-verification-otp") {
         return;
       }
-      const adminEmails = env.ADMIN_EMAIL.split(",").map((email) =>
-        email.trim(),
-      );
-      if (!adminEmails.includes(ctx.body?.email)) {
-        throw new APIError("BAD_REQUEST", {
-          message: "Sorry, registration is restricted for now.",
-        });
-      }
+
+      const email = AuthService.serializeEmail(ctx.body?.email);
+
+      await AuthService.protectSignIn(email);
     }),
   },
 });

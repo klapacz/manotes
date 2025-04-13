@@ -1,4 +1,4 @@
-# Mano
+# Manotes
 
 My notes app
 
