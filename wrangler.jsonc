@@ -37,11 +37,10 @@
       "migrations_dir": "./migrations/d1",
     },
   ],
-  "rules": [
+  "routes": [
     {
-      "type": "Text",
-      "globs": ["**/*.sql"],
-      "fallthrough": true,
+      "pattern": "manotes.dev",
+      "custom_domain": true,
     },
   ],
   /**

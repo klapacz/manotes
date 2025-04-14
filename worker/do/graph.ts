@@ -21,7 +21,7 @@ export class GraphDurableObject extends DurableObject {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.storage = ctx.storage;
-    this.db = drizzle(this.storage, { logger: false });
+    this.db = drizzle(this.storage, { logger: false, casing: "snake_case" });
     ctx.blockConcurrencyWhile(async () => {
       await this._migrate();
     });

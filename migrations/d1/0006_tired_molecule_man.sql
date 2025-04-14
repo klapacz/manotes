@@ -1,0 +1,1 @@
+ALTER TABLE `waitlist` ADD `created_at` text;
