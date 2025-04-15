@@ -20,7 +20,7 @@ function AppLayout() {
   }
 
   if (!isPending && !data) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
   return (

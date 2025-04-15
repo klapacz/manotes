@@ -2,17 +2,15 @@ import { Fragment } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { formatISO, startOfMonth } from "date-fns";
 import { z } from "zod";
-import { zodSearchValidator } from "@tanstack/router-zod-adapter";
+import { fallback, zodSearchValidator } from "@tanstack/router-zod-adapter";
 import { NoteService } from "@/services/note.service";
 import { Editor } from "@/components/editor";
 import { authClient } from "@/lib/auth-client";
 
+const today = formatISO(new Date(), { representation: "date" });
+
 export const indexSearchSchema = z.object({
-  date: z
-    .string()
-    .date()
-    // default to today
-    .default(() => formatISO(new Date(), { representation: "date" })),
+  date: fallback(z.string().date(), today).default(today),
 });
 
 export const Route = createFileRoute("/_app/graph")({

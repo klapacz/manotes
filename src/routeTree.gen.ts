@@ -15,6 +15,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Route as rootRoute } from './routes/__root'
 import { Route as AuthImport } from './routes/_auth'
 import { Route as AppImport } from './routes/_app'
+import { Route as IndexImport } from './routes/index'
 import { Route as AuthLoginImport } from './routes/_auth/login'
 import { Route as AppGraphImport } from './routes/_app/graph'
 import { Route as AppNotesNoteIdImport } from './routes/_app/notes.$noteId'
@@ -32,6 +33,12 @@ const AuthRoute = AuthImport.update({
 
 const AppRoute = AppImport.update({
   id: '/_app',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const IndexRoute = IndexImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -63,6 +70,13 @@ const AppNotesNoteIdRoute = AppNotesNoteIdImport.update({
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexImport
+      parentRoute: typeof rootRoute
+    }
     '/_app': {
       id: '/_app'
       path: ''
@@ -135,6 +149,7 @@ const AuthRouteChildren: AuthRouteChildren = {
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '': typeof AuthRouteWithChildren
   '/graph': typeof AppGraphRoute
   '/login': typeof AuthLoginRoute
@@ -143,6 +158,7 @@ export interface FileRoutesByFullPath {
 }
 
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '': typeof AuthRouteWithChildren
   '/graph': typeof AppGraphRoute
   '/login': typeof AuthLoginRoute
@@ -152,6 +168,7 @@ export interface FileRoutesByTo {
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
+  '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
   '/_app/graph': typeof AppGraphRoute
@@ -162,11 +179,12 @@ export interface FileRoutesById {
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '' | '/graph' | '/login' | '/studio' | '/notes/$noteId'
+  fullPaths: '/' | '' | '/graph' | '/login' | '/studio' | '/notes/$noteId'
   fileRoutesByTo: FileRoutesByTo
-  to: '' | '/graph' | '/login' | '/studio' | '/notes/$noteId'
+  to: '/' | '' | '/graph' | '/login' | '/studio' | '/notes/$noteId'
   id:
     | '__root__'
+    | '/'
     | '/_app'
     | '/_auth'
     | '/_app/graph'
@@ -177,11 +195,13 @@ export interface FileRouteTypes {
 }
 
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
 }
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
 }
@@ -196,9 +216,13 @@ export const routeTree = rootRoute
     "__root__": {
       "filePath": "__root.tsx",
       "children": [
+        "/",
         "/_app",
         "/_auth"
       ]
+    },
+    "/": {
+      "filePath": "index.tsx"
     },
     "/_app": {
       "filePath": "_app.tsx",
