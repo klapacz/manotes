@@ -46,7 +46,7 @@ export function CalendarNavigation() {
               representation: "date",
             });
             navigate({
-              to: "/",
+              to: "/graph",
               search: { date: dateString },
             });
           }}

@@ -9,7 +9,7 @@ export function useNavigateToNote() {
     (note: NoteService.Record) => {
       if (note.daily_at) {
         navigate({
-          to: "/",
+          to: "/graph",
           search: {
             date: note.daily_at,
           },

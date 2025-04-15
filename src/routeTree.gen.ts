@@ -15,8 +15,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Route as rootRoute } from './routes/__root'
 import { Route as AuthImport } from './routes/_auth'
 import { Route as AppImport } from './routes/_app'
-import { Route as AppIndexImport } from './routes/_app/index'
 import { Route as AuthLoginImport } from './routes/_auth/login'
+import { Route as AppGraphImport } from './routes/_app/graph'
 import { Route as AppNotesNoteIdImport } from './routes/_app/notes.$noteId'
 
 // Create Virtual Routes
@@ -35,12 +35,6 @@ const AppRoute = AppImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const AppIndexRoute = AppIndexImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppRoute,
-} as any)
-
 const AppStudioLazyRoute = AppStudioLazyImport.update({
   id: '/studio',
   path: '/studio',
@@ -51,6 +45,12 @@ const AuthLoginRoute = AuthLoginImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => AuthRoute,
+} as any)
+
+const AppGraphRoute = AppGraphImport.update({
+  id: '/graph',
+  path: '/graph',
+  getParentRoute: () => AppRoute,
 } as any)
 
 const AppNotesNoteIdRoute = AppNotesNoteIdImport.update({
@@ -77,6 +77,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthImport
       parentRoute: typeof rootRoute
     }
+    '/_app/graph': {
+      id: '/_app/graph'
+      path: '/graph'
+      fullPath: '/graph'
+      preLoaderRoute: typeof AppGraphImport
+      parentRoute: typeof AppImport
+    }
     '/_auth/login': {
       id: '/_auth/login'
       path: '/login'
@@ -89,13 +96,6 @@ declare module '@tanstack/react-router' {
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof AppStudioLazyImport
-      parentRoute: typeof AppImport
-    }
-    '/_app/': {
-      id: '/_app/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof AppIndexImport
       parentRoute: typeof AppImport
     }
     '/_app/notes/$noteId': {
@@ -111,14 +111,14 @@ declare module '@tanstack/react-router' {
 // Create and export the route tree
 
 interface AppRouteChildren {
+  AppGraphRoute: typeof AppGraphRoute
   AppStudioLazyRoute: typeof AppStudioLazyRoute
-  AppIndexRoute: typeof AppIndexRoute
   AppNotesNoteIdRoute: typeof AppNotesNoteIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppGraphRoute: AppGraphRoute,
   AppStudioLazyRoute: AppStudioLazyRoute,
-  AppIndexRoute: AppIndexRoute,
   AppNotesNoteIdRoute: AppNotesNoteIdRoute,
 }
 
@@ -136,17 +136,17 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 export interface FileRoutesByFullPath {
   '': typeof AuthRouteWithChildren
+  '/graph': typeof AppGraphRoute
   '/login': typeof AuthLoginRoute
   '/studio': typeof AppStudioLazyRoute
-  '/': typeof AppIndexRoute
   '/notes/$noteId': typeof AppNotesNoteIdRoute
 }
 
 export interface FileRoutesByTo {
   '': typeof AuthRouteWithChildren
+  '/graph': typeof AppGraphRoute
   '/login': typeof AuthLoginRoute
   '/studio': typeof AppStudioLazyRoute
-  '/': typeof AppIndexRoute
   '/notes/$noteId': typeof AppNotesNoteIdRoute
 }
 
@@ -154,24 +154,24 @@ export interface FileRoutesById {
   __root__: typeof rootRoute
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
+  '/_app/graph': typeof AppGraphRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_app/studio': typeof AppStudioLazyRoute
-  '/_app/': typeof AppIndexRoute
   '/_app/notes/$noteId': typeof AppNotesNoteIdRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '' | '/login' | '/studio' | '/' | '/notes/$noteId'
+  fullPaths: '' | '/graph' | '/login' | '/studio' | '/notes/$noteId'
   fileRoutesByTo: FileRoutesByTo
-  to: '' | '/login' | '/studio' | '/' | '/notes/$noteId'
+  to: '' | '/graph' | '/login' | '/studio' | '/notes/$noteId'
   id:
     | '__root__'
     | '/_app'
     | '/_auth'
+    | '/_app/graph'
     | '/_auth/login'
     | '/_app/studio'
-    | '/_app/'
     | '/_app/notes/$noteId'
   fileRoutesById: FileRoutesById
 }
@@ -203,8 +203,8 @@ export const routeTree = rootRoute
     "/_app": {
       "filePath": "_app.tsx",
       "children": [
+        "/_app/graph",
         "/_app/studio",
-        "/_app/",
         "/_app/notes/$noteId"
       ]
     },
@@ -214,16 +214,16 @@ export const routeTree = rootRoute
         "/_auth/login"
       ]
     },
+    "/_app/graph": {
+      "filePath": "_app/graph.tsx",
+      "parent": "/_app"
+    },
     "/_auth/login": {
       "filePath": "_auth/login.tsx",
       "parent": "/_auth"
     },
     "/_app/studio": {
       "filePath": "_app/studio.lazy.tsx",
-      "parent": "/_app"
-    },
-    "/_app/": {
-      "filePath": "_app/index.tsx",
       "parent": "/_app"
     },
     "/_app/notes/$noteId": {

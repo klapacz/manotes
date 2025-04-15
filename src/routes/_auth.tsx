@@ -10,7 +10,7 @@ function RouteComponent() {
   const { data } = authClient.useSession();
 
   if (data) {
-    return <Navigate to="/" />;
+    return <Navigate to="/graph" />;
   }
 
   return (

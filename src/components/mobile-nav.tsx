@@ -20,7 +20,7 @@ export function MobileNav() {
             className="flex-col gap-0  h-[54px]"
           >
             <Link
-              to="/"
+              to="/graph"
               search={{ date: formatISO(day, { representation: "date" }) }}
             >
               {day.toLocaleString(undefined, {

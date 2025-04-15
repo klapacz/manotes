@@ -189,7 +189,7 @@ function useEditorFocus(
     if (note.daily_at && currentDate !== note.daily_at) {
       // Navigate to the note's date
       navigate({
-        to: "/",
+        to: "/graph",
         search: {
           date: note.daily_at,
         },

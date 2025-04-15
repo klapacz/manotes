@@ -15,7 +15,7 @@ export const indexSearchSchema = z.object({
     .default(() => formatISO(new Date(), { representation: "date" })),
 });
 
-export const Route = createFileRoute("/_app/")({
+export const Route = createFileRoute("/_app/graph")({
   component: Index,
   validateSearch: zodSearchValidator(indexSearchSchema),
   loaderDeps: ({ search: { date } }) => {
