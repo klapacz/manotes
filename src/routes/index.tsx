@@ -75,10 +75,10 @@ function RouteComponent() {
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <PaperclipIcon className="size-6" />
             </div>
-            <h1 className="max-w-lg text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+            <h1 className="max-w-xl text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
               Capture your ideas with Manotes
             </h1>
-            <p className="max-w-lg text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+            <p className="max-w-xl text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
               The modern note-taking app designed to help you organize your
               thoughts, connect ideas, and boost productivity.
             </p>
