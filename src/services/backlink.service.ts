@@ -1,6 +1,6 @@
 import { ProseUtils } from "@/lib/prose.utils";
 import { Node as ProsemirrorNode } from "@tiptap/pm/model";
-import { db } from "@/sqlocal/client";
+import { BacklinkRepo } from "./backlink.repo";
 
 export namespace BacklinkService {
   export async function recreateForNote({
@@ -12,19 +12,15 @@ export namespace BacklinkService {
   }) {
     const backlinks = ProseUtils.findAllBacklinks(node);
 
-    // backlinks
-    await db.deleteFrom("backlinks").where("source_id", "=", noteId).execute();
+    await BacklinkRepo.deleteForNote({ noteId });
 
     if (backlinks.size > 0) {
-      await db
-        .insertInto("backlinks")
-        .values(
-          Array.from(backlinks).map((backlink) => ({
-            source_id: noteId,
-            target_id: backlink,
-          })),
-        )
-        .execute();
+      await BacklinkRepo.createMany(
+        Array.from(backlinks).map((backlink) => ({
+          source_id: noteId,
+          target_id: backlink,
+        })),
+      );
     }
   }
 }

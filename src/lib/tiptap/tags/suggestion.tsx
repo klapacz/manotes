@@ -20,10 +20,9 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import type { MentionNodeAttrs } from "@tiptap/extension-mention";
-import { db } from "@/sqlocal/client";
 import { PluginKey } from "@tiptap/pm/state";
-import { nanoid } from "nanoid";
 import { useMutation } from "@tanstack/react-query";
+import { TagService } from "@/services/tag.service";
 
 type TagSearchRecord = {
   id: string;
@@ -80,19 +79,12 @@ const TagList = forwardRef<TagListRef, TagListProps>((props, ref) => {
     }
   }, [props.items, props.query]);
 
-  // TODO: create a tags service
   const addMutation = useMutation({
     mutationFn: async () => {
       if (!props.query.trim()) {
         throw new Error("Tag must have name");
       }
-      const id = nanoid();
-      const tag = await db
-        .insertInto("tags")
-        .values({ id, name: props.query.trim() })
-        .returning(["id", "name as label"])
-        .executeTakeFirstOrThrow();
-      return tag;
+      return await TagService.create({ name: props.query.trim() });
     },
     onSuccess: (tag) => {
       props.command(tag);
@@ -155,12 +147,12 @@ export const tagSuggestion: Omit<
 
   pluginKey: new PluginKey("tag"),
 
-  items: ({ query }: { query: string }) => {
-    return db
-      .selectFrom("tags")
-      .select(["id", "name as label"])
-      .where("name", "like", `%${query}%`)
-      .execute();
+  items: async ({ query }: { query: string }) => {
+    const tags = await TagService.search({ name: query });
+    return tags.map((tag) => ({
+      id: tag.id,
+      label: tag.name,
+    }));
   },
 
   render: () => {

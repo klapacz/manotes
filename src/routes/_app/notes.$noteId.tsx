@@ -1,11 +1,10 @@
 import { Editor } from "@/components/editor";
-import { db } from "@/sqlocal/client";
 import { createFileRoute } from "@tanstack/react-router";
+import { NoteService } from "@/services/note.service";
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
-import type { NoteService } from "@/services/note.service";
 import { Tag } from "@/lib/tiptap/tags/tag";
 import LinkExtension from "@tiptap/extension-link";
 import { FlatListNode } from "@/lib/tiptap/flat-list-extension";
@@ -22,28 +21,7 @@ import { yXmlFragmentToProseMirrorRootNode } from "y-prosemirror";
 export const Route = createFileRoute("/_app/notes/$noteId")({
   component: NotePage,
   loader: async ({ params }) => {
-    // TODO: use repo
-    const [note, backlinks] = await Promise.all([
-      db
-        .selectFrom("notes")
-        .where("notes.id", "=", params.noteId)
-        .selectAll("notes")
-        .selectAll("notes")
-        .executeTakeFirstOrThrow(),
-      db
-        .selectFrom("backlinks")
-        .where("backlinks.target_id", "=", params.noteId)
-        .innerJoin(
-          "notes as source_notes",
-          "source_notes.id",
-          "backlinks.source_id",
-        )
-        .orderBy("source_notes.daily_at", "desc")
-        .selectAll("source_notes")
-        .execute(),
-    ]);
-
-    return { note, backlinks };
+    return await NoteService.getWithBacklinks(params.noteId);
   },
 
   // Set staleTime to 0 to consider data stale immediately after loading

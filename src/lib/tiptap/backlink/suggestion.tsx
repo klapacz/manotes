@@ -24,8 +24,6 @@ import type { MentionNodeAttrs } from "@tiptap/extension-mention";
 
 import { NoteService } from "@/services/note.service";
 
-import { db } from "@/sqlocal/client";
-
 import { useMutation } from "@tanstack/react-query";
 
 type NoteSearchRecord = {
@@ -149,12 +147,12 @@ export const backlinkSuggestion: Omit<
   SuggestionOptions<NoteSearchRecord, MentionNodeAttrs>,
   "editor"
 > = {
-  items: ({ query }: { query: string }) => {
-    return db
-      .selectFrom("notes")
-      .select(["id", "title as label"])
-      .where("title", "like", `%${query}%`)
-      .execute();
+  items: async ({ query }: { query: string }) => {
+    const notes = await NoteService.search({ title: query });
+    return notes.map((note) => ({
+      id: note.id,
+      label: note.title,
+    }));
   },
 
   render: () => {

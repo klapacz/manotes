@@ -1,28 +1,13 @@
-import { Node as ProsemirrorNode } from "@tiptap/pm/model";
-import { db } from "@/sqlocal/client";
-import { ProseUtils } from "@/lib/prose.utils";
+import { TagRepo } from "./tag.repo";
+import { nanoid } from "nanoid";
 
 export namespace TagService {
-  export async function recreateForNote({
-    node,
-    noteId,
-  }: {
-    node: ProsemirrorNode;
-    noteId: string;
-  }) {
-    const tags = ProseUtils.findAllTags(node);
-    await db.deleteFrom("notes_tags").where("note_id", "=", noteId).execute();
+  export async function create({ name }: { name: string }) {
+    const id = nanoid();
+    return await TagRepo.create({ id, name: name.trim() });
+  }
 
-    if (tags.size > 0) {
-      await db
-        .insertInto("notes_tags")
-        .values(
-          Array.from(tags).map((tag) => ({
-            note_id: noteId,
-            tag_id: tag,
-          })),
-        )
-        .execute();
-    }
+  export async function search({ name }: { name: string }) {
+    return await TagRepo.search({ name: name });
   }
 }

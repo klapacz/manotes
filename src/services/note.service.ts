@@ -1,5 +1,4 @@
 import { ProseUtils } from "@/lib/prose.utils";
-import { db } from "@/sqlocal/client";
 import type { NotesTable } from "@/sqlocal/schema";
 import type { JSONContent } from "@tiptap/core";
 import { formatISO, endOfMonth, eachDayOfInterval, format } from "date-fns";
@@ -12,8 +11,9 @@ import { RouterInput, RouterOutput, trpcClient } from "@/lib/trpc";
 import { toast } from "sonner";
 import { VectorClock } from "worker/do/schema";
 import { BacklinkService } from "./backlink.service";
-import { TagService } from "./tag.service";
 import { NoteUpdateDownstreamMessage } from "@/schemas/ws";
+import { NoteRepo } from "./note.repo";
+import { NoteTagService } from "./note-tag.service";
 
 export namespace NoteService {
   export type Record = Selectable<NotesTable>;
@@ -28,17 +28,13 @@ export namespace NoteService {
     const ydoc = YjsUtils.prosemirrorJSONToYDoc(emptyNoteJson);
     const clientId = getClientId();
 
-    const note = await db
-      .insertInto("notes")
-      .values({
-        id: nanoid(),
-        title: title,
-        content: Y.encodeStateAsUpdate(ydoc),
-        daily_at: null,
-        vector_clock: JSON.stringify({ [clientId]: 0 }),
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
+    const note = await NoteRepo.create({
+      id: nanoid(),
+      title: title,
+      content: Y.encodeStateAsUpdate(ydoc),
+      daily_at: null,
+      vector_clock: JSON.stringify({ [clientId]: 0 }),
+    });
 
     return note;
   }
@@ -60,7 +56,7 @@ export namespace NoteService {
       node,
       noteId,
     });
-    await TagService.recreateForNote({
+    await NoteTagService.recreateForNote({
       node,
       noteId,
     });
@@ -78,16 +74,11 @@ export namespace NoteService {
     }
 
     // note
-    const noteUpdated = await db
-      .updateTable("notes")
-      .where("id", "=", noteId)
-      .set({
-        content: Y.encodeStateAsUpdate(params.ydoc), // The actual content
-        title: firstHeading ?? "Untitled",
-        vector_clock: JSON.stringify(newVectorClock),
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
+    const noteUpdated = await NoteRepo.update(noteId, {
+      content: Y.encodeStateAsUpdate(params.ydoc), // The actual content
+      title: firstHeading ?? "Untitled",
+      vector_clock: JSON.stringify(newVectorClock),
+    });
 
     return noteUpdated;
   }
@@ -106,9 +97,11 @@ export namespace NoteService {
       representation: "date",
     });
 
-    const notesExisting = await listDaily({
-      rangeStart: monthStartISO,
-      rangeEnd: monthEndISO,
+    const notesExisting = await NoteRepo.listDaily({
+      range: {
+        start: monthStartISO,
+        end: monthEndISO,
+      },
     });
 
     const dates = eachDayOfInterval({
@@ -167,36 +160,9 @@ export namespace NoteService {
       };
     });
 
-    const notesInserted = await db
-      .insertInto("notes")
-      .values(notesToInsert)
-      .returningAll()
-      .execute();
+    const notesInserted = await NoteRepo.createMany(notesToInsert);
 
     return notesInserted;
-  }
-
-  type ListDailyParams = {
-    rangeStart: string;
-    rangeEnd: string;
-  };
-
-  async function listDaily(params: ListDailyParams): Promise<Record[]> {
-    const { rangeStart, rangeEnd } = params;
-
-    const notes = await db
-      .selectFrom("notes")
-      .orderBy("notes.title", "asc")
-      .selectAll("notes")
-      .where((eb) => {
-        return eb.and([
-          eb("daily_at", ">=", rangeStart),
-          eb("daily_at", "<=", rangeEnd),
-        ]);
-      })
-      .execute();
-
-    return notes;
   }
 
   function getEmptyNoteJSON(title: string): JSONContent {
@@ -226,10 +192,7 @@ export namespace NoteService {
   type RemoteNoteInput = RouterInput["note"]["save"]["notes"][0];
 
   export async function sync() {
-    const localMetadata = await db
-      .selectFrom("notes")
-      .select(["notes.id", "notes.vector_clock as vectorClock"])
-      .execute();
+    const localMetadata = await NoteRepo.selectMetadata();
 
     const remoteNotes = await trpcClient.note.getSyncPlan.mutate({
       localMetadata,
@@ -242,7 +205,7 @@ export namespace NoteService {
     const createdNotes = [];
 
     for (const remoteNote of remoteNotes.notesToDownload) {
-      const localNote = await find({ id: remoteNote.id });
+      const localNote = await NoteRepo.find({ id: remoteNote.id });
 
       if (!localNote) {
         const createdNote = await createLocalNoteFromRemote(remoteNote);
@@ -257,7 +220,7 @@ export namespace NoteService {
     const notesToUpload: RemoteNoteInput[] = [];
 
     for (const noteToUploadId of remoteNotes.notesToUpload) {
-      const localNote = await find({ id: noteToUploadId });
+      const localNote = await NoteRepo.find({ id: noteToUploadId });
 
       if (!localNote) {
         continue;
@@ -324,22 +287,18 @@ export namespace NoteService {
       node,
       noteId: remoteNote.id,
     });
-    await TagService.recreateForNote({
+    await NoteTagService.recreateForNote({
       node,
       noteId: remoteNote.id,
     });
 
-    const note = await db
-      .insertInto("notes")
-      .values({
-        id: remoteNote.id,
-        title: firstHeading ?? "Untitled",
-        content: content,
-        daily_at: remoteNote.dailyAt,
-        vector_clock: JSON.stringify(remoteNote.vectorClock),
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
+    const note = await NoteRepo.create({
+      id: remoteNote.id,
+      title: firstHeading ?? "Untitled",
+      content: content,
+      daily_at: remoteNote.dailyAt,
+      vector_clock: JSON.stringify(remoteNote.vectorClock),
+    });
 
     return note;
   }
@@ -348,7 +307,7 @@ export namespace NoteService {
     const mergedNotes = [];
     const createdNotes = [];
 
-    const localNote = await find({ id: remoteNote.id });
+    const localNote = await NoteRepo.find({ id: remoteNote.id });
     let note;
 
     if (!localNote) {
@@ -393,26 +352,19 @@ export namespace NoteService {
     );
   }
 
-  export async function find({ id }: { id: string }) {
-    const note = await db
-      .selectFrom("notes")
-      .selectAll("notes")
-      .where((eb) => {
-        return eb.and([eb("notes.id", "=", id)]);
-      })
-      .executeTakeFirst();
-    return note;
+  export async function search(opts: { title: string }): Promise<Record[]> {
+    return await NoteRepo.search(opts);
+  }
+
+  export async function getWithBacklinks(noteId: string): Promise<{
+    note: Record;
+    backlinks: Record[];
+  }> {
+    return await NoteRepo.getWithBacklinks({ noteId });
   }
 
   export async function get({ id }: { id: string }) {
-    const note = await db
-      .selectFrom("notes")
-      .selectAll("notes")
-      .where((eb) => {
-        return eb.and([eb("notes.id", "=", id)]);
-      })
-      .executeTakeFirstOrThrow();
-    return note;
+    return await NoteRepo.get({ id });
   }
 
   export function formatDailyNoteTitle(date: string) {
