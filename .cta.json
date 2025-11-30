@@ -1,0 +1,12 @@
+{
+  "projectName": "manotes-rewrite",
+  "mode": "file-router",
+  "typescript": true,
+  "tailwind": true,
+  "packageManager": "pnpm",
+  "addOnOptions": {},
+  "git": true,
+  "version": 1,
+  "framework": "solid",
+  "chosenAddOns": []
+}
