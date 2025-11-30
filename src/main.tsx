@@ -3,6 +3,7 @@ import { render } from "solid-js/web";
 
 import { routeTree } from "./routeTree.gen";
 import "./styles.css";
+import "./db";
 
 const router = createRouter({
   routeTree,
