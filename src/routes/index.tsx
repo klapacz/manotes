@@ -1,11 +1,11 @@
-import * as Solid from 'solid-js'
-import { createFileRoute } from '@tanstack/solid-router'
+import * as Solid from "solid-js";
+import { createFileRoute } from "@tanstack/solid-router";
 
-import logo from '../logo.svg'
+import logo from "../logo.svg";
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute("/")({
   component: IndexComponent,
-})
+});
 
 function IndexComponent() {
   return (
@@ -37,5 +37,5 @@ function IndexComponent() {
         </a>
       </header>
     </div>
-  )
+  );
 }
