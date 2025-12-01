@@ -82,11 +82,20 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
       );
     });
 
+    const reactiveList = Effect.fn("NoteRepo.reactiveList")(function* () {
+      const stream = yield* db.reactiveQuery((db) =>
+        db.select().from(Tables.notes),
+      );
+
+      return stream;
+    });
+
     return {
       create,
       updateById,
       getById,
       list,
+      reactiveList,
     };
   }),
 }) {}

@@ -1,4 +1,4 @@
-import { Effect, Data, Context, Option, Exit } from "effect";
+import { Effect, Data, Context, Option, Exit, Stream } from "effect";
 import { type Transaction } from "sqlocal";
 
 import type { RunnableQuery as DrizzleQuery } from "drizzle-orm/runnable-query";
@@ -17,7 +17,10 @@ export class NotFoundError extends Data.TaggedError("DB.NotFoundError")<{}> {}
 
 export class Service extends Effect.Service<Service>()("DB", {
   effect: Effect.gen(function* () {
-    const sqlocal = new SQLocalDrizzle("database.sqlite3");
+    const sqlocal = new SQLocalDrizzle({
+      databasePath: "database.sqlite3",
+      reactive: true,
+    });
 
     const drizzle = createDrizzle(sqlocal.driver, sqlocal.batchDriver);
 
@@ -45,6 +48,27 @@ export class Service extends Effect.Service<Service>()("DB", {
             Exit.isSuccess(exit) ? tx.commit() : tx.rollback(),
           );
         },
+      );
+    });
+
+    const reactiveQuery = Effect.fn("DB.reactiveQuery")(function* <
+      T extends Record<string, any>[],
+    >(cb: QueryCallbackFn<T>) {
+      return Stream.asyncPush<T>((emit) =>
+        Effect.acquireRelease(
+          // Acquire: subscribe and return the subscription handle
+          Effect.sync(() => {
+            const statement = cb(drizzle);
+            const subscription = sqlocal
+              .reactiveQuery(statement)
+              .subscribe((data) => {
+                emit.single(data as T); // Emit each value
+              });
+            return subscription;
+          }),
+          // Release: cleanup the subscription
+          (subscription) => Effect.sync(() => subscription.unsubscribe()),
+        ),
       );
     });
 
@@ -77,6 +101,7 @@ export class Service extends Effect.Service<Service>()("DB", {
       transaction,
       sqlocal,
       query,
+      reactiveQuery,
       find,
     };
   }),

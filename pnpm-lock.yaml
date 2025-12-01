@@ -15,7 +15,7 @@ importers:
     dependencies:
       '@effectify/solid-effect-atom':
         specifier: ^0.1.5
-        version: 0.1.5(@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.19.8))(effect@3.19.8))(@effect/platform@0.92.1(effect@3.19.8))(@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.19.8))(effect@3.19.8))(effect@3.19.8)(solid-js@1.9.10)
+        version: 0.1.5(@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.92.1(effect@3.17.14))(@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)(solid-js@1.9.10)
       '@tailwindcss/vite':
         specifier: ^4.0.6
         version: 4.1.17(vite@7.2.4(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0))
@@ -35,8 +35,8 @@ importers:
         specifier: ^0.44.7
         version: 0.44.7(patch_hash=fc06771d64f348526ce73f91aec82565f1f79942e4ffc60a43940e8dc520b15d)(kysely@0.28.8)
       effect:
-        specifier: ^3.19.8
-        version: 3.19.8
+        specifier: 3.17.14
+        version: 3.17.14
       kysely:
         specifier: ^0.28.8
         version: 0.28.8
@@ -47,7 +47,7 @@ importers:
         specifier: ^0.16.3
         version: 0.16.3(@shikijs/types@3.17.0)(@types/hast@3.0.4)(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-transform@1.10.5)(prosemirror-view@1.41.3)(solid-js@1.9.10)(yjs@13.6.27)
       solid-js:
-        specifier: ^1.9.9
+        specifier: 1.9.10
         version: 1.9.10
       sqlocal:
         specifier: ^0.16.0
@@ -1732,8 +1732,8 @@ packages:
       sqlite3:
         optional: true
 
-  effect@3.19.8:
-    resolution: {integrity: sha512-OmLw8EfH02vdmyU2fO4uY9He/wepwKI5E/JNpE2pseaWWUbaYOK9UlxIiKP20ZEqQr+S/jSqRDGmpiqD/2DeCQ==}
+  effect@3.17.14:
+    resolution: {integrity: sha512-VpIZz72+cg3357vLkNHN8CG+Uq2X0QHNv3qkyGInvG3lG5K7Ala1JliGIAdgNvwzaN37J27FuzVD8m0kEiv2Ig==}
 
   electron-to-chromium@1.5.262:
     resolution: {integrity: sha512-NlAsMteRHek05jRUxUR0a5jpjYq9ykk6+kO0yRaMi5moe7u0fVIOeQ3Y30A8dIiWFBNUoQGi1ljb1i5VtS9WQQ==}
@@ -2874,38 +2874,38 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
-  '@effect-atom/atom@0.3.2(@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.19.8))(effect@3.19.8))(@effect/platform@0.92.1(effect@3.19.8))(@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.19.8))(effect@3.19.8))(effect@3.19.8)':
+  '@effect-atom/atom@0.3.2(@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.92.1(effect@3.17.14))(@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)':
     dependencies:
-      '@effect/experimental': 0.56.0(@effect/platform@0.92.1(effect@3.19.8))(effect@3.19.8)
-      '@effect/platform': 0.92.1(effect@3.19.8)
-      '@effect/rpc': 0.71.2(@effect/platform@0.92.1(effect@3.19.8))(effect@3.19.8)
-      effect: 3.19.8
+      '@effect/experimental': 0.56.0(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14)
+      '@effect/platform': 0.92.1(effect@3.17.14)
+      '@effect/rpc': 0.71.2(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14)
+      effect: 3.17.14
 
-  '@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.19.8))(effect@3.19.8)':
+  '@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14)':
     dependencies:
-      '@effect/platform': 0.92.1(effect@3.19.8)
-      effect: 3.19.8
+      '@effect/platform': 0.92.1(effect@3.17.14)
+      effect: 3.17.14
       uuid: 11.1.0
 
   '@effect/language-service@0.58.0': {}
 
-  '@effect/platform@0.92.1(effect@3.19.8)':
+  '@effect/platform@0.92.1(effect@3.17.14)':
     dependencies:
-      effect: 3.19.8
+      effect: 3.17.14
       find-my-way-ts: 0.1.6
       msgpackr: 1.11.5
       multipasta: 0.2.7
 
-  '@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.19.8))(effect@3.19.8)':
+  '@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14)':
     dependencies:
-      '@effect/platform': 0.92.1(effect@3.19.8)
-      effect: 3.19.8
+      '@effect/platform': 0.92.1(effect@3.17.14)
+      effect: 3.17.14
       msgpackr: 1.11.5
 
-  '@effectify/solid-effect-atom@0.1.5(@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.19.8))(effect@3.19.8))(@effect/platform@0.92.1(effect@3.19.8))(@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.19.8))(effect@3.19.8))(effect@3.19.8)(solid-js@1.9.10)':
+  '@effectify/solid-effect-atom@0.1.5(@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.92.1(effect@3.17.14))(@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)(solid-js@1.9.10)':
     dependencies:
-      '@effect-atom/atom': 0.3.2(@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.19.8))(effect@3.19.8))(@effect/platform@0.92.1(effect@3.19.8))(@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.19.8))(effect@3.19.8))(effect@3.19.8)
-      effect: 3.19.8
+      '@effect-atom/atom': 0.3.2(@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.92.1(effect@3.17.14))(@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)
+      effect: 3.17.14
       solid-js: 1.9.10
     transitivePeerDependencies:
       - '@effect/experimental'
@@ -4313,7 +4313,7 @@ snapshots:
     optionalDependencies:
       kysely: 0.28.8
 
-  effect@3.19.8:
+  effect@3.17.14:
     dependencies:
       '@standard-schema/spec': 1.0.0
       fast-check: 3.23.2

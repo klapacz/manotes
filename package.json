@@ -16,11 +16,11 @@
     "@tanstack/solid-router-devtools": "^1.133.20",
     "@tanstack/solid-start": "^1.133.20",
     "drizzle-orm": "^0.44.7",
-    "effect": "^3.19.8",
+    "effect": "3.17.14",
     "kysely": "^0.28.8",
     "nanoid": "^5.1.6",
     "prosekit": "^0.16.3",
-    "solid-js": "^1.9.9",
+    "solid-js": "1.9.10",
     "sqlocal": "^0.16.0",
     "tailwindcss": "^4.0.6",
     "yjs": "^13.6.27"
