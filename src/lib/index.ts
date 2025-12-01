@@ -4,3 +4,4 @@ export * as Tables from "./db.tables";
 export * as Migrator from "./migrator";
 export * as EventRepo from "./event.repo";
 export * as NoteSchema from "./note.schema";
+export * as NoteRepo from "./note.repo";
