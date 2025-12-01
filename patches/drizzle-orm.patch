@@ -1,0 +1,92 @@
+diff --git a/sqlite-core/columns/blob.cjs b/sqlite-core/columns/blob.cjs
+index 7686b7442a1cf16b658b50680584431179aeccec..3f93cf8f4c55831c27edab00dbb5f8acc14262e4 100644
+--- a/sqlite-core/columns/blob.cjs
++++ b/sqlite-core/columns/blob.cjs
+@@ -53,7 +53,11 @@ class SQLiteBigInt extends import_common.SQLiteColumn {
+     return BigInt(import_utils.textDecoder.decode(value));
+   }
+   mapToDriverValue(value) {
+-    return Buffer.from(value.toString());
++    const str = value.toString();
++    if (typeof Buffer !== "undefined" && Buffer.from) {
++      return Buffer.from(str);
++    }
++    return new TextEncoder().encode(str);
+   }
+ }
+ class SQLiteBlobJsonBuilder extends import_common.SQLiteColumnBuilder {
+@@ -82,7 +86,11 @@ class SQLiteBlobJson extends import_common.SQLiteColumn {
+     return JSON.parse(import_utils.textDecoder.decode(value));
+   }
+   mapToDriverValue(value) {
+-    return Buffer.from(JSON.stringify(value));
++    const str = JSON.stringify(value);
++    if (typeof Buffer !== "undefined" && Buffer.from) {
++      return Buffer.from(str);
++    }
++    return new TextEncoder().encode(str);
+   }
+ }
+ class SQLiteBlobBufferBuilder extends import_common.SQLiteColumnBuilder {
+@@ -98,10 +106,13 @@ class SQLiteBlobBufferBuilder extends import_common.SQLiteColumnBuilder {
+ class SQLiteBlobBuffer extends import_common.SQLiteColumn {
+   static [import_entity.entityKind] = "SQLiteBlobBuffer";
+   mapFromDriverValue(value) {
+-    if (Buffer.isBuffer(value)) {
++    if (typeof Buffer !== "undefined" && Buffer.isBuffer(value)) {
+       return value;
+     }
+-    return Buffer.from(value);
++    if (typeof Buffer !== "undefined" && Buffer.from) {
++      return Buffer.from(value);
++    }
++    return value;
+   }
+   getSQLType() {
+     return "blob";
+diff --git a/sqlite-core/columns/blob.js b/sqlite-core/columns/blob.js
+index 9f2ac778b6d23f956f9ffcd85feda75506efd1a0..2f382c01bb337432b89a10d8378aada5dd692451 100644
+--- a/sqlite-core/columns/blob.js
++++ b/sqlite-core/columns/blob.js
+@@ -24,7 +24,11 @@ class SQLiteBigInt extends SQLiteColumn {
+     return BigInt(textDecoder.decode(value));
+   }
+   mapToDriverValue(value) {
+-    return Buffer.from(value.toString());
++    const str = value.toString();
++    if (typeof Buffer !== "undefined" && Buffer.from) {
++      return Buffer.from(str);
++    }
++    return new TextEncoder().encode(str);
+   }
+ }
+ class SQLiteBlobJsonBuilder extends SQLiteColumnBuilder {
+@@ -53,7 +57,11 @@ class SQLiteBlobJson extends SQLiteColumn {
+     return JSON.parse(textDecoder.decode(value));
+   }
+   mapToDriverValue(value) {
+-    return Buffer.from(JSON.stringify(value));
++    const str = JSON.stringify(value);
++    if (typeof Buffer !== "undefined" && Buffer.from) {
++      return Buffer.from(str);
++    }
++    return new TextEncoder().encode(str);
+   }
+ }
+ class SQLiteBlobBufferBuilder extends SQLiteColumnBuilder {
+@@ -69,10 +77,13 @@ class SQLiteBlobBufferBuilder extends SQLiteColumnBuilder {
+ class SQLiteBlobBuffer extends SQLiteColumn {
+   static [entityKind] = "SQLiteBlobBuffer";
+   mapFromDriverValue(value) {
+-    if (Buffer.isBuffer(value)) {
++    if (typeof Buffer !== "undefined" && Buffer.isBuffer(value)) {
+       return value;
+     }
+-    return Buffer.from(value);
++    if (typeof Buffer !== "undefined" && Buffer.from) {
++      return Buffer.from(value);
++    }
++    return value;
+   }
+   getSQLType() {
+     return "blob";
