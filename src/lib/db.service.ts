@@ -5,6 +5,7 @@ import type { RunnableQuery as DrizzleQuery } from "drizzle-orm/runnable-query";
 import { SQLocalDrizzle } from "sqlocal/drizzle";
 
 import { drizzle as createDrizzle } from "drizzle-orm/sqlite-proxy";
+import { OPFS } from ".";
 
 export class TransactionContext extends Context.Tag("DBTX")<
   TransactionContext,
@@ -15,10 +16,29 @@ export class Error extends Data.TaggedError("DB.Error")<{ cause: unknown }> {}
 
 export class NotFoundError extends Data.TaggedError("DB.NotFoundError")<{}> {}
 
+export class Config extends Context.Tag("DB.Config")<
+  Config,
+  { databasePath: string; allowCreate: boolean }
+>() {}
+
 export class Service extends Effect.Service<Service>()("DB", {
   effect: Effect.gen(function* () {
+    const config = yield* Config;
+
+    const doesFileExist = yield* OPFS.getFileHandleFromOpfsRoot(
+      config.databasePath,
+    ).pipe(
+      Effect.map(() => true),
+      Effect.catchTag("NotFoundError", () => Effect.succeed(false)),
+    );
+
+    if (!doesFileExist && !config.allowCreate) {
+      return yield* new NotFoundError();
+    }
+
+    // const config = yield* Config;
     const sqlocal = new SQLocalDrizzle({
-      databasePath: "database.sqlite3",
+      databasePath: config.databasePath,
       reactive: true,
     });
 

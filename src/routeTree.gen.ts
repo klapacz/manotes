@@ -9,38 +9,89 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as CreateRouteImport } from './routes/create'
+import { Route as GraphRouteImport } from './routes/$graph'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as GraphIndexRouteImport } from './routes/$graph.index'
+import { Route as GraphOtherRouteImport } from './routes/$graph.other'
 
+const CreateRoute = CreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GraphRoute = GraphRouteImport.update({
+  id: '/$graph',
+  path: '/$graph',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GraphIndexRoute = GraphIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => GraphRoute,
+} as any)
+const GraphOtherRoute = GraphOtherRouteImport.update({
+  id: '/other',
+  path: '/other',
+  getParentRoute: () => GraphRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$graph': typeof GraphRouteWithChildren
+  '/create': typeof CreateRoute
+  '/$graph/other': typeof GraphOtherRoute
+  '/$graph/': typeof GraphIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/create': typeof CreateRoute
+  '/$graph/other': typeof GraphOtherRoute
+  '/$graph': typeof GraphIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$graph': typeof GraphRouteWithChildren
+  '/create': typeof CreateRoute
+  '/$graph/other': typeof GraphOtherRoute
+  '/$graph/': typeof GraphIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/$graph' | '/create' | '/$graph/other' | '/$graph/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/create' | '/$graph/other' | '/$graph'
+  id: '__root__' | '/' | '/$graph' | '/create' | '/$graph/other' | '/$graph/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  GraphRoute: typeof GraphRouteWithChildren
+  CreateRoute: typeof CreateRoute
 }
 
 declare module '@tanstack/solid-router' {
   interface FileRoutesByPath {
+    '/create': {
+      id: '/create'
+      path: '/create'
+      fullPath: '/create'
+      preLoaderRoute: typeof CreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$graph': {
+      id: '/$graph'
+      path: '/$graph'
+      fullPath: '/$graph'
+      preLoaderRoute: typeof GraphRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +99,39 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$graph/': {
+      id: '/$graph/'
+      path: '/'
+      fullPath: '/$graph/'
+      preLoaderRoute: typeof GraphIndexRouteImport
+      parentRoute: typeof GraphRoute
+    }
+    '/$graph/other': {
+      id: '/$graph/other'
+      path: '/other'
+      fullPath: '/$graph/other'
+      preLoaderRoute: typeof GraphOtherRouteImport
+      parentRoute: typeof GraphRoute
+    }
   }
 }
 
+interface GraphRouteChildren {
+  GraphOtherRoute: typeof GraphOtherRoute
+  GraphIndexRoute: typeof GraphIndexRoute
+}
+
+const GraphRouteChildren: GraphRouteChildren = {
+  GraphOtherRoute: GraphOtherRoute,
+  GraphIndexRoute: GraphIndexRoute,
+}
+
+const GraphRouteWithChildren = GraphRoute._addFileChildren(GraphRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  GraphRoute: GraphRouteWithChildren,
+  CreateRoute: CreateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
