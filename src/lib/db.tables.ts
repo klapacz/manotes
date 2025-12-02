@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, blob } from "drizzle-orm/sqlite-core";
-import { EventSchema } from ".";
+import * as EventSchema from "./event.schema";
 
 export const notes = sqliteTable("notes", {
   id: text("id").primaryKey(),
@@ -11,6 +11,7 @@ export const notes = sqliteTable("notes", {
 
 export const events = sqliteTable("events", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  noteId: text("noteId").notNull(),
   type: text("type", {
     enum: EventSchema.Type.literals,
   }).notNull(),

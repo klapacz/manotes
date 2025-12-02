@@ -1,5 +1,6 @@
 CREATE TABLE `events` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`noteId` text NOT NULL,
 	`type` text NOT NULL,
 	`payload` blob NOT NULL,
 	`timestamp` text NOT NULL

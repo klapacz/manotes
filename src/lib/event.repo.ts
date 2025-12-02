@@ -17,6 +17,7 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
           .insert(Tables.events)
           .values({
             type: encoded.type,
+            noteId: encoded.noteId,
             payload: encoded.payload,
             timestamp: encoded.timestamp,
           })

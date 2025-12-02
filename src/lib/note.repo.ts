@@ -1,4 +1,4 @@
-import { Effect, pipe, Schema, Option } from "effect";
+import { Effect, pipe, Schema, Option, Stream } from "effect";
 import { DB, NoteSchema, Tables } from ".";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -87,7 +87,11 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
         db.select().from(Tables.notes),
       );
 
-      return stream;
+      return stream.pipe(
+        Stream.mapEffect((n) =>
+          pipe(n, Schema.decode(Schema.Array(NoteSchema.Record))),
+        ),
+      );
     });
 
     return {
