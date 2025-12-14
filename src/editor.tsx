@@ -25,6 +25,7 @@ import {
 import {
   Array,
   Chunk,
+  Data,
   DateTime,
   Effect,
   Fiber,
@@ -33,10 +34,14 @@ import {
   Logger,
   LogLevel,
   Option,
+  pipe,
   Schema,
   Stream,
 } from "effect";
 import * as D from "drizzle-orm";
+import { streamDebounceNoDrop } from "./lib/stream-debounce-no-drop";
+
+const REMOTE_ORIGIN = Symbol("remote");
 
 const decodeAll = Schema.decode(Schema.Array(EventSchema.Record));
 
@@ -69,7 +74,7 @@ const loadInitialUpdates = Effect.fn("loadInitialUpdates")(function* (
 
   // Apply historical updates to the Y.Doc
   yield* Effect.forEach(events, (event) =>
-    Effect.sync(() => Y.applyUpdate(doc, event.payload)),
+    Effect.sync(() => Y.applyUpdate(doc, event.payload, REMOTE_ORIGIN)),
   );
 
   // Track the last known update id
@@ -127,7 +132,7 @@ const applyIncomingUpdates = Effect.fn("applyIncomingUpdates")(function* (
 
         // Apply updates
         yield* Effect.forEach(events, (event) =>
-          Effect.sync(() => Y.applyUpdate(doc, event.payload)),
+          Effect.sync(() => Y.applyUpdate(doc, event.payload, REMOTE_ORIGIN)),
         );
 
         const lastEvent = Array.lastNonEmpty(events);
@@ -139,17 +144,36 @@ const applyIncomingUpdates = Effect.fn("applyIncomingUpdates")(function* (
   });
 });
 
+class OutcomingUpdateCtx extends Data.Class<{
+  update: Uint8Array<ArrayBufferLike>;
+  origin: any;
+}> {}
+
 const saveOutcomingUpdates = Effect.fn("saveOutcomingUpdates")(function* (
   doc: Y.Doc,
   noteId: string,
 ) {
-  yield* Stream.asyncPush<Uint8Array<ArrayBufferLike>>((emit) =>
-    Effect.sync(() => doc.on("update", (update) => emit.single(update))),
+  yield* Stream.asyncPush<OutcomingUpdateCtx>((emit) =>
+    Effect.sync(() =>
+      doc.on("update", (update, origin) => {
+        emit.single(new OutcomingUpdateCtx({ update, origin }));
+      }),
+    ),
   ).pipe(
-    Stream.groupedWithin(100, "1 seconds"),
-    Stream.tap((chunk) =>
+    // Filter out remote origin updates
+    Stream.filter((updateCtx) => updateCtx.origin !== REMOTE_ORIGIN),
+    // Debounce all events within 1 second from first one
+    streamDebounceNoDrop("1 second"),
+    Stream.runForEach((chunk) =>
       Effect.gen(function* () {
-        const merged = Y.mergeUpdates(Chunk.toArray(chunk));
+        const allUpdateCtxs = Chunk.toArray(chunk);
+
+        const merged = Y.mergeUpdates(
+          pipe(
+            allUpdateCtxs,
+            Array.map((updateCtx) => updateCtx.update),
+          ),
+        );
 
         const eventRepo = yield* EventRepo.Service;
 
@@ -161,7 +185,6 @@ const saveOutcomingUpdates = Effect.fn("saveOutcomingUpdates")(function* (
         });
       }),
     ),
-    Stream.runDrain,
   );
 });
 
@@ -176,7 +199,7 @@ const setupDoc = Effect.fn(function* (doc: Y.Doc, noteId: string) {
       saveOutcomingUpdates(doc, noteId),
     ],
     { concurrency: "unbounded" }, // Run in parallel
-  ).pipe(Effect.provide(loggerLayer));
+  ).pipe(Effect.provide(Logger.minimumLogLevel(LogLevel.Debug)));
 });
 
 const logger = Logger.make(({ logLevel, message, spans }) => {
@@ -190,7 +213,7 @@ const logger = Logger.make(({ logLevel, message, spans }) => {
 });
 
 const loggerLayer = Layer.merge(
-  Logger.replace(Logger.defaultLogger, logger),
+  // Logger.replace(Logger.defaultLogger, logger),
   Logger.minimumLogLevel(LogLevel.Debug),
 );
 
