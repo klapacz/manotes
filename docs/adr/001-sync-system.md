@@ -1,17 +1,25 @@
-# E2E Encrypted Note Sync Architecture
+# ADR-001: E2E Encrypted Note Sync System
 
-## Problem Statement
+## Status
 
-Design a synchronization system for an end-to-end encrypted note-taking application with the following requirements:
+Accepted
+
+## Context
+
+We need a synchronization system for an end-to-end encrypted note-taking application with the following requirements:
 
 - Multi-device sync with concurrent editing support
 - Complete note history
 - End-to-end encryption (server cannot read content)
 - Efficient sync for potentially thousands of notes
 
-## Architecture Overview
+The challenge is balancing privacy, efficiency, and offline-resilience while providing a seamless user experience across devices.
 
-### Hybrid Approach: Event Log + CRDT
+## Decision
+
+### Architecture Overview
+
+#### Hybrid Approach: Event Log + CRDT
 
 The system combines two complementary technologies:
 
@@ -25,53 +33,94 @@ The system combines two complementary technologies:
 ```sql
 sync_log:
 seq (global) | note_id | type     | encrypted_blob | timestamp
-1001         | abc     | create   | null           | ...
+1001         | abc     | update   | <binary>       | ...  -- first update implies note creation
 1002         | abc     | update   | <binary>       | ...
 1003         | def     | update   | <binary>       | ...
 1004         | abc     | delete   | null           | ...
 1005         | abc     | compact  | <binary>       | ...
 ```
 
+**Note existence:** A note exists implicitly from its first `update` event. No separate `create` event needed - this simplifies the model and reduces event types.
+
 **Key properties:**
 
 - `seq`: Global, monotonically increasing sequence number (server-assigned, unencrypted)
 - `note_id`: Note identifier (unencrypted for routing)
-- `type`: Event type - `create`, `update`, `delete`, `compact`, `hard_delete`
-- `encrypted_blob`: Encrypted Yjs update or compact (null for `create`, `delete`, `hard_delete`)
+- `type`: Event type - `update`, `delete`, `compact`, `hard_delete`
+- `encrypted_blob`: Encrypted Yjs update or compact (null for `delete`, `hard_delete`)
 - `timestamp`: Server timestamp (unencrypted)
 
 ## Client Architecture
 
-### Materialized Database + Full Sync Log
+### Operating Modes
 
-**Clients maintain two data stores:**
+The application supports two modes with the same underlying architecture:
 
-1. **Materialized database** - local notes table for fast queries and offline access
-2. **Full server sync log** - complete copy of server's sync_log table for sync operations
+**Local-only mode:** Single client, no server. All events are stored locally and never pushed. This is the baseline experience - full functionality without sync.
 
-The materialized database serves application queries. The sync log enables efficient synchronization.
+**Sync mode:** Multiple clients with server coordination. Local events become "pending" until pushed to server, then move to synced state.
+
+The key insight: local-only mode is just sync mode where everything stays "pending" forever. The same data structures and logic work for both.
+
+### Client Data Stores
+
+**Clients maintain three data stores:**
+
+1. **Materialized database** (`notes` table) - current note state for fast queries and offline access
+2. **Pending events** (`events` table) - local changes not yet synced to server
+3. **Server sync log** (sync mode only) - local copy of server's sync_log after pull
+
+In local-only mode, only stores 1 and 2 are used. The pending events table accumulates all changes indefinitely.
+
+In sync mode, pending events are pushed to server, which assigns sequence numbers. After successful push, events move from "pending" to the server sync log copy.
+
+```
+Local-only mode:
+  [notes] ← materialized from → [pending events]
+
+Sync mode:
+  [notes] ← materialized from → [pending events] + [server sync log]
+                                      ↓ push           ↑ pull
+                                   [server]  ←――――――――→
+```
 
 ## Sync Protocol
 
 ### Client State
 
 ```typescript
-{
-  last_synced_seq: 1000,           // Last server sequence number synced
-  pending: Array<{
-    note_id: string;
-    type: "create" | "update" | "delete" | "compact";
-    yjs_update: Binary | null;     // Unencrypted Yjs updates locally
-    timestamp: number;
-  }>,
-  notes: {
-    abc: { deleted: false },       // Note metadata
-    def: { deleted: false }
-  }
+// Pending events table (local changes, not yet synced)
+pending_events: Array<{
+  id: number; // Local auto-increment (for ordering)
+  note_id: string;
+  type: "update" | "delete" | "compact";
+  payload: Binary | null; // Unencrypted Yjs updates
+  timestamp: DateTimeUtc;
+}>;
+
+// Sync state (sync mode only)
+sync_state: {
+  last_synced_seq: number; // Last server sequence number synced
 }
+
+// Server sync log copy (sync mode only)
+server_sync_log: Array<{
+  seq: number; // Server-assigned sequence number
+  note_id: string;
+  type: "update" | "delete" | "compact"; // hard_delete deferred post-MVP
+  encrypted_blob: Binary | null;
+  timestamp: DateTimeUtc;
+}>;
 ```
 
-**Important:** The **server** assigns sequence numbers (`seq`), not clients. Clients track pending local changes without sequence numbers until they're pushed to the server. Local merged updates are purely client-side compaction using `Y.mergeUpdates()` - they're still regular Yjs updates, just merged together.
+**Sequence number assignment:**
+
+- `pending_events.id`: Client-assigned, local auto-increment. Used only for local ordering.
+- `server_sync_log.seq`: Server-assigned, global sequence. Used for sync protocol.
+
+When events are pushed to server, server assigns `seq` and client moves them from pending to server_sync_log.
+
+**Local-only mode:** Only `pending_events` is used. No sync state or server log.
 
 ### Sync Flow
 
@@ -141,18 +190,27 @@ Traditional sync systems require complex rollback and rebase operations when mer
 
 ### Deletion Strategy: Soft Delete with Tombstones
 
+**MVP: Soft delete only.** Hard delete is deferred due to complexity with P2P sync. See `e2e-sync-open-questions.md` for details.
+
+**Soft delete behavior:**
+
+- `delete` event marks note as deleted (sets `deleted_at` timestamp)
+- Content remains in event log and materialized cache
+- Note excluded from search by default (toggle available to search deleted)
+- Trash view shows deleted notes
+- User can restore at any time
+
 **Conflict resolution:**
-| Scenario | Behavior |
-|----------|----------|
-| Device A deletes, Device B edits | Edit applies, note stays "deleted" but recoverable |
-| User wants to restore | Clear `deleted_at`, note reappears |
-| Garbage collection | Hard delete after 30 days |
+
+- Device A deletes, Device B edits: Edit applies, note stays "deleted" but recoverable
+- User wants to restore: Clear `deleted_at`, note reappears
 
 **Advantages:**
 
 - No data loss from concurrent operations
 - User can restore from "trash"
 - Simpler conflict handling (no special cases needed)
+- Works safely with P2P sync (no destructive operations)
 
 ### Compaction: Periodic Compacts
 
@@ -227,9 +285,11 @@ When the server receives a compact, it immediately deletes superseded updates:
 - Yjs merges compact with any local changes automatically
 - No grace period needed - compacts are self-contained
 
-#### 2. Hard-Deleted Notes GC (More Complex)
+#### 2. Hard-Deleted Notes GC (Deferred)
 
-When a tombstone expires (after 30 days) and a note is permanently deleted, clients need explicit notification:
+> **Note:** Hard delete is deferred for MVP due to complexity with P2P sync. See `e2e-sync-open-questions.md` for details on the race conditions and options considered.
+
+When a tombstone expires and a note is permanently deleted, clients need explicit notification. This section describes the intended design for when hard delete is implemented.
 
 **Approach: `hard_delete` events in sync log**
 
@@ -249,45 +309,37 @@ seq  | note_id | type        | encrypted_blob | ...
 6. Other clients receive event and purge local data
 7. `hard_delete` events are **retained forever** (lightweight, no encrypted blob)
 
-**Event Type Schema:**
+**Event Type Schema (MVP):**
 
 ```typescript
 type SyncEvent =
   | {
-      type: "create" | "update" | "delete" | "compact";
+      type: "update" | "compact";
       noteId: string;
       encryptedBlob: Binary;
     }
-  | { type: "hard_delete"; noteId: string; encryptedBlob: null }; // GC notification (kept forever)
+  | { type: "delete"; noteId: string; encryptedBlob: null };
+
+// Future: add hard_delete when P2P implications are resolved
 ```
 
-**Why keep `hard_delete` events forever:**
+**Why keep `hard_delete` events forever (when implemented):**
 
 - Extremely lightweight (just `seq`, `note_id`, `type`, `timestamp` - no encrypted blob)
 - Eliminates the need for complex "full resync" logic for very old clients
 - Provides complete historical record of what was deleted and when
 - Minimal storage cost compared to actual note data
 
-**Edge cases:**
+**Edge cases (when implemented):**
 
-- Client pushes changes to GCed note → Handle "note not found" error gracefully
-- New device onboarding → Receives all `hard_delete` events, knows definitively what's deleted
+- Client pushes changes to GCed note: Handle "note not found" error gracefully
+- New device onboarding: Receives all `hard_delete` events, knows definitively what's deleted
 
 **Pattern trade-offs:**
 
 This is sometimes called a **compacting log** or **log with tombstone GC**. The log contains events that describe mutations to itself, breaking the pure append-only model in a controlled way.
 
-| Pure Event Sourcing                | Pragmatic Need                       |
-| ---------------------------------- | ------------------------------------ |
-| Log is immutable truth             | Log needs to shrink                  |
-| Replay from beginning always works | Ancient history gets GCed            |
-| Events describe domain actions     | Some events describe log maintenance |
-
-**Documentation requirements:**
-
-- Log is append-only _except_ for GC (update deletion and hard delete notification)
-- `hard_delete` events notify clients of permanent deletions
-- `hard_delete` events are kept forever, so even very old clients can sync
+For MVP, only compaction breaks the append-only model. Hard delete adds another layer of complexity deferred for later.
 
 ### Encryption Considerations
 
@@ -380,28 +432,27 @@ Yjs updates have key properties that simplify the sync architecture:
 Here's how compact-based compaction works with concurrent edits:
 
 ```yaml
-# 1. Starting point
+# 1. Starting point - note created with initial content
 server:
   events:
-    - seq: 1, note_id: "abc", type: "create"
+    - seq: 1, note_id: "abc", type: "update"  # first update = note creation
 client_a: synced (last_synced_seq: 1)
 client_b: synced (last_synced_seq: 1)
 
 # 2. Client A makes changes and pushes
 server:
   events:
-    - seq: 1, note_id: "abc", type: "create"
+    - seq: 1, note_id: "abc", type: "update"  # initial
     - seq: 2, note_id: "abc", type: "update"  # A's changes
     - seq: 3, note_id: "abc", type: "update"  # A's changes
 client_a: synced (last_synced_seq: 3)
 
 # 3. Client A creates compact (after pull-merge)
-# Server receives compact and immediately deletes seq 2, 3
+# Server receives compact and immediately deletes seq 1, 2, 3
 server:
   events:
-    - seq: 1, note_id: "abc", type: "create"
     - seq: 4, note_id: "abc", type: "compact"  # Contains all state
-    # seq 2, 3 immediately deleted
+    # seq 1, 2, 3 immediately deleted
 
 # 4. Client B (offline) makes local changes
 client_b:
@@ -421,7 +472,6 @@ client_b:
 # 6. Client B pushes merged changes
 server:
   events:
-    - seq: 1, note_id: "abc", type: "create"
     - seq: 4, note_id: "abc", type: "compact"
     - seq: 5, note_id: "abc", type: "update"  # B's merged update
 ```
@@ -435,19 +485,167 @@ server:
 
 ## Materialized Views and Derived State
 
-### Challenge: Syncing Derived State
+### Notes Table as Materialized Cache
 
-While Yjs CRDT handles note content merging automatically, **derived/materialized state** (like tags, backlinks) doesn't benefit from CRDT properties:
+The `notes` table serves as a cached materialized view, not the source of truth. Source of truth is the events table (Yjs updates).
 
-| Yjs Updates       | Materialized View Operations             |
-| ----------------- | ---------------------------------------- |
-| Order-independent | Order-dependent (for reference counting) |
-| Idempotent        | Not idempotent (`INSERT` can fail)       |
-| Self-merging      | Requires explicit conflict resolution    |
+```sql
+notes:
+  id              -- Note identifier
+  title           -- Derived from content
+  content         -- Merged Yjs state as text/JSON (for search/display)
+  last_event_id   -- Last event ID merged into this cache
+  tokens          -- Full-text search tokens
+  embedding       -- Semantic search vector (future)
+  created_at
+  updated_at
+  deleted_at      -- Soft delete timestamp
+```
 
-### Solution: Junction Table + Idempotent Operations
+**Cache invalidation strategy:**
 
-Instead of tracking tag reference counts (which is order-dependent), use a junction table pattern:
+- `last_event_id` tracks which events have been merged into this cache
+- When `events.id > notes.last_event_id`, the cache is stale
+- Background worker watches for new events and updates the cache
+
+**Why cache content separately:**
+
+- Fast queries without replaying Yjs events
+- Full-text search indexing
+- Semantic search embeddings
+- List/preview rendering without loading Y.Doc
+
+### Background Worker Architecture
+
+Derived fields (content, tokens, embeddings) are updated asynchronously in a shared web worker using Effect Cluster/Workers.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Main Thread                                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │   Editor     │  │  Note List   │  │   Search UI      │  │
+│  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘  │
+│         │                 │                    │            │
+│         ▼                 ▼                    ▼            │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              SQLite (OPFS)                          │   │
+│  │   [events] ←── writes        [notes] ←── reads      │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              │ reactive query (new events)
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Shared Web Worker (Effect Cluster)                         │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  Materialization Pipeline                             │  │
+│  │                                                       │  │
+│  │  1. Watch events where id > notes.last_event_id      │  │
+│  │  2. Load affected note's Y.Doc                        │  │
+│  │  3. Apply new events to Y.Doc                         │  │
+│  │  4. Extract content, compute tokens/embeddings        │  │
+│  │  5. Update notes table with new cache + last_event_id │  │
+│  └──────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Worker responsibilities:**
+
+- Content extraction: Y.Doc → plaintext/JSON
+- Tokenization: Full-text search index updates
+- Embedding generation: Semantic search vectors (calls local/remote model)
+- Tag extraction: Parse content for #tags
+- Backlink extraction: Parse content for [[links]]
+
+**Why a shared worker:**
+
+- Single materialization pipeline across all tabs
+- No duplicate work when multiple tabs open same note
+- Effect Cluster provides supervision, retries, backpressure
+- Main thread stays responsive during heavy processing
+
+### Backlinks (Note Mentions)
+
+Notes can reference other notes via inline mentions. This enables bidirectional linking - viewing a note shows both outgoing links and incoming backlinks.
+
+**Editor integration:**
+
+The editor includes a "backlink" node type (similar to TipTap's Mention extension):
+
+```typescript
+// Backlink node in ProseMirror/Prosekit schema
+{
+  type: "backlink",
+  attrs: {
+    id: string,    // Referenced note's ID
+    label: string  // Display text
+  }
+}
+```
+
+Triggered by typing `[[` - shows autocomplete with note search, allows creating new notes inline.
+
+**Database schema:**
+
+```sql
+note_links:
+  source_note_id | target_note_id
+  PRIMARY KEY (source_note_id, target_note_id)
+```
+
+**Extraction and storage:**
+
+Background worker extracts backlinks when processing note updates:
+
+```typescript
+function findAllBacklinks(doc: ProseMirrorNode): Set<string> {
+  const backlinks = new Set<string>();
+  doc.descendants((node) => {
+    if (node.type.name === "backlink") {
+      backlinks.add(node.attrs.id);
+    }
+  });
+  return backlinks;
+}
+
+// On note update: delete all, re-insert fresh (idempotent)
+async function recreateBacklinks(noteId: string, doc: ProseMirrorNode) {
+  const backlinks = findAllBacklinks(doc);
+  await db.delete(note_links).where(eq(source_note_id, noteId));
+  if (backlinks.size > 0) {
+    await db.insert(note_links).values(
+      Array.from(backlinks).map((targetId) => ({
+        source_note_id: noteId,
+        target_note_id: targetId,
+      })),
+    );
+  }
+}
+```
+
+**Context extraction for display:**
+
+When showing backlinks to a note, extract surrounding context:
+
+- For list items: show parent list context + the item containing the backlink
+- For headings: show the full heading
+- Otherwise: show the parent block
+
+This provides meaningful preview without loading full documents.
+
+**Querying backlinks:**
+
+```sql
+-- Get all notes that link TO this note
+SELECT source_notes.*
+FROM note_links
+JOIN notes AS source_notes ON source_notes.id = note_links.source_note_id
+WHERE note_links.target_note_id = ?
+```
+
+### Tags
+
+Tags are extracted from note content (e.g., `#work`, `#ideas`) and stored in junction tables.
 
 ```sql
 tags:
@@ -458,13 +656,11 @@ note_tags:
   PRIMARY KEY (note_id, tag_id)
 ```
 
-**Why this works:**
+**Idempotent operations:**
 
-| Operation      | SQL                                                               | Idempotent? |
-| -------------- | ----------------------------------------------------------------- | ----------- |
-| Note gains tag | `INSERT ... ON CONFLICT DO NOTHING`                               | ✓           |
-| Note loses tag | `DELETE FROM note_tags WHERE note_id = ? AND tag_id = ?`          | ✓           |
-| Orphan cleanup | `DELETE FROM tags WHERE id NOT IN (SELECT tag_id FROM note_tags)` | ✓           |
+- Note gains tag: `INSERT ... ON CONFLICT DO NOTHING`
+- Note loses tag: `DELETE FROM note_tags WHERE note_id = ? AND tag_id = ?`
+- Orphan cleanup: `DELETE FROM tags WHERE id NOT IN (SELECT tag_id FROM note_tags)`
 
 **Concurrent scenarios:**
 
@@ -480,23 +676,17 @@ Device B: Adds tag to note_b → INSERT INTO note_tags(note_b, 1)
 Result: Tag survives because note_b still references it ✓
 ```
 
-**Derivation strategy:**
-
-After applying Yjs updates during sync, rebuild materialized views from note content.
-
-**Key principles:**
+### Derived State Principles
 
 - Materialized views are **derived from note content** (single source of truth)
 - Operations are **idempotent** (order doesn't matter)
-- No need for "rebasing" separate event logs
+- Background worker handles all derivation asynchronously
 - Tags have no properties (just `id`, `name`, `created_at`) - no metadata conflicts possible
 - Lazy GC for orphaned tags (query-time filtering or periodic cleanup)
 
-## Summary
+## Consequences
 
-**Core Insight:** Event log serves as a lightweight, unencrypted sync index that allows the server to answer "what changed since X" without reading encrypted content.
-
-**Architecture Benefits:**
+**What becomes easier:**
 
 - Efficient sync: O(changes) not O(notes)
 - Privacy: Server stores opaque blobs
@@ -506,7 +696,7 @@ After applying Yjs updates during sync, rebuild materialized views from note con
 - Flexibility: Clear separation of concerns
 - Simple derived state: Junction tables + idempotent operations avoid rebasing complexity
 
-**Trade-offs:**
+**What becomes more difficult:**
 
 - Two systems to maintain (event log + Yjs)
 - Server sees access patterns
