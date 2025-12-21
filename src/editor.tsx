@@ -29,10 +29,6 @@ import {
   DateTime,
   Effect,
   Fiber,
-  Layer,
-  List,
-  Logger,
-  LogLevel,
   Option,
   pipe,
   Schema,
@@ -199,23 +195,8 @@ const setupDoc = Effect.fn(function* (doc: Y.Doc, noteId: string) {
       saveOutcomingUpdates(doc, noteId),
     ],
     { concurrency: "unbounded" }, // Run in parallel
-  ).pipe(Effect.provide(Logger.minimumLogLevel(LogLevel.Debug)));
-});
-
-const logger = Logger.make(({ logLevel, message, spans }) => {
-  const spansStr = List.map(spans, (span) => span.label)
-    .pipe(List.toArray)
-    .join(",");
-
-  console.log(
-    `[${logLevel.label}] [${spansStr}] ${(message as string[]).join(" ")}`,
   );
 });
-
-const loggerLayer = Layer.merge(
-  // Logger.replace(Logger.defaultLogger, logger),
-  Logger.minimumLogLevel(LogLevel.Debug),
-);
 
 export default function Editor(props: {
   note: typeof NoteSchema.Record.Type;

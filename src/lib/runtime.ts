@@ -1,4 +1,13 @@
-import { Cause, Data, Exit, Layer, ManagedRuntime, Option } from "effect";
+import {
+  Cause,
+  Data,
+  Exit,
+  Layer,
+  Logger,
+  LogLevel,
+  ManagedRuntime,
+  Option,
+} from "effect";
 import { DB, EventRepo, Migrator, NoteRepo } from ".";
 
 export type SetupResult = Data.TaggedEnum<{
@@ -52,6 +61,7 @@ async function create(opts: SetupOpts) {
     EventRepo.Service.Default,
     NoteRepo.Service.Default,
     DB.Service.Default,
+    Logger.minimumLogLevel(LogLevel.Debug),
   ).pipe(Layer.provide(ConfigLayer));
 
   return ManagedRuntime.make(AppLayer);
