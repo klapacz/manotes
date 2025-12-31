@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Filtered jj diff - excludes noisy generated/lock files
+# Usage: .opencode/bin/jj-diff [revision]
+
+set -euo pipefail
+
+REV="${1:-@}"
+
+exec jj diff -r "$REV" --git '~(file:pnpm-lock.yaml | glob:**/*.gen.ts)'

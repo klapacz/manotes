@@ -6,7 +6,8 @@
     "dev": "vite --port 3000",
     "build": "vite build && tsc",
     "serve": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint:devlog": "bun run .opencode/scripts/validate-devlogs.ts"
   },
   "dependencies": {
     "@effectify/solid-effect-atom": "^0.1.5",
