@@ -84,7 +84,7 @@ When work is done:
 | ---------------- | ------- | -------------------------- | ------------------------------ |
 | `/task`          | exists  | "create task for X"        | `docs/tasks/<id>-<slug>.md`    |
 | `/devlog`        | exists  | "document this change"     | `docs/devlog/<date>-<slug>.md` |
-| `/review`        | planned | "review this change"       | Analysis + suggestions         |
+| `/review`        | exists  | "review this change"       | Analysis + suggestions         |
 | `/update-devlog` | exists  | "update devlog for change" | Updated devlog                 |
 | `/describe`      | planned | "suggest commit message"   | Message + `jj describe`        |
 
@@ -113,7 +113,7 @@ When work is done:
 ## Acceptance Criteria
 
 - [x] `/task` command creates valid task specs
-- [ ] `/review` command provides useful change analysis
+- [x] `/review` command provides useful change analysis
 - [x] `/update-devlog` command keeps devlogs in sync with changes
 - [ ] Workflow documented in this file is accurate and complete
 - [ ] All commands use consistent patterns (frontmatter validation, jj integration)
