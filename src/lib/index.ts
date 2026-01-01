@@ -11,3 +11,4 @@ export * as Runtime from "./runtime";
 
 export * from "./primitives";
 export * from "./runtime.primitives";
+export * as EditorSyncService from "./editor-sync.service";

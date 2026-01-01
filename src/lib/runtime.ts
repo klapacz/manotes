@@ -8,7 +8,7 @@ import {
   ManagedRuntime,
   Option,
 } from "effect";
-import { DB, EventRepo, Migrator, NoteRepo } from ".";
+import { DB, EventRepo, Migrator, NoteRepo, EditorSyncService } from ".";
 
 export type SetupResult = Data.TaggedEnum<{
   Success: { runtime: Type };
@@ -60,6 +60,7 @@ async function create(opts: SetupOpts) {
   const AppLayer = Layer.mergeAll(
     EventRepo.Service.Default,
     NoteRepo.Service.Default,
+    EditorSyncService.Service.Default,
     DB.Service.Default,
     Logger.minimumLogLevel(LogLevel.Debug),
   ).pipe(Layer.provide(ConfigLayer));
