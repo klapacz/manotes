@@ -87,6 +87,10 @@ When work is done:
 | `/review`        | planned | "review this change"       | Analysis + suggestions         |
 | `/update-devlog` | planned | "update devlog for change" | Updated devlog                 |
 
+## Subtasks
+
+- [002-load-change-plugin](./002-load-change-plugin.md) — Plugin for loading jj diffs with validation. Subtask because `/review`, `/devlog`, and `/update-devlog` all need reliable diff loading—this is shared infrastructure, not a standalone feature.
+
 ## Relevant Files
 
 - `.opencode/command/devlog.md` — existing devlog command
