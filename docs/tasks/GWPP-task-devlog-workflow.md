@@ -1,6 +1,6 @@
 ---
 title: Document AI-assisted development workflow with tasks and devlogs
-id: "001"
+id: GWPP
 status: in_progress
 priority: high
 depends_on: []
@@ -26,7 +26,7 @@ Human or AI creates a task spec:
 /task "Add dark mode support"
 ```
 
-AI generates `docs/tasks/002-dark-mode.md` with:
+AI generates `docs/tasks/XKMT-dark-mode.md` with:
 
 - Frontmatter (title, id, status, priority)
 - Context, Goal, Acceptance Criteria, Constraints

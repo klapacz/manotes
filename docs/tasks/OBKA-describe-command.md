@@ -1,9 +1,9 @@
 ---
 title: Commit message suggestion command
-id: "003"
+id: OBKA
 status: planned
 priority: medium
-depends_on: ["002"]
+depends_on: []
 ---
 
 ## Context

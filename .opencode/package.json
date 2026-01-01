@@ -4,6 +4,7 @@
     "@standard-schema/spec": "^1.0.0",
     "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
+    "nanoid": "^5.1.5",
     "zod": "^4.3.2"
   },
   "devDependencies": {
