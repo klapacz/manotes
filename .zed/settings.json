@@ -3,15 +3,34 @@
 // For a full list of overridable settings, and general information on folder-specific settings,
 // see the documentation: https://zed.dev/docs/configuring-zed#settings-files
 {
-  "languages": {
-    "TSX": {
-      "language_servers": ["vtsls"]
-    },
-    "TypeScript": {
-      "language_servers": ["vtsls"]
-    },
-    "JavaScript": {
-      "language_servers": ["vtsls"]
-    }
-  }
+  // "languages": {
+  //   "TSX": {
+  //     "language_servers": ["vtsls"]
+  //   },
+  //   "TypeScript": {
+  //     "language_servers": ["vtsls"]
+  //   },
+  //   "JavaScript": {
+  //     "language_servers": ["vtsls"]
+  //   }
+  // },
+  // "lsp": {
+  //   "tailwindcss-language-server": {
+  //     "settings": {
+  //       "experimental": {
+  //         "classRegex": [
+  //           "\\.className\\s*[+]?=\\s*['\"]([^'\"]*)['\"]",
+  //           "\\.setAttributeNS\\(.*,\\s*['\"]class['\"],\\s*['\"]([^'\"]*)['\"]",
+  //           "\\.setAttribute\\(['\"]class['\"],\\s*['\"]([^'\"]*)['\"]",
+  //           "\\.classList\\.add\\(['\"]([^'\"]*)['\"]",
+  //           "\\.classList\\.remove\\(['\"]([^'\"]*)['\"]",
+  //           "\\.classList\\.toggle\\(['\"]([^'\"]*)['\"]",
+  //           "\\.classList\\.contains\\(['\"]([^'\"]*)['\"]",
+  //           "\\.classList\\.replace\\(\\s*['\"]([^'\"]*)['\"]",
+  //           "\\.classList\\.replace\\([^,)]+,\\s*['\"]([^'\"]*)['\"]"
+  //         ]
+  //       }
+  //     }
+  //   }
+  // }
 }
