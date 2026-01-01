@@ -61,7 +61,7 @@ Document what was shipped:
 
 AI gets diff + change description, asks shipped vs snippet, writes devlog.
 
-### 5. Devlog Update (`/update-devlog` command - planned)
+### 5. Devlog Update (`/update-devlog` command - exists)
 
 If change evolves after devlog exists:
 
@@ -69,7 +69,7 @@ If change evolves after devlog exists:
 /update-devlog wsqptkls
 ```
 
-AI compares current diff with existing devlog, asks about discrepancies, updates.
+AI compares current diff with existing devlog, identifies discrepancies, and updates. For snippets, also regenerates the patch file.
 
 ### 6. Task Cleanup
 
@@ -85,7 +85,7 @@ When work is done:
 | `/task`          | planned | "create task for X"        | `docs/tasks/<id>-<slug>.md`    |
 | `/devlog`        | exists  | "document this change"     | `docs/devlog/<date>-<slug>.md` |
 | `/review`        | planned | "review this change"       | Analysis + suggestions         |
-| `/update-devlog` | planned | "update devlog for change" | Updated devlog                 |
+| `/update-devlog` | exists  | "update devlog for change" | Updated devlog                 |
 | `/describe`      | planned | "suggest commit message"   | Message + `jj describe`        |
 
 ## Subtasks
@@ -95,6 +95,8 @@ When work is done:
 ## Relevant Files
 
 - `.opencode/command/devlog.md` — existing devlog command
+- `.opencode/command/update-devlog.md` — existing update-devlog command
+- `.opencode/lib/devlog-guidelines.md` — shared devlog guidelines (frontmatter schema, content guidelines)
 - `.opencode/command/task.md` — task command (to be created)
 - `.opencode/command/review.md` — review command (to be created)
 - `PLAN-tasks-system.md` — implementation plan for tasks system
