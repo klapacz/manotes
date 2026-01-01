@@ -18,7 +18,7 @@ Document the complete workflow from task creation through implementation to devl
 
 ## The Workflow
 
-### 1. Task Creation (`/task` command - planned)
+### 1. Task Creation (`/task` command - exists)
 
 Human or AI creates a task spec:
 
@@ -82,7 +82,7 @@ When work is done:
 
 | Command          | Status  | Trigger                    | Output                         |
 | ---------------- | ------- | -------------------------- | ------------------------------ |
-| `/task`          | planned | "create task for X"        | `docs/tasks/<id>-<slug>.md`    |
+| `/task`          | exists  | "create task for X"        | `docs/tasks/<id>-<slug>.md`    |
 | `/devlog`        | exists  | "document this change"     | `docs/devlog/<date>-<slug>.md` |
 | `/review`        | planned | "review this change"       | Analysis + suggestions         |
 | `/update-devlog` | exists  | "update devlog for change" | Updated devlog                 |
@@ -90,23 +90,31 @@ When work is done:
 
 ## Subtasks
 
-- [002-load-change-plugin](./002-load-change-plugin.md) — Plugin for loading jj diffs with validation. Subtask because `/review`, `/devlog`, and `/update-devlog` all need reliable diff loading—this is shared infrastructure, not a standalone feature.
+- ~~[002-load-change-plugin](./002-load-change-plugin.md)~~ — Plugin for loading jj diffs with validation (shipped 2026-01-01, see [devlog](../devlog/2026-01-01-jj-load-change-plugin.md)). Subtask because `/review`, `/devlog`, and `/update-devlog` all need reliable diff loading—this is shared infrastructure, not a standalone feature.
 
 ## Relevant Files
 
 - `.opencode/command/devlog.md` — existing devlog command
 - `.opencode/command/update-devlog.md` — existing update-devlog command
 - `.opencode/lib/devlog-guidelines.md` — shared devlog guidelines (frontmatter schema, content guidelines)
-- `.opencode/command/task.md` — task command (to be created)
+- `.opencode/lib/task-guidelines.md` — shared task guidelines (frontmatter schema, content guidelines)
+
+## Implementation Notes
+
+- `/task` command shipped in [change:sqxoxlts](../devlog/2026-01-01-task-command.md)
+- `/update-devlog` command shipped in [change:mqlqpqop](../devlog/2026-01-01-devlog-command-refactor.md)
+- `load-change` plugin shipped in [2026-01-01-jj-load-change-plugin.md](../devlog/2026-01-01-jj-load-change-plugin.md)
+- `.opencode/command/task.md` — task command
+- `.opencode/lib/task-guidelines.md` — shared task guidelines (frontmatter schema, content guidelines)
 - `.opencode/command/review.md` — review command (to be created)
 - `PLAN-tasks-system.md` — implementation plan for tasks system
 - `todo.md` — raw ideas for other commands
 
 ## Acceptance Criteria
 
-- [ ] `/task` command creates valid task specs
+- [x] `/task` command creates valid task specs
 - [ ] `/review` command provides useful change analysis
-- [ ] `/update-devlog` command keeps devlogs in sync with changes
+- [x] `/update-devlog` command keeps devlogs in sync with changes
 - [ ] Workflow documented in this file is accurate and complete
 - [ ] All commands use consistent patterns (frontmatter validation, jj integration)
 
