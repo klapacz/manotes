@@ -1,0 +1,660 @@
+diff --git a/src/editor.tsx b/src/editor.tsx
+index ce89e27dcf..e611a4a82f 100644
+--- a/src/editor.tsx
++++ b/src/editor.tsx
+@@ -47,7 +47,34 @@
+ ) {
+   const db = yield* DB.Service;
+ 
+-  const events = yield* db
++  // First, check for the latest compact event (contains full merged state)
++  const compactEvent = yield* db
++    .query((db) =>
++      db
++        .select()
++        .from(Tables.events)
++        .where(
++          D.and(
++            D.eq(Tables.events.noteId, noteId),
++            D.eq(Tables.events.type, "compact"),
++          ),
++        )
++        .orderBy(D.desc(Tables.events.id))
++        .limit(1),
++    )
++    .pipe(Effect.flatMap(decodeAll), Effect.map(Array.head));
++
++  let baseEventId = -1;
++
++  // Apply compact event if it exists (this is the baseline state)
++  if (Option.isSome(compactEvent)) {
++    yield* Effect.logDebug("Found compact event, applying as baseline");
++    Y.applyUpdate(doc, compactEvent.value.payload, REMOTE_ORIGIN);
++    baseEventId = compactEvent.value.id;
++  }
++
++  // Then load any update events after the compact event (or all if no compact)
++  const updateEvents = yield* db
+     .query((db) =>
+       db
+         .select()
+@@ -56,27 +83,38 @@
+           D.and(
+             D.eq(Tables.events.noteId, noteId),
+             D.eq(Tables.events.type, "update"),
++            D.gt(Tables.events.id, baseEventId),
+           ),
+         )
+         .orderBy(D.asc(Tables.events.id)),
+     )
+-    .pipe(Effect.flatMap((events) => decodeAll(events)));
+-
+-  if (!Array.isNonEmptyReadonlyArray(events)) {
+-    return { lastKnownEventId: -1 };
++    .pipe(Effect.flatMap(decodeAll));
++
++  if (Array.isNonEmptyReadonlyArray(updateEvents)) {
++    const head = Array.headNonEmpty(updateEvents);
++    const tail = Array.tailNonEmpty(updateEvents);
++
++    const allUpdates = Array.reduce(tail, head.payload, (acc, event) => {
++      return Y.mergeUpdates([acc, event.payload]);
++    });
++
++    console.log("Additional updates size:", allUpdates.length);
++    Y.logUpdate(allUpdates);
++
++    yield* Effect.logDebug("Got update events", updateEvents.length);
++
++    // Apply update events to the Y.Doc
++    yield* Effect.forEach(updateEvents, (event) =>
++      Effect.sync(() => Y.applyUpdate(doc, event.payload, REMOTE_ORIGIN)),
++    );
+   }
+ 
+-  yield* Effect.logDebug("Got events", events.length);
+-
+-  // Apply historical updates to the Y.Doc
+-  yield* Effect.forEach(events, (event) =>
+-    Effect.sync(() => Y.applyUpdate(doc, event.payload, REMOTE_ORIGIN)),
+-  );
+-
+-  // Track the last known update id
+-  const lastEvent = Array.lastNonEmpty(events);
+-
+-  return { lastKnownEventId: lastEvent.id };
++  // Track the last known event id (either from updates or compact)
++  const lastEventId = Array.isNonEmptyReadonlyArray(updateEvents)
++    ? Array.lastNonEmpty(updateEvents).id
++    : baseEventId;
++
++  return { lastKnownEventId: lastEventId };
+ });
+ 
+ const applyIncomingUpdates = Effect.fn("applyIncomingUpdates")(function* (
+@@ -91,7 +129,7 @@
+         yield* Effect.logDebug("Last known ID:", lastKnownEventId);
+ 
+         const db = yield* DB.Service;
+-        // Create reactive stream for events > lastKnownId
++        // Create reactive stream for events > lastKnownId (both update and compact)
+         const reactiveStream = yield* db.reactiveQuery((db) =>
+           db
+             .select()
+@@ -99,7 +137,7 @@
+             .where(
+               D.and(
+                 D.eq(Tables.events.noteId, noteId),
+-                D.eq(Tables.events.type, "update"),
++                D.inArray(Tables.events.type, ["update", "compact"]),
+                 D.gt(Tables.events.id, lastKnownEventId),
+               ),
+             )
+@@ -126,7 +164,7 @@
+         const events = firstBatch.value;
+         yield* Effect.logDebug("Received batch of events", events.length);
+ 
+-        // Apply updates
++        // Apply updates (compact events are also Yjs updates, just merged)
+         yield* Effect.forEach(events, (event) =>
+           Effect.sync(() => Y.applyUpdate(doc, event.payload, REMOTE_ORIGIN)),
+         );
+diff --git a/src/lib/compaction.service.ts b/src/lib/compaction.service.ts
+new file mode 100644
+index 0000000000..5e5c495485
+--- /dev/null
++++ b/src/lib/compaction.service.ts
+@@ -0,0 +1,430 @@
++import {
++  Effect,
++  Schedule,
++  Duration,
++  DateTime,
++  Schema,
++  Array,
++  Option,
++  Ref,
++  pipe,
++} from "effect";
++import * as Y from "yjs";
++import { DB, EventRepo, EventSchema, Tables } from ".";
++import * as D from "drizzle-orm";
++
++// Configuration for compaction thresholds
++export interface CompactionConfig {
++  // Minimum number of events before compaction is considered
++  minEventsThreshold: number;
++  // Minimum total payload size (bytes) before compaction is triggered
++  minPayloadSizeThreshold: number;
++  // How often to check for compaction opportunities (in minutes)
++  checkIntervalMinutes: number;
++  // Maximum compactions per hour (throttling)
++  maxCompactionsPerHour: number;
++  // Minimum time between compactions for the same note (in minutes)
++  minTimeBetweenCompactionsMinutes: number;
++}
++
++const defaultConfig: CompactionConfig = {
++  minEventsThreshold: 50,
++  minPayloadSizeThreshold: 100_000, // 100KB
++  checkIntervalMinutes: 5,
++  maxCompactionsPerHour: 10,
++  minTimeBetweenCompactionsMinutes: 30,
++};
++
++// Schema for persisting compaction state to localStorage
++const CompactionState = Schema.Struct({
++  lastCompactionTime: Schema.OptionFromNullOr(Schema.DateTimeUtc),
++  compactionsThisHour: Schema.Number,
++  hourStartTime: Schema.DateTimeUtc,
++  noteLastCompacted: Schema.Record({
++    key: Schema.String,
++    value: Schema.DateTimeUtc,
++  }),
++});
++
++type CompactionState = typeof CompactionState.Type;
++
++const STORAGE_KEY = "compaction-state";
++
++// Stats about a note's events for compaction decisions
++interface NoteEventStats {
++  noteId: string;
++  eventCount: number;
++  totalPayloadSize: number;
++  oldestEventId: number;
++  newestEventId: number;
++}
++
++const decodeAll = Schema.decode(Schema.Array(EventSchema.Record));
++
++export class Service extends Effect.Service<Service>()("Compaction.Service", {
++  dependencies: [DB.Service.Default, EventRepo.Service.Default],
++  effect: Effect.gen(function* () {
++    const db = yield* DB.Service;
++    const eventRepo = yield* EventRepo.Service;
++    const config = defaultConfig;
++
++    // Load state from localStorage
++    const loadState = Effect.sync((): CompactionState => {
++      try {
++        const stored = localStorage.getItem(STORAGE_KEY);
++        if (stored) {
++          const parsed = JSON.parse(stored);
++          return Schema.decodeUnknownSync(CompactionState)(parsed);
++        }
++      } catch {
++        // Ignore parse errors, return fresh state
++      }
++      return {
++        lastCompactionTime: Option.none(),
++        compactionsThisHour: 0,
++        hourStartTime: DateTime.unsafeNow(),
++        noteLastCompacted: {},
++      };
++    });
++
++    // Save state to localStorage
++    const saveState = (state: CompactionState) =>
++      Effect.sync(() => {
++        const encoded = Schema.encodeSync(CompactionState)(state);
++        localStorage.setItem(STORAGE_KEY, JSON.stringify(encoded));
++      });
++
++    // Mutable state ref
++    const stateRef = yield* Ref.make<CompactionState>(yield* loadState);
++
++    // Reset hourly counter if needed
++    const maybeResetHourlyCounter = Effect.gen(function* () {
++      const state = yield* Ref.get(stateRef);
++      const now = yield* DateTime.now;
++      const hourAgo = DateTime.subtract(now, { hours: 1 });
++
++      if (DateTime.lessThan(state.hourStartTime, hourAgo)) {
++        const newState: CompactionState = {
++          ...state,
++          compactionsThisHour: 0,
++          hourStartTime: now,
++        };
++        yield* Ref.set(stateRef, newState);
++        yield* saveState(newState);
++      }
++    });
++
++    // Check if we can compact (throttling)
++    const canCompact = (noteId: string) =>
++      Effect.gen(function* () {
++        yield* maybeResetHourlyCounter;
++        const state = yield* Ref.get(stateRef);
++        const now = yield* DateTime.now;
++
++        // Check global rate limit
++        if (state.compactionsThisHour >= config.maxCompactionsPerHour) {
++          yield* Effect.logDebug("Rate limit reached for compactions this hour");
++          return false;
++        }
++
++        // Check per-note cooldown
++        const lastCompacted = state.noteLastCompacted[noteId];
++        if (lastCompacted) {
++          const cooldownEnd = DateTime.add(lastCompacted, {
++            minutes: config.minTimeBetweenCompactionsMinutes,
++          });
++          if (DateTime.greaterThan(cooldownEnd, now)) {
++            yield* Effect.logDebug(
++              `Note ${noteId} was recently compacted, skipping`,
++            );
++            return false;
++          }
++        }
++
++        return true;
++      });
++
++    // Record a compaction
++    const recordCompaction = (noteId: string) =>
++      Effect.gen(function* () {
++        const now = yield* DateTime.now;
++        const state = yield* Ref.get(stateRef);
++        const newState: CompactionState = {
++          ...state,
++          lastCompactionTime: Option.some(now),
++          compactionsThisHour: state.compactionsThisHour + 1,
++          noteLastCompacted: {
++            ...state.noteLastCompacted,
++            [noteId]: now,
++          },
++        };
++        yield* Ref.set(stateRef, newState);
++        yield* saveState(newState);
++      });
++
++    // Get stats for all notes that might need compaction
++    const getNotesNeedingCompaction = Effect.gen(function* () {
++      // Get event counts and sizes per note using raw SQL aggregation
++      const stats = yield* db.query((db) =>
++        db
++          .select({
++            noteId: Tables.events.noteId,
++            eventCount: D.count(Tables.events.id),
++            minId: D.min(Tables.events.id),
++            maxId: D.max(Tables.events.id),
++          })
++          .from(Tables.events)
++          .where(D.eq(Tables.events.type, "update"))
++          .groupBy(Tables.events.noteId),
++      );
++
++      // Filter to notes that meet thresholds
++      const candidates: NoteEventStats[] = [];
++
++      for (const stat of stats) {
++        if (Number(stat.eventCount) >= config.minEventsThreshold) {
++          // Get total payload size for this note
++          const events = yield* db
++            .query((db) =>
++              db
++                .select({ payload: Tables.events.payload })
++                .from(Tables.events)
++                .where(
++                  D.and(
++                    D.eq(Tables.events.noteId, stat.noteId),
++                    D.eq(Tables.events.type, "update"),
++                  ),
++                ),
++            )
++            .pipe(Effect.map((events) => events as { payload: Uint8Array }[]));
++
++          const totalSize = events.reduce((sum, e) => sum + e.payload.length, 0);
++
++          if (totalSize >= config.minPayloadSizeThreshold) {
++            candidates.push({
++              noteId: stat.noteId,
++              eventCount: Number(stat.eventCount),
++              totalPayloadSize: totalSize,
++              oldestEventId: stat.minId!,
++              newestEventId: stat.maxId!,
++            });
++          }
++        }
++      }
++
++      return candidates;
++    });
++
++    // Compact events for a single note
++    const compactNote = Effect.fn("Compaction.compactNote")(function* (
++      noteId: string,
++    ) {
++      // Check throttling first
++      const allowed = yield* canCompact(noteId);
++      if (!allowed) {
++        return { compacted: false, reason: "throttled" } as const;
++      }
++
++      // Get all update events for this note
++      const events = yield* db
++        .query((db) =>
++          db
++            .select()
++            .from(Tables.events)
++            .where(
++              D.and(
++                D.eq(Tables.events.noteId, noteId),
++                D.eq(Tables.events.type, "update"),
++              ),
++            )
++            .orderBy(D.asc(Tables.events.id)),
++        )
++        .pipe(Effect.flatMap(decodeAll));
++
++      if (!Array.isNonEmptyReadonlyArray(events)) {
++        return { compacted: false, reason: "no events" } as const;
++      }
++
++      if (events.length < config.minEventsThreshold) {
++        return { compacted: false, reason: "below threshold" } as const;
++      }
++
++      yield* Effect.logInfo(
++        `Compacting ${events.length} events for note ${noteId}`,
++      );
++
++      // Merge all Yjs updates into one
++      const allPayloads = events.map((e) => e.payload);
++      const mergedUpdate = Y.mergeUpdates(allPayloads);
++
++      // Create compacted state by applying to fresh doc
++      const doc = new Y.Doc();
++      Y.applyUpdate(doc, mergedUpdate);
++      const compactedState = Y.encodeStateAsUpdate(doc);
++
++      const beforeSize = allPayloads.reduce((sum, p) => sum + p.length, 0);
++      const afterSize = compactedState.length;
++
++      yield* Effect.logInfo(
++        `Compaction: ${beforeSize} bytes -> ${afterSize} bytes (${Math.round((1 - afterSize / beforeSize) * 100)}% reduction)`,
++      );
++
++      // Perform the compaction in a transaction
++      yield* db.transaction(
++        Effect.gen(function* () {
++          // Insert the compact event with the merged state
++          yield* eventRepo.create({
++            noteId,
++            type: "compact",
++            payload: compactedState,
++            timestamp: yield* DateTime.now,
++          });
++
++          // Delete old update events
++          const eventIds = events.map((e) => e.id);
++          yield* db.query((db) =>
++            db
++              .delete(Tables.events)
++              .where(D.inArray(Tables.events.id, eventIds)),
++          );
++        }),
++      );
++
++      // Record this compaction for throttling
++      yield* recordCompaction(noteId);
++
++      return {
++        compacted: true,
++        eventCount: events.length,
++        beforeSize,
++        afterSize,
++      } as const;
++    });
++
++    // Run a single compaction check cycle
++    const runCompactionCycle = Effect.gen(function* () {
++      yield* Effect.logDebug("Running compaction check cycle");
++
++      const candidates = yield* getNotesNeedingCompaction;
++
++      if (candidates.length === 0) {
++        yield* Effect.logDebug("No notes need compaction");
++        return;
++      }
++
++      yield* Effect.logInfo(
++        `Found ${candidates.length} notes that may need compaction`,
++      );
++
++      // Sort by most events first (most benefit from compaction)
++      const sorted = [...candidates].sort(
++        (a, b) => b.eventCount - a.eventCount,
++      );
++
++      // Compact notes one by one, respecting throttling
++      for (const candidate of sorted) {
++        const result = yield* compactNote(candidate.noteId);
++        if (result.compacted) {
++          yield* Effect.logInfo(
++            `Compacted note ${candidate.noteId}: ${result.eventCount} events, ${result.beforeSize} -> ${result.afterSize} bytes`,
++          );
++        } else {
++          yield* Effect.logDebug(
++            `Skipped compaction for ${candidate.noteId}: ${result.reason}`,
++          );
++        }
++      }
++    });
++
++    // Start background compaction scheduler
++    const startBackgroundCompaction = Effect.gen(function* () {
++      yield* Effect.logInfo("Starting background compaction scheduler");
++
++      const schedule = Schedule.fixed(
++        Duration.minutes(config.checkIntervalMinutes),
++      );
++
++      const fiber = yield* pipe(
++        runCompactionCycle,
++        Effect.catchAll((error) =>
++          Effect.logError("Compaction cycle failed", error),
++        ),
++        Effect.repeat(schedule),
++        Effect.fork,
++      );
++
++      return fiber;
++    });
++
++    // Manually trigger compaction for a specific note
++    const compactNoteManual = Effect.fn("Compaction.compactNoteManual")(
++      function* (noteId: string) {
++        // Skip throttling check for manual compaction
++        const events = yield* db
++          .query((db) =>
++            db
++              .select()
++              .from(Tables.events)
++              .where(
++                D.and(
++                  D.eq(Tables.events.noteId, noteId),
++                  D.eq(Tables.events.type, "update"),
++                ),
++              )
++              .orderBy(D.asc(Tables.events.id)),
++          )
++          .pipe(Effect.flatMap(decodeAll));
++
++        if (!Array.isNonEmptyReadonlyArray(events)) {
++          return { compacted: false, reason: "no events" } as const;
++        }
++
++        // Same compaction logic but without throttle check
++        const allPayloads = events.map((e) => e.payload);
++        const mergedUpdate = Y.mergeUpdates(allPayloads);
++
++        const doc = new Y.Doc();
++        Y.applyUpdate(doc, mergedUpdate);
++        const compactedState = Y.encodeStateAsUpdate(doc);
++
++        const beforeSize = allPayloads.reduce((sum, p) => sum + p.length, 0);
++        const afterSize = compactedState.length;
++
++        yield* db.transaction(
++          Effect.gen(function* () {
++            yield* eventRepo.create({
++              noteId,
++              type: "compact",
++              payload: compactedState,
++              timestamp: yield* DateTime.now,
++            });
++
++            const eventIds = events.map((e) => e.id);
++            yield* db.query((db) =>
++              db
++                .delete(Tables.events)
++                .where(D.inArray(Tables.events.id, eventIds)),
++            );
++          }),
++        );
++
++        yield* recordCompaction(noteId);
++
++        return {
++          compacted: true,
++          eventCount: events.length,
++          beforeSize,
++          afterSize,
++        } as const;
++      },
++    );
++
++    return {
++      compactNote,
++      compactNoteManual,
++      runCompactionCycle,
++      startBackgroundCompaction,
++      getNotesNeedingCompaction,
++    };
++  }),
++}) {}
+diff --git a/src/lib/event.repo.ts b/src/lib/event.repo.ts
+index 92541ade1f..05dec47c5b 100644
+--- a/src/lib/event.repo.ts
++++ b/src/lib/event.repo.ts
+@@ -1,6 +1,6 @@
+ import { Effect, pipe, Schema, Option } from "effect";
+ import { DB, EventSchema, Tables } from ".";
+-import { eq } from "drizzle-orm";
++import { eq, inArray } from "drizzle-orm";
+ 
+ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
+   dependencies: [DB.Service.Default],
+@@ -47,9 +47,22 @@
+       );
+     });
+ 
++    const deleteByIds = Effect.fn("EventRepo.deleteByIds")(function* (
++      ids: readonly number[],
++    ) {
++      if (ids.length === 0) return 0;
++
++      yield* db.query((db) =>
++        db.delete(Tables.events).where(inArray(Tables.events.id, [...ids])),
++      );
++
++      return ids.length;
++    });
++
+     return {
+       create,
+       deleteById,
++      deleteByIds,
+     };
+   }),
+ }) {}
+diff --git a/src/lib/event.schema.ts b/src/lib/event.schema.ts
+index 10cc010486..36dd576c2b 100644
+--- a/src/lib/event.schema.ts
++++ b/src/lib/event.schema.ts
+@@ -1,6 +1,6 @@
+ import { Schema } from "effect";
+ 
+-export const Type = Schema.Literal("create", "update");
++export const Type = Schema.Literal("create", "update", "compact");
+ 
+ export const Record = Schema.Struct({
+   id: Schema.Number,
+diff --git a/src/lib/index.ts b/src/lib/index.ts
+index 93070a68cd..c8c6e8dfc3 100644
+--- a/src/lib/index.ts
++++ b/src/lib/index.ts
+@@ -6,6 +6,7 @@
+ export * as NoteSchema from "./note.schema";
+ export * as NoteRepo from "./note.repo";
+ export * as OPFS from "./opfs.service";
++export * as Compaction from "./compaction.service";
+ 
+ export * as Runtime from "./runtime";
+ 
+diff --git a/src/lib/runtime.ts b/src/lib/runtime.ts
+index 8a2ae11c2e..d3008e1118 100644
+--- a/src/lib/runtime.ts
++++ b/src/lib/runtime.ts
+@@ -1,6 +1,7 @@
+ import {
+   Cause,
+   Data,
++  Effect,
+   Exit,
+   Layer,
+   Logger,
+@@ -8,7 +9,7 @@
+   ManagedRuntime,
+   Option,
+ } from "effect";
+-import { DB, EventRepo, Migrator, NoteRepo } from ".";
++import { Compaction, DB, EventRepo, Migrator, NoteRepo } from ".";
+ 
+ export type SetupResult = Data.TaggedEnum<{
+   Success: { runtime: Type };
+@@ -35,6 +36,14 @@
+ 
+   if (Exit.isSuccess(exit)) {
+     runtimes.set(opts.graphName, runtime);
++
++    // Start background compaction scheduler
++    runtime.runFork(
++      Compaction.Service.pipe(
++        Effect.flatMap((service) => service.startBackgroundCompaction),
++      ),
++    );
++
+     return setupResult.Success({ runtime });
+   }
+ 
+@@ -61,6 +70,7 @@
+     EventRepo.Service.Default,
+     NoteRepo.Service.Default,
+     DB.Service.Default,
++    Compaction.Service.Default,
+     Logger.minimumLogLevel(LogLevel.Debug),
+   ).pipe(Layer.provide(ConfigLayer));
+ 
