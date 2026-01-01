@@ -6,9 +6,13 @@ Create a task file in `docs/tasks/` directory.
 
 @.opencode/lib/task-guidelines.md
 
-## Arguments
+## Context
 
-$ARGUMENTS contains the task title/description.
+Context is the user's description of the task.
+
+<user-context>
+    $ARGUMENTS
+</user-context>
 
 ## ID
 
@@ -17,10 +21,11 @@ Use this generated ID for the task: !`pnpm nanoid --size 4 --alphabet ABCDEFGHIJ
 ## Workflow
 
 1. Create slug from title (kebab-case, max 50 chars)
-2. Write file to `docs/tasks/<id>-<slug>.md` using the ID provided above
-3. Use `status: planned` and `priority: medium` by default
-4. Fill in Context and Goal based on user's description
-5. Leave Acceptance Criteria and Constraints as placeholder sections for user to fill
+2. Use `status: planned` and `priority: medium` by default
+3. Fill in Context and Goal based on user's description
+4. Ask user to provide Acceptance Criteria (checklist of requirements)
+5. Ask user to provide Constraints (limitations, requirements)
+6. Write file to `docs/tasks/<id>-<slug>.md` with all sections filled in
 
 ## Example
 
