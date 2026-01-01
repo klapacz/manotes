@@ -1,9 +1,17 @@
-#!/usr/bin/env bash
-# Filtered jj diff - excludes noisy generated/lock files
-# Usage: .opencode/bin/jj-diff [revision]
+#!/usr/bin/env bun
+// Filtered jj diff - excludes noisy generated/lock files
+// Usage: .opencode/bin/jj-diff [revision] [extra-args...]
 
-set -euo pipefail
+import { EXCLUDE_FILTER } from "../lib/jj-filters";
 
-REV="${1:-@}"
+const [rev = "@", ...extraArgs] = Bun.argv.slice(2);
 
-exec jj diff -r "$REV" --git '~(file:pnpm-lock.yaml | glob:**/*.gen.ts)'
+const proc = Bun.spawn(
+  ["jj", "diff", "-r", rev, "--git", EXCLUDE_FILTER, ...extraArgs],
+  {
+    stdout: "inherit",
+    stderr: "inherit",
+  },
+);
+
+process.exit(await proc.exited);

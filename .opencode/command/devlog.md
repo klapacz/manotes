@@ -33,11 +33,9 @@ diff_file: <path to .patch file>
 
 ## Context
 
-Filtered diff for analysis:
-!`.opencode/bin/jj-diff $1`
+Filtered diff for analysis: %$1
 
-Change description:
-!`jj log -r $1 --no-graph -T 'description'`
+Change description: %$1:log
 
 ## Workflow
 
