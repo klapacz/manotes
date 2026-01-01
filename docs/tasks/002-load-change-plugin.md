@@ -22,7 +22,7 @@ Plugins are the right abstraction here because:
 
 - **Validation**: We can use ArkType to validate that change IDs match expected patterns (e.g., jj's change ID format)
 - **Error handling**: Plugins can return structured errors instead of raw shell failures
-- **Reusability**: Other commands (`/review`, `/devlog`, `/update-devlog`) need the same diff-loading capability
+- **Reusability**: Other commands (`/review`, `/devlog`, `/update-devlog`, `/describe`) need the same diff-loading capability
 - **Testability**: Plugin logic can be unit tested independently of shell execution
 
 ## Goal

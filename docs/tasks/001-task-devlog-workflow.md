@@ -86,6 +86,7 @@ When work is done:
 | `/devlog`        | exists  | "document this change"     | `docs/devlog/<date>-<slug>.md` |
 | `/review`        | planned | "review this change"       | Analysis + suggestions         |
 | `/update-devlog` | planned | "update devlog for change" | Updated devlog                 |
+| `/describe`      | planned | "suggest commit message"   | Message + `jj describe`        |
 
 ## Subtasks
 
