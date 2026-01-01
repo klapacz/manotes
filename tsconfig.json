@@ -23,5 +23,6 @@
     "noUncheckedSideEffectImports": true,
     "noUncheckedIndexedAccess": true,
     "plugins": [{ "name": "@effect/language-service" }]
-  }
+  },
+  "exclude": ["./docs/previous-impl"]
 }

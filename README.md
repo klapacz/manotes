@@ -1,5 +1,21 @@
 Welcome to your new TanStack app!
 
+# Git Submodule
+
+This project includes a git submodule containing the previous implementation of the project for reference:
+
+- **Path:** `./docs/previous-impl`
+- **Repository:** https://github.com/klapacz/manotes.git
+- **Purpose:** Reference implementation for the rewrite effort
+
+To update the submodule:
+
+```bash
+git submodule update --remote
+```
+
+The submodule is managed using git commands since Jujutsu (jj) does not yet have native submodule support. Due to the colocated workspace setup, jj will automatically import/export submodule changes.
+
 # Getting Started
 
 To run this application:

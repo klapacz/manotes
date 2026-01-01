@@ -1,0 +1,3 @@
+[submodule "docs/previous-impl"]
+	path = docs/previous-impl
+	url = https://github.com/klapacz/manotes.git
