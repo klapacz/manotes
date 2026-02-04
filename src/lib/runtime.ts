@@ -52,6 +52,7 @@ async function create(opts: SetupOpts) {
   const ConfigLayer = Layer.succeed(
     DB.Config,
     DB.Config.of({
+      graphName: opts.graphName,
       allowCreate: opts.allowCreate,
       databasePath: `${opts.graphName}.sqlite3`,
     }),

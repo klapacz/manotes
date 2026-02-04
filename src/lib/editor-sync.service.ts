@@ -1,6 +1,7 @@
 import { Effect, pipe, Stream, Data } from "effect";
 import * as Y from "yjs";
-import { EventRepo } from ".";
+import * as EventRepo from "./event.repo";
+import * as GraphWorkerClient from "./graph-worker.client";
 import { Array, Chunk, DateTime, Option } from "effect";
 import { streamDebounceNoDrop } from "./stream-debounce-no-drop";
 
@@ -14,9 +15,13 @@ class OutcomingUpdateCtx extends Data.Class<{
 export class Service extends Effect.Service<Service>()(
   "EditorSyncService.Service",
   {
-    dependencies: [EventRepo.Service.Default],
+    dependencies: [
+      EventRepo.Service.Default,
+      GraphWorkerClient.Service.Default,
+    ],
     effect: Effect.gen(function* () {
       const eventRepo = yield* EventRepo.Service;
+      const graphWorker = yield* GraphWorkerClient.Service;
 
       const loadInitialUpdates = Effect.fn("loadInitialUpdates")(function* (
         doc: Y.Doc,
@@ -118,30 +123,40 @@ export class Service extends Effect.Service<Service>()(
                 type: "update",
                 noteId: noteId,
               });
+
+              yield* graphWorker.client
+                .materialize({
+                  noteId: noteId,
+                })
+                .pipe(
+                  Effect.catchAllCause((cause) =>
+                    Effect.logError("Materialize request failed", cause),
+                  ),
+                );
             }),
           ),
         );
       });
 
-      const setupDoc = Effect.fn("EditorSyncService.setupDoc")(function* (
-        doc: Y.Doc,
-        noteId: string,
-      ) {
-        yield* Effect.all(
-          [
-            Effect.gen(function* () {
-              const { lastKnownEventId } = yield* loadInitialUpdates(
-                doc,
-                noteId,
-              );
+      const setupDoc = Effect.fn("EditorSyncService.setupDoc")(
+        function* (doc: Y.Doc, noteId: string) {
+          yield* Effect.all(
+            [
+              Effect.gen(function* () {
+                const { lastKnownEventId } = yield* loadInitialUpdates(
+                  doc,
+                  noteId,
+                );
 
-              yield* applyIncomingUpdates(doc, noteId, lastKnownEventId);
-            }),
-            saveOutcomingUpdates(doc, noteId),
-          ],
-          { concurrency: "unbounded" },
-        );
-      });
+                yield* applyIncomingUpdates(doc, noteId, lastKnownEventId);
+              }),
+              saveOutcomingUpdates(doc, noteId),
+            ],
+            { concurrency: "unbounded" },
+          );
+        },
+        (effect, _doc, noteId) => effect.pipe(Effect.annotateLogs({ noteId })),
+      );
 
       return {
         setupDoc,

@@ -5,7 +5,7 @@ import type { RunnableQuery as DrizzleQuery } from "drizzle-orm/runnable-query";
 import { SQLocalDrizzle } from "sqlocal/drizzle";
 
 import { drizzle as createDrizzle } from "drizzle-orm/sqlite-proxy";
-import { OPFS } from ".";
+import * as OPFS from "./opfs.service";
 
 export class TransactionContext extends Context.Tag("DBTX")<
   TransactionContext,
@@ -18,7 +18,7 @@ export class NotFoundError extends Data.TaggedError("DB.NotFoundError")<{}> {}
 
 export class Config extends Context.Tag("DB.Config")<
   Config,
-  { databasePath: string; allowCreate: boolean }
+  { graphName: string; databasePath: string; allowCreate: boolean }
 >() {}
 
 export class Service extends Effect.Service<Service>()("DB", {
