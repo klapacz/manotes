@@ -13,9 +13,18 @@ importers:
 
   .:
     dependencies:
+      '@effect/platform':
+        specifier: ^0.94.1
+        version: 0.94.1(effect@3.17.14)
+      '@effect/platform-browser':
+        specifier: ^0.74.0
+        version: 0.74.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
+      '@effect/rpc':
+        specifier: ^0.73.0
+        version: 0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
       '@effectify/solid-effect-atom':
         specifier: ^0.1.5
-        version: 0.1.5(@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.92.1(effect@3.17.14))(@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)(solid-js@1.9.10)
+        version: 0.1.5(@effect/experimental@0.56.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)(solid-js@1.9.10)
       '@tailwindcss/vite':
         specifier: ^4.0.6
         version: 4.1.17(vite@7.2.4(@types/node@25.0.3)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0))
@@ -317,16 +326,22 @@ packages:
     resolution: {integrity: sha512-M5T9zEEu6sLuzXOIp+bQ8B1pMcX3A9gyahTTWlv9idr+b2SlZOfydomwgXkod4vlXw7mYhLLcXgCsnHcBUz9rw==}
     hasBin: true
 
-  '@effect/platform@0.92.1':
-    resolution: {integrity: sha512-XXWCBVwyhaKZISN7aM1fv/3fWDGyxr84ObywnUrL8aHvJLoIeskWFAP/fqw3c5MFCrJ3ZV97RWLbv6JiBQugdg==}
+  '@effect/platform-browser@0.74.0':
+    resolution: {integrity: sha512-PAgkg5L5cASQpScA0SZTSy543MVA4A9kmpVCjo2fCINLRpTeuCFAOQHgPmw8dKHnYS0yGs2TYn7AlrhhqQ5o3g==}
     peerDependencies:
-      effect: ^3.18.1
+      '@effect/platform': ^0.94.0
+      effect: ^3.19.13
 
-  '@effect/rpc@0.71.2':
-    resolution: {integrity: sha512-gWapP9wUDdg+HZe43PlckMURHN4WelJdai1Eeqw/jVUuO4YADJnPduNmdtFPIVe+RhDDs0q+LbrgEDWyO4K27g==}
+  '@effect/platform@0.94.1':
+    resolution: {integrity: sha512-SlL8OMTogHmMNnFLnPAHHo3ua1yrB1LNQOVQMiZsqYu9g3216xjr0gn5WoDgCxUyOdZcseegMjWJ7dhm/2vnfg==}
     peerDependencies:
-      '@effect/platform': ^0.92.1
-      effect: ^3.18.5
+      effect: ^3.19.14
+
+  '@effect/rpc@0.73.0':
+    resolution: {integrity: sha512-iMPf6tTriz8sK0l5x4koFId8Hz5nFptHYg8WqyjHGIIVLTpZxuiSqhmXZG7FnAs5N2n6uCEws4wWGcIgXNUrFg==}
+    peerDependencies:
+      '@effect/platform': ^0.94.0
+      effect: ^3.19.13
 
   '@effectify/solid-effect-atom@0.1.5':
     resolution: {integrity: sha512-aW9qSKxg1AviAxsg3xVkRc+wj7E3KsWFwSAJdLLyQ/CrCWQWLNWCgXn7S8+1XXZNRJ0Y1KkFogNUvfmRispBDA==}
@@ -2902,37 +2917,43 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
-  '@effect-atom/atom@0.3.2(@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.92.1(effect@3.17.14))(@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)':
+  '@effect-atom/atom@0.3.2(@effect/experimental@0.56.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)':
     dependencies:
-      '@effect/experimental': 0.56.0(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14)
-      '@effect/platform': 0.92.1(effect@3.17.14)
-      '@effect/rpc': 0.71.2(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14)
+      '@effect/experimental': 0.56.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
+      '@effect/platform': 0.94.1(effect@3.17.14)
+      '@effect/rpc': 0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
       effect: 3.17.14
 
-  '@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14)':
+  '@effect/experimental@0.56.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)':
     dependencies:
-      '@effect/platform': 0.92.1(effect@3.17.14)
+      '@effect/platform': 0.94.1(effect@3.17.14)
       effect: 3.17.14
       uuid: 11.1.0
 
   '@effect/language-service@0.58.0': {}
 
-  '@effect/platform@0.92.1(effect@3.17.14)':
+  '@effect/platform-browser@0.74.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)':
+    dependencies:
+      '@effect/platform': 0.94.1(effect@3.17.14)
+      effect: 3.17.14
+      multipasta: 0.2.7
+
+  '@effect/platform@0.94.1(effect@3.17.14)':
     dependencies:
       effect: 3.17.14
       find-my-way-ts: 0.1.6
       msgpackr: 1.11.5
       multipasta: 0.2.7
 
-  '@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14)':
+  '@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)':
     dependencies:
-      '@effect/platform': 0.92.1(effect@3.17.14)
+      '@effect/platform': 0.94.1(effect@3.17.14)
       effect: 3.17.14
       msgpackr: 1.11.5
 
-  '@effectify/solid-effect-atom@0.1.5(@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.92.1(effect@3.17.14))(@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)(solid-js@1.9.10)':
+  '@effectify/solid-effect-atom@0.1.5(@effect/experimental@0.56.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)(solid-js@1.9.10)':
     dependencies:
-      '@effect-atom/atom': 0.3.2(@effect/experimental@0.56.0(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.92.1(effect@3.17.14))(@effect/rpc@0.71.2(@effect/platform@0.92.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)
+      '@effect-atom/atom': 0.3.2(@effect/experimental@0.56.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)
       effect: 3.17.14
       solid-js: 1.9.10
     transitivePeerDependencies:
