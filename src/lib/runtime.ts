@@ -8,7 +8,12 @@ import {
   ManagedRuntime,
   Option,
 } from "effect";
-import { DB, EventRepo, Migrator, NoteRepo, EditorSyncService } from ".";
+import * as DB from "./db.service";
+import * as EventRepo from "./event.repo";
+import * as GraphWorkerClient from "./graph-worker.client";
+import * as Migrator from "./migrator";
+import * as NoteRepo from "./note.repo";
+import * as EditorSyncService from "./editor-sync.service";
 
 export type SetupResult = Data.TaggedEnum<{
   Success: { runtime: Type };
@@ -62,6 +67,7 @@ async function create(opts: SetupOpts) {
     EventRepo.Service.Default,
     NoteRepo.Service.Default,
     EditorSyncService.Service.Default,
+    GraphWorkerClient.Service.Default,
     DB.Service.Default,
     Logger.minimumLogLevel(LogLevel.Debug),
   ).pipe(Layer.provide(ConfigLayer));
