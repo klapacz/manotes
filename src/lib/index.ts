@@ -5,6 +5,7 @@ export * as Migrator from "./migrator";
 export * as EventRepo from "./event.repo";
 export * as NoteSchema from "./note.schema";
 export * as NoteRepo from "./note.repo";
+export * as NoteCache from "./note-cache.service";
 export * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
 export * as MaterializedEventService from "./materialized-event.service";
 export * as OPFS from "./opfs.service";

@@ -15,6 +15,7 @@ import * as MaterializationCheckpointRepo from "./materialization-checkpoint.rep
 import * as MaterializedEventService from "./materialized-event.service";
 import * as Migrator from "./migrator";
 import * as NoteRepo from "./note.repo";
+import * as NoteCache from "./note-cache.service";
 import * as EditorSyncService from "./editor-sync.service";
 import { SqlLive } from "./db.service";
 
@@ -70,6 +71,7 @@ async function create(opts: SetupOpts) {
   const AppLayer = Layer.mergeAll(
     EventRepo.Service.Default,
     NoteRepo.Service.Default,
+    NoteCache.Service.Default,
     MaterializationCheckpointRepo.Service.Default,
     MaterializedEventService.Service.Default,
     EditorSyncService.Service.Default,
