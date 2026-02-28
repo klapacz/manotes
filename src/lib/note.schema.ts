@@ -27,6 +27,13 @@ export const Record = Schema.Struct({
   lastEventLocalSeq: Schema.Number,
 });
 
+export const Preview = Schema.Struct({
+  id: Schema.String,
+  title: Schema.String,
+  isDaily: SchemaPrimitives.BooleanFromInt,
+  updatedAt: Schema.DateTimeUtc,
+});
+
 export const Create = Schema.Struct({
   id: Schema.optional(Schema.String),
   title: Schema.String,

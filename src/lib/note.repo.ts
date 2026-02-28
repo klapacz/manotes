@@ -1,4 +1,4 @@
-import { Effect, pipe, Schema, Option, Stream } from "effect";
+import { Effect, pipe, Schema, Option, Stream, Array, flow } from "effect";
 import * as DB from "./db.service";
 import * as NoteSchema from "./note.schema";
 import * as Tables from "./db.tables";
@@ -107,6 +107,37 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
       );
     });
 
+    const reactiveFindPreviewById = Effect.fn(
+      "NoteRepo.reactiveFindPreviewById",
+    )(function* (id: string) {
+      const stream = yield* db.reactiveQuery((db) =>
+        db
+          .select({
+            id: Tables.notes.id,
+            title: Tables.notes.title,
+            isDaily: Tables.notes.isDaily,
+            updatedAt: Tables.notes.updatedAt,
+          })
+          .from(Tables.notes)
+          .where(eq(Tables.notes.id, id)),
+      );
+
+      return stream.pipe(
+        Stream.mapEffect(
+          flow(
+            Array.head,
+            Option.match({
+              onNone: () => Effect.succeedNone,
+              onSome: flow(
+                Schema.decode(NoteSchema.Preview),
+                Effect.map(Option.some),
+              ),
+            }),
+          ),
+        ),
+      );
+    });
+
     const reactiveSearch = Effect.fn("NoteRepo.reactiveSearch")(function* (
       filter: string,
     ) {
@@ -133,6 +164,7 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
       getById,
       list,
       reactiveList,
+      reactiveFindPreviewById,
       reactiveSearch,
     };
   }),
