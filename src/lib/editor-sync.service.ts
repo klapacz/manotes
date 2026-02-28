@@ -50,10 +50,10 @@ export class Service extends Effect.Service<Service>()(
             Effect.gen(function* () {
               yield* Effect.logDebug("Last known ID:", lastKnownEventId);
 
-              const reactiveStream = yield* eventRepo.streamUpdatesForNote(
+              const reactiveStream = yield* eventRepo.streamUpdatesForNote({
                 noteId,
-                lastKnownEventId,
-              );
+                afterId: lastKnownEventId,
+              });
 
               const firstBatch = yield* reactiveStream.pipe(
                 Stream.filterMap((events) =>
