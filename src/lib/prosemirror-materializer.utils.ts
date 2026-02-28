@@ -2,7 +2,7 @@ import { Option, pipe, Schema } from "effect";
 import { createEditor, jsonFromNode } from "prosekit/core";
 import * as Y from "yjs";
 import { yXmlFragmentToProseMirrorRootNode } from "y-prosemirror";
-import { defineAppExtension } from "../editor.extension";
+import { defineAppSchema } from "../editor.schema";
 import type { UnknownNodeJSON } from "./node-json";
 
 export function yDocToNodeJSON(opts: {
@@ -13,7 +13,7 @@ export function yDocToNodeJSON(opts: {
   const rootNode = yXmlFragmentToProseMirrorRootNode(
     xmlFragment,
     createEditor({
-      extension: defineAppExtension({ isDaily: opts.isDaily }),
+      extension: defineAppSchema({ isDaily: opts.isDaily }),
     }).schema,
   );
   return jsonFromNode(rootNode);

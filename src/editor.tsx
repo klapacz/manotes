@@ -25,6 +25,7 @@ import { EditorSyncService, useRuntime } from "./lib";
 import { defineVirtualDailyHeading } from "./editor.virtual-daily-heading.extension";
 import { formatDailyNoteTitle } from "./lib/daily-note";
 import { Fiber, Effect } from "effect";
+import BacklinkMenu from "./lib/editor/backlink/menu";
 
 type Props = {
   noteId: string;
@@ -89,7 +90,8 @@ export default function Editor(props: Props): JSX.Element {
     <Show when={state()} keyed>
       {(current) => (
         <ProseKit editor={current.editor}>
-          <div ref={current.editor.mount} class="outline-solid p-4"></div>
+          <div ref={current.editor.mount} class="outline-solid p-4" />
+          <BacklinkMenu currentNoteId={props.noteId} />
         </ProseKit>
       )}
     </Show>
