@@ -1,9 +1,9 @@
 import { Schema } from "effect";
-import type { NodeJSON } from "prosekit/core";
+import type { UnknownNodeJSON } from "./node-json";
 
 export const Content = Schema.transform(
   Schema.String,
-  Schema.declare<NodeJSON>((_x): _x is NodeJSON => true),
+  Schema.declare<UnknownNodeJSON>((_x): _x is UnknownNodeJSON => true),
   {
     encode: (value) => JSON.stringify(value),
     decode: (value) => JSON.parse(value),
