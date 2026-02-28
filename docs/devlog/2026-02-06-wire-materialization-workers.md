@@ -21,6 +21,8 @@ Wired the SharedWorker ↔ Dedicated Worker pipeline for materialization, inspir
 - **Leader election**: Web Locks ensures only one dedicated worker exists per graph. Followers wait and take over when the leader closes.
 - **MessagePort RPC**: SharedWorker builds an RPC client over the `MessagePort` using `BrowserWorker.layerPlatform` and `RpcSerialization.layerJson`.
 - **Fail fast DB init**: Dedicated Worker builds graph-scoped services with `allowCreate: false` and logs DB init failures early.
+- **Materialize semantics**: `materialize({ noteId })` is fire-and-forget. During startup/failover, SharedWorker may soft-drop requests before a dedicated port is connected.
+- **Consistency model**: No SharedWorker buffering. Eventual correctness is delegated to dedicated-worker catch-up (watermark-based replay of unmaterialized events on startup/takeover).
 
 ## Next Steps
 
