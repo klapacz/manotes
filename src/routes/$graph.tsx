@@ -4,11 +4,19 @@ import * as GraphWorkerClient from "../lib/graph-worker.client";
 import { Effect, Schema, Stream } from "effect";
 import { Show } from "solid-js";
 import { DedicatedWorkerHealth } from "../lib/graph.worker-rpc";
+import { Temporal } from "temporal-polyfill";
+import * as TemporalSchema from "../lib/temporal.schema";
 
 export const Route = createFileRoute("/$graph")({
   component: RouteComponent,
   validateSearch: Schema.Struct({
     allowCreate: Schema.optional(Schema.Boolean),
+    date: Schema.optional(TemporalSchema.PlainDateString).pipe(
+      Schema.withDefaults({
+        decoding: () => Temporal.Now.plainDateISO().toString(),
+        constructor: () => Temporal.Now.plainDateISO().toString(),
+      }),
+    ),
   }).pipe(Schema.standardSchemaV1),
   beforeLoad: async ({ params, search }) => {
     const graphName = params.graph;
@@ -29,7 +37,11 @@ export const Route = createFileRoute("/$graph")({
             from: Route.fullPath,
             to: "/$graph",
             replace: true,
-            search: (search) => ({ ...search, allowCreate: undefined }),
+            search: (search) => ({
+              ...search,
+              allowCreate: undefined,
+              date: search.date,
+            }),
           });
         }
         return { runtime };

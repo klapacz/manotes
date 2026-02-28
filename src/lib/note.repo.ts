@@ -24,6 +24,7 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
             id,
             title: encoded.title,
             content: encoded.content,
+            isDaily: encoded.isDaily ?? false,
             materializedYUpdate: encoded.materializedYUpdate ?? null,
             createdAt: encoded.createdAt,
             updatedAt: encoded.updatedAt,

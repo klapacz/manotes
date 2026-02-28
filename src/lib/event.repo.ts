@@ -22,6 +22,7 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
           .values({
             type: encoded.type,
             noteId: encoded.noteId,
+            isDaily: encoded.isDaily,
             payload: encoded.payload,
             timestamp: encoded.timestamp,
           })

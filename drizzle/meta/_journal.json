@@ -15,6 +15,13 @@
       "when": 1772303200616,
       "tag": "0001_lame_groot",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1772388242568,
+      "tag": "0002_slimy_wolf_cub",
+      "breakpoints": true
     }
   ]
 }

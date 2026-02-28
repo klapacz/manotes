@@ -16,6 +16,7 @@ import {
   findFirstH1Text,
   yDocToNodeJSON,
 } from "./prosemirror-materializer.utils";
+import { formatDailyNoteTitle } from "./daily-note";
 
 const MAX_FETCHED_UNDONE_EVENTS = 100;
 
@@ -59,7 +60,11 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
           events,
         );
 
-        const materialized = buildMaterializedNoteFields({ yDoc });
+        const materialized = buildMaterializedNoteFields({
+          yDoc,
+          noteId,
+          isDaily: note.isDaily,
+        });
         const lastEvent = Arr.lastNonEmpty(events);
 
         yield* noteRepo.updateById(noteId, {
@@ -84,14 +89,20 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
 
       const yDoc = yield* applyMaterializationUpdates(null, events);
 
-      const materialized = buildMaterializedNoteFields({ yDoc });
       const firstEvent = Arr.headNonEmpty(events);
       const lastEvent = Arr.lastNonEmpty(events);
+      const isDaily = firstEvent.isDaily;
+      const materialized = buildMaterializedNoteFields({
+        yDoc,
+        noteId,
+        isDaily,
+      });
 
       yield* noteRepo.create({
         id: noteId,
         title: materialized.title,
         content: materialized.content,
+        isDaily,
         materializedYUpdate: materialized.materializedYUpdate,
         createdAt: firstEvent.timestamp,
         updatedAt: lastEvent.timestamp,
@@ -183,13 +194,27 @@ const applyMaterializationUpdates = Effect.fn(
   return yDoc;
 });
 
-const FALLBACK_TITLE = "Untitled";
+export const FALLBACK_TITLE = "Untitled";
 
-function buildMaterializedNoteFields({ yDoc }: { yDoc: Y.Doc }) {
+function buildMaterializedNoteFields({
+  yDoc,
+  noteId,
+  isDaily,
+}: {
+  yDoc: Y.Doc;
+  noteId: string;
+  isDaily: boolean;
+}) {
   const materializedYUpdate = Y.encodeStateAsUpdate(yDoc);
   const content = yDocToNodeJSON(yDoc);
   const extractedTitle = findFirstH1Text(content);
-  const title = extractedTitle.length > 0 ? extractedTitle : FALLBACK_TITLE;
+  // Daily note titles are deterministic from note id (date), so user edits in
+  // the document body do not mutate the canonical daily title.
+  const title = isDaily
+    ? formatDailyNoteTitle(noteId)
+    : extractedTitle.length > 0
+      ? extractedTitle
+      : FALLBACK_TITLE;
 
   return {
     title,

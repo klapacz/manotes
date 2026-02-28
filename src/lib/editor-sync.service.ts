@@ -3,6 +3,7 @@ import * as Y from "yjs";
 import * as EventRepo from "./event.repo";
 import { Array, Chunk, DateTime, Option } from "effect";
 import * as NoteSchema from "./note.schema";
+import * as NoteRepo from "./note.repo";
 import { streamDebounceNoDrop } from "./stream-debounce-no-drop";
 
 const REMOTE_ORIGIN = Symbol("remote");
@@ -12,12 +13,18 @@ class OutcomingUpdateCtx extends Data.Class<{
   origin: unknown;
 }> {}
 
+type SetupInput = {
+  noteId: string;
+  isDaily: boolean;
+};
+
 export class Service extends Effect.Service<Service>()(
   "EditorSyncService.Service",
   {
-    dependencies: [EventRepo.Service.Default],
+    dependencies: [EventRepo.Service.Default, NoteRepo.Service.Default],
     effect: Effect.gen(function* () {
       const eventRepo = yield* EventRepo.Service;
+      const noteRepo = yield* NoteRepo.Service;
 
       const applyMaterializedYUpdate = Effect.fn("applyMaterializedYUpdate")(
         function* (
@@ -84,6 +91,7 @@ export class Service extends Effect.Service<Service>()(
       const saveOutcomingUpdates = Effect.fn("saveOutcomingUpdates")(function* (
         doc: Y.Doc,
         noteId: string,
+        isDaily: boolean,
       ) {
         yield* Stream.asyncPush<OutcomingUpdateCtx>((emit) =>
           Effect.sync(() =>
@@ -112,6 +120,7 @@ export class Service extends Effect.Service<Service>()(
                 timestamp: yield* DateTime.now,
                 type: "update",
                 noteId: noteId,
+                isDaily,
               });
             }),
           ),
@@ -119,21 +128,32 @@ export class Service extends Effect.Service<Service>()(
       });
 
       const setupDoc = Effect.fn("EditorSyncService.setupDoc")(
-        function* (doc: Y.Doc, note: typeof NoteSchema.Record.Type) {
+        function* (doc: Y.Doc, input: SetupInput) {
+          const note = yield* noteRepo
+            .findById(input.noteId)
+            .pipe(Effect.map(Option.getOrNull));
+
+          const materializedYUpdate = note?.materializedYUpdate ?? null;
+          const initialLastKnownEventId = note?.lastEventId ?? 0;
+
           yield* Effect.all(
             [
               Effect.gen(function* () {
-                yield* applyMaterializedYUpdate(doc, note.materializedYUpdate);
+                yield* applyMaterializedYUpdate(doc, materializedYUpdate);
 
-                yield* applyIncomingUpdates(doc, note.id, note.lastEventId);
+                yield* applyIncomingUpdates(
+                  doc,
+                  input.noteId,
+                  initialLastKnownEventId,
+                );
               }),
-              saveOutcomingUpdates(doc, note.id),
+              saveOutcomingUpdates(doc, input.noteId, input.isDaily),
             ],
             { concurrency: "unbounded" },
           );
         },
-        (effect, _doc, note) =>
-          effect.pipe(Effect.annotateLogs({ noteId: note.id })),
+        (effect, _doc, input) =>
+          effect.pipe(Effect.annotateLogs({ noteId: input.noteId })),
       );
 
       return {

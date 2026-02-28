@@ -1,79 +1,77 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/solid-router";
-import {
-  createRuntimeStreamStore,
-  NoteRepo,
-  NoteSchema,
-  useRuntime,
-} from "../lib";
-import { DateTime, Effect, Stream } from "effect";
-import { For } from "solid-js";
+import { createFileRoute, Link } from "@tanstack/solid-router";
+import { Temporal } from "temporal-polyfill";
 import Editor from "../editor";
 
 export const Route = createFileRoute("/$graph/")({
   component: RouteComponent,
 });
 
-const createNote = Effect.gen(function* () {
-  const note = yield* NoteRepo.Service;
-  yield* note.create({
-    title: "New Note",
-    content: { type: "doc", content: [] },
-    createdAt: yield* DateTime.now,
-    updatedAt: yield* DateTime.now,
-  });
-});
-
 function RouteComponent() {
-  const runtime = useRuntime();
-
-  const notes = createRuntimeStreamStore(
-    () =>
-      NoteRepo.Service.pipe(
-        Effect.flatMap((noteRepo) => noteRepo.reactiveList()),
-        Stream.unwrap,
-      ),
-    [],
-  );
+  const search = Route.useSearch();
 
   return (
     <div class="p-6 flex flex-col gap-4">
-      <div class="flex gap-2 justify-between">
-        <button
-          class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded"
-          onClick={async () => {
-            await runtime().runPromise(createNote);
-          }}
-        >
-          Create
-        </button>
-
-        <Link
-          from={Route.fullPath}
-          to="/$graph/other"
-          class="bg-gray-500 hover:bg-gray-700 text-white py-2 px-4 rounded"
-        >
-          Go to other
-        </Link>
-      </div>
-
-      <Outlet />
-
-      <ul>
-        <For each={notes}>
-          {(note) => {
-            return <Note note={note} />;
-          }}
-        </For>
-      </ul>
+      <Navigation />
+      <Editor noteId={search().date} isDaily={true} />
     </div>
   );
 }
 
-function Note(props: { note: typeof NoteSchema.Record.Type }) {
+function Navigation() {
+  const moveBy = (days: number) => (current: { date: string }) => {
+    const to = Temporal.PlainDate.from(current.date).add({ days }).toString();
+
+    return {
+      ...current,
+      date: to,
+    };
+  };
+
   return (
-    <div>
-      <h1>{props.note.title}</h1>
-      <Editor note={props.note} />
+    <div class="flex gap-2 justify-between">
+      <div class="flex gap-2 items-center">
+        <Link
+          from={Route.fullPath}
+          to="/$graph"
+          class="bg-gray-500 hover:bg-gray-700 text-white py-2 px-4 rounded"
+          search={moveBy(-1)}
+        >
+          Prev
+        </Link>
+
+        <Link
+          from={Route.fullPath}
+          to="/$graph"
+          class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded"
+          search={(current) => {
+            const to = Temporal.Now.plainDateISO().toString();
+
+            return {
+              ...current,
+              date: to,
+            };
+          }}
+        >
+          Today
+        </Link>
+
+        <Link
+          from={Route.fullPath}
+          to="/$graph"
+          class="bg-gray-500 hover:bg-gray-700 text-white py-2 px-4 rounded"
+          search={moveBy(1)}
+        >
+          Next
+        </Link>
+      </div>
+
+      <Link
+        from={Route.fullPath}
+        to="/$graph/other"
+        class="bg-gray-500 hover:bg-gray-700 text-white py-2 px-4 rounded"
+      >
+        Go to other
+      </Link>
     </div>
   );
 }

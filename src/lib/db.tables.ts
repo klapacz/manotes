@@ -5,6 +5,7 @@ export const notes = sqliteTable("notes", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
   content: text("content").notNull(),
+  isDaily: integer("isDaily", { mode: "boolean" }).notNull().default(false),
   materializedYUpdate: blob("materializedYUpdate", {
     mode: "buffer",
   }).$type<Uint8Array<ArrayBufferLike> | null>(),
@@ -16,6 +17,7 @@ export const notes = sqliteTable("notes", {
 export const events = sqliteTable("events", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   noteId: text("noteId").notNull(),
+  isDaily: integer("isDaily", { mode: "boolean" }).notNull().default(false),
   type: text("type", {
     enum: EventSchema.Type.literals,
   }).notNull(),

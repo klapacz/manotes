@@ -19,6 +19,7 @@ export const Record = Schema.Struct({
   id: Schema.String,
   title: Schema.String,
   content: Content,
+  isDaily: Schema.Boolean,
   materializedYUpdate: MaterializedYUpdate,
   createdAt: Schema.DateTimeUtc,
   updatedAt: Schema.DateTimeUtc,
@@ -29,6 +30,7 @@ export const Create = Schema.Struct({
   id: Schema.optional(Schema.String),
   title: Schema.String,
   content: Content,
+  isDaily: Schema.optional(Schema.Boolean),
   materializedYUpdate: Schema.optional(MaterializedYUpdate),
   createdAt: Schema.DateTimeUtc,
   updatedAt: Schema.DateTimeUtc,
@@ -38,6 +40,7 @@ export const Create = Schema.Struct({
 export const Update = Schema.Struct({
   title: Schema.optional(Schema.String),
   content: Schema.optional(Content),
+  isDaily: Schema.optional(Schema.Boolean),
   materializedYUpdate: Schema.optional(MaterializedYUpdate),
   createdAt: Schema.optional(Schema.DateTimeUtc),
   updatedAt: Schema.optional(Schema.DateTimeUtc),

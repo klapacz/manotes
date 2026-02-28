@@ -21,28 +21,45 @@ import {
   type YjsUndoPluginOptions,
 } from "prosekit/extensions/yjs";
 import { defineAppExtension } from "./editor.extension";
-import { useRuntime, type NoteSchema, EditorSyncService } from "./lib";
+import { EditorSyncService, useRuntime } from "./lib";
+import { defineVirtualDailyHeading } from "./editor.virtual-daily-heading.extension";
+import { formatDailyNoteTitle } from "./lib/daily-note";
 import { Fiber, Effect } from "effect";
 
-export default function Editor(props: {
-  note: typeof NoteSchema.Record.Type;
-}): JSX.Element {
+type Props = {
+  noteId: string;
+  isDaily: boolean;
+};
+
+export default function Editor(props: Props): JSX.Element {
   const runtime = useRuntime();
 
   // The editor stack is recreated per note-id boundary so future route/view
   // changes can swap notes in-place without leaking Y.Doc/editor state.
   const state = createMemo(
     on(
-      () => props.note.id,
+      () => props.noteId,
       (noteId) => {
         const doc = new Y.Doc();
-        const extension = union([defineYjs({ doc }), defineAppExtension()]);
+        const extension = union([
+          defineYjs({ doc }),
+          defineAppExtension(),
+          // Daily title is virtual (render-only), not part of persisted doc content.
+          ...(props.isDaily
+            ? [
+                defineVirtualDailyHeading({
+                  title: formatDailyNoteTitle(noteId),
+                }),
+              ]
+            : []),
+        ]);
         const editor = createEditor({ extension });
 
         return {
           doc,
           editor,
-          initialNote: { ...props.note, id: noteId },
+          noteId,
+          isDaily: props.isDaily,
         };
       },
       // Build the first editor state immediately so render/effect can consume it
@@ -53,12 +70,12 @@ export default function Editor(props: {
 
   createEffect(() => {
     const r = runtime();
-    const { doc, initialNote } = state();
+    const { doc, noteId, isDaily } = state();
 
     const fiber = r.runFork(
       Effect.gen(function* () {
         const service = yield* EditorSyncService.Service;
-        yield* service.setupDoc(doc, initialNote);
+        yield* service.setupDoc(doc, { noteId, isDaily });
       }),
     );
 
