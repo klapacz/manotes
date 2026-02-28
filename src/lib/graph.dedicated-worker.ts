@@ -4,6 +4,10 @@ import { Effect, Layer, Logger, LogLevel } from "effect";
 import { RpcServer } from "@effect/rpc";
 import type { RpcGroup } from "@effect/rpc";
 import * as DB from "./db.service";
+import * as EventRepo from "./event.repo";
+import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
+import * as MaterializerService from "./materializer.service";
+import * as NoteRepo from "./note.repo";
 import {
   GraphDedicatedRpc,
   GraphDedicatedInitialMessage,
@@ -58,9 +62,14 @@ function makeRpcHandler(graphName: string) {
     Effect.gen(function* () {
       yield* Effect.logInfo("RPC handler started");
 
-      // Validate DB access by running a simple effect
-      yield* DB.Service;
-      yield* Effect.logInfo("DB.Service initialized");
+      const materializer = yield* MaterializerService.Service;
+
+      yield* materializer.start().pipe(
+        Effect.catchAllCause((cause) =>
+          Effect.logError("Materializer failed", cause),
+        ),
+        Effect.forkScoped,
+      );
 
       return {
         placeholder: Effect.fn("DedicatedWorker.placeholder")(function* () {
@@ -85,6 +94,10 @@ function buildServiceLayer(graphName: string) {
 
   return Layer.mergeAll(
     DB.Service.Default,
+    EventRepo.Service.Default,
+    NoteRepo.Service.Default,
+    MaterializationCheckpointRepo.Service.Default,
+    MaterializerService.Service.Default,
     Logger.minimumLogLevel(LogLevel.Debug),
   ).pipe(Layer.provide(ConfigLayer));
 }
