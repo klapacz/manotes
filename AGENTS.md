@@ -16,6 +16,10 @@ This project uses **Jujutsu (jj)** for version control. Always use `--git` flag 
 
 For working with Jujutsu changes (squashing, splitting, partial commits, etc.), use the `jj-hunk` skill.
 
+## Migrations
+
+Do not create Drizzle migration SQL files by hand. Generate migrations with `drizzle-kit generate`.
+
 ## Linting
 
 DO NOT ever run any type checking or linting commands before asking me first.
