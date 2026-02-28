@@ -11,6 +11,7 @@ import {
 import * as DB from "./db.service";
 import * as EventRepo from "./event.repo";
 import * as GraphWorkerClient from "./graph-worker.client";
+import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
 import * as Migrator from "./migrator";
 import * as NoteRepo from "./note.repo";
 import * as EditorSyncService from "./editor-sync.service";
@@ -66,6 +67,7 @@ async function create(opts: SetupOpts) {
   const AppLayer = Layer.mergeAll(
     EventRepo.Service.Default,
     NoteRepo.Service.Default,
+    MaterializationCheckpointRepo.Service.Default,
     EditorSyncService.Service.Default,
     GraphWorkerClient.Service.Default,
     DB.Service.Default,
