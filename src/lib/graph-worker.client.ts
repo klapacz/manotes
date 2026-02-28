@@ -99,7 +99,7 @@ const SharedRpcProtocol = Layer.unwrapEffect(
 
     return RpcClient.layerProtocolWorker({
       size: 1,
-      // healthStream is long-lived, so allow unary RPCs (materialize/updateMessagePort)
+      // healthStream is long-lived, so allow unary RPCs (placeholder/updateMessagePort)
       // to run concurrently on the same worker connection.
       concurrency: 16,
     }).pipe(

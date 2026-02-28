@@ -127,13 +127,13 @@ const RpcHandler = GraphSharedWorkerRpc.toLayer(
         (effect) => effect.pipe(annotateHandler),
       ),
 
-      // Forward materialize requests to the Dedicated Worker.
-      // All tabs (leader and followers) call this - the SharedWorker routes to the leader's worker.
-      materialize: Effect.fn("SharedWorker.materialize")(
+      // Forward placeholder requests to the Dedicated Worker.
+      // Kept as a future RPC hook. Correctness does not depend on this path.
+      placeholder: Effect.fn("SharedWorker.placeholder")(
         function* (payload) {
           const current = yield* ScopedRef.get(dedicatedWorkerRef);
 
-          yield* Effect.logInfo("Forwarding materialize request");
+          yield* Effect.logInfo("Forwarding placeholder request");
 
           if (Option.isNone(current)) {
             yield* dedicatedWorkerHealth.setStatus(
@@ -144,30 +144,26 @@ const RpcHandler = GraphSharedWorkerRpc.toLayer(
             return;
           }
 
-          yield* Effect.matchCauseEffect(current.value.materialize(payload), {
+          yield* Effect.matchCauseEffect(current.value.placeholder(payload), {
             onFailure: Effect.fn(function* (cause) {
               yield* dedicatedWorkerHealth.setStatus(
                 "degraded",
-                `Materialize failed for note ${payload.noteId}: ${Cause.pretty(cause)}`,
+                `Placeholder RPC failed: ${Cause.pretty(cause)}`,
               );
 
               yield* Effect.logError(
-                "Failed to materialize in dedicated worker",
+                "Placeholder RPC failed in dedicated worker",
                 cause,
               );
             }),
 
             onSuccess: Effect.fn(function* () {
-              yield* Effect.logInfo("Successfully materialized");
+              yield* Effect.logInfo("Placeholder RPC succeeded");
               yield* dedicatedWorkerHealth.markHealthy;
             }),
           });
         },
-        (effect, payload) =>
-          effect.pipe(
-            annotateHandler,
-            Effect.annotateLogs({ noteId: payload.noteId }),
-          ),
+        (effect) => effect.pipe(annotateHandler),
       ),
 
       healthStream: () => dedicatedWorkerHealth.ref.changes,

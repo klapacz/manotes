@@ -20,12 +20,10 @@ export class DedicatedWorkerHealth extends Schema.Class<DedicatedWorkerHealth>(
 
 /** External RPC surface (main thread -> SharedWorker). */
 export class GraphSharedWorkerRpc extends RpcGroup.make(
-  Rpc.make("materialize", {
+  Rpc.make("placeholder", {
     success: Schema.Void,
     error: Schema.Never,
-    payload: {
-      noteId: Schema.String,
-    },
+    payload: {},
   }),
   Rpc.make("updateMessagePort", {
     payload: {
@@ -44,8 +42,8 @@ export class GraphSharedWorkerRpc extends RpcGroup.make(
 
 /** Internal RPC surface (SharedWorker -> Dedicated Worker via MessagePort). */
 export class GraphDedicatedRpc extends RpcGroup.make(
-  Rpc.make("materialize", {
-    payload: { noteId: Schema.String },
+  Rpc.make("placeholder", {
+    payload: {},
     success: Schema.Void,
     error: Schema.Never,
   }),

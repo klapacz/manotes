@@ -63,22 +63,9 @@ function makeRpcHandler(graphName: string) {
       yield* Effect.logInfo("DB.Service initialized");
 
       return {
-        materialize: Effect.fn("DedicatedWorker.materialize")(
-          function* (_payload) {
-            yield* Effect.logInfo("Materializing");
-
-            // TODO: Implement actual materialization logic
-            // const noteRepo = yield* NoteRepo.Service;
-            // const eventRepo = yield* EventRepo.Service;
-            // ... materialization logic
-          },
-          (effect, payload) =>
-            Effect.annotateLogs(effect, {
-              worker: "dedicated",
-              graphName,
-              noteId: payload.noteId,
-            }),
-        ),
+        placeholder: Effect.fn("DedicatedWorker.placeholder")(function* () {
+          yield* Effect.logInfo("Placeholder RPC invoked");
+        }),
       } satisfies Handlers;
     }).pipe(Effect.annotateLogs({ worker: "dedicated", graphName })),
   );

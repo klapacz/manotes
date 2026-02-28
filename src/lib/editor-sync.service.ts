@@ -1,7 +1,6 @@
 import { Effect, pipe, Stream, Data } from "effect";
 import * as Y from "yjs";
 import * as EventRepo from "./event.repo";
-import * as GraphWorkerClient from "./graph-worker.client";
 import { Array, Chunk, DateTime, Option } from "effect";
 import { streamDebounceNoDrop } from "./stream-debounce-no-drop";
 
@@ -15,13 +14,9 @@ class OutcomingUpdateCtx extends Data.Class<{
 export class Service extends Effect.Service<Service>()(
   "EditorSyncService.Service",
   {
-    dependencies: [
-      EventRepo.Service.Default,
-      GraphWorkerClient.Service.Default,
-    ],
+    dependencies: [EventRepo.Service.Default],
     effect: Effect.gen(function* () {
       const eventRepo = yield* EventRepo.Service;
-      const graphWorker = yield* GraphWorkerClient.Service;
 
       const loadInitialUpdates = Effect.fn("loadInitialUpdates")(function* (
         doc: Y.Doc,
@@ -123,16 +118,6 @@ export class Service extends Effect.Service<Service>()(
                 type: "update",
                 noteId: noteId,
               });
-
-              yield* graphWorker.client
-                .materialize({
-                  noteId: noteId,
-                })
-                .pipe(
-                  Effect.catchAllCause((cause) =>
-                    Effect.logError("Materialize request failed", cause),
-                  ),
-                );
             }),
           ),
         );
