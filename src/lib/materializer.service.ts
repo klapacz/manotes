@@ -206,7 +206,7 @@ function buildMaterializedNoteFields({
   isDaily: boolean;
 }) {
   const materializedYUpdate = Y.encodeStateAsUpdate(yDoc);
-  const content = yDocToNodeJSON(yDoc);
+  const content = yDocToNodeJSON({ yDoc, isDaily });
   const extractedTitle = findFirstH1Text(content);
   // Daily note titles are deterministic from note id (date), so user edits in
   // the document body do not mutate the canonical daily title.

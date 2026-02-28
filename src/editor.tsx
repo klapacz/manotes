@@ -43,7 +43,7 @@ export default function Editor(props: Props): JSX.Element {
         const doc = new Y.Doc();
         const extension = union([
           defineYjs({ doc }),
-          defineAppExtension(),
+          defineAppExtension({ isDaily: props.isDaily }),
           // Daily title is virtual (render-only), not part of persisted doc content.
           ...(props.isDaily
             ? [

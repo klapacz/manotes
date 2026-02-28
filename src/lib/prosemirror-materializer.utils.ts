@@ -5,15 +5,16 @@ import { yXmlFragmentToProseMirrorRootNode } from "y-prosemirror";
 import { defineAppExtension } from "../editor.extension";
 import type { UnknownNodeJSON } from "./node-json";
 
-const APP_EDITOR_SCHEMA = createEditor({
-  extension: defineAppExtension(),
-}).schema;
-
-export function yDocToNodeJSON(yDoc: Y.Doc): UnknownNodeJSON {
-  const xmlFragment = yDoc.getXmlFragment("prosemirror");
+export function yDocToNodeJSON(opts: {
+  yDoc: Y.Doc;
+  isDaily: boolean;
+}): UnknownNodeJSON {
+  const xmlFragment = opts.yDoc.getXmlFragment("prosemirror");
   const rootNode = yXmlFragmentToProseMirrorRootNode(
     xmlFragment,
-    APP_EDITOR_SCHEMA,
+    createEditor({
+      extension: defineAppExtension({ isDaily: opts.isDaily }),
+    }).schema,
   );
   return jsonFromNode(rootNode);
 }

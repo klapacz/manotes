@@ -1,5 +1,9 @@
-import { defineBaseCommands, defineBaseKeymap, union } from "prosekit/core";
-import { defineDoc } from "prosekit/extensions/doc";
+import {
+  defineBaseCommands,
+  defineBaseKeymap,
+  defineNodeSpec,
+  union,
+} from "prosekit/core";
 import { defineText } from "prosekit/extensions/text";
 import { defineParagraph } from "prosekit/extensions/paragraph";
 import { defineHeading } from "prosekit/extensions/heading";
@@ -21,10 +25,22 @@ import { defineVirtualSelection } from "prosekit/extensions/virtual-selection";
 import { defineModClickPrevention } from "prosekit/extensions/mod-click-prevention";
 import { defineTaskListToggle } from "./editor.task-list-toggle.extension";
 
-export function defineAppExtension() {
+type DefineAppExtensionOptions = {
+  isDaily: boolean;
+};
+
+function defineDoc(options: DefineAppExtensionOptions) {
+  return defineNodeSpec({
+    name: "doc",
+    content: options.isDaily ? "block+" : "heading block+",
+    topNode: true,
+  });
+}
+
+export function defineAppExtension(options: DefineAppExtensionOptions) {
   return union(
     // Nodes
-    defineDoc(),
+    defineDoc(options),
     defineText(),
     defineParagraph(),
     defineHeading(),
