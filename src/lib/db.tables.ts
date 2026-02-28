@@ -5,8 +5,12 @@ export const notes = sqliteTable("notes", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
   content: text("content").notNull(),
+  materializedYUpdate: blob("materializedYUpdate", {
+    mode: "buffer",
+  }).$type<Uint8Array<ArrayBufferLike> | null>(),
   createdAt: text("createdAt").notNull(),
   updatedAt: text("updatedAt").notNull(),
+  lastEventId: integer("lastEventId").notNull().default(0),
 });
 
 export const events = sqliteTable("events", {
@@ -20,3 +24,12 @@ export const events = sqliteTable("events", {
     .notNull(),
   timestamp: text("timestamp").notNull(),
 });
+
+export const materializationCheckpoint = sqliteTable(
+  "materialization_checkpoint",
+  {
+    id: integer("id").primaryKey(),
+    lastAppliedEventId: integer("lastAppliedEventId").notNull(),
+    updatedAt: text("updatedAt").notNull(),
+  },
+);
