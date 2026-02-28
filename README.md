@@ -18,6 +18,21 @@ The submodule is managed using git commands since Jujutsu (jj) does not yet have
 
 # Getting Started
 
+## Nix dev shell
+
+If you use Nix, you can enter a reproducible dev shell with Node.js, pnpm, and Bun:
+
+```bash
+nix develop
+```
+
+Then install dependencies and run the dev server:
+
+```bash
+pnpm install
+pnpm dev
+```
+
 To run this application:
 
 ```bash
