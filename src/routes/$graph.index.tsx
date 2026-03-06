@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/solid-router";
 import { Temporal } from "temporal-polyfill";
 import Editor from "../editor";
+import { buttonVariants } from "../components/ui/button";
 
 export const Route = createFileRoute("/$graph/")({
   component: RouteComponent,
@@ -33,7 +34,7 @@ function Navigation() {
         <Link
           from={Route.fullPath}
           to="/$graph"
-          class="bg-gray-500 hover:bg-gray-700 text-white py-2 px-4 rounded"
+          class={buttonVariants({ variant: "secondary" })}
           search={moveBy(-1)}
         >
           Prev
@@ -42,7 +43,7 @@ function Navigation() {
         <Link
           from={Route.fullPath}
           to="/$graph"
-          class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded"
+          class={buttonVariants()}
           search={(current) => {
             const to = Temporal.Now.plainDateISO().toString();
 
@@ -58,7 +59,7 @@ function Navigation() {
         <Link
           from={Route.fullPath}
           to="/$graph"
-          class="bg-gray-500 hover:bg-gray-700 text-white py-2 px-4 rounded"
+          class={buttonVariants({ variant: "secondary" })}
           search={moveBy(1)}
         >
           Next
@@ -68,7 +69,7 @@ function Navigation() {
       <Link
         from={Route.fullPath}
         to="/$graph/other"
-        class="bg-gray-500 hover:bg-gray-700 text-white py-2 px-4 rounded"
+        class={buttonVariants({ variant: "secondary" })}
       >
         Go to other
       </Link>
