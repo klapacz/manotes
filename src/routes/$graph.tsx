@@ -6,6 +6,8 @@ import { Show } from "solid-js";
 import { DedicatedWorkerHealth } from "../lib/graph.worker-rpc";
 import { Temporal } from "temporal-polyfill";
 import * as TemporalSchema from "../lib/temporal.schema";
+import { AppSidebar } from "../components/app-sidebar";
+import { SidebarInset, SidebarProvider } from "../components/ui/sidebar";
 
 export const Route = createFileRoute("/$graph")({
   component: RouteComponent,
@@ -83,11 +85,20 @@ function WorkerHealthBanner() {
 
 function RouteComponent() {
   const data = Route.useLoaderData();
+  const params = Route.useParams();
+  const search = Route.useSearch();
 
   return (
     <RuntimeProvider runtime={() => data().runtime}>
-      <WorkerHealthBanner />
-      <Outlet />
+      <SidebarProvider defaultOpenMobile={true}>
+        <AppSidebar graph={params().graph} date={search().date} />
+        <SidebarInset>
+          <WorkerHealthBanner />
+          <div class="flex-1 overflow-auto">
+            <Outlet />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     </RuntimeProvider>
   );
 }
