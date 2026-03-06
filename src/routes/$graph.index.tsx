@@ -65,14 +65,6 @@ function Navigation() {
           Next
         </Link>
       </div>
-
-      <Link
-        from={Route.fullPath}
-        to="/$graph/other"
-        class={buttonVariants({ variant: "secondary" })}
-      >
-        Go to other
-      </Link>
     </div>
   );
 }

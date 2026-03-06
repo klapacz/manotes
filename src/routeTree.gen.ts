@@ -13,7 +13,6 @@ import { Route as CreateRouteImport } from './routes/create'
 import { Route as GraphRouteImport } from './routes/$graph'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GraphIndexRouteImport } from './routes/$graph.index'
-import { Route as GraphOtherRouteImport } from './routes/$graph.other'
 
 const CreateRoute = CreateRouteImport.update({
   id: '/create',
@@ -35,23 +34,16 @@ const GraphIndexRoute = GraphIndexRouteImport.update({
   path: '/',
   getParentRoute: () => GraphRoute,
 } as any)
-const GraphOtherRoute = GraphOtherRouteImport.update({
-  id: '/other',
-  path: '/other',
-  getParentRoute: () => GraphRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$graph': typeof GraphRouteWithChildren
   '/create': typeof CreateRoute
-  '/$graph/other': typeof GraphOtherRoute
   '/$graph/': typeof GraphIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
-  '/$graph/other': typeof GraphOtherRoute
   '/$graph': typeof GraphIndexRoute
 }
 export interface FileRoutesById {
@@ -59,15 +51,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$graph': typeof GraphRouteWithChildren
   '/create': typeof CreateRoute
-  '/$graph/other': typeof GraphOtherRoute
   '/$graph/': typeof GraphIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$graph' | '/create' | '/$graph/other' | '/$graph/'
+  fullPaths: '/' | '/$graph' | '/create' | '/$graph/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/create' | '/$graph/other' | '/$graph'
-  id: '__root__' | '/' | '/$graph' | '/create' | '/$graph/other' | '/$graph/'
+  to: '/' | '/create' | '/$graph'
+  id: '__root__' | '/' | '/$graph' | '/create' | '/$graph/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,23 +97,14 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof GraphIndexRouteImport
       parentRoute: typeof GraphRoute
     }
-    '/$graph/other': {
-      id: '/$graph/other'
-      path: '/other'
-      fullPath: '/$graph/other'
-      preLoaderRoute: typeof GraphOtherRouteImport
-      parentRoute: typeof GraphRoute
-    }
   }
 }
 
 interface GraphRouteChildren {
-  GraphOtherRoute: typeof GraphOtherRoute
   GraphIndexRoute: typeof GraphIndexRoute
 }
 
 const GraphRouteChildren: GraphRouteChildren = {
-  GraphOtherRoute: GraphOtherRoute,
   GraphIndexRoute: GraphIndexRoute,
 }
 
