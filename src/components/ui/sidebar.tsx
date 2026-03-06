@@ -37,18 +37,22 @@ export const useSidebar = () => {
 
 export type SidebarProviderProps = ComponentProps<"div"> & {
   defaultOpen?: boolean;
+  defaultOpenMobile?: boolean;
 };
 
 export const SidebarProvider = (props: SidebarProviderProps) => {
   const [local, rest] = splitProps(props, [
     "defaultOpen",
+    "defaultOpenMobile",
     "class",
     "style",
     "children",
   ]);
   const isMobile = useIsMobile();
   const [open, setOpen] = createSignal(local.defaultOpen ?? true);
-  const [openMobile, setOpenMobile] = createSignal(false);
+  const [openMobile, setOpenMobile] = createSignal(
+    local.defaultOpenMobile ?? false,
+  );
 
   const toggleSidebar = () => {
     if (isMobile()) {
