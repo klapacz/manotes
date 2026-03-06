@@ -13,6 +13,9 @@ importers:
 
   .:
     dependencies:
+      '@corvu/calendar':
+        specifier: ^0.1.2
+        version: 0.1.2(solid-js@1.9.10)
       '@effect/platform':
         specifier: ^0.94.1
         version: 0.94.1(effect@3.17.14)
@@ -312,6 +315,11 @@ packages:
   '@babel/types@7.28.5':
     resolution: {integrity: sha512-qQ5m48eI/MFLQ5PxQj4PFaprjyCTLI37ElWMmNs0K8Lk3dVeOdNpB3ks8jc7yM5CDmVC73eMVk/trk3fgmrUpA==}
     engines: {node: '>=6.9.0'}
+
+  '@corvu/calendar@0.1.2':
+    resolution: {integrity: sha512-Vbdns1iNNI0WTIwDZS7m9pHWtr/YTz7yrisXhHUCfl4mxDvb9W8MMmun651wiEjhL7+OrcNbbl2kTOmYSFIf4g==}
+    peerDependencies:
+      solid-js: ^1.8
 
   '@corvu/utils@0.4.2':
     resolution: {integrity: sha512-Ox2kYyxy7NoXdKWdHeDEjZxClwzO4SKM8plAaVwmAJPxHMqA0rLOoAsa+hBDwRLpctf+ZRnAd/ykguuJidnaTA==}
@@ -3008,6 +3016,11 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
+
+  '@corvu/calendar@0.1.2(solid-js@1.9.10)':
+    dependencies:
+      '@corvu/utils': 0.4.2(solid-js@1.9.10)
+      solid-js: 1.9.10
 
   '@corvu/utils@0.4.2(solid-js@1.9.10)':
     dependencies:
