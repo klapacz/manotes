@@ -2,7 +2,7 @@ import { Effect, pipe, Schema, Option, Stream } from "effect";
 import * as DB from "./db.service";
 import * as NoteSchema from "./note.schema";
 import * as Tables from "./db.tables";
-import { eq } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
@@ -107,6 +107,25 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
       );
     });
 
+    const reactiveSearch = Effect.fn("NoteRepo.reactiveSearch")(function* (
+      filter: string,
+    ) {
+      const stream = yield* db.reactiveQuery((db) => {
+        const where = and(
+          eq(Tables.notes.isDaily, false),
+          like(Tables.notes.title, `%${filter.trim()}%`),
+        );
+
+        return db.select().from(Tables.notes).where(where);
+      });
+
+      return stream.pipe(
+        Stream.mapEffect((records) =>
+          pipe(records, Schema.decode(Schema.Array(NoteSchema.Record))),
+        ),
+      );
+    });
+
     return {
       create,
       updateById,
@@ -114,6 +133,7 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
       getById,
       list,
       reactiveList,
+      reactiveSearch,
     };
   }),
 }) {}

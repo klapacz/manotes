@@ -2,10 +2,11 @@ import { useMutation } from "@tanstack/solid-query";
 import { useNavigate } from "@tanstack/solid-router";
 import { DateTime, Effect } from "effect";
 import { nanoid } from "nanoid";
-import { Index, createMemo, Show } from "solid-js";
+import { Index, Show, createMemo } from "solid-js";
 import { Temporal } from "temporal-polyfill";
 import * as Y from "yjs";
 import { MaterializedEventService, useRuntime } from "../lib";
+import { NoteSearchCommand } from "./note-search-command";
 import { Button } from "./ui/button";
 import {
   Calendar,
@@ -98,6 +99,7 @@ export const AppSidebar = (props: AppSidebarProps) => {
                 </p>
               </Show>
             </div>
+            <NoteSearchCommand graph={props.graph} />
             <Calendar
               mode="single"
               value={selectedDate()}
