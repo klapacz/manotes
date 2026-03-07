@@ -19,6 +19,7 @@ import { defineLink } from "prosekit/extensions/link";
 import { defineGapCursor } from "prosekit/extensions/gap-cursor";
 import { defineVirtualSelection } from "prosekit/extensions/virtual-selection";
 import { defineModClickPrevention } from "prosekit/extensions/mod-click-prevention";
+import { defineTaskListToggle } from "./editor.task-list-toggle.extension";
 
 export function defineAppExtension() {
   return union(
@@ -47,5 +48,6 @@ export function defineAppExtension() {
     defineGapCursor(),
     defineVirtualSelection(),
     defineModClickPrevention(),
+    defineTaskListToggle(),
   );
 }
