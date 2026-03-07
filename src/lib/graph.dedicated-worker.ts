@@ -6,6 +6,7 @@ import type { RpcGroup } from "@effect/rpc";
 import * as DB from "./db.service";
 import * as EventRepo from "./event.repo";
 import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
+import * as MaterializedEventService from "./materialized-event.service";
 import * as MaterializerService from "./materializer.service";
 import * as NoteRepo from "./note.repo";
 import {
@@ -97,6 +98,7 @@ function buildServiceLayer(graphName: string) {
     EventRepo.Service.Default,
     NoteRepo.Service.Default,
     MaterializationCheckpointRepo.Service.Default,
+    MaterializedEventService.Service.Default,
     MaterializerService.Service.Default,
     Logger.minimumLogLevel(LogLevel.Debug),
   ).pipe(Layer.provide(ConfigLayer));

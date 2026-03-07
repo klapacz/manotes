@@ -1,4 +1,4 @@
-import { DateTime, Effect, Option } from "effect";
+import { DateTime, Effect, Option, Stream } from "effect";
 import { eq } from "drizzle-orm";
 import * as DB from "./db.service";
 import * as Tables from "./db.tables";
@@ -77,9 +77,43 @@ export class Service extends Effect.Service<Service>()(
         );
       });
 
+      const waitUntilAtLeast = Effect.fn(
+        "MaterializationCheckpointRepo.waitUntilAtLeast",
+      )(function* (targetEventId: number) {
+        yield* getOrInit();
+
+        const stream = yield* db.reactiveQuery((db) =>
+          db
+            .select({
+              lastAppliedEventId:
+                Tables.materializationCheckpoint.lastAppliedEventId,
+            })
+            .from(Tables.materializationCheckpoint)
+            .where(eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID)),
+        );
+
+        const reached = yield* stream.pipe(
+          Stream.filterMap(([row]) => Option.fromNullable(row)),
+          Stream.map((row) => row.lastAppliedEventId),
+          Stream.filter(
+            (lastAppliedEventId) => lastAppliedEventId >= targetEventId,
+          ),
+          Stream.runHead,
+        );
+
+        return yield* Option.match(reached, {
+          onNone: () =>
+            Effect.dieMessage(
+              "Checkpoint stream ended before target event was materialized.",
+            ),
+          onSome: () => Effect.void,
+        });
+      });
+
       return {
         getLastAppliedEventId,
         setLastAppliedEventId,
+        waitUntilAtLeast,
       };
     }),
   },
