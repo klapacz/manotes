@@ -136,15 +136,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-/* Editor styles */
-
-.virtual-daily-heading {
-  margin: 0 0 0.75rem;
-  color: rgb(15 23 42);
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1.2;
-  pointer-events: none;
-  user-select: none;
-}
