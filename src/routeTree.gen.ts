@@ -13,6 +13,7 @@ import { Route as CreateRouteImport } from './routes/create'
 import { Route as GraphRouteImport } from './routes/$graph'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GraphIndexRouteImport } from './routes/$graph.index'
+import { Route as GraphNoteNoteRouteImport } from './routes/$graph.note.$note'
 
 const CreateRoute = CreateRouteImport.update({
   id: '/create',
@@ -34,17 +35,24 @@ const GraphIndexRoute = GraphIndexRouteImport.update({
   path: '/',
   getParentRoute: () => GraphRoute,
 } as any)
+const GraphNoteNoteRoute = GraphNoteNoteRouteImport.update({
+  id: '/note/$note',
+  path: '/note/$note',
+  getParentRoute: () => GraphRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$graph': typeof GraphRouteWithChildren
   '/create': typeof CreateRoute
   '/$graph/': typeof GraphIndexRoute
+  '/$graph/note/$note': typeof GraphNoteNoteRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
   '/$graph': typeof GraphIndexRoute
+  '/$graph/note/$note': typeof GraphNoteNoteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -52,13 +60,20 @@ export interface FileRoutesById {
   '/$graph': typeof GraphRouteWithChildren
   '/create': typeof CreateRoute
   '/$graph/': typeof GraphIndexRoute
+  '/$graph/note/$note': typeof GraphNoteNoteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$graph' | '/create' | '/$graph/'
+  fullPaths: '/' | '/$graph' | '/create' | '/$graph/' | '/$graph/note/$note'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/create' | '/$graph'
-  id: '__root__' | '/' | '/$graph' | '/create' | '/$graph/'
+  to: '/' | '/create' | '/$graph' | '/$graph/note/$note'
+  id:
+    | '__root__'
+    | '/'
+    | '/$graph'
+    | '/create'
+    | '/$graph/'
+    | '/$graph/note/$note'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -97,15 +112,24 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof GraphIndexRouteImport
       parentRoute: typeof GraphRoute
     }
+    '/$graph/note/$note': {
+      id: '/$graph/note/$note'
+      path: '/note/$note'
+      fullPath: '/$graph/note/$note'
+      preLoaderRoute: typeof GraphNoteNoteRouteImport
+      parentRoute: typeof GraphRoute
+    }
   }
 }
 
 interface GraphRouteChildren {
   GraphIndexRoute: typeof GraphIndexRoute
+  GraphNoteNoteRoute: typeof GraphNoteNoteRoute
 }
 
 const GraphRouteChildren: GraphRouteChildren = {
   GraphIndexRoute: GraphIndexRoute,
+  GraphNoteNoteRoute: GraphNoteNoteRoute,
 }
 
 const GraphRouteWithChildren = GraphRoute._addFileChildren(GraphRouteChildren)
