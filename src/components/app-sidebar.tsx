@@ -1,6 +1,12 @@
+import { useMutation } from "@tanstack/solid-query";
 import { useNavigate } from "@tanstack/solid-router";
-import { Index, createMemo } from "solid-js";
+import { DateTime, Effect } from "effect";
+import { nanoid } from "nanoid";
+import { Index, createMemo, Show } from "solid-js";
 import { Temporal } from "temporal-polyfill";
+import * as Y from "yjs";
+import { MaterializedEventService, useRuntime } from "../lib";
+import { Button } from "./ui/button";
 import {
   Calendar,
   CalendarCell,
@@ -15,13 +21,14 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
 } from "./ui/sidebar";
 
 type AppSidebarProps = {
   graph: string;
   date: string;
 };
+
+const EMPTY_YJS_UPDATE = Y.encodeStateAsUpdate(new Y.Doc());
 
 const { format: formatWeekdayLong } = new Intl.DateTimeFormat("en", {
   weekday: "long",
@@ -36,7 +43,34 @@ const { format: formatMonth } = new Intl.DateTimeFormat("en", {
 });
 
 export const AppSidebar = (props: AppSidebarProps) => {
+  const runtime = useRuntime();
   const navigate = useNavigate();
+
+  const createNoteMutation = useMutation(() => ({
+    mutationFn: async () => {
+      const noteId = nanoid();
+
+      return runtime().runPromise(
+        Effect.gen(function* () {
+          const service = yield* MaterializedEventService.Service;
+
+          return yield* service.create({
+            noteId,
+            isDaily: false,
+            payload: EMPTY_YJS_UPDATE,
+            timestamp: yield* DateTime.now,
+          });
+        }),
+      );
+    },
+    onSuccess(note) {
+      void navigate({
+        to: "/$graph/note/$note",
+        params: { graph: props.graph, note: note.id },
+      });
+    },
+  }));
+
   const selectedDate = createMemo(() => {
     const date = Temporal.PlainDate.from(props.date);
     return new Date(date.year, date.month - 1, date.day);
@@ -50,6 +84,20 @@ export const AppSidebar = (props: AppSidebarProps) => {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
+            <div class="mb-3 px-1">
+              <Button
+                class="w-full"
+                onClick={() => createNoteMutation.mutate()}
+                disabled={createNoteMutation.isPending}
+              >
+                {createNoteMutation.isPending ? "Creating..." : "Create"}
+              </Button>
+              <Show when={createNoteMutation.isError}>
+                <p class="text-destructive mt-2 text-xs">
+                  Failed to create note
+                </p>
+              </Show>
+            </div>
             <Calendar
               mode="single"
               value={selectedDate()}
