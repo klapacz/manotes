@@ -4,6 +4,8 @@
 
 Accepted
 
+See also `docs/adr/002-cloudflare-sync-topology.md` for the concrete Cloudflare Workers / Durable Objects deployment shape and the narrower plaintext single-user MVP scope.
+
 ## Context
 
 We need a synchronization system for an end-to-end encrypted note-taking application with the following requirements:
