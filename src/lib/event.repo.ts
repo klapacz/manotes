@@ -3,6 +3,7 @@ import * as DB from "./db.service";
 import * as EventSchema from "./event.schema";
 import * as Tables from "./db.tables";
 import { and, asc, eq, gt, lte } from "drizzle-orm";
+import { nanoid } from "nanoid";
 
 const decodeAll = Schema.decode(Schema.Array(EventSchema.Record));
 
@@ -25,6 +26,8 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
             isDaily: encoded.isDaily,
             payload: encoded.payload,
             createdAt: encoded.createdAt,
+            id: encoded.id ?? nanoid(),
+            commitSeq: encoded.commitSeq ?? null,
           })
           .returning(),
       );

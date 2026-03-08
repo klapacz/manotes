@@ -25,6 +25,8 @@ export const events = sqliteTable("events", {
     .$type<(typeof EventSchema.Record.Encoded)["payload"]>()
     .notNull(),
   createdAt: text("createdAt").notNull(),
+  id: text("id").notNull().unique(),
+  commitSeq: integer("commitSeq").unique(),
 });
 
 export const materializationCheckpoint = sqliteTable(
