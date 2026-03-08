@@ -1,5 +1,6 @@
 import { BrowserRuntime, BrowserWorkerRunner } from "@effect/platform-browser";
 import { WorkerRunner } from "@effect/platform";
+import * as Socket from "@effect/platform/Socket";
 import { Effect, Layer, Logger, LogLevel } from "effect";
 import { RpcServer } from "@effect/rpc";
 import type { RpcGroup } from "@effect/rpc";
@@ -9,6 +10,8 @@ import * as MaterializationCheckpointRepo from "./materialization-checkpoint.rep
 import * as MaterializedEventService from "./materialized-event.service";
 import * as MaterializerService from "./materializer.service";
 import * as NoteRepo from "./note.repo";
+import * as GraphSync from "./graph-sync/service";
+import * as GraphSyncEventLog from "./graph-sync/event-log.service";
 import {
   GraphDedicatedRpc,
   GraphDedicatedInitialMessage,
@@ -20,7 +23,7 @@ const BootstrapRunner = WorkerRunner.layerSerialized(
   GraphDedicatedInitialMessage,
   {
     // Key must match the _tag "InitialMessage" exactly — see GraphDedicatedInitialMessage.
-    InitialMessage: ({ port, graphName }) =>
+    InitialMessage: ({ port, graphName }): Layer.Layer<never, never, never> =>
       Layer.unwrapEffect(
         Effect.gen(function* () {
           yield* Effect.logInfo(`Received port`);
@@ -49,6 +52,10 @@ const RpcWorkerServer = BootstrapRunner.pipe(
 
 BrowserRuntime.runMain(
   WorkerRunner.launch(RpcWorkerServer).pipe(
+    Effect.provideService(
+      Socket.WebSocketConstructor,
+      (url, protocols) => new WebSocket(url, protocols),
+    ),
     Effect.tapErrorCause((error) =>
       Effect.logError("Dedicated worker fatal error", error),
     ),
@@ -64,10 +71,18 @@ function makeRpcHandler(graphName: string) {
       yield* Effect.logInfo("RPC handler started");
 
       const materializer = yield* MaterializerService.Service;
+      const graphSync = yield* GraphSync.Service;
 
       yield* materializer.start().pipe(
         Effect.catchAllCause((cause) =>
           Effect.logError("Materializer failed", cause),
+        ),
+        Effect.forkScoped,
+      );
+
+      yield* graphSync.start().pipe(
+        Effect.catchAllCause((cause) =>
+          Effect.logError("Graph sync failed", cause),
         ),
         Effect.forkScoped,
       );
@@ -100,6 +115,13 @@ function buildServiceLayer(graphName: string) {
     MaterializationCheckpointRepo.Service.Default,
     MaterializedEventService.Service.Default,
     MaterializerService.Service.Default,
+    GraphSync.Service.Default,
+    GraphSyncEventLog.Service.Default,
+    Socket.layerWebSocketConstructorGlobal,
     Logger.minimumLogLevel(LogLevel.Debug),
-  ).pipe(Layer.provide(ConfigLayer));
+  ).pipe(
+    // Keep DB.Config in the final layer output because downstream effects
+    // still read it directly even after the service graph has been built.
+    Layer.provideMerge(ConfigLayer),
+  );
 }
