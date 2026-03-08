@@ -26,11 +26,11 @@ export class Service extends Effect.Service<Service>()(
           noteId: input.noteId,
           isDaily: input.isDaily,
           payload: input.payload,
-          timestamp: input.timestamp,
+          createdAt: input.createdAt,
           type: "update",
         });
 
-        yield* checkpointRepo.waitUntilAtLeast(event.id);
+        yield* checkpointRepo.waitUntilAtLeast(event.localSeq);
 
         return yield* noteRepo.getById(event.noteId);
       });

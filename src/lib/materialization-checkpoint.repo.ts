@@ -36,7 +36,7 @@ export class Service extends Effect.Service<Service>()(
               .insert(Tables.materializationCheckpoint)
               .values({
                 id: CHECKPOINT_ROW_ID,
-                lastAppliedEventId: 0,
+                lastAppliedLocalSeq: 0,
                 updatedAt,
               })
               .returning(),
@@ -52,16 +52,16 @@ export class Service extends Effect.Service<Service>()(
         },
       );
 
-      const getLastAppliedEventId = Effect.fn(
-        "MaterializationCheckpointRepo.getLastAppliedEventId",
+      const getLastAppliedLocalSeq = Effect.fn(
+        "MaterializationCheckpointRepo.getLastAppliedLocalSeq",
       )(function* () {
         const checkpoint = yield* getOrInit();
-        return checkpoint.lastAppliedEventId;
+        return checkpoint.lastAppliedLocalSeq;
       });
 
-      const setLastAppliedEventId = Effect.fn(
-        "MaterializationCheckpointRepo.setLastAppliedEventId",
-      )(function* (lastAppliedEventId: number) {
+      const setLastAppliedLocalSeq = Effect.fn(
+        "MaterializationCheckpointRepo.setLastAppliedLocalSeq",
+      )(function* (lastAppliedLocalSeq: number) {
         yield* getOrInit();
 
         const updatedAt = yield* nowISOString;
@@ -70,7 +70,7 @@ export class Service extends Effect.Service<Service>()(
           db
             .update(Tables.materializationCheckpoint)
             .set({
-              lastAppliedEventId,
+              lastAppliedLocalSeq,
               updatedAt,
             })
             .where(eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID)),
@@ -79,14 +79,14 @@ export class Service extends Effect.Service<Service>()(
 
       const waitUntilAtLeast = Effect.fn(
         "MaterializationCheckpointRepo.waitUntilAtLeast",
-      )(function* (targetEventId: number) {
+      )(function* (targetLocalSeq: number) {
         yield* getOrInit();
 
         const stream = yield* db.reactiveQuery((db) =>
           db
             .select({
-              lastAppliedEventId:
-                Tables.materializationCheckpoint.lastAppliedEventId,
+              lastAppliedLocalSeq:
+                Tables.materializationCheckpoint.lastAppliedLocalSeq,
             })
             .from(Tables.materializationCheckpoint)
             .where(eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID)),
@@ -94,9 +94,9 @@ export class Service extends Effect.Service<Service>()(
 
         const reached = yield* stream.pipe(
           Stream.filterMap(([row]) => Option.fromNullable(row)),
-          Stream.map((row) => row.lastAppliedEventId),
+          Stream.map((row) => row.lastAppliedLocalSeq),
           Stream.filter(
-            (lastAppliedEventId) => lastAppliedEventId >= targetEventId,
+            (lastAppliedLocalSeq) => lastAppliedLocalSeq >= targetLocalSeq,
           ),
           Stream.runHead,
         );
@@ -111,8 +111,8 @@ export class Service extends Effect.Service<Service>()(
       });
 
       return {
-        getLastAppliedEventId,
-        setLastAppliedEventId,
+        getLastAppliedLocalSeq,
+        setLastAppliedLocalSeq,
         waitUntilAtLeast,
       };
     }),

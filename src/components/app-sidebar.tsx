@@ -59,7 +59,7 @@ export const AppSidebar = (props: AppSidebarProps) => {
             noteId,
             isDaily: false,
             payload: EMPTY_YJS_UPDATE,
-            timestamp: yield* DateTime.now,
+            createdAt: yield* DateTime.now,
           });
         }),
       );

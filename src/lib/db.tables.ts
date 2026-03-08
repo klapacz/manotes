@@ -11,11 +11,11 @@ export const notes = sqliteTable("notes", {
   }).$type<Uint8Array<ArrayBufferLike> | null>(),
   createdAt: text("createdAt").notNull(),
   updatedAt: text("updatedAt").notNull(),
-  lastEventId: integer("lastEventId").notNull().default(0),
+  lastEventLocalSeq: integer("lastEventLocalSeq").notNull().default(0),
 });
 
 export const events = sqliteTable("events", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+  localSeq: integer("localSeq").primaryKey({ autoIncrement: true }),
   noteId: text("noteId").notNull(),
   isDaily: integer("isDaily", { mode: "boolean" }).notNull().default(false),
   type: text("type", {
@@ -24,14 +24,14 @@ export const events = sqliteTable("events", {
   payload: blob("payload", { mode: "buffer" })
     .$type<(typeof EventSchema.Record.Encoded)["payload"]>()
     .notNull(),
-  timestamp: text("timestamp").notNull(),
+  createdAt: text("createdAt").notNull(),
 });
 
 export const materializationCheckpoint = sqliteTable(
   "materialization_checkpoint",
   {
     id: integer("id").primaryKey(),
-    lastAppliedEventId: integer("lastAppliedEventId").notNull(),
+    lastAppliedLocalSeq: integer("lastAppliedLocalSeq").notNull(),
     updatedAt: text("updatedAt").notNull(),
   },
 );

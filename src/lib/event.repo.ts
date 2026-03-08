@@ -24,7 +24,7 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
             noteId: encoded.noteId,
             isDaily: encoded.isDaily,
             payload: encoded.payload,
-            timestamp: encoded.timestamp,
+            createdAt: encoded.createdAt,
           })
           .returning(),
       );
@@ -38,9 +38,14 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
       );
     });
 
-    const deleteById = Effect.fn("EventRepo.delete")(function* (id: number) {
+    const deleteByLocalSeq = Effect.fn("EventRepo.delete")(function* (
+      localSeq: number,
+    ) {
       const record = yield* db.find((db) =>
-        db.delete(Tables.events).where(eq(Tables.events.id, id)).returning(),
+        db
+          .delete(Tables.events)
+          .where(eq(Tables.events.localSeq, localSeq))
+          .returning(),
       );
 
       return yield* pipe(
@@ -64,7 +69,7 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
                 eq(Tables.events.type, "update"),
               ),
             )
-            .orderBy(asc(Tables.events.id)),
+            .orderBy(asc(Tables.events.localSeq)),
         );
 
         return yield* pipe(events, decodeAll);
@@ -75,12 +80,12 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
       "EventRepo.findUpdatesForNoteBetweenIds",
     )(function* ({
       noteId,
-      afterId,
-      upToEventId,
+      afterLocalSeq,
+      upToLocalSeq,
     }: {
       noteId: string;
-      afterId: number;
-      upToEventId: number;
+      afterLocalSeq: number;
+      upToLocalSeq: number;
     }) {
       const events = yield* db.query((db) =>
         db
@@ -90,18 +95,24 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
             and(
               eq(Tables.events.noteId, noteId),
               eq(Tables.events.type, "update"),
-              gt(Tables.events.id, afterId),
-              lte(Tables.events.id, upToEventId),
+              gt(Tables.events.localSeq, afterLocalSeq),
+              lte(Tables.events.localSeq, upToLocalSeq),
             ),
           )
-          .orderBy(asc(Tables.events.id)),
+          .orderBy(asc(Tables.events.localSeq)),
       );
 
       return yield* pipe(events, decodeAll);
     });
 
     const streamUpdatesForNote = Effect.fn("EventRepo.streamUpdatesForNote")(
-      function* ({ noteId, afterId }: { noteId: string; afterId: number }) {
+      function* ({
+        noteId,
+        afterLocalSeq,
+      }: {
+        noteId: string;
+        afterLocalSeq: number;
+      }) {
         const stream = yield* db.reactiveQuery((db) =>
           db
             .select()
@@ -110,10 +121,10 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
               and(
                 eq(Tables.events.noteId, noteId),
                 eq(Tables.events.type, "update"),
-                gt(Tables.events.id, afterId),
+                gt(Tables.events.localSeq, afterLocalSeq),
               ),
             )
-            .orderBy(asc(Tables.events.id)),
+            .orderBy(asc(Tables.events.localSeq)),
         );
 
         return stream.pipe(Stream.mapEffect(decodeAll));
@@ -122,7 +133,7 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
 
     const streamUpdatesAfterGlobalId = Effect.fn(
       "EventRepo.streamUpdatesAfterGlobalId",
-    )(function* (afterId: number, limit: number) {
+    )(function* (afterLocalSeq: number, limit: number) {
       const stream = yield* db.reactiveQuery((db) =>
         db
           .select()
@@ -130,10 +141,10 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
           .where(
             and(
               eq(Tables.events.type, "update"),
-              gt(Tables.events.id, afterId),
+              gt(Tables.events.localSeq, afterLocalSeq),
             ),
           )
-          .orderBy(asc(Tables.events.id))
+          .orderBy(asc(Tables.events.localSeq))
           .limit(limit),
       );
 
@@ -142,7 +153,7 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
 
     return {
       create,
-      deleteById,
+      deleteByLocalSeq,
       findUpdatesForNote,
       findUpdatesForNoteBetweenIds,
       streamUpdatesForNote,

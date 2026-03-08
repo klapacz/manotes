@@ -28,7 +28,7 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
             materializedYUpdate: encoded.materializedYUpdate ?? null,
             createdAt: encoded.createdAt,
             updatedAt: encoded.updatedAt,
-            lastEventId: encoded.lastEventId ?? 0,
+            lastEventLocalSeq: encoded.lastEventLocalSeq ?? 0,
           })
           .returning(),
       );

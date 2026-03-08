@@ -37,10 +37,10 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
       "MaterializerService.materializeNoteUpTo",
     )(function* ({
       noteId,
-      upToEventId,
+      upToLocalSeq,
     }: {
       noteId: string;
-      upToEventId: number;
+      upToLocalSeq: number;
     }) {
       const noteOption = yield* noteRepo.findById(noteId);
 
@@ -49,8 +49,8 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
 
         const events = yield* eventRepo.findUpdatesForNoteBetweenIds({
           noteId,
-          afterId: note.lastEventId,
-          upToEventId,
+          afterLocalSeq: note.lastEventLocalSeq,
+          upToLocalSeq,
         });
 
         if (!Arr.isNonEmptyReadonlyArray(events)) return;
@@ -71,18 +71,18 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
           title: materialized.title,
           content: materialized.content,
           materializedYUpdate: materialized.materializedYUpdate,
-          updatedAt: lastEvent.timestamp,
-          lastEventId: upToEventId,
+          updatedAt: lastEvent.createdAt,
+          lastEventLocalSeq: upToLocalSeq,
         });
 
-        yield* Effect.logInfo(`Materialized note up to event ${upToEventId}`);
+        yield* Effect.logInfo(`Materialized note up to event ${upToLocalSeq}`);
         return;
       }
 
       const events = yield* eventRepo.findUpdatesForNoteBetweenIds({
         noteId,
-        afterId: 0,
-        upToEventId,
+        afterLocalSeq: 0,
+        upToLocalSeq,
       });
 
       if (!Arr.isNonEmptyReadonlyArray(events)) return;
@@ -104,28 +104,28 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
         content: materialized.content,
         isDaily,
         materializedYUpdate: materialized.materializedYUpdate,
-        createdAt: firstEvent.timestamp,
-        updatedAt: lastEvent.timestamp,
-        lastEventId: upToEventId,
+        createdAt: firstEvent.createdAt,
+        updatedAt: lastEvent.createdAt,
+        lastEventLocalSeq: upToLocalSeq,
       });
 
-      yield* Effect.logInfo(`Materialized note up to event ${upToEventId}`);
+      yield* Effect.logInfo(`Materialized note up to event ${upToLocalSeq}`);
     });
 
     const start = Effect.fn("MaterializerService.start")(function* () {
       // Checkpoint advances only after a batch is fully materialized.
       // This makes replay idempotent after worker restarts.
-      const initialCursor = yield* checkpointRepo.getLastAppliedEventId();
+      const initialCursor = yield* checkpointRepo.getLastAppliedLocalSeq();
       yield* Effect.logInfo(
         `Starting materializer at global cursor ${initialCursor}`,
       );
 
       yield* Effect.iterate(initialCursor, {
         while: () => true,
-        body: (lastAppliedEventId) =>
+        body: (lastAppliedLocalSeq) =>
           Effect.gen(function* () {
             const stream = yield* eventRepo.streamUpdatesAfterGlobalId(
-              lastAppliedEventId,
+              lastAppliedLocalSeq,
               MAX_FETCHED_UNDONE_EVENTS,
             );
 
@@ -135,11 +135,11 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
             );
 
             if (Option.isNone(nextBatch)) {
-              return lastAppliedEventId;
+              return lastAppliedLocalSeq;
             }
 
             const batch = nextBatch.value;
-            const newestEventId = Arr.lastNonEmpty(batch).id;
+            const newestLocalSeq = Arr.lastNonEmpty(batch).localSeq;
             const targets = buildMaterializationTargets(batch);
 
             yield* db.transaction(
@@ -149,7 +149,7 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
                   (target) =>
                     materializeNoteUpTo({
                       noteId: target.noteId,
-                      upToEventId: target.upToEventId,
+                      upToLocalSeq: target.upToLocalSeq,
                     }),
                   {
                     concurrency: 1,
@@ -157,14 +157,14 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
                   },
                 );
 
-                yield* checkpointRepo.setLastAppliedEventId(newestEventId);
+                yield* checkpointRepo.setLastAppliedLocalSeq(newestLocalSeq);
               }),
             );
 
             yield* Effect.logInfo(
-              `Processed ${batch.length} events up to ${newestEventId}`,
+              `Processed ${batch.length} events up to ${newestLocalSeq}`,
             );
-            return newestEventId;
+            return newestLocalSeq;
           }),
       });
     });
@@ -225,24 +225,26 @@ function buildMaterializedNoteFields({
 
 type MaterializationTarget = {
   noteId: string;
-  upToEventId: number;
+  upToLocalSeq: number;
 };
 
 function buildMaterializationTargets(
-  events: ReadonlyArray<{ noteId: string; id: number }>,
+  events: ReadonlyArray<{ noteId: string; localSeq: number }>,
 ): ReadonlyArray<MaterializationTarget> {
   return pipe(
     events,
     // 1) Partition the batch by note so each note is handled once.
     Arr.groupBy((event) => event.noteId),
-    // 2) For each note, keep only the event with the highest id.
-    //    Materializing up to that id implicitly covers earlier events.
+    // 2) For each note, keep only the event with the highest localSeq.
+    //    Materializing up to that localSeq implicitly covers earlier events.
     Record.map((noteEvents) =>
       Arr.max(
         noteEvents,
         pipe(
           Order.number,
-          Order.mapInput((event: { noteId: string; id: number }) => event.id),
+          Order.mapInput(
+            (event: { noteId: string; localSeq: number }) => event.localSeq,
+          ),
         ),
       ),
     ),
@@ -250,13 +252,13 @@ function buildMaterializationTargets(
     Record.toEntries,
     Arr.map(([noteId, event]) => ({
       noteId,
-      upToEventId: event.id,
+      upToLocalSeq: event.localSeq,
     })),
-    // 4) Process targets in ascending event-id order for deterministic replay.
+    // 4) Process targets in ascending event localSeq order for deterministic replay.
     Arr.sort(
       pipe(
         Order.number,
-        Order.mapInput((record: MaterializationTarget) => record.upToEventId),
+        Order.mapInput((record: MaterializationTarget) => record.upToLocalSeq),
       ),
     ),
   );

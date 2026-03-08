@@ -23,7 +23,7 @@ export const Record = Schema.Struct({
   materializedYUpdate: MaterializedYUpdate,
   createdAt: Schema.DateTimeUtc,
   updatedAt: Schema.DateTimeUtc,
-  lastEventId: Schema.Number,
+  lastEventLocalSeq: Schema.Number,
 });
 
 export const Create = Schema.Struct({
@@ -34,7 +34,7 @@ export const Create = Schema.Struct({
   materializedYUpdate: Schema.optional(MaterializedYUpdate),
   createdAt: Schema.DateTimeUtc,
   updatedAt: Schema.DateTimeUtc,
-  lastEventId: Schema.optional(Schema.Number),
+  lastEventLocalSeq: Schema.optional(Schema.Number),
 });
 
 export const Update = Schema.Struct({
@@ -44,5 +44,5 @@ export const Update = Schema.Struct({
   materializedYUpdate: Schema.optional(MaterializedYUpdate),
   createdAt: Schema.optional(Schema.DateTimeUtc),
   updatedAt: Schema.optional(Schema.DateTimeUtc),
-  lastEventId: Schema.optional(Schema.Number),
+  lastEventLocalSeq: Schema.optional(Schema.Number),
 });

@@ -44,17 +44,17 @@ export class Service extends Effect.Service<Service>()(
       const applyIncomingUpdates = Effect.fn("applyIncomingUpdates")(function* (
         doc: Y.Doc,
         noteId: string,
-        initialLastKnownEventId: number,
+        initialLastKnownLocalSeq: number,
       ) {
-        yield* Effect.iterate(initialLastKnownEventId, {
+        yield* Effect.iterate(initialLastKnownLocalSeq, {
           while: () => true,
-          body: (lastKnownEventId) =>
+          body: (lastKnownLocalSeq) =>
             Effect.gen(function* () {
-              yield* Effect.logDebug("Last known ID:", lastKnownEventId);
+              yield* Effect.logDebug("Last known localSeq:", lastKnownLocalSeq);
 
               const reactiveStream = yield* eventRepo.streamUpdatesForNote({
                 noteId,
-                afterId: lastKnownEventId,
+                afterLocalSeq: lastKnownLocalSeq,
               });
 
               const firstBatch = yield* reactiveStream.pipe(
@@ -68,7 +68,7 @@ export class Service extends Effect.Service<Service>()(
 
               if (Option.isNone(firstBatch)) {
                 yield* Effect.logError("Stream ended without events");
-                return lastKnownEventId;
+                return lastKnownLocalSeq;
               }
 
               const events = firstBatch.value;
@@ -81,9 +81,9 @@ export class Service extends Effect.Service<Service>()(
               );
 
               const lastEvent = Array.lastNonEmpty(events);
-              const nextLastKnownId = lastEvent.id;
+              const nextLastKnownLocalSeq = lastEvent.localSeq;
 
-              return nextLastKnownId;
+              return nextLastKnownLocalSeq;
             }),
         });
       });
@@ -117,7 +117,7 @@ export class Service extends Effect.Service<Service>()(
 
               yield* eventRepo.create({
                 payload: merged,
-                timestamp: yield* DateTime.now,
+                createdAt: yield* DateTime.now,
                 type: "update",
                 noteId: noteId,
                 isDaily,
@@ -134,7 +134,7 @@ export class Service extends Effect.Service<Service>()(
             .pipe(Effect.map(Option.getOrNull));
 
           const materializedYUpdate = note?.materializedYUpdate ?? null;
-          const initialLastKnownEventId = note?.lastEventId ?? 0;
+          const initialLastKnownLocalSeq = note?.lastEventLocalSeq ?? 0;
 
           yield* Effect.all(
             [
@@ -144,7 +144,7 @@ export class Service extends Effect.Service<Service>()(
                 yield* applyIncomingUpdates(
                   doc,
                   input.noteId,
-                  initialLastKnownEventId,
+                  initialLastKnownLocalSeq,
                 );
               }),
               saveOutcomingUpdates(doc, input.noteId, input.isDaily),
