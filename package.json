@@ -13,9 +13,12 @@
   },
   "dependencies": {
     "@corvu/calendar": "^0.1.2",
+    "@effect/experimental": "0.55.0",
     "@effect/platform": "^0.94.1",
     "@effect/platform-browser": "^0.74.0",
     "@effect/rpc": "^0.73.0",
+    "@effect/sql": "0.45.0",
+    "@effect/sql-sqlite-do": "0.23.0",
     "@effectify/solid-effect-atom": "^0.1.5",
     "@kobalte/core": "^0.13.11",
     "@standard-schema/spec": "^1.1.0",

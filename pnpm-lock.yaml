@@ -16,6 +16,9 @@ importers:
       '@corvu/calendar':
         specifier: ^0.1.2
         version: 0.1.2(solid-js@1.9.10)
+      '@effect/experimental':
+        specifier: 0.55.0
+        version: 0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
       '@effect/platform':
         specifier: ^0.94.1
         version: 0.94.1(effect@3.17.14)
@@ -25,9 +28,15 @@ importers:
       '@effect/rpc':
         specifier: ^0.73.0
         version: 0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
+      '@effect/sql':
+        specifier: 0.45.0
+        version: 0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
+      '@effect/sql-sqlite-do':
+        specifier: 0.23.0
+        version: 0.23.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)
       '@effectify/solid-effect-atom':
         specifier: ^0.1.5
-        version: 0.1.5(@effect/experimental@0.56.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)(solid-js@1.9.10)
+        version: 0.1.5(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)(solid-js@1.9.10)
       '@kobalte/core':
         specifier: ^0.13.11
         version: 0.13.11(solid-js@1.9.10)
@@ -405,11 +414,11 @@ packages:
       '@effect/rpc': ^0.71.0
       effect: ^3.18.0
 
-  '@effect/experimental@0.56.0':
-    resolution: {integrity: sha512-ZT9wTUVyDptzdkW4Tfvz5fNzygW9vt5jWcFmKI9SlhZMu9unVJgsBhxWCNYCyfPnxw3n/Z6SEKsqgt8iKQc4MA==}
+  '@effect/experimental@0.55.0':
+    resolution: {integrity: sha512-vUzWXSqBrPyVJXcZqmASZR1c5GqmeeJp/OZspT265GdHaqvt8PiLfKear9Lh48vzm6nKySnVT0mQrcygo+1qlA==}
     peerDependencies:
-      '@effect/platform': ^0.92.0
-      effect: ^3.18.0
+      '@effect/platform': ^0.91.0
+      effect: ^3.17.14
       ioredis: ^5
       lmdb: ^3
     peerDependenciesMeta:
@@ -438,6 +447,20 @@ packages:
     peerDependencies:
       '@effect/platform': ^0.94.0
       effect: ^3.19.13
+
+  '@effect/sql-sqlite-do@0.23.0':
+    resolution: {integrity: sha512-CuNaYzEhzZ7g7s2Xe2m8Lv5hFdh+1797WIzhDNfLKsX5Zj2bY+tfaPAbxJSQL1/sRhDdBYYc7fibe4dr3J1PCg==}
+    peerDependencies:
+      '@effect/experimental': ^0.55.0
+      '@effect/sql': ^0.45.0
+      effect: ^3.17.14
+
+  '@effect/sql@0.45.0':
+    resolution: {integrity: sha512-250w6apb25GTj5T5zxXN1Yw3RJPeaE4xozghOImx5iZn/DHYXWPrTvEM9b/RNmSX5+JaeComObeNgpZbMzKfVQ==}
+    peerDependencies:
+      '@effect/experimental': ^0.55.0
+      '@effect/platform': ^0.91.0
+      effect: ^3.17.14
 
   '@effectify/solid-effect-atom@0.1.5':
     resolution: {integrity: sha512-aW9qSKxg1AviAxsg3xVkRc+wj7E3KsWFwSAJdLLyQ/CrCWQWLNWCgXn7S8+1XXZNRJ0Y1KkFogNUvfmRispBDA==}
@@ -3570,14 +3593,14 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
-  '@effect-atom/atom@0.3.2(@effect/experimental@0.56.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)':
+  '@effect-atom/atom@0.3.2(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)':
     dependencies:
-      '@effect/experimental': 0.56.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
+      '@effect/experimental': 0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
       '@effect/platform': 0.94.1(effect@3.17.14)
       '@effect/rpc': 0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
       effect: 3.17.14
 
-  '@effect/experimental@0.56.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)':
+  '@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)':
     dependencies:
       '@effect/platform': 0.94.1(effect@3.17.14)
       effect: 3.17.14
@@ -3604,9 +3627,22 @@ snapshots:
       effect: 3.17.14
       msgpackr: 1.11.5
 
-  '@effectify/solid-effect-atom@0.1.5(@effect/experimental@0.56.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)(solid-js@1.9.10)':
+  '@effect/sql-sqlite-do@0.23.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)':
     dependencies:
-      '@effect-atom/atom': 0.3.2(@effect/experimental@0.56.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)
+      '@effect/experimental': 0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
+      '@effect/sql': 0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
+      effect: 3.17.14
+
+  '@effect/sql@0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)':
+    dependencies:
+      '@effect/experimental': 0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
+      '@effect/platform': 0.94.1(effect@3.17.14)
+      effect: 3.17.14
+      uuid: 11.1.0
+
+  '@effectify/solid-effect-atom@0.1.5(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)(solid-js@1.9.10)':
+    dependencies:
+      '@effect-atom/atom': 0.3.2(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)
       effect: 3.17.14
       solid-js: 1.9.10
     transitivePeerDependencies:
