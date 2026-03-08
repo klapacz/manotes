@@ -2,9 +2,9 @@ Welcome to your new TanStack app!
 
 # Git Submodule
 
-This project includes a git submodule containing the previous implementation of the project for reference:
+This project includes a repository containing the previous implementation of the project for reference:
 
-- **Path:** `./docs/previous-impl`
+- **Path:** `./.reference/previous-impl`
 - **Repository:** https://github.com/klapacz/manotes.git
 - **Purpose:** Reference implementation for the rewrite effort
 
