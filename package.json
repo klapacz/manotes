@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000",
-    "build": "vite build && tsc",
-    "tsc:check": "tsc --noEmit",
+    "build": "vite build && pnpm typecheck",
+    "cf:typegen": "wrangler types --config wrangler.jsonc",
+    "typecheck": "tsc -b",
     "serve": "vite preview",
     "test": "vitest run",
     "lint:docs": "bun run .opencode/scripts/lint-docs.ts"
@@ -17,6 +18,7 @@
     "@effect/rpc": "^0.73.0",
     "@effectify/solid-effect-atom": "^0.1.5",
     "@kobalte/core": "^0.13.11",
+    "@standard-schema/spec": "^1.1.0",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/router-plugin": "^1.133.21",
     "@tanstack/solid-query": "^5.90.23",
@@ -40,12 +42,14 @@
     "yjs": "^13.6.27"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.26.1",
     "@effect/language-service": "^0.58.0",
     "@tanstack/devtools-vite": "^0.3.11",
     "drizzle-kit": "^0.31.7",
     "prettier": "^3.7.3",
     "typescript": "^5.7.2",
     "vite": "^7.1.7",
-    "vite-plugin-solid": "^2.11.10"
+    "vite-plugin-solid": "^2.11.10",
+    "wrangler": "^4.71.0"
   }
 }

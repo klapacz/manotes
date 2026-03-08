@@ -1,2 +1,10 @@
+ignoredBuiltDependencies:
+  - esbuild
+  - msgpackr-extract
+  - sharp
+
+onlyBuiltDependencies:
+  - workerd
+
 patchedDependencies:
   drizzle-orm: patches/drizzle-orm.patch

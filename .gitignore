@@ -12,3 +12,6 @@ dist-ssr
 sandbox
 .reference
 .workspace
+
+.wrangler
+.dev.vars*
