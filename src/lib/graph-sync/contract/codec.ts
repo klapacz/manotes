@@ -15,5 +15,5 @@ export const encodeClientMessage = Schema.encode(ClientMessageMsgPack);
 
 export const decodeServerMessage = Schema.decode(ServerMessageMsgPack);
 
-export const encodeServerMessageUnsfae =
+export const encodeServerMessageUnsafe =
   Schema.encodeSync(ServerMessageMsgPack);

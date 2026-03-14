@@ -101,12 +101,12 @@ export class GraphSyncDurableObject extends DurableObject<Env> {
     result: Protocol.ResponsePlan,
   ): void {
     for (const response of result.reply)
-      ws.send(Codec.encodeServerMessageUnsfae(response));
+      ws.send(Codec.encodeServerMessageUnsafe(response));
     for (const response of result.broadcast) this.broadcast(response, ws);
   }
 
   private broadcast(message: Messages.ServerMessage, except: WebSocket): void {
-    const encoded = Codec.encodeServerMessageUnsfae(message);
+    const encoded = Codec.encodeServerMessageUnsafe(message);
 
     for (const socket of this.ctx.getWebSockets()) {
       if (socket === except) continue;
