@@ -64,10 +64,7 @@ const createDedicatedWorker = Effect.fn(
         port: mc.port1,
         graphName: graphName,
       }),
-  }).pipe(
-    Effect.provide(dedicatedWorkerLayer),
-    Effect.forkScoped, // Tied to scope - cleaned up automatically when scope closes
-  );
+  }).pipe(Effect.provide(dedicatedWorkerLayer));
 
   yield* Effect.logInfo("Created dedicated worker");
 
@@ -195,9 +192,16 @@ const becomeLeader = Effect.fn("GraphWorkerClient.becomeLeader")(function* (
     const workerScope = yield* Scope.fork(scope, ExecutionStrategy.sequential);
 
     yield* Effect.gen(function* () {
+      // This can hang if the dedicated worker crashes during module evaluation
+      // before WorkerRunner sends its initial ready message. Effect's internal
+      // worker listener retries in the background, so this call may neither
+      // succeed nor fail promptly unless we add our own timeout.
       const dedicatedWorkerPort = yield* createDedicatedWorker(graphName);
 
       // Sends the dedicated worker's port2 to the SharedWorker via RPC.
+      // Note: with the current SharedWorker implementation, attach failures can
+      // be logged and reflected in health state there without surfacing back to
+      // this caller as an RPC failure, so the leader may not retry on them.
       yield* sharedClient.updateMessagePort({ port: dedicatedWorkerPort });
 
       yield* Effect.logInfo("MessagePort sent to SharedWorker");
