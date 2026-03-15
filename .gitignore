@@ -12,6 +12,7 @@ dist-ssr
 sandbox
 .reference
 .workspace
+.playwright-cli
 
 .wrangler
 .dev.vars*
