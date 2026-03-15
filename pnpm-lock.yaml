@@ -34,6 +34,9 @@ importers:
       '@effect/sql-sqlite-do':
         specifier: 0.23.0
         version: 0.23.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)
+      '@effect/sql-sqlite-wasm':
+        specifier: ^0.50.0
+        version: 0.50.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/wa-sqlite@0.1.2)(effect@3.17.14)
       '@effectify/solid-effect-atom':
         specifier: ^0.1.5
         version: 0.1.5(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)(solid-js@1.9.10)
@@ -103,6 +106,9 @@ importers:
       tw-animate-css:
         specifier: ^1.4.0
         version: 1.4.0
+      wa-sqlite:
+        specifier: github:rhashimoto/wa-sqlite#779219540f66cecaa159da32b3b8936697ba10a7
+        version: https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/779219540f66cecaa159da32b3b8936697ba10a7
       y-prosemirror:
         specifier: ^1.3.7
         version: 1.3.7(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-view@1.41.3)(y-protocols@1.0.6(yjs@13.6.27))(yjs@13.6.27)
@@ -458,12 +464,23 @@ packages:
       '@effect/sql': ^0.45.0
       effect: ^3.17.14
 
+  '@effect/sql-sqlite-wasm@0.50.0':
+    resolution: {integrity: sha512-CsdEsPkA8fJTfPrKuhr0taqRSuDC+qe4m9FvwcTaTG5m+nI3FHF5yqDD+ZyMZp24YhWsvF+epEX50NE6Rri+Mg==}
+    peerDependencies:
+      '@effect/experimental': ^0.58.0
+      '@effect/sql': ^0.49.0
+      '@effect/wa-sqlite': ^0.1.2
+      effect: ^3.19.13
+
   '@effect/sql@0.45.0':
     resolution: {integrity: sha512-250w6apb25GTj5T5zxXN1Yw3RJPeaE4xozghOImx5iZn/DHYXWPrTvEM9b/RNmSX5+JaeComObeNgpZbMzKfVQ==}
     peerDependencies:
       '@effect/experimental': ^0.55.0
       '@effect/platform': ^0.91.0
       effect: ^3.17.14
+
+  '@effect/wa-sqlite@0.1.2':
+    resolution: {integrity: sha512-2JvJ9BDkBOwfeY/gXsC0XwEKC0AwisP2W5ABJ6mx14QyXTK12MGDIybDlHieuZt1TEFSMiKfpg7yyqyRWRooJQ==}
 
   '@effectify/solid-effect-atom@0.1.5':
     resolution: {integrity: sha512-aW9qSKxg1AviAxsg3xVkRc+wj7E3KsWFwSAJdLLyQ/CrCWQWLNWCgXn7S8+1XXZNRJ0Y1KkFogNUvfmRispBDA==}
@@ -3148,6 +3165,10 @@ packages:
   w3c-keyname@2.2.8:
     resolution: {integrity: sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ==}
 
+  wa-sqlite@https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/779219540f66cecaa159da32b3b8936697ba10a7:
+    resolution: {tarball: https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/779219540f66cecaa159da32b3b8936697ba10a7}
+    version: 1.0.9
+
   webpack-virtual-modules@0.6.2:
     resolution: {integrity: sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ==}
 
@@ -3636,12 +3657,21 @@ snapshots:
       '@effect/sql': 0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
       effect: 3.17.14
 
+  '@effect/sql-sqlite-wasm@0.50.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/wa-sqlite@0.1.2)(effect@3.17.14)':
+    dependencies:
+      '@effect/experimental': 0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
+      '@effect/sql': 0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
+      '@effect/wa-sqlite': 0.1.2
+      effect: 3.17.14
+
   '@effect/sql@0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)':
     dependencies:
       '@effect/experimental': 0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
       '@effect/platform': 0.94.1(effect@3.17.14)
       effect: 3.17.14
       uuid: 11.1.0
+
+  '@effect/wa-sqlite@0.1.2': {}
 
   '@effectify/solid-effect-atom@0.1.5(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)(solid-js@1.9.10)':
     dependencies:
@@ -6301,6 +6331,8 @@ snapshots:
       vite: 7.2.4(@types/node@25.0.3)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)
 
   w3c-keyname@2.2.8: {}
+
+  wa-sqlite@https://codeload.github.com/rhashimoto/wa-sqlite/tar.gz/779219540f66cecaa159da32b3b8936697ba10a7: {}
 
   webpack-virtual-modules@0.6.2: {}
 
