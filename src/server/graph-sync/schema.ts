@@ -1,17 +1,12 @@
 import { Effect, ParseResult, Schema } from "effect";
 import * as Messages from "../../lib/graph-sync/contract/messages";
-
-const BooleanFromInt = Schema.transform(Schema.Number, Schema.Boolean, {
-  strict: true,
-  decode: (value) => value !== 0,
-  encode: (value) => (value ? 1 : 0),
-});
+import * as SchemaPrimitives from "../../lib/schema/primitives";
 
 export const Record = Schema.Struct({
   commitSeq: Schema.NonNegative,
   id: Schema.NonEmptyString,
   noteId: Schema.NonEmptyString,
-  isDaily: BooleanFromInt,
+  isDaily: SchemaPrimitives.BooleanFromInt,
   payload: Schema.instanceOf(Uint8Array<ArrayBufferLike>),
   createdAt: Schema.DateTimeUtc,
 });

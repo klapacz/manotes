@@ -4,16 +4,17 @@
     "lib": ["ES2024", "WebWorker"],
     "types": ["vite/client"],
     "composite": true,
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.wrangler.tsbuildinfo"
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.wrangler.tsbuildinfo",
   },
   "include": [
     "worker-configuration.d.ts",
     "src/server/**/*.ts",
     "src/lib/graph-sync/**/*.ts",
     "src/lib/db.service.ts",
+    "src/lib/schema/primitives.ts",
     "src/lib/db.tables.ts",
     "src/lib/event.repo.ts",
     "src/lib/event.schema.ts",
-    "src/lib/opfs.service.ts"
-  ]
+    "src/lib/opfs.service.ts",
+  ],
 }
