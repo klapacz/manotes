@@ -103,7 +103,7 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
       function* () {
         const result = yield* db.find((db) =>
           db
-            .select({ commitSeq: max(Tables.events.commitSeq) })
+            .select({ commitSeq: max(Tables.events.commitSeq).as("commitSeq") })
             .from(Tables.events),
         );
 

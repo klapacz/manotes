@@ -16,6 +16,7 @@ import {
   GraphDedicatedRpc,
   GraphDedicatedInitialMessage,
 } from "./graph.worker-rpc";
+import { SqlLive } from "./db.service";
 
 // Bootstrap runner - receives MessagePort via initial message and installs
 // the RPC server layer into the serialized runner context.
@@ -107,6 +108,7 @@ function buildServiceLayer(graphName: string) {
       allowCreate: false, // Worker assumes DB already exists and is migrated
     }),
   );
+  const DBWithConfigLayer = Layer.provideMerge(SqlLive, ConfigLayer);
 
   return Layer.mergeAll(
     DB.Service.Default,
@@ -122,6 +124,6 @@ function buildServiceLayer(graphName: string) {
   ).pipe(
     // Keep DB.Config in the final layer output because downstream effects
     // still read it directly even after the service graph has been built.
-    Layer.provideMerge(ConfigLayer),
+    Layer.provideMerge(DBWithConfigLayer),
   );
 }

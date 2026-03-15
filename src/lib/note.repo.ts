@@ -24,7 +24,7 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
             id,
             title: encoded.title,
             content: encoded.content,
-            isDaily: encoded.isDaily ?? false,
+            isDaily: encoded.isDaily ?? 0,
             materializedYUpdate: encoded.materializedYUpdate ?? null,
             createdAt: encoded.createdAt,
             updatedAt: encoded.updatedAt,
@@ -112,7 +112,7 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
     ) {
       const stream = yield* db.reactiveQuery((db) => {
         const where = and(
-          eq(Tables.notes.isDaily, false),
+          eq(Tables.notes.isDaily, 0),
           like(Tables.notes.title, `%${filter.trim()}%`),
         );
 

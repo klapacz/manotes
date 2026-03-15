@@ -1,28 +1,16 @@
-import { Effect, Data, Context, Option, Exit, Stream } from "effect";
-import { type Transaction } from "sqlocal";
+import { Effect, Data, Context, Layer, Option } from "effect";
 
 import type { RunnableQuery as DrizzleQuery } from "drizzle-orm/runnable-query";
-import { SQLocalDrizzle } from "sqlocal/drizzle";
 
 import { drizzle as createDrizzle } from "drizzle-orm/sqlite-proxy";
 import * as OPFS from "./opfs.service";
+import { SqlClient } from "@effect/sql";
+import type { Primitive } from "@effect/sql/Statement";
+import type { Query } from "drizzle-orm";
+import * as SqliteClient from "./sql-sqlite-wasm/sqlite-client";
 
-export class TransactionContext extends Context.Tag("DBTX")<
-  TransactionContext,
-  Transaction
->() {}
-
-export class Error extends Data.TaggedError("DB.Error")<{ cause: unknown }> {}
-
-export class NotFoundError extends Data.TaggedError("DB.NotFoundError")<{}> {}
-
-export class Config extends Context.Tag("DB.Config")<
-  Config,
-  { graphName: string; databasePath: string; allowCreate: boolean }
->() {}
-
-export class Service extends Effect.Service<Service>()("DB", {
-  effect: Effect.gen(function* () {
+export const SqlLive = Layer.unwrapEffect(
+  Effect.gen(function* () {
     const config = yield* Config;
 
     const doesFileExist = yield* OPFS.getFileHandleFromOpfsRoot(
@@ -36,81 +24,75 @@ export class Service extends Effect.Service<Service>()("DB", {
       return yield* new NotFoundError();
     }
 
-    // const config = yield* Config;
-    const sqlocal = new SQLocalDrizzle({
-      databasePath: config.databasePath,
-      reactive: true,
-    });
-
-    const drizzle = createDrizzle(sqlocal.driver, sqlocal.batchDriver);
-
-    const transaction = Effect.fn("DB.Transaction")(function* <A, E, R>(
-      effect: Effect.Effect<A, E, R>,
-    ) {
-      const tx = yield* Effect.serviceOption(TransactionContext);
-
-      if (Option.isSome(tx)) {
-        return yield* effect.pipe(
-          Effect.provideService(TransactionContext, tx.value),
+    return SqliteClient.layer({
+      worker: Effect.gen(function* () {
+        const worker = yield* Effect.acquireRelease(
+          Effect.sync(
+            () =>
+              new globalThis.Worker(
+                new URL("./db/worker.ts", import.meta.url),
+                {
+                  type: "module",
+                  name: `wa-sqlite-worker-${config.graphName}`,
+                },
+              ),
+          ),
+          (worker) => Effect.sync(() => worker.terminate()),
         );
-      }
 
-      const acquire = Effect.tryPromise({
-        try: () => sqlocal.beginTransaction(),
-        catch: (cause) => new Error({ cause }),
-      });
-
-      return yield* Effect.acquireUseRelease(
-        acquire,
-        (tx) => effect.pipe(Effect.provideService(TransactionContext, tx)),
-        (tx, exit) => {
-          return Effect.promise(() =>
-            Exit.isSuccess(exit) ? tx.commit() : tx.rollback(),
-          );
-        },
-      );
+        return worker;
+      }),
+      initMessage: { dbName: config.databasePath },
+      installReactivityHooks: true,
     });
+  }),
+);
 
-    const reactiveQuery = Effect.fn("DB.reactiveQuery")(function* <
-      T extends Record<string, any>[],
-    >(cb: QueryCallbackFn<T>) {
-      return Stream.asyncPush<T>((emit) =>
-        Effect.acquireRelease(
-          // Acquire: subscribe and return the subscription handle
-          Effect.sync(() => {
-            const statement = cb(drizzle);
-            const subscription = sqlocal
-              .reactiveQuery(statement)
-              .subscribe((data) => {
-                emit.single(data as T); // Emit each value
-              });
-            return subscription;
-          }),
-          // Release: cleanup the subscription
-          (subscription) => Effect.sync(() => subscription.unsubscribe()),
-        ),
-      );
-    });
+export class Error extends Data.TaggedError("DB.Error")<{ cause: unknown }> {}
+
+export class NotFoundError extends Data.TaggedError("DB.NotFoundError")<{}> {}
+
+export class Config extends Context.Tag("DB.Config")<
+  Config,
+  { graphName: string; databasePath: string; allowCreate: boolean }
+>() {}
+
+export class Service extends Effect.Service<Service>()("DB", {
+  effect: Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+
+    // dummy drizzle proxy - we use drizzle only for query building
+    const drizzle = createDrizzle(async () => ({ rows: [] }));
+
+    const transaction = sql.withTransaction;
 
     type QueryCallbackFn<T> = (db: typeof drizzle) => DrizzleQuery<T, "sqlite">;
 
-    const query = Effect.fn("DB.query")(function* <T>(cb: QueryCallbackFn<T>) {
-      const tx = yield* Effect.serviceOption(TransactionContext);
+    const reactiveQuery = Effect.fn("DB.reactiveQuery")(function* <
+      T extends object[],
+    >(cb: QueryCallbackFn<T>) {
+      const query = cb(drizzle);
+      const statement = yield* queryToSQL(query);
 
-      return yield* Effect.tryPromise({
-        try: async () => {
-          const statement = cb(drizzle);
-
-          if (Option.isSome(tx)) {
-            return tx.value.query(statement) as T; // Run within transaction
-          }
-          return (await (statement as never as Promise<T>)) as T; // Invoke query by awaiting it
-        },
-        catch: (cause) => new Error({ cause }),
-      });
+      return sql.reactive(
+        yield* getUsedTables(query),
+        sql.unsafe<T[number]>(statement.sql, statement.params as Primitive[]),
+      );
     });
 
-    const find = Effect.fn("DB.find")(function* <T extends Array<any>>(
+    const query = Effect.fn("DB.query")(function* <T extends object[]>(
+      cb: QueryCallbackFn<T>,
+    ) {
+      const query = cb(drizzle);
+      const statement = yield* queryToSQL(query);
+
+      return yield* sql.unsafe<T[number]>(
+        statement.sql,
+        statement.params as Primitive[],
+      );
+    });
+
+    const find = Effect.fn("DB.find")(function* <T extends object[]>(
       cb: QueryCallbackFn<T>,
     ) {
       const [result] = yield* query(cb);
@@ -119,10 +101,32 @@ export class Service extends Effect.Service<Service>()("DB", {
 
     return {
       transaction,
-      sqlocal,
       query,
       reactiveQuery,
       find,
     };
   }),
 }) {}
+
+const queryToSQL = Effect.fnUntraced(function* (
+  query: DrizzleQuery<any, "sqlite">,
+) {
+  if (!("toSQL" in query) || typeof query.toSQL !== "function") {
+    return yield* Effect.die("Provided query is not a valid Drizzle query");
+  }
+
+  return query.toSQL() as Query;
+});
+
+const getUsedTables = Effect.fnUntraced(function* (
+  query: DrizzleQuery<any, "sqlite">,
+) {
+  if (
+    !("getUsedTables" in query) ||
+    typeof query.getUsedTables !== "function"
+  ) {
+    return yield* Effect.die("Provided query is not a valid Drizzle query");
+  }
+
+  return query.getUsedTables() as string[];
+});

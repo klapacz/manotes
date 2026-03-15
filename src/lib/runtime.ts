@@ -16,6 +16,7 @@ import * as MaterializedEventService from "./materialized-event.service";
 import * as Migrator from "./migrator";
 import * as NoteRepo from "./note.repo";
 import * as EditorSyncService from "./editor-sync.service";
+import { SqlLive } from "./db.service";
 
 export type SetupResult = Data.TaggedEnum<{
   Success: { runtime: Type };
@@ -64,6 +65,7 @@ async function create(opts: SetupOpts) {
       databasePath: `${opts.graphName}.sqlite3`,
     }),
   );
+  const DBWithConfigLayer = Layer.provideMerge(SqlLive, ConfigLayer);
 
   const AppLayer = Layer.mergeAll(
     EventRepo.Service.Default,
@@ -74,7 +76,7 @@ async function create(opts: SetupOpts) {
     GraphWorkerClient.Service.Default,
     DB.Service.Default,
     Logger.minimumLogLevel(LogLevel.Debug),
-  ).pipe(Layer.provide(ConfigLayer));
+  ).pipe(Layer.provideMerge(DBWithConfigLayer));
 
   return ManagedRuntime.make(AppLayer);
 }

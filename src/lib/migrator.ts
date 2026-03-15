@@ -2,9 +2,10 @@
 import { Data, Effect, LogLevel } from "effect";
 import { migrations } from "../../drizzle/migrations";
 import { DB } from ".";
+import { SqlClient, SqlError } from "@effect/sql";
 
 class Error extends Data.TaggedError("Migrator.Error")<{
-  cause: DB.Error;
+  cause: SqlError.SqlError;
 }> {}
 
 const MIGRATIONS_TABLE_NAME = "_drizzle_migrations";
@@ -14,37 +15,25 @@ export const migrate = Effect.gen(function* () {
 
   yield* db.transaction(
     Effect.gen(function* () {
-      const tx = yield* DB.TransactionContext;
+      const sql = yield* SqlClient.SqlClient;
 
-      yield* Effect.promise(() =>
-        tx.query({
-          sql: `
-            CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE_NAME} (
-              id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-              name TEXT NOT NULL,
-              hash TEXT NOT NULL,
-              created_at INTEGER NOT NULL
-            );
-          `,
-          params: [],
-        }),
+      yield* sql.unsafe(
+        `CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE_NAME} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+          name TEXT NOT NULL,
+          hash TEXT NOT NULL,
+          created_at INTEGER NOT NULL
+        );`,
       );
 
       yield* Effect.logWithLevel(LogLevel.Debug, "Table created");
 
-      const appliedMigrations = yield* Effect.promise(() =>
-        tx.query<{
-          id: number;
-          name: string;
-          hash: string;
-          created_at: number;
-        }>({
-          sql: `
-            SELECT * FROM ${MIGRATIONS_TABLE_NAME};
-          `,
-          params: [],
-        }),
-      );
+      const appliedMigrations = yield* sql.unsafe<{
+        id: number;
+        name: string;
+        hash: string;
+        created_at: number;
+      }>(`SELECT * FROM ${MIGRATIONS_TABLE_NAME};`);
 
       yield* Effect.logWithLevel(LogLevel.Debug, "Applied migrations fetched");
 
@@ -55,21 +44,11 @@ export const migrate = Effect.gen(function* () {
           continue;
         }
 
-        yield* Effect.promise(() =>
-          tx.query({
-            sql: migration.sql,
-            params: [],
-          }),
-        );
+        yield* sql.unsafe(migration.sql, []);
 
-        yield* Effect.promise(() =>
-          tx.query({
-            sql: `
-              INSERT INTO ${MIGRATIONS_TABLE_NAME} ("name", "hash", "created_at")
-              VALUES (?, ?, ?);
-            `,
-            params: [migration.tag, hash, Date.now()],
-          }),
+        yield* sql.unsafe(
+          `INSERT INTO ${MIGRATIONS_TABLE_NAME} ("name", "hash", "created_at") VALUES (?, ?, ?);`,
+          [migration.tag, hash, Date.now()],
         );
       }
     }),

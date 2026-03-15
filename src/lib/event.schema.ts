@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import * as SchemaPrimitives from "./schema/primitives";
 
 export const Type = Schema.Literal("update");
 
@@ -8,7 +9,7 @@ const CommitSeq = Schema.Union(Schema.Null, Schema.Number);
 export const Record = Schema.Struct({
   localSeq: Schema.Number,
   noteId: Schema.NonEmptyString,
-  isDaily: Schema.Boolean,
+  isDaily: SchemaPrimitives.BooleanFromInt,
   type: Type,
   payload: Schema.instanceOf(Uint8Array<ArrayBufferLike>),
   createdAt: Schema.DateTimeUtc,
@@ -18,7 +19,7 @@ export const Record = Schema.Struct({
 
 export const Create = Schema.Struct({
   noteId: Schema.NonEmptyString,
-  isDaily: Schema.Boolean,
+  isDaily: SchemaPrimitives.BooleanFromInt,
   type: Type,
   payload: Schema.instanceOf(Uint8Array<ArrayBufferLike>),
   createdAt: Schema.DateTimeUtc,

@@ -73,7 +73,8 @@ export class Service extends Effect.Service<Service>()(
               lastAppliedLocalSeq,
               updatedAt,
             })
-            .where(eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID)),
+            .where(eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID))
+            .returning(),
         );
       });
 

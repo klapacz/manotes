@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import type { UnknownNodeJSON } from "./node-json";
+import * as SchemaPrimitives from "./schema/primitives";
 
 export const Content = Schema.transform(
   Schema.String,
@@ -19,7 +20,7 @@ export const Record = Schema.Struct({
   id: Schema.String,
   title: Schema.String,
   content: Content,
-  isDaily: Schema.Boolean,
+  isDaily: SchemaPrimitives.BooleanFromInt,
   materializedYUpdate: MaterializedYUpdate,
   createdAt: Schema.DateTimeUtc,
   updatedAt: Schema.DateTimeUtc,
@@ -30,7 +31,7 @@ export const Create = Schema.Struct({
   id: Schema.optional(Schema.String),
   title: Schema.String,
   content: Content,
-  isDaily: Schema.optional(Schema.Boolean),
+  isDaily: Schema.optional(SchemaPrimitives.BooleanFromInt),
   materializedYUpdate: Schema.optional(MaterializedYUpdate),
   createdAt: Schema.DateTimeUtc,
   updatedAt: Schema.DateTimeUtc,
@@ -40,7 +41,7 @@ export const Create = Schema.Struct({
 export const Update = Schema.Struct({
   title: Schema.optional(Schema.String),
   content: Schema.optional(Content),
-  isDaily: Schema.optional(Schema.Boolean),
+  isDaily: Schema.optional(SchemaPrimitives.BooleanFromInt),
   materializedYUpdate: Schema.optional(MaterializedYUpdate),
   createdAt: Schema.optional(Schema.DateTimeUtc),
   updatedAt: Schema.optional(Schema.DateTimeUtc),
