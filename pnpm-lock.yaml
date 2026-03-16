@@ -34,9 +34,6 @@ importers:
       '@effect/sql-sqlite-do':
         specifier: 0.23.0
         version: 0.23.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)
-      '@effect/sql-sqlite-wasm':
-        specifier: ^0.50.0
-        version: 0.50.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/wa-sqlite@0.1.2)(effect@3.17.14)
       '@effectify/solid-effect-atom':
         specifier: ^0.1.5
         version: 0.1.5(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)(solid-js@1.9.10)
@@ -91,9 +88,6 @@ importers:
       solid-js:
         specifier: 1.9.10
         version: 1.9.10
-      sqlocal:
-        specifier: ^0.16.0
-        version: 0.16.0(drizzle-orm@0.44.7(patch_hash=fc06771d64f348526ce73f91aec82565f1f79942e4ffc60a43940e8dc520b15d)(bun-types@1.3.5)(kysely@0.28.8))(kysely@0.28.8)(vite@7.2.4(@types/node@25.0.3)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0))
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.5.0
@@ -464,23 +458,12 @@ packages:
       '@effect/sql': ^0.45.0
       effect: ^3.17.14
 
-  '@effect/sql-sqlite-wasm@0.50.0':
-    resolution: {integrity: sha512-CsdEsPkA8fJTfPrKuhr0taqRSuDC+qe4m9FvwcTaTG5m+nI3FHF5yqDD+ZyMZp24YhWsvF+epEX50NE6Rri+Mg==}
-    peerDependencies:
-      '@effect/experimental': ^0.58.0
-      '@effect/sql': ^0.49.0
-      '@effect/wa-sqlite': ^0.1.2
-      effect: ^3.19.13
-
   '@effect/sql@0.45.0':
     resolution: {integrity: sha512-250w6apb25GTj5T5zxXN1Yw3RJPeaE4xozghOImx5iZn/DHYXWPrTvEM9b/RNmSX5+JaeComObeNgpZbMzKfVQ==}
     peerDependencies:
       '@effect/experimental': ^0.55.0
       '@effect/platform': ^0.91.0
       effect: ^3.17.14
-
-  '@effect/wa-sqlite@0.1.2':
-    resolution: {integrity: sha512-2JvJ9BDkBOwfeY/gXsC0XwEKC0AwisP2W5ABJ6mx14QyXTK12MGDIybDlHieuZt1TEFSMiKfpg7yyqyRWRooJQ==}
 
   '@effectify/solid-effect-atom@0.1.5':
     resolution: {integrity: sha512-aW9qSKxg1AviAxsg3xVkRc+wj7E3KsWFwSAJdLLyQ/CrCWQWLNWCgXn7S8+1XXZNRJ0Y1KkFogNUvfmRispBDA==}
@@ -1737,10 +1720,6 @@ packages:
   '@speed-highlight/core@1.2.14':
     resolution: {integrity: sha512-G4ewlBNhUtlLvrJTb88d2mdy2KRijzs4UhnlrOSRT4bmjh/IqNElZa3zkrZ+TC47TwtlDWzVLFADljF1Ijp5hA==}
 
-  '@sqlite.org/sqlite-wasm@3.50.4-build1':
-    resolution: {integrity: sha512-Qig2Wso7gPkU1PtXwFzndh+CTRzrIFxVGqv6eCetjU7YqxlHItj+GvQYwYTppCRgAPawtRN/4AJcEgB9xDHGug==}
-    hasBin: true
-
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
@@ -2017,9 +1996,6 @@ packages:
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
 
-  '@ungap/with-resolvers@0.1.0':
-    resolution: {integrity: sha512-g7f0IkJdPW2xhY7H4iE72DAsIyfuwEFc6JWc2tYFwKDMWWAF699vGjrM348cwQuOXgHpe1gWFe+Eiyjx/ewvvw==}
-
   '@zag-js/dismissable@1.30.0':
     resolution: {integrity: sha512-EyxbKe2TQtpkg8dprbjkyyPClR52zxe0Q1witVsKLLWCyUvd5yEx1lYRkUK3Ig5BaVmxtDmgDJdsdcf7axRiEg==}
 
@@ -2136,9 +2112,6 @@ packages:
     resolution: {integrity: sha512-E0g6bwr2Z92Ib1K2WHwGsq6xsrkVVSN1oe5YTg8LCV3iIwtyZORwmR+8n0xrecqycdhgAar8vWUjtB1OJt9tiA==}
     peerDependencies:
       solid-js: ^1.8.0
-
-  coincident@1.2.3:
-    resolution: {integrity: sha512-Uxz3BMTWIslzeWjuQnizGWVg0j6khbvHUQ8+5BdM7WuJEm4ALXwq3wluYoB+uF68uPBz/oUOeJnYURKyfjexlA==}
 
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
@@ -2395,9 +2368,6 @@ packages:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
-
-  gc-hook@0.3.1:
-    resolution: {integrity: sha512-E5M+O/h2o7eZzGhzRZGex6hbB3k4NWqO0eA+OzLRLXxhdbYPajZnynPwAtphnh+cRHPwsj5Z80dqZlfI4eK55A==}
 
   gensync@1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
@@ -2841,9 +2811,6 @@ packages:
   prosemirror-view@1.41.3:
     resolution: {integrity: sha512-SqMiYMUQNNBP9kfPhLO8WXEk/fon47vc52FQsUiJzTBuyjKgEcoAwMyF04eQ4WZ2ArMn7+ReypYL60aKngbACQ==}
 
-  proxy-target@3.0.2:
-    resolution: {integrity: sha512-FFE1XNwXX/FNC3/P8HiKaJSy/Qk68RitG/QEcLy/bVnTAPlgTAWPZKh0pARLAnpfXQPKyalBhk009NRTgsk8vQ==}
-
   pure-rand@6.1.0:
     resolution: {integrity: sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==}
 
@@ -2959,29 +2926,6 @@ packages:
 
   space-separated-tokens@2.0.2:
     resolution: {integrity: sha512-PEGlAwrG8yXGXRjW32fGbg66JAlOAwbObuqVoJpv/mRgoWDQfgH1wDPvtzWyUSNAXBGSk8h755YDbbcEy3SH2Q==}
-
-  sqlocal@0.16.0:
-    resolution: {integrity: sha512-iK9IAnPGW+98Pw0dWvhPZlapEZ9NaAKMEhRsbY1XlXPpAnRXblF6hP3NGtfLcW2dErWRJ79xzX3tAVZ2jNwqCg==}
-    peerDependencies:
-      '@angular/core': '>=17.0.0'
-      drizzle-orm: '*'
-      kysely: '*'
-      react: '>=18.0.0'
-      vite: '>=4.0.0'
-      vue: '>=3.0.0'
-    peerDependenciesMeta:
-      '@angular/core':
-        optional: true
-      drizzle-orm:
-        optional: true
-      kysely:
-        optional: true
-      react:
-        optional: true
-      vite:
-        optional: true
-      vue:
-        optional: true
 
   srvx@0.8.16:
     resolution: {integrity: sha512-hmcGW4CgroeSmzgF1Ihwgl+Ths0JqAJ7HwjP2X7e3JzY7u4IydLMcdnlqGQiQGUswz+PO9oh/KtCpOISIvs9QQ==}
@@ -3657,21 +3601,12 @@ snapshots:
       '@effect/sql': 0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
       effect: 3.17.14
 
-  '@effect/sql-sqlite-wasm@0.50.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/wa-sqlite@0.1.2)(effect@3.17.14)':
-    dependencies:
-      '@effect/experimental': 0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
-      '@effect/sql': 0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
-      '@effect/wa-sqlite': 0.1.2
-      effect: 3.17.14
-
   '@effect/sql@0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)':
     dependencies:
       '@effect/experimental': 0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
       '@effect/platform': 0.94.1(effect@3.17.14)
       effect: 3.17.14
       uuid: 11.1.0
-
-  '@effect/wa-sqlite@0.1.2': {}
 
   '@effectify/solid-effect-atom@0.1.5(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)(solid-js@1.9.10)':
     dependencies:
@@ -4770,8 +4705,6 @@ snapshots:
 
   '@speed-highlight/core@1.2.14': {}
 
-  '@sqlite.org/sqlite-wasm@3.50.4-build1': {}
-
   '@standard-schema/spec@1.1.0': {}
 
   '@swc/helpers@0.5.19':
@@ -5177,8 +5110,6 @@ snapshots:
 
   '@ungap/structured-clone@1.3.0': {}
 
-  '@ungap/with-resolvers@0.1.0': {}
-
   '@zag-js/dismissable@1.30.0':
     dependencies:
       '@zag-js/dom-query': 1.30.0
@@ -5321,18 +5252,6 @@ snapshots:
       '@solid-primitives/deep': 0.2.10(solid-js@1.9.10)
       '@solid-primitives/mutation-observer': 1.2.3(solid-js@1.9.10)
       solid-js: 1.9.10
-
-  coincident@1.2.3:
-    dependencies:
-      '@ungap/structured-clone': 1.3.0
-      '@ungap/with-resolvers': 0.1.0
-      gc-hook: 0.3.1
-      proxy-target: 3.0.2
-    optionalDependencies:
-      ws: 8.18.3
-    transitivePeerDependencies:
-      - bufferutil
-      - utf-8-validate
 
   comma-separated-tokens@2.0.3: {}
 
@@ -5574,8 +5493,6 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
-
-  gc-hook@0.3.1: {}
 
   gensync@1.0.0-beta.2: {}
 
@@ -6006,8 +5923,6 @@ snapshots:
       prosemirror-state: 1.4.4
       prosemirror-transform: 1.10.5
 
-  proxy-target@3.0.2: {}
-
   pure-rand@6.1.0: {}
 
   readdirp@3.6.0:
@@ -6169,18 +6084,6 @@ snapshots:
   source-map@0.7.6: {}
 
   space-separated-tokens@2.0.2: {}
-
-  sqlocal@0.16.0(drizzle-orm@0.44.7(patch_hash=fc06771d64f348526ce73f91aec82565f1f79942e4ffc60a43940e8dc520b15d)(bun-types@1.3.5)(kysely@0.28.8))(kysely@0.28.8)(vite@7.2.4(@types/node@25.0.3)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)):
-    dependencies:
-      '@sqlite.org/sqlite-wasm': 3.50.4-build1
-      coincident: 1.2.3
-    optionalDependencies:
-      drizzle-orm: 0.44.7(patch_hash=fc06771d64f348526ce73f91aec82565f1f79942e4ffc60a43940e8dc520b15d)(bun-types@1.3.5)(kysely@0.28.8)
-      kysely: 0.28.8
-      vite: 7.2.4(@types/node@25.0.3)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)
-    transitivePeerDependencies:
-      - bufferutil
-      - utf-8-validate
 
   srvx@0.8.16: {}
 
