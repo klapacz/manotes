@@ -1,5 +1,4 @@
-import "prosekit/basic/style.css";
-import "prosekit/basic/typography.css";
+import "./editor.css";
 
 import { createEditor, Priority, union, withPriority } from "prosekit/core";
 import { ProseKit } from "prosekit/solid";
