@@ -24,6 +24,9 @@ export const buttonVariants = cva({
       secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
       ghost:
         "hover:bg-accent hover:text-accent-foreground hover:dark:bg-accent/50",
+      // No background or hover styles — caller owns all visual states.
+      // Use when ghost's hover:dark:bg-accent/50 would fight custom state styling.
+      plain: "",
       link: "text-primary underline-offset-4 hover:underline",
     },
     size: {

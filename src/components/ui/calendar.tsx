@@ -152,11 +152,26 @@ export const CalendarCellTrigger = <T extends ValidComponent = "button">(
     <CalendarPrimitive.CellTrigger
       data-slot="calendar-cell-trigger"
       class={buttonVariants({
-        variant: "ghost",
+        // plain: no hover/bg styles from the variant — we own every state
+        // below explicitly, avoiding specificity fights with ghost's
+        // hover:dark:bg-accent/50 which shares (0,2,1) with aria-selected:hover.
+        variant: "plain",
         class: [
-          "size-8 p-0 font-normal aria-selected:opacity-100",
-          "data-today:bg-accent data-today:text-accent-foreground",
-          "aria-selected:bg-primary aria-selected:text-primary-foreground aria-selected:hover:bg-primary aria-selected:hover:text-primary-foreground",
+          "size-8 p-0 font-normal",
+          // Unselected idle hover: use --accent so the parent can override it
+          // via a CSS variable (e.g. sidebar sets --accent: var(--sidebar-accent)).
+          "hover:bg-accent hover:text-accent-foreground",
+          // Today (unselected): subtle accent tint to mark the current date.
+          // Scoped to not-aria-selected so it doesn't fight the selected state.
+          // Hover dims to accent/80 — mirrors the button convention of reducing
+          // opacity on hover rather than switching to a different colour.
+          "not-aria-selected:data-today:bg-accent not-aria-selected:data-today:text-accent-foreground",
+          "not-aria-selected:data-today:hover:bg-accent/80",
+          // Selected: always primary. Hover dims to primary/90 like the default
+          // button variant. aria-selected:hover specificity (0,2,1) beats plain
+          // hover (0,1,1) so no hacks needed.
+          "aria-selected:bg-primary aria-selected:text-primary-foreground",
+          "aria-selected:hover:bg-primary/90 aria-selected:hover:text-primary-foreground",
           props.class,
         ],
       })}
