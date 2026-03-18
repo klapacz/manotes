@@ -1,4 +1,11 @@
-import { sqliteTable, text, integer, blob } from "drizzle-orm/sqlite-core";
+import {
+  sqliteTable,
+  text,
+  integer,
+  blob,
+  primaryKey,
+  index,
+} from "drizzle-orm/sqlite-core";
 import * as EventSchema from "./event.schema";
 
 export const notes = sqliteTable("notes", {
@@ -36,4 +43,16 @@ export const materializationCheckpoint = sqliteTable(
     lastAppliedLocalSeq: integer("lastAppliedLocalSeq").notNull(),
     updatedAt: text("updatedAt").notNull(),
   },
+);
+
+export const backlinks = sqliteTable(
+  "backlinks",
+  {
+    sourceId: text("sourceId").notNull(),
+    targetId: text("targetId").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.sourceId, table.targetId] }),
+    index("backlinks_target_id_idx").on(table.targetId),
+  ],
 );

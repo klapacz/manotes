@@ -36,6 +36,13 @@
       "when": 1773342119226,
       "tag": "0004_famous_drax",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1773867311718,
+      "tag": "0005_young_vindicator",
+      "breakpoints": true
     }
   ]
 }
