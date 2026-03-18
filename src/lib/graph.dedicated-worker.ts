@@ -8,6 +8,7 @@ import * as DB from "./db.service";
 import * as EventRepo from "./event.repo";
 import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
 import * as MaterializedEventService from "./materialized-event.service";
+import * as BacklinkService from "./materializer/backlink/service";
 import * as MaterializerService from "./materializer.service";
 import * as NoteRepo from "./note.repo";
 import * as GraphSync from "./graph-sync/service";
@@ -114,6 +115,7 @@ function buildServiceLayer(graphName: string) {
     DB.Service.Default,
     EventRepo.Service.Default,
     NoteRepo.Service.Default,
+    BacklinkService.Service.Default,
     MaterializationCheckpointRepo.Service.Default,
     MaterializedEventService.Service.Default,
     MaterializerService.Service.Default,

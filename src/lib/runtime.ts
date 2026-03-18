@@ -13,6 +13,7 @@ import * as EventRepo from "./event.repo";
 import * as GraphWorkerClient from "./graph-worker.client";
 import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
 import * as MaterializedEventService from "./materialized-event.service";
+import * as BacklinkService from "./materializer/backlink/service";
 import * as Migrator from "./migrator";
 import * as NoteRepo from "./note.repo";
 import * as NoteCache from "./note-cache.service";
@@ -71,6 +72,7 @@ async function create(opts: SetupOpts) {
   const AppLayer = Layer.mergeAll(
     EventRepo.Service.Default,
     NoteRepo.Service.Default,
+    BacklinkService.Service.Default,
     NoteCache.Service.Default,
     MaterializationCheckpointRepo.Service.Default,
     MaterializedEventService.Service.Default,

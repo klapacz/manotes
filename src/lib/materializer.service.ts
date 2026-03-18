@@ -11,6 +11,7 @@ import * as Y from "yjs";
 import * as DB from "./db.service";
 import * as EventRepo from "./event.repo";
 import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
+import * as BacklinkService from "./materializer/backlink/service";
 import * as NoteRepo from "./note.repo";
 import {
   findFirstH1Text,
@@ -25,12 +26,14 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
     DB.Service.Default,
     EventRepo.Service.Default,
     NoteRepo.Service.Default,
+    BacklinkService.Service.Default,
     MaterializationCheckpointRepo.Service.Default,
   ],
   effect: Effect.gen(function* () {
     const db = yield* DB.Service;
     const eventRepo = yield* EventRepo.Service;
     const noteRepo = yield* NoteRepo.Service;
+    const backlinkService = yield* BacklinkService.Service;
     const checkpointRepo = yield* MaterializationCheckpointRepo.Service;
 
     const materializeNoteUpTo = Effect.fn(
@@ -75,6 +78,11 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
           lastEventLocalSeq: upToLocalSeq,
         });
 
+        yield* backlinkService.replaceForSourceNote({
+          sourceId: noteId,
+          content: materialized.content,
+        });
+
         yield* Effect.logInfo(`Materialized note up to event ${upToLocalSeq}`);
         return;
       }
@@ -107,6 +115,11 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
         createdAt: firstEvent.createdAt,
         updatedAt: lastEvent.createdAt,
         lastEventLocalSeq: upToLocalSeq,
+      });
+
+      yield* backlinkService.replaceForSourceNote({
+        sourceId: noteId,
+        content: materialized.content,
       });
 
       yield* Effect.logInfo(`Materialized note up to event ${upToLocalSeq}`);
