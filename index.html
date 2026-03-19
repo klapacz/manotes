@@ -4,7 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/favicon.ico" />
-    <meta name="theme-color" content="#000000" />
+    <meta
+      name="theme-color"
+      content="#ffffff"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#211f1c"
+      media="(prefers-color-scheme: dark)"
+    />
     <meta
       name="description"
       content="Web site created using create-tsrouter-app"
@@ -12,6 +21,20 @@
     <link rel="apple-touch-icon" href="/logo192.png" />
     <link rel="manifest" href="/manifest.json" />
     <title>Create TanStack App - app-ts</title>
+    <script>
+      (() => {
+        const root = document.documentElement;
+        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+        const syncTheme = (event) => {
+          root.dataset.kbTheme = event.matches ? "dark" : "light";
+        };
+
+        syncTheme(mediaQuery);
+
+        mediaQuery.addEventListener("change", syncTheme);
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>
