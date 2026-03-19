@@ -82,7 +82,12 @@ export const AppSidebar = (props: AppSidebarProps) => {
       <div class="border-sidebar-border flex h-12 items-center border-b px-4 text-sm font-semibold">
         Manotes
       </div>
-      <SidebarContent style={{ "--accent": "var(--sidebar-accent)" }}>
+      <SidebarContent
+        style={{
+          "--color-accent": "var(--color-sidebar-accent)",
+          "--color-accent-foreground": "var(--color-sidebar-accent-foreground)",
+        }}
+      >
         <SidebarGroup>
           <SidebarGroupContent>
             <div class="mb-3 px-1">

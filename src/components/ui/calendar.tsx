@@ -158,8 +158,8 @@ export const CalendarCellTrigger = <T extends ValidComponent = "button">(
         variant: "plain",
         class: [
           "size-8 p-0 font-normal",
-          // Unselected idle hover: use --accent so the parent can override it
-          // via a CSS variable (e.g. sidebar sets --accent: var(--sidebar-accent)).
+          // Unselected idle hover: use the accent theme token so a parent can
+          // override it via CSS variables.
           "hover:bg-accent hover:text-accent-foreground",
           // Today (unselected): subtle accent tint to mark the current date.
           // Scoped to not-aria-selected so it doesn't fight the selected state.
