@@ -90,7 +90,8 @@ img.ProseMirror-separator {
   );
   --editor-match: color-mix(in oklch, var(--color-fg-subtle) 15%, transparent);
   --editor-muted: var(--color-fg-subtle);
-  --editor-link: var(--color-primary-fg);
+  --editor-link: var(--color-primary-fg-subtle);
+  --editor-link-hover: var(--color-primary-fg);
   --editor-code-bg: var(--color-control);
   --editor-code-fg: var(--color-fg);
 }
@@ -420,9 +421,20 @@ prosekit-table-handle-drop-indicator {
 }
 
 .ProseMirror a {
-  font-weight: 500;
-  text-decoration: underline;
+  @apply transition duration-100;
   color: var(--editor-link);
+
+  &:hover {
+    color: var(--editor-link-hover);
+  }
+
+  &[data-backlink-state="Missing"] {
+    color: var(--color-warning-fg-subtle);
+
+    &:hover {
+      color: var(--color-warning-fg);
+    }
+  }
 }
 
 .ProseMirror p,

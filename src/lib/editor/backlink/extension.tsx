@@ -54,11 +54,6 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
       })(state);
     });
 
-    const className = BacklinkLabelEntry.$match({
-      Resolved: () => "text-primary-fg",
-      Missing: () => "text-warning-fg",
-      Loading: () => "",
-    });
     const label = BacklinkLabelEntry.$match({
       Resolved: ({ title }) => title,
       Missing: () => "[unavailable note]",
@@ -71,8 +66,8 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
         from="/$graph"
         params={{ note: noteId() }}
         data-backlink=""
+        data-backlink-state={state._tag}
         data-backlink-id={noteId()}
-        class={className(state)}
         contentEditable={false}
       >
         {label(state)}
