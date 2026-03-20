@@ -21,7 +21,7 @@ function RouteComponent() {
   const search = Route.useSearch();
 
   return (
-    <div class="p-6">
+    <div class="mx-auto max-w-3xl px-6 py-10">
       <Editor noteId={search().date} isDaily={true} />
     </div>
   );

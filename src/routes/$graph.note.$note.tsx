@@ -58,28 +58,30 @@ function RouteComponent() {
   return (
     <Show
       when={Option.getOrNull(data().note)}
-      fallback={<div class="p-6 text-fg-subtle">Note not found.</div>}
+      fallback={
+        <div class="mx-auto max-w-3xl px-6 py-10 text-fg-subtle">
+          Note not found.
+        </div>
+      }
     >
       {(n) => (
-        <div class="p-6 space-y-8">
+        <div class="mx-auto max-w-3xl px-6 py-10 space-y-12">
           <Editor noteId={n().id} isDaily={false} />
 
-          <section class="space-y-3 p-3 bg-bg-subtle rounded-md">
-            <h2 class="px-4 text-xs font-medium text-fg-subtle uppercase">
+          <section class="space-y-4 rounded-md bg-bg-subtle py-4">
+            <h2 class="px-4 text-xs uppercase tracking-wide text-fg-subtle">
               Backlinks
             </h2>
 
             <Show
               when={backlinks.length > 0}
               fallback={
-                <div class="text-sm text-fg-subtle">No backlinks yet.</div>
+                <div class="px-4 text-sm text-fg-subtle">No backlinks yet.</div>
               }
             >
-              <div class="divide-y rounded-md">
-                <For each={backlinks}>
-                  {(backlink) => <BacklinkSnippet content={backlink.preview} />}
-                </For>
-              </div>
+              <For each={backlinks}>
+                {(backlink) => <BacklinkSnippet content={backlink.preview} />}
+              </For>
             </Show>
           </section>
         </div>
@@ -100,10 +102,7 @@ function BacklinkSnippet(props: {
 
   return (
     <ProseKit editor={editor}>
-      <div
-        ref={editor.mount}
-        class="bg-bg-subtle text-fg-subtle px-4 py-3 outline-hidden"
-      />
+      <div ref={editor.mount} class="text-fg-subtle px-4 py-3 text-sm" />
     </ProseKit>
   );
 }

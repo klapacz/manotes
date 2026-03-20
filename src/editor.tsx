@@ -89,7 +89,7 @@ export default function Editor(props: Props): JSX.Element {
     <Show when={state()} keyed>
       {(current) => (
         <ProseKit editor={current.editor}>
-          <div ref={current.editor.mount} class="outline-solid p-4" />
+          <div ref={current.editor.mount} class="outline-none" />
           <BacklinkMenu currentNoteId={props.noteId} />
         </ProseKit>
       )}
