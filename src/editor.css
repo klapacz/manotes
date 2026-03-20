@@ -183,6 +183,75 @@ img.ProseMirror-separator {
   cursor: pointer;
 }
 
+.prosemirror-flat-list[data-list-kind="task"] > .list-marker label {
+  position: relative;
+  transition: transform 0.15s ease-in-out;
+}
+
+/* Checkmark icon (hidden until checked) */
+.prosemirror-flat-list[data-list-kind="task"] > .list-marker label::after {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  content: "";
+  opacity: 0;
+  background-color: var(--color-primary-fg-solid);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='none' stroke='black' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+  mask-repeat: no-repeat;
+  mask-size: 70% 70%;
+  mask-position: center;
+  pointer-events: none;
+  transition: opacity 0.15s ease-in-out;
+}
+
+/* Native checkbox → custom box */
+.prosemirror-flat-list[data-list-kind="task"] > .list-marker label input {
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  border: 1px solid var(--color-primary-border-subtle);
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.prosemirror-flat-list[data-list-kind="task"] > .list-marker label input:hover {
+  border-color: var(--color-primary-border-hover);
+}
+
+.prosemirror-flat-list[data-list-kind="task"]
+  > .list-marker
+  label
+  input:checked {
+  border-color: var(--color-primary-border);
+  background-color: var(--color-primary-solid);
+}
+
+.prosemirror-flat-list[data-list-kind="task"]
+  > .list-marker
+  label
+  input:checked:hover {
+  background-color: var(--color-primary-solid-hover);
+}
+
+/* Show checkmark when checked */
+.prosemirror-flat-list[data-list-kind="task"][data-list-checked]
+  > .list-marker
+  label::after {
+  opacity: 1;
+}
+
+/* Dim for completed tasks */
+.prosemirror-flat-list[data-list-kind="task"][data-list-checked]
+  > .list-content
+  > :not(.prosemirror-flat-list) {
+  color: var(--color-fg-subtle);
+}
+
 .prosemirror-flat-list[data-list-kind="toggle"][data-list-collapsable]
   > .list-marker {
   cursor: pointer;
