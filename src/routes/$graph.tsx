@@ -4,8 +4,6 @@ import * as GraphWorkerClient from "../lib/graph-worker.client";
 import { Effect, Schema, Stream } from "effect";
 import { Show } from "solid-js";
 import { DedicatedWorkerHealth } from "../lib/graph.worker-rpc";
-import { Temporal } from "temporal-polyfill";
-import * as TemporalSchema from "../lib/temporal.schema";
 import { AppSidebar } from "../components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "../components/ui/sidebar";
 
@@ -13,12 +11,6 @@ export const Route = createFileRoute("/$graph")({
   component: RouteComponent,
   validateSearch: Schema.Struct({
     allowCreate: Schema.optional(Schema.Boolean),
-    date: Schema.optional(TemporalSchema.PlainDateString).pipe(
-      Schema.withDefaults({
-        decoding: () => Temporal.Now.plainDateISO().toString(),
-        constructor: () => Temporal.Now.plainDateISO().toString(),
-      }),
-    ),
   }).pipe(Schema.standardSchemaV1),
   beforeLoad: async ({ params, search }) => {
     const graphName = params.graph;
@@ -42,7 +34,6 @@ export const Route = createFileRoute("/$graph")({
             search: (search) => ({
               ...search,
               allowCreate: undefined,
-              date: search.date,
             }),
           });
         }
@@ -85,13 +76,11 @@ function WorkerHealthBanner() {
 
 function RouteComponent() {
   const data = Route.useLoaderData();
-  const params = Route.useParams();
-  const search = Route.useSearch();
 
   return (
     <RuntimeProvider runtime={() => data().runtime}>
       <SidebarProvider defaultOpenMobile={true}>
-        <AppSidebar graph={params().graph} date={search().date} />
+        <AppSidebar />
         <SidebarInset>
           <WorkerHealthBanner />
           <div class="flex-1 overflow-auto">

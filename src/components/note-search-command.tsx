@@ -12,11 +12,7 @@ import {
   CommandList,
 } from "./ui/command";
 
-type NoteSearchCommandProps = {
-  graph: string;
-};
-
-export const NoteSearchCommand = (props: NoteSearchCommandProps) => {
+export const NoteSearchCommand = () => {
   const navigate = useNavigate();
   const [noteFilter, setNoteFilter] = createSignal("");
   const [isCommandOpen, setIsCommandOpen] = createSignal(false);
@@ -85,8 +81,9 @@ export const NoteSearchCommand = (props: NoteSearchCommandProps) => {
                     setIsCommandOpen(false);
                     setNoteFilter("");
                     void navigate({
+                      from: "/$graph",
                       to: "/$graph/note/$note",
-                      params: { graph: props.graph, note: note().id },
+                      params: { note: note().id },
                     });
                   }}
                 >

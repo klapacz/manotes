@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/solid-query";
-import { useNavigate } from "@tanstack/solid-router";
+import { useNavigate, useSearch } from "@tanstack/solid-router";
 import { DateTime, Effect } from "effect";
 import { nanoid } from "nanoid";
 import { Index, Show, createMemo } from "solid-js";
@@ -24,11 +24,6 @@ import {
   SidebarGroupContent,
 } from "./ui/sidebar";
 
-type AppSidebarProps = {
-  graph: string;
-  date: string;
-};
-
 const EMPTY_YJS_UPDATE = Y.encodeStateAsUpdate(new Y.Doc());
 
 const { format: formatWeekdayLong } = new Intl.DateTimeFormat("en", {
@@ -43,7 +38,11 @@ const { format: formatMonth } = new Intl.DateTimeFormat("en", {
   month: "long",
 });
 
-export const AppSidebar = (props: AppSidebarProps) => {
+export const AppSidebar = () => {
+  const search = useSearch({
+    from: "/$graph/",
+    shouldThrow: false,
+  });
   const runtime = useRuntime();
   const navigate = useNavigate();
 
@@ -66,14 +65,17 @@ export const AppSidebar = (props: AppSidebarProps) => {
     },
     onSuccess(note) {
       void navigate({
+        from: "/$graph",
         to: "/$graph/note/$note",
-        params: { graph: props.graph, note: note.id },
+        params: { note: note.id },
       });
     },
   }));
 
   const selectedDate = createMemo(() => {
-    const date = Temporal.PlainDate.from(props.date);
+    const rawDate = search()?.date;
+    if (!rawDate) return null;
+    const date = Temporal.PlainDate.from(rawDate);
     return new Date(date.year, date.month - 1, date.day);
   });
 
@@ -97,7 +99,7 @@ export const AppSidebar = (props: AppSidebarProps) => {
                 <p class="text-error-fg mt-2 text-xs">Failed to create note</p>
               </Show>
             </div>
-            <NoteSearchCommand graph={props.graph} />
+            <NoteSearchCommand />
             <Calendar
               mode="single"
               value={selectedDate()}
@@ -113,8 +115,8 @@ export const AppSidebar = (props: AppSidebarProps) => {
                 ).toString();
 
                 navigate({
+                  from: "/$graph",
                   to: "/$graph",
-                  params: { graph: props.graph },
                   search: (current) => ({
                     ...current,
                     date,
