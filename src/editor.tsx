@@ -26,10 +26,7 @@ import { formatDailyNoteTitle } from "./lib/daily-note";
 import { Fiber, Effect } from "effect";
 import BacklinkMenu from "./lib/editor/backlink/menu";
 
-type Props = {
-  noteId: string;
-  isDaily: boolean;
-};
+type Props = EditorSyncService.SetupInput;
 
 export default function Editor(props: Props): JSX.Element {
   const runtime = useRuntime();
@@ -60,6 +57,7 @@ export default function Editor(props: Props): JSX.Element {
           editor,
           noteId,
           isDaily: props.isDaily,
+          initial: props.initial,
         };
       },
       // Build the first editor state immediately so render/effect can consume it
@@ -70,12 +68,16 @@ export default function Editor(props: Props): JSX.Element {
 
   createEffect(() => {
     const r = runtime();
-    const { doc, noteId, isDaily } = state();
+    const { doc, noteId, isDaily, initial } = state();
 
     const fiber = r.runFork(
       Effect.gen(function* () {
         const service = yield* EditorSyncService.Service;
-        yield* service.setupDoc(doc, { noteId, isDaily });
+        yield* service.setupDoc(doc, {
+          noteId,
+          isDaily,
+          initial,
+        });
       }),
     );
 

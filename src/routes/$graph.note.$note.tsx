@@ -66,7 +66,14 @@ function RouteComponent() {
     >
       {(n) => (
         <div class="mx-auto max-w-3xl px-6 py-10 space-y-12">
-          <Editor noteId={n().id} isDaily={false} />
+          <Editor
+            noteId={n().id}
+            isDaily={false}
+            initial={Option.some({
+              materializedYUpdate: n().materializedYUpdate,
+              lastEventLocalSeq: n().lastEventLocalSeq,
+            })}
+          />
 
           <section class="space-y-4 rounded-md bg-bg-subtle py-4">
             <h2 class="px-4 text-xs uppercase tracking-wide text-fg-subtle">

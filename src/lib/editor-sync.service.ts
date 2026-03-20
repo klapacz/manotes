@@ -1,4 +1,4 @@
-import { Effect, pipe, Stream, Data } from "effect";
+import { Effect, pipe, Stream, Data, flow } from "effect";
 import * as Y from "yjs";
 import * as EventRepo from "./event.repo";
 import { Array, Chunk, DateTime, Option } from "effect";
@@ -13,9 +13,13 @@ class OutcomingUpdateCtx extends Data.Class<{
   origin: unknown;
 }> {}
 
-type SetupInput = {
+export type SetupInput = {
   noteId: string;
   isDaily: boolean;
+  initial: Option.Option<{
+    materializedYUpdate: typeof NoteSchema.MaterializedYUpdate.Type;
+    lastEventLocalSeq: number;
+  }>;
 };
 
 export class Service extends Effect.Service<Service>()(
@@ -129,22 +133,31 @@ export class Service extends Effect.Service<Service>()(
 
       const setupDoc = Effect.fn("EditorSyncService.setupDoc")(
         function* (doc: Y.Doc, input: SetupInput) {
-          const note = yield* noteRepo
-            .findById(input.noteId)
-            .pipe(Effect.map(Option.getOrNull));
-
-          const materializedYUpdate = note?.materializedYUpdate ?? null;
-          const initialLastKnownLocalSeq = note?.lastEventLocalSeq ?? 0;
+          const initial = yield* Option.match(input.initial, {
+            onSome: Effect.succeed,
+            onNone: flow(
+              () => noteRepo.findById(input.noteId),
+              Effect.map(
+                Option.getOrElse(() => ({
+                  lastEventLocalSeq: 0,
+                  materializedYUpdate: null,
+                })),
+              ),
+            ),
+          });
 
           yield* Effect.all(
             [
               Effect.gen(function* () {
-                yield* applyMaterializedYUpdate(doc, materializedYUpdate);
+                yield* applyMaterializedYUpdate(
+                  doc,
+                  initial.materializedYUpdate,
+                );
 
                 yield* applyIncomingUpdates(
                   doc,
                   input.noteId,
-                  initialLastKnownLocalSeq,
+                  initial.lastEventLocalSeq,
                 );
               }),
               saveOutcomingUpdates(doc, input.noteId, input.isDaily),
