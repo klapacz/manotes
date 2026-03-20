@@ -418,6 +418,7 @@ prosekit-table-handle-drop-indicator {
   border-style: none;
   font-weight: 600;
   line-height: 1.25;
+  color: var(--color-fg);
 }
 
 .ProseMirror a {
@@ -453,31 +454,34 @@ prosekit-table-handle-drop-indicator {
 }
 
 .ProseMirror h1 {
-  margin: 1rem 0;
-  font-size: 2.25em;
+  margin: 1em 0;
+  font-size: 2em;
 }
 
 .ProseMirror h2 {
-  margin: 1.75em 0 0.5em;
-  font-size: 1.75em;
+  margin: 1.5em 0 0.5em;
+  font-size: 1.5em;
 }
 
 .ProseMirror h3 {
-  margin: 1.5em 0 0.5em;
-  font-size: 1.375em;
+  margin: 1.25em 0 0.375em;
+  font-size: 1.25em;
 }
 
 .ProseMirror h4 {
-  margin: 1em 0;
+  margin: 1em 0 0.25em;
   font-size: 1.125em;
 }
 
 .ProseMirror h5 {
-  margin: 0.5em 0;
+  margin: 0.875em 0 0.25em;
+  font-size: 1em;
 }
 
 .ProseMirror h6 {
-  opacity: 0.8;
+  margin: 0.75em 0 0.25em;
+  font-size: 0.875em;
+  color: var(--color-fg-subtle);
 }
 
 .ProseMirror img,
@@ -532,9 +536,9 @@ prosekit-table-handle-drop-indicator {
 }
 
 .ProseMirror hr {
-  margin: 2em 0;
-  border-width: 1px;
-  border-color: var(--color-border);
+  margin: 1.5em 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
 }
 
 .ProseMirror .prosekit-horizontal-rule {
