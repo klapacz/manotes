@@ -6,6 +6,7 @@ import { Index, Show, createMemo } from "solid-js";
 import { Temporal } from "temporal-polyfill";
 import * as Y from "yjs";
 import { MaterializedEventService, useRuntime } from "../lib";
+import { PlusIcon, SearchIcon } from "./icons";
 import { NoteSearchCommand } from "./note-search-command";
 import { Button } from "./ui/button";
 import {
@@ -82,25 +83,38 @@ export const AppSidebar = () => {
 
   return (
     <Sidebar>
-      <div class="border-border flex h-12 items-center border-b px-4 text-sm font-semibold">
+      <div class="border-border flex h-12 items-center justify-between border-b px-2 text-sm font-semibold">
         Manotes
+        <div class="flex items-center gap-1">
+          <NoteSearchCommand>
+            {(openSearch) => (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={openSearch}
+                title="Search notes (Ctrl+K)"
+              >
+                <SearchIcon />
+              </Button>
+            )}
+          </NoteSearchCommand>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => createNoteMutation.mutate()}
+            disabled={createNoteMutation.isPending}
+            title="Create note"
+          >
+            <PlusIcon />
+          </Button>
+        </div>
       </div>
+      <Show when={createNoteMutation.isError}>
+        <p class="text-error-fg px-4 py-1 text-xs">Failed to create note</p>
+      </Show>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <div class="mb-3 px-1">
-              <Button
-                class="w-full"
-                onClick={() => createNoteMutation.mutate()}
-                disabled={createNoteMutation.isPending}
-              >
-                {createNoteMutation.isPending ? "Creating..." : "Create"}
-              </Button>
-              <Show when={createNoteMutation.isError}>
-                <p class="text-error-fg mt-2 text-xs">Failed to create note</p>
-              </Show>
-            </div>
-            <NoteSearchCommand />
             <Calendar
               mode="single"
               value={selectedDate()}

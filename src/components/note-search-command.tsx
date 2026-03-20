@@ -1,8 +1,8 @@
 import { useNavigate } from "@tanstack/solid-router";
 import { Effect, Stream } from "effect";
+import type { JSX } from "solid-js";
 import { Index, createEffect, createSignal, onCleanup } from "solid-js";
 import { NoteRepo, createRuntimeStreamStore } from "../lib";
-import { Button } from "./ui/button";
 import {
   CommandDialog,
   CommandEmpty,
@@ -12,7 +12,9 @@ import {
   CommandList,
 } from "./ui/command";
 
-export const NoteSearchCommand = () => {
+export const NoteSearchCommand = (props: {
+  children?: (open: () => void) => JSX.Element;
+}) => {
   const navigate = useNavigate();
   const [noteFilter, setNoteFilter] = createSignal("");
   const [isCommandOpen, setIsCommandOpen] = createSignal(false);
@@ -49,15 +51,8 @@ export const NoteSearchCommand = () => {
   });
 
   return (
-    <div class="mb-3 px-1">
-      <Button
-        variant="outline"
-        class="text-fg-subtle w-full justify-between font-normal"
-        onClick={() => setIsCommandOpen(true)}
-      >
-        Search notes...
-        <span class="text-xs">Ctrl+K</span>
-      </Button>
+    <>
+      {props.children?.(() => setIsCommandOpen(true))}
       <CommandDialog
         open={isCommandOpen()}
         onOpenChange={setIsCommandOpen}
@@ -94,6 +89,6 @@ export const NoteSearchCommand = () => {
           </CommandGroup>
         </CommandList>
       </CommandDialog>
-    </div>
+    </>
   );
 };
