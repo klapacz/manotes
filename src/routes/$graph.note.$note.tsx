@@ -35,7 +35,7 @@ function RouteComponent() {
   return (
     <Show
       when={Option.getOrNull(data())}
-      fallback={<div class="p-6 text-muted-foreground">Note not found.</div>}
+      fallback={<div class="p-6 text-fg-subtle">Note not found.</div>}
     >
       {(n) => (
         <div class="p-6">

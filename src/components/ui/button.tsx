@@ -10,24 +10,24 @@ export const buttonVariants = cva({
     "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all [&_svg:not([class*=size-])]:size-4 shrink-0 outline-none",
     "disabled:pointer-events-none disabled:opacity-50",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0",
-    "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-    "aria-[invalid]:ring-destructive/20 aria-[invalid]:dark:ring-destructive/40 aria-[invalid]:border-destructive",
+    "focus-visible:border-primary-border focus-visible:ring-primary-border/30 focus-visible:ring-[3px]",
+    "aria-[invalid]:border-error-border aria-[invalid]:ring-error-border/30",
   ],
 
   variants: {
     variant: {
-      default: "bg-primary text-primary-foreground hover:bg-primary/90",
+      default:
+        "bg-primary-solid text-primary-fg-solid hover:bg-primary-solid-hover",
       destructive:
-        "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 focus-visible:dark:ring-destructive/40 dark:bg-destructive/60",
+        "bg-error-solid text-error-fg-solid hover:bg-error-solid-hover focus-visible:border-error-border focus-visible:ring-error-border/30",
       outline:
-        "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground hover:dark:bg-input/50 dark:bg-input/30 dark:border-input",
-      secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-      ghost:
-        "hover:bg-accent hover:text-accent-foreground hover:dark:bg-accent/50",
-      // No background or hover styles — caller owns all visual states.
-      // Use when ghost's hover:dark:bg-accent/50 would fight custom state styling.
+        "border border-border bg-bg text-fg shadow-xs hover:bg-control-hover",
+      secondary: "bg-control text-fg hover:bg-control-hover",
+      ghost: "text-fg hover:bg-control-hover",
+      // No background or hover styles - caller owns all visual states.
+      // Use when shared button hovers would fight custom state styling.
       plain: "",
-      link: "text-primary underline-offset-4 hover:underline",
+      link: "text-primary-fg underline-offset-4 hover:text-primary-fg-subtle hover:underline",
     },
     size: {
       default: "h-9 px-4 py-2 has-[>svg]:px-3",

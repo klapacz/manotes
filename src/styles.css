@@ -114,6 +114,7 @@
   --color-sidebar-ring: var(--color-primary-border);
   --color-code: var(--color-control);
   --color-code-foreground: var(--color-fg);
+  --color-overlay: var(--color-black-a6);
   --color-selection: color-mix(
     in oklch,
     var(--color-primary-solid) 30%,
@@ -128,6 +129,7 @@
 
 [data-kb-theme="dark"] {
   color-scheme: dark;
+  --color-overlay: var(--color-black-a7);
 }
 
 @layer base {

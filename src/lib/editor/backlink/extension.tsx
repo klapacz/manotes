@@ -55,8 +55,8 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
     });
 
     const className = BacklinkLabelEntry.$match({
-      Resolved: () => "text-primary",
-      Missing: () => "text-amber-600",
+      Resolved: () => "text-primary-fg",
+      Missing: () => "text-warning-fg",
       Loading: () => "",
     });
     const label = BacklinkLabelEntry.$match({

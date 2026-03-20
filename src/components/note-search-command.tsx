@@ -56,7 +56,7 @@ export const NoteSearchCommand = (props: NoteSearchCommandProps) => {
     <div class="mb-3 px-1">
       <Button
         variant="outline"
-        class="text-muted-foreground w-full justify-between font-normal"
+        class="text-fg-subtle w-full justify-between font-normal"
         onClick={() => setIsCommandOpen(true)}
       >
         Search notes...

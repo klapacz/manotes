@@ -111,7 +111,7 @@ export const CalendarHeadCell = <T extends ValidComponent = "th">(
     <CalendarPrimitive.HeadCell
       data-slot="calendar-head-cell"
       class={cx(
-        "text-muted-foreground w-8 rounded-md text-[0.8rem] font-normal",
+        "text-fg-subtle w-8 rounded-md text-[0.8rem] font-normal",
         props.class,
       )}
       {...rest}
@@ -153,25 +153,15 @@ export const CalendarCellTrigger = <T extends ValidComponent = "button">(
       data-slot="calendar-cell-trigger"
       class={buttonVariants({
         // plain: no hover/bg styles from the variant — we own every state
-        // below explicitly, avoiding specificity fights with ghost's
-        // hover:dark:bg-accent/50 which shares (0,2,1) with aria-selected:hover.
+        // below explicitly, avoiding specificity fights with shared hover rules.
         variant: "plain",
         class: [
           "size-8 p-0 font-normal",
-          // Unselected idle hover: use the accent theme token so a parent can
-          // override it via CSS variables.
-          "hover:bg-accent hover:text-accent-foreground",
-          // Today (unselected): subtle accent tint to mark the current date.
-          // Scoped to not-aria-selected so it doesn't fight the selected state.
-          // Hover dims to accent/80 — mirrors the button convention of reducing
-          // opacity on hover rather than switching to a different colour.
-          "not-aria-selected:data-today:bg-accent not-aria-selected:data-today:text-accent-foreground",
-          "not-aria-selected:data-today:hover:bg-accent/80",
-          // Selected: always primary. Hover dims to primary/90 like the default
-          // button variant. aria-selected:hover specificity (0,2,1) beats plain
-          // hover (0,1,1) so no hacks needed.
-          "aria-selected:bg-primary aria-selected:text-primary-foreground",
-          "aria-selected:hover:bg-primary/90 aria-selected:hover:text-primary-foreground",
+          "hover:bg-control-hover hover:text-fg",
+          "not-aria-selected:data-today:bg-control not-aria-selected:data-today:text-fg",
+          "not-aria-selected:data-today:hover:bg-control-hover",
+          "aria-selected:bg-primary-solid aria-selected:text-primary-fg-solid",
+          "aria-selected:hover:bg-primary-solid-hover aria-selected:hover:text-primary-fg-solid",
           props.class,
         ],
       })}

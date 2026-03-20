@@ -110,7 +110,7 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
             <AutocompleteItem
               class={cx(
                 commandItemBaseClass,
-                "data-focused:bg-accent data-focused:text-accent-foreground",
+                "data-focused:bg-control-hover data-focused:text-fg",
               )}
               value={note.id}
             >

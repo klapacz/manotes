@@ -98,7 +98,7 @@ export const Sidebar = (props: SidebarProps) => {
           data-slot="sidebar"
           data-state={open() ? "expanded" : "collapsed"}
           class={cx(
-            "bg-sidebar text-sidebar-foreground border-sidebar-border relative hidden h-svh border-r transition-all duration-200 ease-linear md:flex md:flex-col",
+            "bg-bg-subtle text-fg border-border relative hidden h-svh border-r transition-all duration-200 ease-linear md:flex md:flex-col",
             open() ? "w-(--sidebar-width)" : "w-0 overflow-hidden border-r-0",
             local.class,
           )}
@@ -110,13 +110,13 @@ export const Sidebar = (props: SidebarProps) => {
 
       <Show when={isMobile() && openMobile()}>
         <div
-          class="fixed inset-0 z-40 bg-black/30"
+          class="bg-overlay fixed inset-0 z-40"
           onClick={() => setOpenMobile(false)}
         />
         <aside
           data-slot="sidebar"
           class={cx(
-            "bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-50 flex w-(--sidebar-width-mobile) flex-col border-r",
+            "bg-bg-subtle text-fg border-border fixed inset-y-0 left-0 z-50 flex w-(--sidebar-width-mobile) flex-col border-r",
             local.class,
           )}
           style={{ "--sidebar-width-mobile": SIDEBAR_WIDTH_MOBILE }}
@@ -137,7 +137,7 @@ export const SidebarInset = (props: SidebarInsetProps) => {
   return (
     <main
       data-slot="sidebar-inset"
-      class={cx("bg-background flex min-w-0 flex-1 flex-col", local.class)}
+      class={cx("bg-bg flex min-w-0 flex-1 flex-col", local.class)}
       {...rest}
     />
   );
@@ -245,7 +245,7 @@ export const SidebarGroupLabel = (props: SidebarGroupLabelProps) => {
     <div
       data-slot="sidebar-group-label"
       class={cx(
-        "text-sidebar-foreground/70 flex h-8 items-center px-2 text-xs font-medium",
+        "text-fg-subtle flex h-8 items-center px-2 text-xs font-medium",
         local.class,
       )}
       {...rest}
@@ -309,9 +309,8 @@ export const SidebarMenuButton = (props: SidebarMenuButtonProps) => {
       data-slot="sidebar-menu-button"
       data-active={local.isActive}
       class={cx(
-        "ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex w-full items-center gap-2 overflow-hidden rounded-md px-2 py-2 text-left text-sm outline-hidden transition-colors focus-visible:ring-2",
-        local.isActive &&
-          "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
+        "ring-primary-border hover:bg-control-hover hover:text-fg flex w-full items-center gap-2 overflow-hidden rounded-md px-2 py-2 text-left text-sm outline-hidden transition-colors focus-visible:ring-2",
+        local.isActive && "bg-control-hover text-fg font-medium",
         collapsed() && "justify-center",
         local.class,
       )}

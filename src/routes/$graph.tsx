@@ -71,10 +71,10 @@ function WorkerHealthBanner() {
     <div
       class={`px-4 py-2 text-sm text-center ${
         health.status === "down"
-          ? "bg-red-600 text-white"
+          ? "bg-error-solid text-error-fg-solid"
           : health.status === "healthy"
-            ? "bg-green-600 text-white"
-            : "bg-yellow-500 text-black"
+            ? "bg-success-solid text-success-fg-solid"
+            : "bg-warning-solid text-warning-fg-solid"
       }`}
     >
       Worker {health.status}
