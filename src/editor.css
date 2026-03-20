@@ -46,7 +46,7 @@
 }
 
 .ProseMirror-selectednode {
-  outline: 2px solid color-mix(in oklch, var(--color-primary) 60%, transparent);
+  outline: 2px solid var(--editor-selection-strong);
 }
 
 /* Make sure li selections wrap around markers */
@@ -61,7 +61,7 @@ li.ProseMirror-selectednode:after {
   right: -2px;
   top: -2px;
   bottom: -2px;
-  border: 2px solid color-mix(in oklch, var(--color-primary) 60%, transparent);
+  border: 2px solid var(--editor-selection-strong);
   pointer-events: none;
 }
 
@@ -78,6 +78,21 @@ img.ProseMirror-separator {
   --prosekit-list-bullet-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='2.5' fill='currentColor'/%3E%3C/svg%3E");
   --prosekit-list-toggle-open-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpolygon points='8,10 12,14 16,10' fill='currentColor'/%3E%3C/svg%3E");
   --prosekit-list-toggle-closed-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpolygon points='10,8 14,12 10,16' fill='currentColor'/%3E%3C/svg%3E");
+  --editor-selection-strong: color-mix(
+    in oklch,
+    var(--color-primary-solid) 60%,
+    transparent
+  );
+  --editor-selection: color-mix(
+    in oklch,
+    var(--color-primary-solid) 25%,
+    transparent
+  );
+  --editor-match: color-mix(in oklch, var(--color-fg-subtle) 15%, transparent);
+  --editor-muted: var(--color-fg-subtle);
+  --editor-link: var(--color-primary-fg);
+  --editor-code-bg: var(--color-control);
+  --editor-code-fg: var(--color-fg);
 }
 
 .prosemirror-flat-list {
@@ -210,7 +225,7 @@ img.ProseMirror-separator {
 }
 
 prosekit-table-handle-drop-indicator {
-  background-color: var(--color-primary);
+  background-color: var(--color-primary-solid);
 }
 
 .ProseMirror .column-resize-handle {
@@ -220,7 +235,7 @@ prosekit-table-handle-drop-indicator {
   right: -2px;
   bottom: 0;
   width: 4px;
-  background-color: var(--color-primary);
+  background-color: var(--color-primary-solid);
   pointer-events: none;
 }
 
@@ -230,8 +245,12 @@ prosekit-table-handle-drop-indicator {
 }
 
 .ProseMirror .selectedCell {
-  border: 1px double var(--color-primary);
-  background-color: color-mix(in oklch, var(--color-primary) 15%, transparent);
+  border: 1px double var(--color-primary-solid);
+  background-color: color-mix(
+    in oklch,
+    var(--color-primary-solid) 15%,
+    transparent
+  );
 }
 
 /* ─── 2c. Extension: placeholder ────────────────────────────────────────── */
@@ -240,7 +259,7 @@ prosekit-table-handle-drop-indicator {
   position: absolute;
   height: 0;
   content: attr(data-placeholder);
-  color: var(--color-muted-foreground);
+  color: var(--editor-muted);
   opacity: 60%;
   pointer-events: none;
 }
@@ -249,13 +268,9 @@ prosekit-table-handle-drop-indicator {
 
 .prosekit-virtual-selection {
   border-radius: 2px;
-  background-color: color-mix(
-    in oklch,
-    var(--color-muted-foreground) 25%,
-    transparent
-  );
+  background-color: color-mix(in oklch, var(--editor-muted) 25%, transparent);
   box-shadow: 0 0 0 2px
-    color-mix(in oklch, var(--color-muted-foreground) 25%, transparent);
+    color-mix(in oklch, var(--editor-muted) 25%, transparent);
 }
 
 /* ─── 2e. Extension: gap-cursor ─────────────────────────────────────────── */
@@ -289,16 +304,8 @@ prosekit-table-handle-drop-indicator {
 /* ─── 3. Typography ──────────────────────────────────────────────────────── */
 
 :root {
-  --prosekit-node-selection-color: color-mix(
-    in oklch,
-    var(--color-primary) 25%,
-    transparent
-  );
-  --prosekit-autocomplete-color: color-mix(
-    in oklch,
-    var(--color-muted-foreground) 15%,
-    transparent
-  );
+  --prosekit-node-selection-color: var(--editor-selection);
+  --prosekit-autocomplete-color: var(--editor-match);
 }
 
 .ProseMirror {
@@ -346,7 +353,7 @@ prosekit-table-handle-drop-indicator {
 .ProseMirror a {
   font-weight: 500;
   text-decoration: underline;
-  color: var(--color-primary);
+  color: var(--editor-link);
 }
 
 .ProseMirror p,
@@ -361,7 +368,7 @@ prosekit-table-handle-drop-indicator {
 .ProseMirror blockquote {
   padding-inline-start: 1em;
   border-inline-start: 0.25em solid var(--color-border);
-  color: var(--color-muted-foreground);
+  color: var(--editor-muted);
 }
 
 .ProseMirror h1 {
@@ -402,8 +409,8 @@ prosekit-table-handle-drop-indicator {
 .ProseMirror code {
   font-weight: 600;
   font-size: 0.875em;
-  background-color: var(--color-code, var(--color-muted));
-  color: var(--color-code-foreground, var(--color-foreground));
+  background-color: var(--editor-code-bg);
+  color: var(--editor-code-fg);
   border-radius: var(--radius-sm);
   padding: 0.1em 0.3em;
 }
@@ -414,17 +421,11 @@ prosekit-table-handle-drop-indicator {
   overflow-x: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background-color: var(--color-code, var(--color-muted));
-  color: var(--color-code-foreground, var(--color-foreground));
+  background-color: var(--editor-code-bg);
+  color: var(--editor-code-fg);
   /* CSS variables set by prosemirror-highlight override the above */
-  background-color: var(
-    --prosemirror-highlight-bg,
-    var(--color-code, var(--color-muted))
-  );
-  color: var(
-    --prosemirror-highlight,
-    var(--color-code-foreground, var(--color-foreground))
-  );
+  background-color: var(--prosemirror-highlight-bg, var(--editor-code-bg));
+  color: var(--prosemirror-highlight, var(--editor-code-fg));
 }
 
 .ProseMirror pre,

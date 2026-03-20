@@ -112,8 +112,6 @@
   --color-sidebar-accent-foreground: var(--color-fg);
   --color-sidebar-border: var(--color-border);
   --color-sidebar-ring: var(--color-primary-border);
-  --color-code: var(--color-control);
-  --color-code-foreground: var(--color-fg);
   --color-overlay: var(--color-black-a6);
   --color-selection: color-mix(
     in oklch,
