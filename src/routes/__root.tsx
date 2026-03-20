@@ -24,7 +24,7 @@ function RootComponent() {
       <HeadContent />
 
       <Outlet />
-      <TanStackRouterDevtools />
+      <TanStackRouterDevtools position="bottom-right" />
 
       <Scripts />
     </>

@@ -1,9 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/solid-router";
-import { Runtime, RuntimeProvider, createRuntimeStreamStore } from "../lib";
-import * as GraphWorkerClient from "../lib/graph-worker.client";
-import { Effect, Schema, Stream } from "effect";
-import { Show } from "solid-js";
-import { DedicatedWorkerHealth } from "../lib/graph.worker-rpc";
+import { Runtime, RuntimeProvider } from "../lib";
+import { Schema } from "effect";
 import { AppSidebar } from "../components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "../components/ui/sidebar";
 
@@ -44,36 +41,6 @@ export const Route = createFileRoute("/$graph")({
   loader: async ({ context }) => ({ runtime: context.runtime }),
 });
 
-function WorkerHealthBanner() {
-  const health = createRuntimeStreamStore(
-    () =>
-      GraphWorkerClient.Service.pipe(
-        Effect.map((svc) => svc.client.healthStream({})),
-        Stream.unwrap,
-      ),
-    new DedicatedWorkerHealth({
-      status: "down",
-      consecutiveFailures: 0,
-      lastFailure: "",
-    }),
-  );
-
-  return (
-    <div
-      class={`px-4 py-2 text-sm text-center ${
-        health.status === "down"
-          ? "bg-error-solid text-error-fg-solid"
-          : health.status === "healthy"
-            ? "bg-success-solid text-success-fg-solid"
-            : "bg-warning-solid text-warning-fg-solid"
-      }`}
-    >
-      Worker {health.status}
-      <Show when={health.lastFailure}>{`: ${health.lastFailure}`}</Show>
-    </div>
-  );
-}
-
 function RouteComponent() {
   const data = Route.useLoaderData();
 
@@ -82,7 +49,6 @@ function RouteComponent() {
       <SidebarProvider defaultOpenMobile={true}>
         <AppSidebar />
         <SidebarInset>
-          <WorkerHealthBanner />
           <div class="flex-1 overflow-auto">
             <Outlet />
           </div>
