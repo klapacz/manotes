@@ -2,6 +2,7 @@ import type { ComponentProps, ValidComponent } from "solid-js";
 import { Match, Switch, splitProps } from "solid-js";
 import CalendarPrimitive from "@corvu/calendar";
 import { cx } from "../../lib/cva";
+import { ChevronLeftIcon, ChevronRightIcon } from "../icons";
 import { buttonVariants } from "./button";
 
 export type CalendarProps = ComponentProps<typeof CalendarPrimitive>;
@@ -35,38 +36,12 @@ export const CalendarNav = <T extends ValidComponent = "button">(
         <Match
           when={props.action === "prev-year" || props.action === "prev-month"}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="size-4"
-            viewBox="0 0 24 24"
-          >
-            <path
-              fill="none"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="m15 18l-6-6l6-6"
-            />
-          </svg>
+          <ChevronLeftIcon class="size-4" />
         </Match>
         <Match
           when={props.action === "next-year" || props.action === "next-month"}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="size-4"
-            viewBox="0 0 24 24"
-          >
-            <path
-              fill="none"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="m9 18l6-6l-6-6"
-            />
-          </svg>
+          <ChevronRightIcon class="size-4" />
         </Match>
       </Switch>
     </CalendarPrimitive.Nav>

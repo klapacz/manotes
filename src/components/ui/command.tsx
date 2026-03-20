@@ -3,6 +3,7 @@ import { splitProps } from "solid-js";
 import { Command as CommandPrimitive } from "cmdk-solid";
 
 import { cx } from "../../lib/cva";
+import { SearchIcon } from "../icons";
 
 export type CommandProps = ComponentProps<typeof CommandPrimitive>;
 
@@ -77,22 +78,7 @@ export const CommandInput = (props: CommandInputProps) => {
       data-slot="command-input-wrapper"
       class="border-border flex h-9 items-center gap-2 border-b px-3"
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="size-4 shrink-0 opacity-50"
-        viewBox="0 0 24 24"
-      >
-        <g
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-        >
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21l-4.3-4.3" />
-        </g>
-      </svg>
+      <SearchIcon class="size-4 shrink-0 opacity-50" />
       <CommandPrimitive.Input
         data-slot="command-input"
         class={cx(
