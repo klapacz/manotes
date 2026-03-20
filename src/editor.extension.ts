@@ -3,6 +3,7 @@ import { defineGapCursor } from "prosekit/extensions/gap-cursor";
 import { defineVirtualSelection } from "prosekit/extensions/virtual-selection";
 import { defineModClickPrevention } from "prosekit/extensions/mod-click-prevention";
 import { defineTaskListToggle } from "./editor.task-list-toggle.extension";
+import { defineCodeBlockBackspace } from "./lib/editor/code-block-backspace/extension";
 import { defineBacklinkCommands } from "./lib/editor/backlink/spec";
 import { defineBacklinkRuntime } from "./lib/editor/backlink/extension";
 import { defineAppSchema, type DefineAppSchemaOptions } from "./editor.schema";
@@ -24,6 +25,7 @@ export function defineAppExtension(options: DefineAppSchemaOptions) {
     defineVirtualSelection(),
     defineModClickPrevention(),
     defineTaskListToggle(),
+    defineCodeBlockBackspace(),
     // Browser runtime (node views, clipboard)
     defineBacklinkRuntime(),
   );
