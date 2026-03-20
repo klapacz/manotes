@@ -87,31 +87,6 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  --color-background: var(--color-bg);
-  --color-foreground: var(--color-fg);
-  --color-card: var(--color-bg);
-  --color-card-foreground: var(--color-fg);
-  --color-popover: var(--color-bg);
-  --color-popover-foreground: var(--color-fg);
-  --color-primary: var(--color-primary-solid);
-  --color-primary-foreground: var(--color-primary-fg-solid);
-  --color-secondary: var(--color-control);
-  --color-secondary-foreground: var(--color-fg);
-  --color-muted: var(--color-bg-subtle);
-  --color-muted-foreground: var(--color-fg-subtle);
-  --color-accent: var(--color-control-hover);
-  --color-accent-foreground: var(--color-fg);
-  --color-destructive: var(--color-error-solid);
-  --color-input: var(--color-border);
-  --color-ring: var(--color-primary-border);
-  --color-sidebar: var(--color-bg-subtle);
-  --color-sidebar-foreground: var(--color-fg);
-  --color-sidebar-primary: var(--color-primary-solid);
-  --color-sidebar-primary-foreground: var(--color-primary-fg-solid);
-  --color-sidebar-accent: var(--color-control-hover);
-  --color-sidebar-accent-foreground: var(--color-fg);
-  --color-sidebar-border: var(--color-border);
-  --color-sidebar-ring: var(--color-primary-border);
   --color-overlay: var(--color-black-a6);
   --color-selection: color-mix(
     in oklch,
@@ -132,10 +107,10 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-primary-border/50;
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-bg text-fg;
   }
 }
