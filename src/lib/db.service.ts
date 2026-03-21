@@ -29,7 +29,7 @@ export const SqlLive = Layer.unwrapEffect(
         const worker = yield* Effect.acquireRelease(
           Effect.sync(
             () =>
-              new globalThis.Worker(
+              new Worker(
                 new URL("./db/worker.ts", import.meta.url),
                 {
                   type: "module",

@@ -1,5 +1,5 @@
 import { BrowserWorker } from "@effect/platform-browser";
-import { Worker } from "@effect/platform";
+import { Worker as PlatformWorker } from "@effect/platform";
 import {
   Duration,
   Effect,
@@ -44,7 +44,7 @@ const createDedicatedWorker = Effect.fn(
   const worker = yield* Effect.acquireRelease(
     Effect.sync(
       () =>
-        new globalThis.Worker(
+        new Worker(
           new URL("./graph.dedicated-worker.ts", import.meta.url),
           {
             type: "module",
@@ -58,7 +58,7 @@ const createDedicatedWorker = Effect.fn(
   const dedicatedWorkerLayer = BrowserWorker.layer(() => worker);
 
   // Send port1 to the dedicated worker via initial message.
-  yield* Worker.makeSerialized<GraphDedicatedInitialMessage>({
+  yield* PlatformWorker.makeSerialized<GraphDedicatedInitialMessage>({
     initialMessage: () =>
       new GraphDedicatedInitialMessage({
         port: mc.port1,

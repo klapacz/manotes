@@ -1,5 +1,6 @@
 import { createContext, useContext, type JSX } from "solid-js";
-import { createStreamStore, type Runtime } from ".";
+import { createStreamStore } from "./primitives";
+import type * as Runtime from "./runtime";
 import type { ManagedRuntime, Stream } from "effect";
 
 export const RuntimeContext = createContext<() => Runtime.Type>(null!);

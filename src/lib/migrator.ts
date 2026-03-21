@@ -1,7 +1,7 @@
 // migrate.ts
 import { Data, Effect, LogLevel } from "effect";
 import { migrations } from "../../drizzle/migrations";
-import { DB } from ".";
+import * as DB from "./db.service";
 import { SqlClient, SqlError } from "@effect/sql";
 
 class Error extends Data.TaggedError("Migrator.Error")<{
