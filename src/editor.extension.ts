@@ -7,6 +7,7 @@ import { defineCodeBlockBackspace } from "./lib/editor/code-block-backspace/exte
 import { defineBacklinkCommands } from "./lib/editor/backlink/spec";
 import { defineBacklinkRuntime } from "./lib/editor/backlink/extension";
 import { defineAppSchema, type DefineAppSchemaOptions } from "./editor.schema";
+import { defineTitlePlaceholder } from "./lib/editor/title-placeholder/extension";
 
 /**
  * Full editor extension for the browser.
@@ -28,6 +29,8 @@ export function defineAppExtension(options: DefineAppSchemaOptions) {
     defineCodeBlockBackspace(),
     // Browser runtime (node views, clipboard)
     defineBacklinkRuntime(),
+    // Title placeholder for non-daily notes
+    ...(!options.isDaily ? [defineTitlePlaceholder()] : []),
   );
 }
 
