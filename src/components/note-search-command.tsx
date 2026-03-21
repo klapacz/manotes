@@ -74,7 +74,9 @@ export const NoteSearchCommand = (props: {
                   value={note().id}
                   onSelect={() => {
                     setIsCommandOpen(false);
-                    setNoteFilter("");
+                    // HACK: clear filter after close animation to prevent flickering
+                    setTimeout(() => setNoteFilter(""), 200);
+
                     void navigate({
                       from: "/$graph",
                       to: "/$graph/note/$note",
