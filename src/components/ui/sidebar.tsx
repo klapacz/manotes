@@ -99,7 +99,7 @@ export const Sidebar = (props: SidebarProps) => {
           data-slot="sidebar"
           data-state={open() ? "expanded" : "collapsed"}
           class={cx(
-            "bg-bg-subtle text-fg border-border relative hidden h-svh border-r transition-all duration-200 ease-linear md:flex md:flex-col",
+            "bg-bg-subtle text-fg border-border sticky top-0 hidden h-svh border-r transition-all duration-200 ease-linear md:flex md:flex-col",
             open() ? "w-(--sidebar-width)" : "w-0 overflow-hidden border-r-0",
             local.class,
           )}
