@@ -20,11 +20,7 @@ export const Route = createFileRoute("/$graph/")({
 });
 
 function RouteComponent() {
-  return (
-    <div class="mx-auto max-w-3xl px-6 py-10">
-      <DailyNotes />
-    </div>
-  );
+  return <DailyNotes />;
 }
 
 function DailyNotes() {
@@ -140,31 +136,28 @@ function DailyNotes() {
         bufferSize={400}
         onScroll={maybeExtendWindow}
         style={{
-          height: `90vh`,
+          height: "100%",
         }}
       >
         {(date) => (
-          <div
-            style={{
-              "min-height": "600px",
-              "padding-bottom": "40px",
-              "box-sizing": "border-box",
-            }}
-          >
-            <Editor
-              noteId={date.toString()}
-              isDaily={true}
-              initial={Option.none()}
-              onFocusIn={() => {
-                void navigate({
-                  to: ".",
-                  search: {
-                    date: date.toString(),
-                  },
-                });
-                skipNextSearchSync = true;
-              }}
-            />
+          <div class="border-b border-border-subtle">
+            <div class="mx-auto max-w-3xl px-6 py-10">
+              <Editor
+                noteId={date.toString()}
+                isDaily={true}
+                initial={Option.none()}
+                style={{ "min-height": "600px" }}
+                onFocusIn={() => {
+                  void navigate({
+                    to: ".",
+                    search: {
+                      date: date.toString(),
+                    },
+                  });
+                  skipNextSearchSync = true;
+                }}
+              />
+            </div>
           </div>
         )}
       </VList>

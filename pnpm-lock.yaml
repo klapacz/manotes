@@ -43,6 +43,9 @@ importers:
       '@kobalte/core':
         specifier: ^0.13.11
         version: 0.13.11(solid-js@1.9.10)
+      '@solid-primitives/memo':
+        specifier: ^1.4.5
+        version: 1.4.5(solid-js@1.9.10)
       '@standard-schema/spec':
         specifier: ^1.1.0
         version: 1.1.0

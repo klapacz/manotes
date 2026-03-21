@@ -28,6 +28,7 @@ import BacklinkMenu from "./lib/editor/backlink/menu";
 
 type Props = EditorSyncService.SetupInput & {
   onFocusIn?: () => void;
+  style?: JSX.CSSProperties;
 };
 
 export default function Editor(props: Props): JSX.Element {
@@ -96,6 +97,7 @@ export default function Editor(props: Props): JSX.Element {
           <div
             ref={current.editor.mount}
             class="outline-none"
+            style={props.style}
             onFocusIn={() => props.onFocusIn?.()}
           />
           <BacklinkMenu currentNoteId={props.noteId} />

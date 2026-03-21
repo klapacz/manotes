@@ -1,7 +1,8 @@
 import { useMutation } from "@tanstack/solid-query";
-import { useNavigate, useSearch } from "@tanstack/solid-router";
+import { useLocation, useNavigate } from "@tanstack/solid-router";
 import { DateTime, Effect } from "effect";
 import { nanoid } from "nanoid";
+import { createWritableMemo } from "@solid-primitives/memo";
 import { Index, Show, createMemo } from "solid-js";
 import { Temporal } from "temporal-polyfill";
 import * as Y from "yjs";
@@ -41,9 +42,8 @@ const { format: formatMonth } = new Intl.DateTimeFormat("en", {
 });
 
 export const AppSidebar = () => {
-  const search = useSearch({
-    from: "/$graph/",
-    shouldThrow: false,
+  const searchDate = useLocation({
+    select: (location) => location.search.date,
   });
   const runtime = useRuntime();
   const navigate = useNavigate();
@@ -75,11 +75,15 @@ export const AppSidebar = () => {
   }));
 
   const selectedDate = createMemo(() => {
-    const rawDate = search()?.date;
-    if (!rawDate) return null;
+    const rawDate = searchDate();
+    if (!rawDate) return undefined;
     const date = Temporal.PlainDate.from(rawDate);
     return new Date(date.year, date.month - 1, date.day);
   });
+
+  const [displayedMonth, setDisplayedMonth] = createWritableMemo(() =>
+    selectedDate(),
+  );
 
   return (
     <Sidebar>
@@ -118,6 +122,8 @@ export const AppSidebar = () => {
             <Calendar
               mode="single"
               value={selectedDate()}
+              month={displayedMonth()}
+              onMonthChange={setDisplayedMonth}
               onValueChange={(value) => {
                 if (!value) {
                   return;

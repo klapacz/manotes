@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --port 3000",
+    "dev": "vite",
     "build": "vite build && pnpm typecheck",
     "cf:typegen": "wrangler types --config wrangler.jsonc",
     "typecheck": "tsc -b",
@@ -22,6 +22,7 @@
     "@effectify/solid-effect-atom": "^0.1.5",
     "@fontsource-variable/inter": "^5.2.8",
     "@kobalte/core": "^0.13.11",
+    "@solid-primitives/memo": "^1.4.5",
     "@standard-schema/spec": "^1.1.0",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/router-plugin": "^1.133.21",
