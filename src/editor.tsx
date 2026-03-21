@@ -26,7 +26,9 @@ import { formatDailyNoteTitle } from "./lib/daily-note";
 import { Fiber, Effect } from "effect";
 import BacklinkMenu from "./lib/editor/backlink/menu";
 
-type Props = EditorSyncService.SetupInput;
+type Props = EditorSyncService.SetupInput & {
+  onFocusIn?: () => void;
+};
 
 export default function Editor(props: Props): JSX.Element {
   const runtime = useRuntime();
@@ -91,7 +93,11 @@ export default function Editor(props: Props): JSX.Element {
     <Show when={state()} keyed>
       {(current) => (
         <ProseKit editor={current.editor}>
-          <div ref={current.editor.mount} class="outline-none" />
+          <div
+            ref={current.editor.mount}
+            class="outline-none"
+            onFocusIn={() => props.onFocusIn?.()}
+          />
           <BacklinkMenu currentNoteId={props.noteId} />
         </ProseKit>
       )}
