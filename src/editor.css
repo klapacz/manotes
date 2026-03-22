@@ -425,6 +425,11 @@ prosekit-table-handle-drop-indicator {
   @apply transition duration-100;
   color: var(--editor-link);
 
+  /* Don't suggest navigation to already active note */
+  &[aria-current="page"] {
+    color: var(--editor-link) !important;
+  }
+
   &:hover {
     color: var(--editor-link-hover);
   }

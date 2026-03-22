@@ -13,6 +13,7 @@ import { createRuntimeStreamStore } from "../../runtime.primitives";
 import { Link } from "@tanstack/solid-router";
 import { type BacklinkAttrs } from "./spec";
 import { formatDailyNoteTitle } from "../../daily-note";
+import * as NoteLink from "../../note/link";
 
 export type { BacklinkAttrs };
 
@@ -70,9 +71,7 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
 
     return (
       <Link
-        to="/$graph/note/$note"
-        from="/$graph"
-        params={{ note: noteId() }}
+        {...NoteLink.getOptions({ id: noteId(), isDaily: isDaily() })}
         data-backlink=""
         data-backlink-state={state._tag}
         data-backlink-id={noteId()}
