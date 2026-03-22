@@ -31,6 +31,7 @@
     "@tanstack/solid-router": "^1.133.20",
     "@tanstack/solid-router-devtools": "^1.133.20",
     "@tanstack/solid-start": "^1.133.20",
+    "chrono-node": "^2.9.0",
     "cmdk-solid": "^1.1.2",
     "cva": "1.0.0-beta.4",
     "drizzle-orm": "^0.44.7",

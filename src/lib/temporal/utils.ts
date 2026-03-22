@@ -8,3 +8,15 @@ export function createDateRange(
     startDate.add({ days: index }),
   );
 }
+
+export function plainDateToJSDate(date: Temporal.PlainDate): Date {
+  return new Date(date.year, date.month - 1, date.day, 12);
+}
+
+export function JSDateToPlainDate(date: Date): Temporal.PlainDate {
+  return new Temporal.PlainDate(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    date.getDate(),
+  );
+}

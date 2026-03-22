@@ -1,6 +1,6 @@
 import { defineCommands, defineNodeSpec, insertNode } from "prosekit/core";
 
-export type BacklinkAttrs = { id: string };
+export type BacklinkAttrs = { id: string; isDaily?: boolean };
 
 export function defineBacklinkSpec() {
   return defineNodeSpec<"backlink", BacklinkAttrs>({
@@ -9,6 +9,7 @@ export function defineBacklinkSpec() {
     group: "inline",
     attrs: {
       id: { validate: "string" },
+      isDaily: { default: false, validate: "boolean" },
     },
     inline: true,
     leafText: (node) => `[[${(node.attrs as BacklinkAttrs).id}]]`,
@@ -17,17 +18,19 @@ export function defineBacklinkSpec() {
         tag: "span[data-backlink-id]",
         getAttrs: (dom: HTMLElement): BacklinkAttrs => ({
           id: dom.getAttribute("data-backlink-id") || "",
+          isDaily: dom.getAttribute("data-backlink-is-daily") === "true",
         }),
       },
     ],
     toDOM(node) {
-      const { id } = node.attrs as BacklinkAttrs;
+      const { id, isDaily } = node.attrs as BacklinkAttrs;
 
       return [
         "span",
         {
           "data-backlink": "",
           "data-backlink-id": id,
+          ...(isDaily ? { "data-backlink-is-daily": "true" } : {}),
         },
         `[[${id}]]`,
       ];

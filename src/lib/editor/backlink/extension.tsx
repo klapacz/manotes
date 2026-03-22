@@ -12,6 +12,7 @@ import * as NoteCache from "../../note-cache.service";
 import { createRuntimeStreamStore } from "../../runtime.primitives";
 import { Link } from "@tanstack/solid-router";
 import { type BacklinkAttrs } from "./spec";
+import { formatDailyNoteTitle } from "../../daily-note";
 
 export type { BacklinkAttrs };
 
@@ -30,21 +31,28 @@ const BacklinkLabelEntry = Data.taggedEnum<BacklinkLabelEntry>();
 function createBacklinkView(labelSnapshot: Map<string, string>) {
   return function BacklinkView(props: SolidNodeViewProps): JSX.Element {
     const noteId = () => (props.node.attrs as BacklinkAttrs).id;
-    const state: BacklinkLabelEntry = createRuntimeStreamStore(
-      () =>
-        NoteCache.Service.pipe(
-          Effect.flatMap((cache) => cache.changes(noteId())),
-          Stream.unwrapScoped,
-          Stream.map(
-            Option.match({
-              onSome: ({ title }): BacklinkLabelEntry =>
-                BacklinkLabelEntry.Resolved({ title }),
-              onNone: BacklinkLabelEntry.Missing,
-            }),
-          ),
+    const isDaily = () => Boolean((props.node.attrs as BacklinkAttrs).isDaily);
+    const state: BacklinkLabelEntry = createRuntimeStreamStore(() => {
+      if (isDaily()) {
+        return Stream.succeed(
+          BacklinkLabelEntry.Resolved({
+            title: formatDailyNoteTitle(noteId()),
+          }),
+        );
+      }
+
+      return NoteCache.Service.pipe(
+        Effect.flatMap((cache) => cache.changes(noteId())),
+        Stream.unwrapScoped,
+        Stream.map(
+          Option.match({
+            onSome: ({ title }): BacklinkLabelEntry =>
+              BacklinkLabelEntry.Resolved({ title }),
+            onNone: BacklinkLabelEntry.Missing,
+          }),
         ),
-      BacklinkLabelEntry.Loading(),
-    );
+      );
+    }, BacklinkLabelEntry.Loading());
 
     createEffect(() => {
       BacklinkLabelEntry.$match({
@@ -114,13 +122,14 @@ export function defineBacklinkRuntime() {
         return {
           ...nodes,
           backlink: (node) => {
-            const { id } = node.attrs as BacklinkAttrs;
+            const { id, isDaily } = node.attrs as BacklinkAttrs;
 
             return [
               "span",
               {
                 "data-backlink": "",
                 "data-backlink-id": id,
+                ...(isDaily ? { "data-backlink-is-daily": "true" } : {}),
               },
               labelSnapshot.get(id) ?? id,
             ];

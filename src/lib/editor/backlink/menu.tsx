@@ -1,4 +1,4 @@
-import { Effect, Stream } from "effect";
+import { Effect, flow, Stream, Array, Struct, pipe } from "effect";
 import { useEditor } from "prosekit/solid";
 import {
   AutocompleteEmpty,
@@ -15,12 +15,16 @@ import {
 } from "../../../components/ui/command";
 import { NoteRepo, createRuntimeStreamStore } from "../..";
 import { cx } from "../../cva";
-import type * as NoteSchema from "../../note.schema";
 import type { AppExtension } from "../../../editor.extension";
+import { suggestDailyNoteIds } from "../../daily-note";
 
 const BACKLINK_REGEX = /\[\[([^\]\n]*)$/u;
 const BACKLINK_RESULT_LIMIT = 8;
-type NoteRecord = typeof NoteSchema.Record.Type;
+type BacklinkNote = {
+  id: string;
+  title: string;
+  isDaily: boolean;
+};
 
 export default function BacklinkMenu(props: { currentNoteId: string }) {
   const editor = useEditor<AppExtension>();
@@ -28,23 +32,28 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
   const [rawQuery, setRawQuery] = createSignal("");
   const [open, setOpen] = createSignal(false);
 
-  const result = createRuntimeStreamStore(
-    () => {
-      const query = rawQuery();
-      if (!open()) return Stream.succeed({ notes: [] as Array<NoteRecord> });
+  const notes = createRuntimeStreamStore(() => {
+    const query = rawQuery();
+    if (!open()) return Stream.succeed([]);
 
-      return NoteRepo.Service.pipe(
-        Effect.flatMap((repo) => repo.reactiveSearch(query)),
-        Stream.unwrap,
-        Stream.map((notes) => ({
-          notes: notes
-            .filter((note) => note.id !== props.currentNoteId)
-            .slice(0, BACKLINK_RESULT_LIMIT),
-        })),
-      );
-    },
-    { notes: [] as Array<NoteRecord> },
-  );
+    const dailyNotes = pipe(
+      suggestDailyNoteIds(query),
+      Array.map((note) => ({ ...note, isDaily: true })),
+    );
+
+    return NoteRepo.Service.pipe(
+      Effect.flatMap((repo) => repo.reactiveSearch(query)),
+      Stream.unwrap,
+      Stream.map(
+        flow(
+          Array.prependAll(dailyNotes),
+          Array.filter((note) => note.id !== props.currentNoteId),
+          Array.take(BACKLINK_RESULT_LIMIT),
+          Array.map(Struct.pick("id", "title", "isDaily")),
+        ),
+      ),
+    );
+  }, [] as BacklinkNote[]);
 
   const handleQueryChange = (fallbackQuery: string) => {
     try {
@@ -63,11 +72,12 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
     }
   };
 
-  const insertBacklink = (note: Pick<NoteRecord, "id">) => {
+  const insertBacklink = (note: BacklinkNote) => {
     editor().view.focus();
 
     const inserted = editor().commands.insertBacklink({
       id: note.id,
+      ...(note.isDaily ? { isDaily: true } : {}),
     });
 
     if (!inserted) {
@@ -79,7 +89,7 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
   };
 
   const handleValueChange = (value: string) => {
-    const note = result.notes.find((result) => result.id === value);
+    const note = notes.find((result) => result.id === value);
     if (!note) return;
 
     // Autocomplete emits valueChange and also runs its internal submit handler.
@@ -105,7 +115,7 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
           No matching notes
         </AutocompleteEmpty>
 
-        <For each={result.notes}>
+        <For each={notes}>
           {(note) => (
             <AutocompleteItem
               class={cx(

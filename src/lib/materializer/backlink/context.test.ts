@@ -318,7 +318,7 @@ function setupBuilders() {
       };
     },
     backlink(id: string): BacklinkNodeJSON {
-      return { type: "backlink", attrs: { id } };
+      return { type: "backlink", attrs: { id, isDaily: false } };
     },
   };
 }
@@ -340,6 +340,7 @@ type BacklinkNodeJSON = UnknownNodeJSON & {
   type: "backlink";
   attrs: {
     id: string;
+    isDaily: boolean;
   };
 };
 
