@@ -6,12 +6,12 @@ import { createEditor, union } from "prosekit/core";
 import { defineReadonly } from "prosekit/extensions/readonly";
 import { defineAppExtension } from "../editor.extension";
 import * as BacklinkService from "../lib/materializer/backlink/service";
+import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
 import * as NoteLink from "../lib/note/link";
 import { RunStream } from "../lib";
 
 export function IncomingBacklinksFetcher(props: {
   noteId: string;
-  initialBacklinks?: BacklinkService.IncomingBacklinkPreview[];
   children: (
     backlinks: BacklinkService.IncomingBacklinkPreview[],
   ) => JSX.Element;
@@ -23,14 +23,14 @@ export function IncomingBacklinksFetcher(props: {
       {(noteId) => (
         <RunStream
           stream={() =>
-            BacklinkService.Service.pipe(
-              Effect.flatMap((service) =>
-                service.reactiveListIncomingPreviews(noteId),
+            EditorNoteBootCache.Service.pipe(
+              Effect.flatMap((cache) =>
+                cache.incomingBacklinkChanges(noteId),
               ),
-              Stream.unwrap,
+              Stream.unwrapScoped,
             )
           }
-          staticInitialValue={props.initialBacklinks ?? []}
+          staticInitialValue={[]}
         >
           {props.children}
         </RunStream>

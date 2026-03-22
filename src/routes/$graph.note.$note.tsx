@@ -2,7 +2,6 @@ import { createFileRoute, redirect } from "@tanstack/solid-router";
 import { Effect, Option } from "effect";
 import { createSignal, Show } from "solid-js";
 import Editor, { type BootState } from "../editor";
-import * as BacklinkService from "../lib/materializer/backlink/service";
 import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
 import * as NoteRepo from "../lib/note.repo";
 import {
@@ -19,7 +18,7 @@ export const Route = createFileRoute("/$graph/note/$note")({
     );
 
     if (Option.isNone(note)) {
-      return { note, backlinks: [] };
+      return { note };
     }
 
     if (note.value.isDaily) {
@@ -30,22 +29,13 @@ export const Route = createFileRoute("/$graph/note/$note")({
       });
     }
 
-    const [, backlinks] = await Promise.all([
-      context.runtime.runPromise(
-        EditorNoteBootCache.Service.pipe(
-          Effect.flatMap((cache) => cache.preload(params.note)),
-        ),
+    await context.runtime.runPromise(
+      EditorNoteBootCache.Service.pipe(
+        Effect.flatMap((cache) => cache.preload(params.note)),
       ),
-      context.runtime.runPromise(
-        BacklinkService.Service.pipe(
-          Effect.flatMap((service) =>
-            service.listIncomingPreviews(params.note),
-          ),
-        ),
-      ),
-    ]);
+    );
 
-    return { note, backlinks };
+    return { note };
   },
   component: RouteComponent,
 });
@@ -80,10 +70,7 @@ function RouteComponent() {
               />
             </div>
 
-            <IncomingBacklinksFetcher
-              noteId={n().id}
-              initialBacklinks={data().backlinks}
-            >
+            <IncomingBacklinksFetcher noteId={n().id}>
               {(backlinks) => (
                 <IncomingBacklinksSection backlinks={backlinks} />
               )}
