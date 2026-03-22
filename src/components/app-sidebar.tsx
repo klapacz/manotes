@@ -89,7 +89,9 @@ export const AppSidebar = () => {
   return (
     <Sidebar>
       <div class="border-border flex h-12 items-center justify-between border-b px-2 text-sm font-semibold">
-        Manotes
+        <span class="text-base leading-none tracking-tight font-title-serif">
+          Manotes
+        </span>
         <div class="flex items-center gap-1">
           <NoteSearchCommand>
             {(openSearch) => (

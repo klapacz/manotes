@@ -456,6 +456,9 @@ prosekit-table-handle-drop-indicator {
 .ProseMirror h1 {
   margin: 1em 0;
   font-size: 2em;
+  font-family: var(--font-title-serif);
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .ProseMirror h2 {

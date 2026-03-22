@@ -2,7 +2,8 @@
 
 @import "tw-animate-css";
 
-@import "@fontsource-variable/inter";
+@import "@fontsource-variable/source-sans-3";
+@import "@fontsource/bitter/600.css";
 @import "./colors.css";
 
 @custom-variant dark (&:is([data-kb-theme="dark"] *));
@@ -78,7 +79,8 @@
   --color-error-fg: var(--color-ruby-12);
   --color-error-fg-solid: oklch(1 0 0);
 
-  --font-sans: "Inter Variable", sans-serif;
+  --font-sans: "Source Sans 3 Variable", sans-serif;
+  --font-title-serif: "Bitter", Georgia, serif;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
