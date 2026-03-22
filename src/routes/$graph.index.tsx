@@ -4,8 +4,9 @@ import { Option, Schema } from "effect";
 import { Temporal } from "temporal-polyfill";
 import * as TemporalSchema from "../lib/temporal.schema";
 import * as TemporalUtils from "../lib/temporal/utils";
-import { batch, createEffect, createSignal, untrack } from "solid-js";
+import { batch, createEffect, createSignal, on, untrack } from "solid-js";
 import { VList, type VListHandle } from "virtua/solid";
+import { scrollToDateRequest } from "../lib/daily-note";
 
 export const Route = createFileRoute("/$graph/")({
   component: RouteComponent,
@@ -111,6 +112,8 @@ function DailyNotes() {
     });
   };
 
+  const [focusNoteId, setFocusNoteId] = createSignal<string | null>(null);
+
   createEffect(() => {
     const date = Temporal.PlainDate.from(search().date);
     const handle = listHandle();
@@ -121,10 +124,33 @@ function DailyNotes() {
 
     const index = dates().findIndex((loadedDate) => loadedDate.equals(date));
 
-    if (index === -1) return seedAroundDate(date);
+    if (index === -1) {
+      seedAroundDate(date);
+    } else {
+      handle.scrollToIndex(index, { align: "start" });
+    }
 
-    handle.scrollToIndex(index, { align: "start" });
+    setFocusNoteId(date.toString());
   });
+
+  // Scroll back to the already-selected date and focus its editor.
+  // Bypasses the router's deepEqual so re-clicking the same date works.
+  createEffect(
+    on(scrollToDateRequest, (request) => {
+      if (!request) return;
+
+      const handle = listHandle();
+      if (!handle) return;
+
+      const date = Temporal.PlainDate.from(search().date);
+      const index = dates().findIndex((d) => d.equals(date));
+      if (index !== -1) {
+        handle.scrollToIndex(index, { align: "start" });
+      }
+
+      setFocusNoteId(date.toString());
+    }),
+  );
 
   return (
     <>
@@ -146,13 +172,15 @@ function DailyNotes() {
                 noteId={date.toString()}
                 isDaily={true}
                 initial={Option.none()}
+                autoFocus={focusNoteId() === date.toString()}
                 style={{ "min-height": "600px" }}
                 onFocusIn={() => {
+                  setFocusNoteId(null);
+                  const dateStr = date.toString();
+                  if (search().date === dateStr) return;
                   void navigate({
                     to: ".",
-                    search: {
-                      date: date.toString(),
-                    },
+                    search: { date: dateStr },
                   });
                   skipNextSearchSync = true;
                 }}

@@ -1,4 +1,4 @@
-import { Effect, pipe, Stream, Data, flow } from "effect";
+import { Effect, pipe, Stream, Data, flow, Deferred } from "effect";
 import * as Y from "yjs";
 import * as EventRepo from "./event.repo";
 import { Array, Chunk, DateTime, Option } from "effect";
@@ -132,7 +132,11 @@ export class Service extends Effect.Service<Service>()(
       });
 
       const setupDoc = Effect.fn("EditorSyncService.setupDoc")(
-        function* (doc: Y.Doc, input: SetupInput) {
+        function* (
+          doc: Y.Doc,
+          input: SetupInput,
+          ready: Deferred.Deferred<void>,
+        ) {
           const initial = yield* Option.match(input.initial, {
             onSome: Effect.succeed,
             onNone: flow(
@@ -153,6 +157,7 @@ export class Service extends Effect.Service<Service>()(
                   doc,
                   initial.materializedYUpdate,
                 );
+                yield* Deferred.succeed(ready, void 0);
 
                 yield* applyIncomingUpdates(
                   doc,

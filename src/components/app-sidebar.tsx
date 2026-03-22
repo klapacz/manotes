@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 import { createWritableMemo } from "@solid-primitives/memo";
 import { Index, Show, createMemo } from "solid-js";
 import { Temporal } from "temporal-polyfill";
+import { requestScrollToDate } from "../lib/daily-note";
 import * as Y from "yjs";
 import { MaterializedEventService, useRuntime } from "../lib";
 import { PlusIcon, SearchIcon } from "./icons";
@@ -126,6 +127,9 @@ export const AppSidebar = () => {
               onMonthChange={setDisplayedMonth}
               onValueChange={(value) => {
                 if (!value) {
+                  // Clicking the already-selected date deselects it.
+                  // Re-scroll + focus via the shared signal.
+                  requestScrollToDate();
                   return;
                 }
 
@@ -135,7 +139,7 @@ export const AppSidebar = () => {
                   value.getDate(),
                 ).toString();
 
-                navigate({
+                void navigate({
                   from: "/$graph",
                   to: "/$graph",
                   search: (current) => ({

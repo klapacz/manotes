@@ -1,10 +1,12 @@
 import "./editor.css";
 
 import { createEditor, Priority, union, withPriority } from "prosekit/core";
+import { Selection } from "prosekit/pm/state";
 import { ProseKit } from "prosekit/solid";
 import {
   createEffect,
   createMemo,
+  createSignal,
   on,
   onCleanup,
   Show,
@@ -23,11 +25,12 @@ import { defineAppExtension } from "./editor.extension";
 import { EditorSyncService, useRuntime } from "./lib";
 import { defineVirtualDailyHeading } from "./editor.virtual-daily-heading.extension";
 import { formatDailyNoteTitle } from "./lib/daily-note";
-import { Fiber, Effect } from "effect";
+import { Fiber, Effect, Deferred } from "effect";
 import BacklinkMenu from "./lib/editor/backlink/menu";
 
 type Props = EditorSyncService.SetupInput & {
   onFocusIn?: () => void;
+  autoFocus?: boolean;
   style?: JSX.CSSProperties;
 };
 
@@ -69,18 +72,27 @@ export default function Editor(props: Props): JSX.Element {
     ),
   );
 
+  const [docReady, setDocReady] = createSignal(false);
+
   createEffect(() => {
+    setDocReady(false);
     const r = runtime();
     const { doc, noteId, isDaily, initial } = state();
 
     const fiber = r.runFork(
       Effect.gen(function* () {
         const service = yield* EditorSyncService.Service;
-        yield* service.setupDoc(doc, {
-          noteId,
-          isDaily,
-          initial,
-        });
+        const ready = yield* Deferred.make<void>();
+        yield* Effect.all(
+          [
+            service.setupDoc(doc, { noteId, isDaily, initial }, ready),
+            Effect.gen(function* () {
+              yield* Deferred.await(ready);
+              yield* Effect.sync(() => setDocReady(true));
+            }),
+          ],
+          { concurrency: "unbounded" },
+        );
       }),
     );
 
@@ -88,6 +100,15 @@ export default function Editor(props: Props): JSX.Element {
       void r.runPromise(Fiber.interrupt(fiber));
       doc.destroy();
     });
+  });
+
+  createEffect(() => {
+    const editor = state()?.editor;
+    if (!props.autoFocus || !docReady() || !editor) return;
+
+    const view = editor.view;
+    view.dispatch(view.state.tr.setSelection(Selection.atEnd(view.state.doc)));
+    view.focus();
   });
 
   return (

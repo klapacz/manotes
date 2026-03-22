@@ -1,3 +1,4 @@
+import { createSignal } from "solid-js";
 import { Temporal } from "temporal-polyfill";
 
 const DISPLAY_FORMAT = new Intl.DateTimeFormat("en-US", {
@@ -6,6 +7,20 @@ const DISPLAY_FORMAT = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
   year: "numeric",
 });
+
+/**
+ * Shared signal for requesting a scroll-to + focus of the currently selected
+ * daily note.  Each call creates a new object reference so Solid always
+ * detects the change.
+ */
+const [scrollToDateRequest, setScrollToDateRequest] =
+  createSignal<Record<string, never> | null>(null);
+
+export { scrollToDateRequest };
+
+export function requestScrollToDate(): void {
+  setScrollToDateRequest({});
+}
 
 export function parseDailyNoteId(noteId: string): Temporal.PlainDate | null {
   try {
