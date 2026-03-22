@@ -29,7 +29,7 @@ import { Cause, Data, Fiber, Effect, Deferred } from "effect";
 import BacklinkMenu from "./lib/editor/backlink/menu";
 import { MatchTagged } from "./lib/compoennts/match-tagged";
 
-type BootState = Data.TaggedEnum<{
+export type BootState = Data.TaggedEnum<{
   Loading: {};
   Ready: {};
   Error: { message: string };
@@ -39,6 +39,7 @@ const BootState = Data.taggedEnum<BootState>();
 
 type Props = EditorSyncService.SetupInput & {
   onFocusIn?: () => void;
+  onBootStateChange?: (state: BootState) => void;
   autoFocus?: boolean;
   style?: JSX.CSSProperties;
 };
@@ -80,9 +81,13 @@ export default function Editor(props: Props): JSX.Element {
     ),
   );
 
-  const [bootState, setBootState] = createSignal<BootState>(
+  const [bootState, _setBootState] = createSignal<BootState>(
     BootState.Loading(),
   );
+  const setBootState = (state: BootState) => {
+    _setBootState(state);
+    props.onBootStateChange?.(state);
+  };
 
   createEffect(() => {
     setBootState(BootState.Loading());
@@ -120,6 +125,7 @@ export default function Editor(props: Props): JSX.Element {
 
     onCleanup(() => {
       disposed = true;
+      setBootState(BootState.Loading());
       void r.runPromise(Fiber.interrupt(fiber));
       doc.destroy();
     });

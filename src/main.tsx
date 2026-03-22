@@ -15,6 +15,7 @@ const router = createRouter({
   defaultPreload: "intent",
   scrollRestoration: true,
   defaultPreloadStaleTime: 0,
+  defaultViewTransition: true,
 });
 
 declare module "@tanstack/solid-router" {

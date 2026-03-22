@@ -106,6 +106,22 @@
 }
 
 @layer base {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 150ms;
+  }
+
+  [data-slot="sidebar"] {
+    view-transition-name: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none !important;
+    }
+  }
+
   * {
     @apply border-border outline-primary-border/50;
   }

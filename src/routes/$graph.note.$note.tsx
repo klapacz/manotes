@@ -1,7 +1,14 @@
 import { createFileRoute, redirect } from "@tanstack/solid-router";
 import { Effect, Option, Stream } from "effect";
-import { createEffect, For, onCleanup, Show, type JSX } from "solid-js";
-import Editor from "../editor";
+import {
+  createEffect,
+  createSignal,
+  For,
+  onCleanup,
+  Show,
+  type JSX,
+} from "solid-js";
+import Editor, { type BootState } from "../editor";
 import * as BacklinkService from "../lib/materializer/backlink/service";
 import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
 import * as NoteRepo from "../lib/note.repo";
@@ -74,28 +81,45 @@ function RouteComponent() {
         </div>
       }
     >
-      {(n) => (
-        <div class="mx-auto max-w-3xl px-6 py-10 space-y-12">
-          <Editor noteId={n().id} isDaily={false} />
+      {(n) => {
+        const [docVisible, setDocVisible] = createSignal(false);
+        const handleBootStateChange = (state: BootState) =>
+          setDocVisible(state._tag !== "Loading");
 
-          <section class="space-y-4 rounded-md bg-bg-subtle py-4">
-            <h2 class="px-4 text-xs uppercase tracking-wide text-fg-subtle">
-              Backlinks
-            </h2>
-
-            <Show
-              when={backlinks.length > 0}
-              fallback={
-                <div class="px-4 text-sm text-fg-subtle">No backlinks yet.</div>
-              }
+        return (
+          <div class="mx-auto max-w-3xl px-6 py-10 space-y-12">
+            <div
+              class="transition-opacity duration-150 ease-out"
+              classList={{ "opacity-0": !docVisible() }}
             >
-              <For each={backlinks}>
-                {(backlink) => <BacklinkSnippet content={backlink.preview} />}
-              </For>
-            </Show>
-          </section>
-        </div>
-      )}
+              <Editor
+                noteId={n().id}
+                isDaily={false}
+                onBootStateChange={handleBootStateChange}
+              />
+            </div>
+
+            <section class="space-y-4 rounded-md bg-bg-subtle py-4">
+              <h2 class="px-4 text-xs uppercase tracking-wide text-fg-subtle">
+                Backlinks
+              </h2>
+
+              <Show
+                when={backlinks.length > 0}
+                fallback={
+                  <div class="px-4 text-sm text-fg-subtle">
+                    No backlinks yet.
+                  </div>
+                }
+              >
+                <For each={backlinks}>
+                  {(backlink) => <BacklinkSnippet content={backlink.preview} />}
+                </For>
+              </Show>
+            </section>
+          </div>
+        );
+      }}
     </Show>
   );
 }

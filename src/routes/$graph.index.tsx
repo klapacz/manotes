@@ -142,16 +142,26 @@ function DailyNotes() {
     });
   };
 
-  const [focusNoteId, setFocusNoteId] = createSignal<string | null>(null);
+  // VList (virtua) renders 0 items on the first frame — it waits for
+  // ResizeObserver to measure the viewport before rendering. The View
+  // Transitions API snapshots this blank state, making the enter animation
+  // invisible. Instead we use a CSS opacity fade-in after VList has items.
+  // Double-rAF: the first frame commits opacity:0 to pixels, the second
+  // flips to opacity:1 so the CSS transition actually animates.
+  const [ready, setReady] = createSignal(false);
 
   createEffect(() => {
-    const date = Temporal.PlainDate.from(search().date);
+    if (!listHandle()) return;
+    requestAnimationFrame(() => requestAnimationFrame(() => setReady(true)));
+  });
+
+  const [focusNoteId, setFocusNoteId] = createSignal<string | null>(null);
+
+  const scrollToDate = (date: Temporal.PlainDate) => {
     const handle = listHandle();
     const loadedDates = dates();
 
     if (!handle) return;
-    if (skipNextSearchSync) return (skipNextSearchSync = false);
-    if (listUpdatePhase !== null) return;
 
     const index = loadedDates.findIndex((loadedDate) =>
       loadedDate.equals(date),
@@ -164,7 +174,17 @@ function DailyNotes() {
     }
 
     setFocusNoteId(date.toString());
-  });
+  };
+
+  createEffect(
+    on([() => search().date, listHandle], ([dateString, handle]) => {
+      if (!handle) return;
+      if (skipNextSearchSync) return (skipNextSearchSync = false);
+      if (listUpdatePhase !== null) return;
+
+      scrollToDate(Temporal.PlainDate.from(dateString));
+    }),
+  );
 
   // Scroll back to the already-selected date and focus its editor.
   // Bypasses the router's deepEqual so re-clicking the same date works.
@@ -172,22 +192,16 @@ function DailyNotes() {
     on(scrollToDateRequest, (request) => {
       if (!request) return;
 
-      const handle = listHandle();
-      if (!handle) return;
-
       const date = Temporal.PlainDate.from(search().date);
-      const index = dates().findIndex((d) => d.equals(date));
-      if (index !== -1) {
-        handle.scrollToIndex(index, { align: "start" });
-      }
-
-      setFocusNoteId(date.toString());
+      scrollToDate(date);
     }),
   );
 
   return (
-    <>
-      {/* The scrollable element for your list */}
+    <div
+      class="h-full transition-opacity duration-150 ease-out"
+      classList={{ "opacity-0": !ready() }}
+    >
       <VList
         ref={setListHandle}
         data={dates()}
@@ -210,18 +224,19 @@ function DailyNotes() {
                   setFocusNoteId(null);
                   const dateStr = date.toString();
                   if (search().date === dateStr) return;
+                  skipNextSearchSync = true;
                   void navigate({
                     to: ".",
                     search: { date: dateStr },
+                    viewTransition: false,
                   });
-                  skipNextSearchSync = true;
                 }}
               />
             </div>
           </div>
         )}
       </VList>
-    </>
+    </div>
   );
 }
 
