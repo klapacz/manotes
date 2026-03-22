@@ -77,13 +77,13 @@ export const AppSidebar = () => {
 
   const selectedDate = createMemo(() => {
     const rawDate = searchDate();
-    if (!rawDate) return undefined;
+    if (!rawDate) return null;
     const date = Temporal.PlainDate.from(rawDate);
     return new Date(date.year, date.month - 1, date.day);
   });
 
-  const [displayedMonth, setDisplayedMonth] = createWritableMemo(() =>
-    selectedDate(),
+  const [displayedMonth, setDisplayedMonth] = createWritableMemo(
+    () => selectedDate() ?? undefined,
   );
 
   return (

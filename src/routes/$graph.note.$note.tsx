@@ -3,6 +3,7 @@ import { Effect, Option, Stream } from "effect";
 import { createEffect, For, onCleanup, Show, type JSX } from "solid-js";
 import Editor from "../editor";
 import * as BacklinkService from "../lib/materializer/backlink/service";
+import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
 import * as NoteRepo from "../lib/note.repo";
 import { ProseKit } from "prosekit/solid";
 import { createEditor, union } from "prosekit/core";
@@ -30,11 +31,20 @@ export const Route = createFileRoute("/$graph/note/$note")({
       });
     }
 
-    const backlinks = await context.runtime.runPromise(
-      BacklinkService.Service.pipe(
-        Effect.flatMap((service) => service.listIncomingPreviews(params.note)),
+    const [, backlinks] = await Promise.all([
+      context.runtime.runPromise(
+        EditorNoteBootCache.Service.pipe(
+          Effect.flatMap((cache) => cache.preload(params.note)),
+        ),
       ),
-    );
+      context.runtime.runPromise(
+        BacklinkService.Service.pipe(
+          Effect.flatMap((service) =>
+            service.listIncomingPreviews(params.note),
+          ),
+        ),
+      ),
+    ]);
 
     return { note, backlinks };
   },
@@ -66,14 +76,7 @@ function RouteComponent() {
     >
       {(n) => (
         <div class="mx-auto max-w-3xl px-6 py-10 space-y-12">
-          <Editor
-            noteId={n().id}
-            isDaily={false}
-            initial={Option.some({
-              materializedYUpdate: n().materializedYUpdate,
-              lastEventLocalSeq: n().lastEventLocalSeq,
-            })}
-          />
+          <Editor noteId={n().id} isDaily={false} />
 
           <section class="space-y-4 rounded-md bg-bg-subtle py-4">
             <h2 class="px-4 text-xs uppercase tracking-wide text-fg-subtle">

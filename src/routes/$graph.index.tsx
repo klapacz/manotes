@@ -1,15 +1,45 @@
 import { createFileRoute } from "@tanstack/solid-router";
 import Editor from "../editor";
-import { Option, Schema } from "effect";
+import { Effect, Schema } from "effect";
 import { Temporal } from "temporal-polyfill";
 import * as TemporalSchema from "../lib/temporal.schema";
 import * as TemporalUtils from "../lib/temporal/utils";
+import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
 import { batch, createEffect, createSignal, on, untrack } from "solid-js";
 import { VList, type VListHandle } from "virtua/solid";
 import { scrollToDateRequest } from "../lib/daily-note";
 
 export const Route = createFileRoute("/$graph/")({
   component: RouteComponent,
+  loaderDeps: ({ search: { date } }) => ({ date }),
+  remountDeps: () => [],
+  loader: async ({ context, deps }) => {
+    const selectedDate = Temporal.PlainDate.from(deps.date);
+    const previousDate = selectedDate.subtract({ days: 1 }).toString();
+    const nextDate = selectedDate.add({ days: 1 }).toString();
+    const currentDate = selectedDate.toString();
+
+    await context.runtime.runPromise(
+      Effect.gen(function* () {
+        const noteBootCache = yield* EditorNoteBootCache.Service;
+        yield* noteBootCache.preload(currentDate);
+      }),
+    );
+
+    void context.runtime.runPromiseExit(
+      Effect.gen(function* () {
+        const noteBootCache = yield* EditorNoteBootCache.Service;
+
+        yield* Effect.forEach(
+          [previousDate, nextDate],
+          (noteId) => noteBootCache.preload(noteId),
+          { concurrency: "unbounded", discard: true },
+        );
+      }),
+    );
+
+    return null;
+  },
   validateSearch: Schema.Struct({
     date: Schema.optional(TemporalSchema.PlainDateString).pipe(
       Schema.withDefaults({
@@ -117,12 +147,15 @@ function DailyNotes() {
   createEffect(() => {
     const date = Temporal.PlainDate.from(search().date);
     const handle = listHandle();
+    const loadedDates = dates();
 
     if (!handle) return;
     if (skipNextSearchSync) return (skipNextSearchSync = false);
     if (listUpdatePhase !== null) return;
 
-    const index = dates().findIndex((loadedDate) => loadedDate.equals(date));
+    const index = loadedDates.findIndex((loadedDate) =>
+      loadedDate.equals(date),
+    );
 
     if (index === -1) {
       seedAroundDate(date);
@@ -159,7 +192,7 @@ function DailyNotes() {
         ref={setListHandle}
         data={dates()}
         shift={shift()}
-        bufferSize={400}
+        bufferSize={1200}
         onScroll={maybeExtendWindow}
         style={{
           height: "100%",
@@ -171,7 +204,6 @@ function DailyNotes() {
               <Editor
                 noteId={date.toString()}
                 isDaily={true}
-                initial={Option.none()}
                 autoFocus={focusNoteId() === date.toString()}
                 style={{ "min-height": "600px" }}
                 onFocusIn={() => {

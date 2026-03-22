@@ -17,6 +17,7 @@ import * as BacklinkService from "./materializer/backlink/service";
 import * as Migrator from "./migrator";
 import * as NoteRepo from "./note.repo";
 import * as NoteCache from "./note-cache.service";
+import * as EditorNoteBootCache from "./editor/note-boot-cache.service";
 import * as EditorSyncService from "./editor-sync.service";
 import { SqlLive } from "./db.service";
 
@@ -74,6 +75,7 @@ async function create(opts: SetupOpts) {
     NoteRepo.Service.Default,
     BacklinkService.Service.Default,
     NoteCache.Service.Default,
+    EditorNoteBootCache.Service.Default,
     MaterializationCheckpointRepo.Service.Default,
     MaterializedEventService.Service.Default,
     EditorSyncService.Service.Default,

@@ -25,8 +25,17 @@ import { defineAppExtension } from "./editor.extension";
 import { EditorSyncService, useRuntime } from "./lib";
 import { defineVirtualDailyHeading } from "./editor.virtual-daily-heading.extension";
 import { formatDailyNoteTitle } from "./lib/daily-note";
-import { Fiber, Effect, Deferred } from "effect";
+import { Cause, Data, Fiber, Effect, Deferred } from "effect";
 import BacklinkMenu from "./lib/editor/backlink/menu";
+import { MatchTagged } from "./lib/compoennts/match-tagged";
+
+type BootState = Data.TaggedEnum<{
+  Loading: {};
+  Ready: {};
+  Error: { message: string };
+}>;
+
+const BootState = Data.taggedEnum<BootState>();
 
 type Props = EditorSyncService.SetupInput & {
   onFocusIn?: () => void;
@@ -63,7 +72,6 @@ export default function Editor(props: Props): JSX.Element {
           editor,
           noteId,
           isDaily: props.isDaily,
-          initial: props.initial,
         };
       },
       // Build the first editor state immediately so render/effect can consume it
@@ -72,31 +80,46 @@ export default function Editor(props: Props): JSX.Element {
     ),
   );
 
-  const [docReady, setDocReady] = createSignal(false);
+  const [bootState, setBootState] = createSignal<BootState>(
+    BootState.Loading(),
+  );
 
   createEffect(() => {
-    setDocReady(false);
+    setBootState(BootState.Loading());
     const r = runtime();
-    const { doc, noteId, isDaily, initial } = state();
+    const { doc, noteId, isDaily } = state();
+    let disposed = false;
 
     const fiber = r.runFork(
-      Effect.gen(function* () {
-        const service = yield* EditorSyncService.Service;
-        const ready = yield* Deferred.make<void>();
-        yield* Effect.all(
-          [
-            service.setupDoc(doc, { noteId, isDaily, initial }, ready),
-            Effect.gen(function* () {
-              yield* Deferred.await(ready);
-              yield* Effect.sync(() => setDocReady(true));
-            }),
-          ],
-          { concurrency: "unbounded" },
-        );
-      }),
+      Effect.catchAllCause(
+        Effect.gen(function* () {
+          const service = yield* EditorSyncService.Service;
+          const ready = yield* Deferred.make<void>();
+          yield* Effect.all(
+            [
+              Effect.scoped(service.setupDoc(doc, { noteId, isDaily }, ready)),
+              Effect.gen(function* () {
+                yield* Deferred.await(ready);
+                yield* Effect.sync(() => setBootState(BootState.Ready()));
+              }),
+            ],
+            { concurrency: "unbounded" },
+          );
+        }),
+        (cause) =>
+          Cause.isInterruptedOnly(cause)
+            ? Effect.void
+            : Effect.sync(() => {
+                if (disposed) return;
+                setBootState(
+                  BootState.Error({ message: "Failed to load note content." }),
+                );
+              }),
+      ),
     );
 
     onCleanup(() => {
+      disposed = true;
       void r.runPromise(Fiber.interrupt(fiber));
       doc.destroy();
     });
@@ -104,7 +127,7 @@ export default function Editor(props: Props): JSX.Element {
 
   createEffect(() => {
     const editor = state()?.editor;
-    if (!props.autoFocus || !docReady() || !editor) return;
+    if (!props.autoFocus || bootState()._tag !== "Ready" || !editor) return;
 
     const view = editor.view;
     view.dispatch(view.state.tr.setSelection(Selection.atEnd(view.state.doc)));
@@ -115,6 +138,11 @@ export default function Editor(props: Props): JSX.Element {
     <Show when={state()} keyed>
       {(current) => (
         <ProseKit editor={current.editor}>
+          <MatchTagged value={bootState()} tag="Error">
+            {(value) => (
+              <p class="text-error-fg mb-3 text-sm">{value().message}</p>
+            )}
+          </MatchTagged>
           <div
             ref={current.editor.mount}
             class="outline-none"

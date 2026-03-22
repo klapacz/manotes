@@ -1,9 +1,9 @@
-import { Effect, pipe, Stream, Data, flow, Deferred } from "effect";
+import { Effect, pipe, Stream, Data, Deferred } from "effect";
 import * as Y from "yjs";
 import * as EventRepo from "./event.repo";
 import { Array, Chunk, DateTime, Option } from "effect";
 import * as NoteSchema from "./note.schema";
-import * as NoteRepo from "./note.repo";
+import * as EditorNoteBootCache from "./editor/note-boot-cache.service";
 import { streamDebounceNoDrop } from "./stream-debounce-no-drop";
 
 const REMOTE_ORIGIN = Symbol("remote");
@@ -16,19 +16,18 @@ class OutcomingUpdateCtx extends Data.Class<{
 export type SetupInput = {
   noteId: string;
   isDaily: boolean;
-  initial: Option.Option<{
-    materializedYUpdate: typeof NoteSchema.MaterializedYUpdate.Type;
-    lastEventLocalSeq: number;
-  }>;
 };
 
 export class Service extends Effect.Service<Service>()(
   "EditorSyncService.Service",
   {
-    dependencies: [EventRepo.Service.Default, NoteRepo.Service.Default],
+    dependencies: [
+      EventRepo.Service.Default,
+      EditorNoteBootCache.Service.Default,
+    ],
     effect: Effect.gen(function* () {
       const eventRepo = yield* EventRepo.Service;
-      const noteRepo = yield* NoteRepo.Service;
+      const noteBootCache = yield* EditorNoteBootCache.Service;
 
       const applyMaterializedYUpdate = Effect.fn("applyMaterializedYUpdate")(
         function* (
@@ -137,21 +136,19 @@ export class Service extends Effect.Service<Service>()(
           input: SetupInput,
           ready: Deferred.Deferred<void>,
         ) {
-          const initial = yield* Option.match(input.initial, {
-            onSome: Effect.succeed,
-            onNone: flow(
-              () => noteRepo.findById(input.noteId),
-              Effect.map(
-                Option.getOrElse(() => ({
-                  lastEventLocalSeq: 0,
-                  materializedYUpdate: null,
-                })),
-              ),
-            ),
-          });
+          const noteChanges = yield* noteBootCache.changes(input.noteId);
+          const initial = pipe(
+            yield* noteChanges.pipe(Stream.runHead),
+            Option.getOrElse(() => Option.none<EditorNoteBootCache.NoteBoot>()),
+            Option.getOrElse(() => ({
+              lastEventLocalSeq: 0,
+              materializedYUpdate: null,
+            })),
+          );
 
           yield* Effect.all(
             [
+              noteChanges.pipe(Stream.runDrain), // Keep stream warm for lifetime of editor
               Effect.gen(function* () {
                 yield* applyMaterializedYUpdate(
                   doc,
