@@ -5,7 +5,11 @@ import { Temporal } from "temporal-polyfill";
 import * as TemporalSchema from "../lib/temporal.schema";
 import * as TemporalUtils from "../lib/temporal/utils";
 import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
-import { batch, createEffect, createSignal, on, untrack } from "solid-js";
+import {
+  IncomingBacklinksFetcher,
+  IncomingBacklinksSection,
+} from "../components/incoming-backlinks";
+import { batch, createEffect, createSignal, on, Show, untrack } from "solid-js";
 import { VList, type VListHandle } from "virtua/solid";
 import { scrollToDateRequest } from "../lib/daily-note";
 
@@ -214,7 +218,7 @@ function DailyNotes() {
       >
         {(date) => (
           <div class="border-b border-border-subtle">
-            <div class="mx-auto max-w-3xl px-6 py-10">
+            <div class="mx-auto max-w-3xl space-y-8 px-6 py-10">
               <Editor
                 noteId={date.toString()}
                 isDaily={true}
@@ -232,6 +236,13 @@ function DailyNotes() {
                   });
                 }}
               />
+              <IncomingBacklinksFetcher noteId={date.toString()}>
+                {(backlinks) => (
+                  <Show when={backlinks.length > 0}>
+                    <IncomingBacklinksSection backlinks={backlinks} />
+                  </Show>
+                )}
+              </IncomingBacklinksFetcher>
             </div>
           </div>
         )}

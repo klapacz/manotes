@@ -1,4 +1,3 @@
-import { createHeadingNode } from "../../prosemirror/utils";
 import type { UnknownNodeJSON } from "../../node-json";
 import { extractBacklinkContexts } from "./context";
 
@@ -19,6 +18,6 @@ export function buildBacklinkPreviewDoc(options: {
 
   return {
     type: "doc",
-    content: [createHeadingNode(2, options.title), ...contexts],
+    content: contexts,
   };
 }

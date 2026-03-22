@@ -11,7 +11,7 @@ export function extractBacklinkContexts(options: {
   content: UnknownNodeJSON;
   targetId: string;
   isDaily: boolean;
-}): ReadonlyArray<UnknownNodeJSON> {
+}): Array<UnknownNodeJSON> {
   const doc = appNodeFromJSON({
     content: options.content,
     isDaily: options.isDaily,
@@ -31,10 +31,7 @@ type BacklinkInfo = { node: Node; pos: number };
  * Finds all backlink nodes in the document that match the given target ID.
  * Results stay in document order so previews render predictably.
  */
-function findBacklinkNodes(
-  doc: Node,
-  targetId: string,
-): ReadonlyArray<BacklinkInfo> {
+function findBacklinkNodes(doc: Node, targetId: string): Array<BacklinkInfo> {
   const results: BacklinkInfo[] = [];
 
   doc.descendants((node, pos) => {

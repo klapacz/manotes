@@ -41,3 +41,18 @@ export function createRuntimeStreamStore<A extends object, E>(
     staticInitialValue,
   );
 }
+
+export interface RunStreamProps<A extends object, E> {
+  stream: () => Stream.Stream<A, E, RuntimeRequirements>;
+  staticInitialValue: NoInfer<A>;
+  children: (value: A) => JSX.Element;
+}
+
+export function RunStream<A extends object, E>(props: RunStreamProps<A, E>) {
+  const value = createRuntimeStreamStore(
+    props.stream,
+    props.staticInitialValue,
+  );
+
+  return props.children(value);
+}
