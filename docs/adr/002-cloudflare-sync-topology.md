@@ -38,7 +38,7 @@ The sync boundary is the graph, not the individual note.
 
 Each graph maps to one `GraphSyncDurableObject` instance.
 
-For the one-user MVP, the Durable Object name can be derived from `graphName`. When real auth is added, the key becomes `userId:graphName` without changing the rest of the design.
+For the one-user plaintext MVP, the Durable Object name can be derived from `graphName`. The intended account-integrated shape is documented in `docs/adr/003-account-graph-identity-and-e2ee-integration.md`: the Durable Object key becomes stable `graphId`, while account ownership and graph metadata live in a separate graph registry layer.
 
 ### High-Level Topology
 
