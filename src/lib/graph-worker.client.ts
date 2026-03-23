@@ -35,7 +35,13 @@ type GraphSharedRpcClient = RpcClient.RpcClient<
  */
 const createDedicatedWorker = Effect.fn(
   "GraphWorkerClient.createDedicatedWorker",
-)(function* (graphName: string) {
+)(function* ({
+  localGraphId,
+  displayName,
+}: {
+  localGraphId: string;
+  displayName: string;
+}) {
   // Create MessageChannel - ports will be distributed to both workers.
   const mc = new MessageChannel();
 
@@ -48,7 +54,7 @@ const createDedicatedWorker = Effect.fn(
           new URL("./graph.dedicated-worker.ts", import.meta.url),
           {
             type: "module",
-            name: `graph-dedicated-${graphName}`,
+            name: `graph-dedicated-${localGraphId}`,
           },
         ),
     ),
@@ -62,7 +68,8 @@ const createDedicatedWorker = Effect.fn(
     initialMessage: () =>
       new GraphDedicatedInitialMessage({
         port: mc.port1,
-        graphName: graphName,
+        localGraphId,
+        displayName,
       }),
   }).pipe(Effect.provide(dedicatedWorkerLayer));
 
@@ -76,7 +83,7 @@ const SharedInitialMessageLayer = RpcWorker.layerInitialMessage(
   GraphSharedInitialMessageSchema,
   Effect.gen(function* () {
     const config = yield* DB.Config;
-    return { graphName: config.graphName };
+    return { localGraphId: config.localGraphId };
   }),
 );
 
@@ -90,7 +97,7 @@ const SharedRpcProtocol = Layer.unwrapEffect(
       () =>
         new SharedWorker(new URL("./graph.shared-worker.ts", import.meta.url), {
           type: "module",
-          name: `graph-worker-${config.graphName}`,
+          name: `graph-worker-${config.localGraphId}`,
         }),
     );
 
@@ -123,22 +130,22 @@ export class Service extends Effect.Service<Service>()(
     dependencies: [SharedRpcProtocol],
     scoped: Effect.gen(function* () {
       const config = yield* DB.Config;
-      const graphName = config.graphName;
+      const localGraphId = config.localGraphId;
 
-      yield* Effect.annotateLogsScoped({ graphName });
+      yield* Effect.annotateLogsScoped({ localGraphId });
 
       // Create RPC client for SharedWorker (all tabs have this)
       const sharedClient = yield* RpcClient.make(GraphSharedWorkerRpc);
       const serviceApi = { client: sharedClient };
 
       // Try to become leader immediately (non-blocking check)
-      const role = yield* LeaderElection.resolveRole(graphName);
+      const role = yield* LeaderElection.resolveRole(localGraphId);
 
       yield* Effect.annotateLogsScoped({ initialRole: role });
 
       if (role === "leader") {
         // We're the leader - setup worker in the background (it doesn't have to be available right away)
-        yield* becomeLeader(sharedClient, graphName).pipe(Effect.forkScoped);
+        yield* becomeLeader(sharedClient, config).pipe(Effect.forkScoped);
 
         return serviceApi;
       }
@@ -146,9 +153,9 @@ export class Service extends Effect.Service<Service>()(
       // We're a follower: wait for leadership and attempt takeover in background.
       yield* Effect.gen(function* () {
         yield* Effect.logInfo("Waiting for leadership");
-        yield* LeaderElection.waitForLeadership(graphName);
+        yield* LeaderElection.waitForLeadership(localGraphId);
 
-        yield* becomeLeader(sharedClient, graphName);
+        yield* becomeLeader(sharedClient, config);
       }).pipe(Effect.forkScoped);
 
       return serviceApi;
@@ -161,7 +168,10 @@ export class Service extends Effect.Service<Service>()(
  */
 const becomeLeader = Effect.fn("GraphWorkerClient.becomeLeader")(function* (
   sharedClient: GraphSharedRpcClient,
-  graphName: string,
+  config: {
+    localGraphId: string;
+    displayName: string;
+  },
 ) {
   yield* Effect.logInfo("Became leader");
 
@@ -196,7 +206,7 @@ const becomeLeader = Effect.fn("GraphWorkerClient.becomeLeader")(function* (
       // before WorkerRunner sends its initial ready message. Effect's internal
       // worker listener retries in the background, so this call may neither
       // succeed nor fail promptly unless we add our own timeout.
-      const dedicatedWorkerPort = yield* createDedicatedWorker(graphName);
+      const dedicatedWorkerPort = yield* createDedicatedWorker(config);
 
       // Sends the dedicated worker's port2 to the SharedWorker via RPC.
       // Note: with the current SharedWorker implementation, attach failures can

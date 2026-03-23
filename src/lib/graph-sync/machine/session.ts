@@ -60,7 +60,7 @@ const createSocket = Effect.fn("GraphSyncMachineSession.createSocket")(
   function* () {
     const config = yield* DB.Config;
     const socketUrl = new URL(
-      `/api/sync/${encodeURIComponent(config.graphName)}`,
+      `/api/sync/${encodeURIComponent(config.displayName)}`,
       self.location.origin,
     );
     socketUrl.protocol = socketUrl.protocol === "https:" ? "wss:" : "ws:";

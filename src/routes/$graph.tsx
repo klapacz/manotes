@@ -1,8 +1,9 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/solid-router";
 import { Runtime, RuntimeProvider } from "../lib";
-import { Schema } from "effect";
+import { Option, Schema } from "effect";
 import { AppSidebar } from "../components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "../components/ui/sidebar";
+import * as LocalRegistry from "../lib/local-registry";
 
 export const Route = createFileRoute("/$graph")({
   component: RouteComponent,
@@ -10,16 +11,24 @@ export const Route = createFileRoute("/$graph")({
     allowCreate: Schema.optional(Schema.Boolean),
   }).pipe(Schema.standardSchemaV1),
   beforeLoad: async ({ params, search }) => {
-    const graphName = params.graph;
+    const localGraphId = params.graph;
+    const graph = await LocalRegistry.Runtime.runtime.runPromise(
+      LocalRegistry.Repo.getGraph(localGraphId),
+    );
+
+    if (Option.isNone(graph)) {
+      throw redirect({ to: "/" });
+    }
+
     const result = await Runtime.setup({
       allowCreate: search.allowCreate ?? false,
-      graphName,
+      localGraphId,
+      displayName: graph.value.displayName,
     });
 
     return Runtime.setupResult.$match({
       DatabaseNotFound() {
-        // Redirect user so they can confirm creation of new graph
-        throw redirect({ to: "/create", search: { graphName } });
+        throw redirect({ to: "/" });
       },
       Success({ runtime }) {
         // Remove allowCreate from search params
@@ -34,7 +43,7 @@ export const Route = createFileRoute("/$graph")({
             }),
           });
         }
-        return { runtime };
+        return { runtime, graph: graph.value };
       },
     })(result);
   },

@@ -57,12 +57,12 @@ type DedicatedClient = RpcClient.RpcClient<
 
 const RpcHandler = GraphSharedWorkerRpc.toLayer(
   Effect.gen(function* () {
-    // Receive graphName via initial message
+    // Receive localGraphId via initial message
     const initialMessage = yield* RpcWorker.initialMessage(
       GraphSharedInitialMessageSchema,
     );
-    const { graphName } = initialMessage;
-    const logsAnnotation = { worker: "shared", graphName };
+    const { localGraphId } = initialMessage;
+    const logsAnnotation = { worker: "shared", localGraphId };
     const annotateHandler = Effect.annotateLogs(logsAnnotation);
     yield* Effect.annotateLogsScoped(logsAnnotation);
 

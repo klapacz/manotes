@@ -29,8 +29,8 @@ class LeadershipLock extends Data.Class<{
  * Non-blocking attempt to acquire a leadership lock.
  * Returns `"leader"` (lock held for scope lifetime) or `"follower"` (no lock).
  */
-export function resolveRole(graphName: string) {
-  const lockName = `graph-worker-leader-${graphName}`;
+export function resolveRole(localGraphId: string) {
+  const lockName = `graph-worker-leader-${localGraphId}`;
   return Effect.map(
     tryAcquireLeadershipLock(lockName),
     Option.match({
@@ -41,11 +41,11 @@ export function resolveRole(graphName: string) {
 }
 
 /**
- * Blocks until the leadership lock for `graphName` becomes available,
+ * Blocks until the leadership lock for `localGraphId` becomes available,
  * then acquires it. Returns the lock handle on success.
  */
-export function waitForLeadership(graphName: string) {
-  const lockName = `graph-worker-leader-${graphName}`;
+export function waitForLeadership(localGraphId: string) {
+  const lockName = `graph-worker-leader-${localGraphId}`;
   return acquireLeadershipLock(lockName);
 }
 

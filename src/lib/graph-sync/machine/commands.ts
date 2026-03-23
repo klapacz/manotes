@@ -44,13 +44,13 @@ export const sendConnect = Effect.fn("GraphSyncMachineCommands.sendConnect")(
 
     yield* context.write(
       new Messages.Connect({
-        graphName: config.graphName,
+        graphName: config.displayName,
         lastCommitSeq,
       }),
     );
 
     yield* Effect.logInfo("Sent connect to graph sync server", {
-      graphName: config.graphName,
+      graphName: config.displayName,
       lastCommitSeq,
     });
   },

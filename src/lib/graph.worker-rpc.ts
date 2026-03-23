@@ -4,7 +4,7 @@ import { Transferable } from "@effect/platform";
 
 /** Initial message sent from main thread to SharedWorker. */
 export const GraphSharedInitialMessageSchema = Schema.Struct({
-  graphName: Schema.String,
+  localGraphId: Schema.String,
 });
 
 export type GraphSharedInitialMessage =
@@ -51,7 +51,7 @@ export class GraphDedicatedRpc extends RpcGroup.make(
 
 /**
  * Initial message for the dedicated worker (not RPC).
- * Carries the `MessagePort` and graph name.
+ * Carries the `MessagePort`, local graph id, and display name.
  *
  * IMPORTANT: The _tag MUST be exactly "InitialMessage" — `layerSerialized`'s
  * `HandlersContext` type hardcodes this key to track Layer requirements.
@@ -62,7 +62,8 @@ export class GraphDedicatedInitialMessage extends Schema.TaggedRequest<GraphDedi
   {
     payload: {
       port: Transferable.MessagePort,
-      graphName: Schema.String,
+      localGraphId: Schema.String,
+      displayName: Schema.String,
     },
     success: Schema.Void,
     failure: Schema.Never,

@@ -25,24 +25,31 @@ const BootstrapRunner = WorkerRunner.layerSerialized(
   GraphDedicatedInitialMessage,
   {
     // Key must match the _tag "InitialMessage" exactly — see GraphDedicatedInitialMessage.
-    InitialMessage: ({ port, graphName }): Layer.Layer<never, never, never> =>
+    InitialMessage: ({
+      port,
+      localGraphId,
+      displayName,
+    }): Layer.Layer<never, never, never> =>
       Layer.unwrapEffect(
         Effect.gen(function* () {
           yield* Effect.logInfo(`Received port`);
 
           // Build the service layer for the RPC server
-          const serviceLayer = buildServiceLayer(graphName);
+          const serviceLayer = buildServiceLayer({
+            localGraphId,
+            displayName,
+          });
 
           // Return a layer so WorkerRunner keeps it alive in its internal scope.
           return RpcServer.layer(GraphDedicatedRpc).pipe(
-            Layer.provide(makeRpcHandler(graphName)),
+            Layer.provide(makeRpcHandler(localGraphId)),
             Layer.provide(RpcServer.layerProtocolWorkerRunner),
             // Listen on the transferred MessagePort instead of self.
             Layer.provide(BrowserWorkerRunner.layerMessagePort(port)),
             Layer.provide(serviceLayer),
             Layer.orDie,
           );
-        }).pipe(Effect.annotateLogs({ worker: "dedicated", graphName })),
+        }).pipe(Effect.annotateLogs({ worker: "dedicated", localGraphId })),
       ),
   },
 );
@@ -67,7 +74,7 @@ BrowserRuntime.runMain(
 type Handlers = RpcGroup.HandlersFrom<RpcGroup.Rpcs<typeof GraphDedicatedRpc>>;
 
 /** RPC handler layer with graph-scoped materialization logic. */
-function makeRpcHandler(graphName: string) {
+function makeRpcHandler(localGraphId: string) {
   return GraphDedicatedRpc.toLayer(
     Effect.gen(function* () {
       yield* Effect.logInfo("RPC handler started");
@@ -94,18 +101,22 @@ function makeRpcHandler(graphName: string) {
           yield* Effect.logInfo("Placeholder RPC invoked");
         }),
       } satisfies Handlers;
-    }).pipe(Effect.annotateLogs({ worker: "dedicated", graphName })),
+    }).pipe(Effect.annotateLogs({ worker: "dedicated", localGraphId })),
   );
 }
 
 // TODO: reuse services building between dedicated workers and main thread
 /** Builds the service layer for a specific graph. */
-function buildServiceLayer(graphName: string) {
+function buildServiceLayer(opts: {
+  localGraphId: string;
+  displayName: string;
+}) {
   const ConfigLayer = Layer.succeed(
     DB.Config,
     DB.Config.of({
-      graphName,
-      databasePath: `${graphName}.sqlite3`,
+      localGraphId: opts.localGraphId,
+      displayName: opts.displayName,
+      databasePath: `${opts.localGraphId}.sqlite3`,
       allowCreate: false, // Worker assumes DB already exists and is migrated
     }),
   );

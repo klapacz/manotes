@@ -33,7 +33,7 @@ export const SqlLive = Layer.unwrapEffect(
                 new URL("./db/worker.ts", import.meta.url),
                 {
                   type: "module",
-                  name: `wa-sqlite-worker-${config.graphName}`,
+                  name: `wa-sqlite-worker-${config.localGraphId}`,
                 },
               ),
           ),
@@ -54,7 +54,12 @@ export class NotFoundError extends Data.TaggedError("DB.NotFoundError")<{}> {}
 
 export class Config extends Context.Tag("DB.Config")<
   Config,
-  { graphName: string; databasePath: string; allowCreate: boolean }
+  {
+    localGraphId: string;
+    displayName: string;
+    databasePath: string;
+    allowCreate: boolean;
+  }
 >() {}
 
 export class Service extends Effect.Service<Service>()("DB", {

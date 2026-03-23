@@ -28,7 +28,8 @@ export type SetupResult = Data.TaggedEnum<{
 export const setupResult = Data.taggedEnum<SetupResult>();
 
 type SetupOpts = {
-  graphName: string;
+  localGraphId: string;
+  displayName: string;
   allowCreate: boolean;
 };
 
@@ -36,7 +37,7 @@ const runtimes = new Map<string, Type>();
 
 export async function setup(opts: SetupOpts): Promise<SetupResult> {
   // Use existing runtime if available
-  const existingRuntime = runtimes.get(opts.graphName);
+  const existingRuntime = runtimes.get(opts.localGraphId);
   if (existingRuntime) {
     return setupResult.Success({ runtime: existingRuntime });
   }
@@ -45,7 +46,7 @@ export async function setup(opts: SetupOpts): Promise<SetupResult> {
   const exit = await runtime.runPromiseExit(Migrator.migrate);
 
   if (Exit.isSuccess(exit)) {
-    runtimes.set(opts.graphName, runtime);
+    runtimes.set(opts.localGraphId, runtime);
     return setupResult.Success({ runtime });
   }
 
@@ -63,9 +64,10 @@ async function create(opts: SetupOpts) {
   const ConfigLayer = Layer.succeed(
     DB.Config,
     DB.Config.of({
-      graphName: opts.graphName,
+      localGraphId: opts.localGraphId,
+      displayName: opts.displayName,
       allowCreate: opts.allowCreate,
-      databasePath: `${opts.graphName}.sqlite3`,
+      databasePath: `${opts.localGraphId}.sqlite3`,
     }),
   );
   const DBWithConfigLayer = Layer.provideMerge(SqlLive, ConfigLayer);
