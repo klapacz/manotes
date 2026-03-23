@@ -12,7 +12,6 @@ export const migrate = Effect.gen(function* () {
       commitSeq INTEGER PRIMARY KEY AUTOINCREMENT,
       id TEXT NOT NULL UNIQUE,
       noteId TEXT NOT NULL,
-      isDaily INTEGER NOT NULL DEFAULT 0,
       payload BLOB NOT NULL,
       createdAt TEXT NOT NULL
     );
@@ -39,7 +38,7 @@ export const getEventsBetweenSeq = Effect.fn(
 )(function* (filter: { afterSeq: number; upToCommitSeq: number }) {
   const sql = yield* SqlClient.SqlClient;
   const rows = yield* sql<EventSchema.RawRecord>`
-    SELECT commitSeq, id, noteId, isDaily, payload, createdAt
+    SELECT commitSeq, id, noteId, payload, createdAt
     FROM events
     WHERE commitSeq > ${filter.afterSeq} AND commitSeq <= ${filter.upToCommitSeq}
     ORDER BY commitSeq ASC
@@ -55,7 +54,7 @@ export const insertEvents = Effect.fn("GraphSyncRepo.insertEvents")(function* (
   const sql = yield* SqlClient.SqlClient;
   const rows = yield* sql<EventSchema.RawRecord>`
     INSERT INTO events ${sql.insert(newEvents)}
-    RETURNING commitSeq, id, noteId, isDaily, payload, createdAt
+    RETURNING commitSeq, id, noteId, payload, createdAt
   `;
 
   if (!Array.isNonEmptyReadonlyArray(rows)) {

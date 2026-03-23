@@ -43,6 +43,13 @@
       "when": 1773867311718,
       "tag": "0005_young_vindicator",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1774289551988,
+      "tag": "0006_rainy_otto_octavius",
+      "breakpoints": true
     }
   ]
 }

@@ -96,7 +96,6 @@ export class Service extends Effect.Service<Service>()(
                     // TODO: use Schema for transformation after migration to effect v4
                     yield* eventRepo.create({
                       noteId: event.noteId,
-                      isDaily: event.isDaily,
                       type: "update",
                       payload: event.payload,
                       createdAt: event.createdAt,
@@ -130,7 +129,6 @@ export class Service extends Effect.Service<Service>()(
               new Messages.PendingEvent({
                 id: event.id,
                 noteId: event.noteId,
-                isDaily: event.isDaily,
                 payload: event.payload,
                 createdAt: event.createdAt,
               }),

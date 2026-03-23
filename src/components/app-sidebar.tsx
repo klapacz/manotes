@@ -59,7 +59,6 @@ export const AppSidebar = () => {
 
           return yield* service.create({
             noteId,
-            isDaily: false,
             payload: EMPTY_YJS_UPDATE,
             createdAt: yield* DateTime.now,
           });

@@ -24,7 +24,6 @@ export class Service extends Effect.Service<Service>()(
       ) {
         const event = yield* eventRepo.create({
           noteId: input.noteId,
-          isDaily: input.isDaily,
           payload: input.payload,
           createdAt: input.createdAt,
           type: "update",

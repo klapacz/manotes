@@ -1,12 +1,10 @@
 import { Effect, ParseResult, Schema } from "effect";
 import * as Messages from "../../lib/graph-sync/contract/messages";
-import * as SchemaPrimitives from "../../lib/schema/primitives";
 
 export const Record = Schema.Struct({
   commitSeq: Schema.NonNegative,
   id: Schema.NonEmptyString,
   noteId: Schema.NonEmptyString,
-  isDaily: SchemaPrimitives.BooleanFromInt,
   payload: Schema.instanceOf(Uint8Array<ArrayBufferLike>),
   createdAt: Schema.DateTimeUtc,
 });

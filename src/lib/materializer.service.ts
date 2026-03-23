@@ -17,7 +17,7 @@ import {
   findFirstH1Text,
   yDocToNodeJSON,
 } from "./prosemirror-materializer.utils";
-import { formatDailyNoteTitle } from "./daily-note";
+import { formatDailyNoteTitle, parseDailyNoteId } from "./daily-note";
 
 const MAX_FETCHED_UNDONE_EVENTS = 100;
 
@@ -99,7 +99,7 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
 
       const firstEvent = Arr.headNonEmpty(events);
       const lastEvent = Arr.lastNonEmpty(events);
-      const isDaily = firstEvent.isDaily;
+      const isDaily = parseDailyNoteId(noteId) !== null;
       const materialized = buildMaterializedNoteFields({
         yDoc,
         noteId,

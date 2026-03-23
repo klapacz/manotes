@@ -94,7 +94,6 @@ export class Service extends Effect.Service<Service>()(
       const saveOutcomingUpdates = Effect.fn("saveOutcomingUpdates")(function* (
         doc: Y.Doc,
         noteId: string,
-        isDaily: boolean,
       ) {
         yield* Stream.asyncPush<OutcomingUpdateCtx>((emit) =>
           Effect.sync(() =>
@@ -123,7 +122,6 @@ export class Service extends Effect.Service<Service>()(
                 createdAt: yield* DateTime.now,
                 type: "update",
                 noteId: noteId,
-                isDaily,
               });
             }),
           ),
@@ -162,7 +160,7 @@ export class Service extends Effect.Service<Service>()(
                   initial.lastEventLocalSeq,
                 );
               }),
-              saveOutcomingUpdates(doc, input.noteId, input.isDaily),
+              saveOutcomingUpdates(doc, input.noteId),
             ],
             { concurrency: "unbounded" },
           );

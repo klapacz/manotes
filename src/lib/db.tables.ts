@@ -24,7 +24,6 @@ export const notes = sqliteTable("notes", {
 export const events = sqliteTable("events", {
   localSeq: integer("localSeq").primaryKey({ autoIncrement: true }),
   noteId: text("noteId").notNull(),
-  isDaily: integer("isDaily").notNull().default(0),
   type: text("type", {
     enum: EventSchema.Type.literals,
   }).notNull(),

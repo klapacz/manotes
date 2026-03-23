@@ -8,7 +8,6 @@ export class PendingEvent extends Schema.Class<PendingEvent>(
 )({
   id: Schema.NonEmptyString,
   noteId: Schema.NonEmptyString,
-  isDaily: Schema.Boolean,
   payload: Schema.instanceOf(Uint8Array<ArrayBufferLike>),
   createdAt: Schema.DateTimeUtc,
 }) {
@@ -20,7 +19,6 @@ export class CommittedEvent extends Schema.Class<CommittedEvent>(
 )({
   id: Schema.NonEmptyString,
   noteId: Schema.NonEmptyString,
-  isDaily: Schema.Boolean,
   payload: Schema.instanceOf(Uint8Array<ArrayBufferLike>),
   createdAt: Schema.DateTimeUtc,
   commitSeq: Schema.Positive,
