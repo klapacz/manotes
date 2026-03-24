@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/solid-router";
 import { Cause, Exit, Match, Option, Boolean } from "effect";
 import { createSignal } from "solid-js";
 import * as LocalRegistry from "../lib/local-registry";
+import * as GraphEncryption from "../lib/graph-encryption";
 import { constant } from "effect/Function";
 import { Button, buttonVariants } from "../components/ui/button";
 import * as RemoteGraphRegistry from "../lib/remote-graph-registry";
@@ -14,14 +15,17 @@ export const Route = createFileRoute("/create")({
 function RouteComponent() {
   const navigate = useNavigate();
   const [displayName, setDisplayName] = createSignal("");
+  const [password, setPassword] = createSignal("");
   const [error, setError] = createSignal<string | null>(null);
   const createGraphMutation = useMutation(() => ({
     async mutationFn({
       mode,
       displayName,
+      password,
     }: {
       mode: "local" | "cloud";
       displayName: string;
+      password: string;
     }) {
       const exit = await Match.value(mode).pipe(
         Match.when("local", () =>
@@ -29,16 +33,25 @@ function RouteComponent() {
             LocalRegistry.Repo.createGraph(displayName),
           ),
         ),
-        Match.when("cloud", () =>
-          RemoteGraphRegistry.createGraph(displayName).then((graph) =>
-            LocalRegistry.Runtime.runtime.runPromiseExit(
+        Match.when("cloud", async () => {
+          const wrapped = await GraphEncryption.createGraphKey(password);
+
+          const graph = await RemoteGraphRegistry.createGraph({
+            displayName,
+            graphKeyEnvelope: wrapped.envelope,
+          });
+
+          const localGraphExit =
+            await LocalRegistry.Runtime.runtime.runPromiseExit(
               LocalRegistry.Repo.createCloudGraph({
                 graphId: graph.graphId,
                 displayName: graph.displayName,
+                graphKeyEnvelope: graph.graphKeyEnvelope,
               }),
-            ),
-          ),
-        ),
+            );
+
+          return localGraphExit;
+        }),
         Match.exhaustive,
       );
 
@@ -91,9 +104,17 @@ function RouteComponent() {
       mode = "cloud";
     }
 
+    const normalizedPassword = GraphEncryption.normalizePassword(password());
+
+    if (mode === "cloud" && !normalizedPassword) {
+      setError("Password is required for synced graphs.");
+      return;
+    }
+
     createGraphMutation.mutate({
       mode,
       displayName: trimmedName,
+      password: normalizedPassword,
     });
   }
 
@@ -115,6 +136,17 @@ function RouteComponent() {
             class="w-full rounded-md border border-border bg-transparent px-3 py-2 outline-none"
             placeholder="work"
             autofocus
+          />
+        </label>
+
+        <label class="block space-y-2">
+          <span class="text-sm font-medium">Password for synced graphs</span>
+          <input
+            type="password"
+            value={password()}
+            onInput={(event) => setPassword(event.currentTarget.value)}
+            class="w-full rounded-md border border-border bg-transparent px-3 py-2 outline-none"
+            placeholder="Required only for synced graphs"
           />
         </label>
 

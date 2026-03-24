@@ -45,6 +45,7 @@ function RouteComponent() {
         LocalRegistry.Repo.createCloudGraph({
           graphId: graph.graphId,
           displayName: graph.displayName,
+          graphKeyEnvelope: graph.graphKeyEnvelope,
         }),
       );
 
