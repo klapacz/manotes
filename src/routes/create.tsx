@@ -1,10 +1,11 @@
 import { useMutation } from "@tanstack/solid-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/solid-router";
-import { Cause, Exit, Predicate, Option, Boolean } from "effect";
+import { Cause, Exit, Match, Option, Boolean } from "effect";
 import { createSignal } from "solid-js";
 import * as LocalRegistry from "../lib/local-registry";
 import { constant } from "effect/Function";
 import { Button, buttonVariants } from "../components/ui/button";
+import * as RemoteGraphRegistry from "../lib/remote-graph-registry";
 
 export const Route = createFileRoute("/create")({
   component: RouteComponent,
@@ -15,36 +16,62 @@ function RouteComponent() {
   const [displayName, setDisplayName] = createSignal("");
   const [error, setError] = createSignal<string | null>(null);
   const createGraphMutation = useMutation(() => ({
-    mutationFn: async (trimmedName: string) => {
-      const exit = await LocalRegistry.Runtime.runtime.runPromiseExit(
-        LocalRegistry.Repo.createGraph(trimmedName),
+    async mutationFn({
+      mode,
+      displayName,
+    }: {
+      mode: "local" | "cloud";
+      displayName: string;
+    }) {
+      const exit = await Match.value(mode).pipe(
+        Match.when("local", () =>
+          LocalRegistry.Runtime.runtime.runPromiseExit(
+            LocalRegistry.Repo.createGraph(displayName),
+          ),
+        ),
+        Match.when("cloud", () =>
+          RemoteGraphRegistry.createGraph(displayName).then((graph) =>
+            LocalRegistry.Runtime.runtime.runPromiseExit(
+              LocalRegistry.Repo.createCloudGraph({
+                graphId: graph.graphId,
+                displayName: graph.displayName,
+              }),
+            ),
+          ),
+        ),
+        Match.exhaustive,
       );
 
-      if (Exit.isSuccess(exit)) {
-        return void navigate({
-          to: "/$graph",
-          params: { graph: exit.value.localGraphId },
-        });
-      }
+      Exit.match(exit, {
+        onFailure: (cause) => {
+          const isDisplayNameTakenError = Cause.failureOption(cause).pipe(
+            Option.map(
+              (failure) =>
+                failure._tag === "LocalRegistry.DisplayNameTakenError",
+            ),
+            Option.getOrElse(constant(false)),
+          );
 
-      const isisDisplayNameTakenError = Cause.failureOption(exit.cause).pipe(
-        Option.map(Predicate.isTagged("LocalRegistry.DisplayNameTakenError")),
-        Option.getOrElse(constant(false)),
-      );
-
-      setError(
-        Boolean.match(isisDisplayNameTakenError, {
-          onTrue: constant("A graph with that name already exists."),
-          onFalse: constant("Failed to create graph."),
-        }),
-      );
-    },
-    onError() {
-      setError("Failed to create graph.");
+          setError(
+            Boolean.match(isDisplayNameTakenError, {
+              onTrue: constant("A graph with that name already exists."),
+              onFalse: constant("Failed to create graph."),
+            }),
+          );
+        },
+        onSuccess: (graph) => {
+          void navigate({
+            to: "/$graph",
+            params: { graph: graph.localGraphId },
+          });
+        },
+      });
     },
   }));
 
-  const handleSubmit = (event: Event) => {
+  function handleSubmit(
+    event: SubmitEvent & { currentTarget: HTMLFormElement },
+  ) {
     event.preventDefault();
 
     const trimmedName = displayName().trim();
@@ -54,14 +81,29 @@ function RouteComponent() {
     }
 
     setError(null);
-    createGraphMutation.mutate(trimmedName);
-  };
+    const submitter = event.submitter;
+    let mode: "local" | "cloud" = "local";
+
+    if (
+      submitter instanceof HTMLButtonElement &&
+      submitter.dataset.mode === "cloud"
+    ) {
+      mode = "cloud";
+    }
+
+    createGraphMutation.mutate({
+      mode,
+      displayName: trimmedName,
+    });
+  }
 
   return (
     <main class="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-8 px-6 py-12">
       <header class="space-y-2">
         <h1 class="text-3xl tracking-tight font-title-serif">Create graph</h1>
-        <p class="text-fg-subtle">Name your graph.</p>
+        <p class="text-fg-subtle">
+          Name your graph and choose whether it stays local or syncs.
+        </p>
       </header>
 
       <form class="space-y-4" onSubmit={handleSubmit}>
@@ -83,8 +125,20 @@ function RouteComponent() {
         ) : null}
 
         <div class="flex gap-3">
-          <Button type="submit" disabled={createGraphMutation.isPending}>
-            Create graph
+          <Button
+            type="submit"
+            data-mode="local"
+            disabled={createGraphMutation.isPending}
+          >
+            Create local graph
+          </Button>
+          <Button
+            type="submit"
+            variant="outline"
+            data-mode="cloud"
+            disabled={createGraphMutation.isPending}
+          >
+            Create synced graph
           </Button>
           <Link to="/" class={buttonVariants({ variant: "outline" })}>
             Cancel
