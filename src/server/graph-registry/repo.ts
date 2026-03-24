@@ -2,6 +2,7 @@ import type * as SqlError from "@effect/sql/SqlError";
 import { SqlClient } from "@effect/sql";
 import { nanoid } from "nanoid";
 import { Array, Effect, flow, Option } from "effect";
+import type * as GraphEncryption from "../../lib/graph-encryption";
 import * as Errors from "./errors";
 import * as Schema from "./schema";
 
@@ -15,8 +16,7 @@ export const migrate = Effect.gen(function* () {
       graphId TEXT PRIMARY KEY,
       displayName TEXT NOT NULL,
       createdAt TEXT NOT NULL,
-      wrappedGraphKey BLOB,
-      encryptionMetadata TEXT
+      graphKeyEnvelope TEXT NOT NULL
     );
 
     CREATE UNIQUE INDEX IF NOT EXISTS graphs_display_name_idx
@@ -27,11 +27,11 @@ export const migrate = Effect.gen(function* () {
 export const listGraphs = Effect.fn("GraphRegistryRepo.listGraphs")(
   function* () {
     const sql = yield* SqlClient.SqlClient;
-    const rows = yield* sql<Schema.Record>`
-    SELECT graphId, displayName, createdAt
-    FROM graphs
-    ORDER BY displayName ASC
-  `;
+    const rows = yield* sql<Schema.RawRecord>`
+      SELECT graphId, displayName, createdAt, graphKeyEnvelope
+      FROM graphs
+      ORDER BY displayName ASC
+    `;
 
     return yield* Schema.decodeArray(rows);
   },
@@ -43,8 +43,8 @@ export const getGraph = Effect.fn("GraphRegistryRepo.getGraph")(function* ({
   graphId: string;
 }) {
   const sql = yield* SqlClient.SqlClient;
-  const rows = yield* sql<Schema.Record>`
-    SELECT graphId, displayName, createdAt
+  const rows = yield* sql<Schema.RawRecord>`
+    SELECT graphId, displayName, createdAt, graphKeyEnvelope
     FROM graphs
     WHERE graphId = ${graphId}
     LIMIT 1
@@ -59,19 +59,25 @@ export const getGraph = Effect.fn("GraphRegistryRepo.getGraph")(function* ({
 });
 
 export const createGraph = Effect.fn("GraphRegistryRepo.createGraph")(
-  function* ({ displayName }: { displayName: string }) {
+  function* ({
+    displayName,
+    graphKeyEnvelope,
+  }: {
+    displayName: string;
+    graphKeyEnvelope: GraphEncryption.GraphKeyEnvelope;
+  }) {
     const sql = yield* SqlClient.SqlClient;
+    const values = yield* Schema.encodeRecord({
+      graphId: nanoid(GRAPH_ID_LENGTH),
+      displayName,
+      createdAt: new Date().toISOString(),
+      graphKeyEnvelope,
+    });
 
-    const rows = yield* sql<Schema.Record>`
-    INSERT INTO graphs ${sql.insert([
-      {
-        graphId: nanoid(GRAPH_ID_LENGTH),
-        displayName,
-        createdAt: new Date().toISOString(),
-      },
-    ])}
-    RETURNING graphId, displayName, createdAt
-  `.pipe(
+    const rows = yield* sql<Schema.RawRecord>`
+      INSERT INTO graphs ${sql.insert(values)}
+      RETURNING graphId, displayName, createdAt, graphKeyEnvelope
+    `.pipe(
       Effect.catchTag("SqlError", (error) =>
         Effect.fail(remapDisplayNameSqlError(error, displayName)),
       ),
@@ -98,12 +104,12 @@ export const renameGraph = Effect.fn("GraphRegistryRepo.renameGraph")(
   }) {
     const sql = yield* SqlClient.SqlClient;
 
-    const rows = yield* sql<Schema.Record>`
-    UPDATE graphs
-    SET displayName = ${displayName}
-    WHERE graphId = ${graphId}
-    RETURNING graphId, displayName, createdAt
-  `.pipe(
+    const rows = yield* sql<Schema.RawRecord>`
+      UPDATE graphs
+      SET displayName = ${displayName}
+      WHERE graphId = ${graphId}
+      RETURNING graphId, displayName, createdAt, graphKeyEnvelope
+    `.pipe(
       Effect.catchTag("SqlError", (error) =>
         Effect.fail(remapDisplayNameSqlError(error, displayName)),
       ),

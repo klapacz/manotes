@@ -1,9 +1,18 @@
 import { SqlClient } from "@effect/sql";
 import { SqliteClient } from "@effect/sql-sqlite-do";
-import { Cause, ManagedRuntime, Option, Predicate, Schema } from "effect";
+import {
+  Cause,
+  Effect,
+  flow,
+  ManagedRuntime,
+  Option,
+  Predicate,
+  Schema,
+} from "effect";
 import { DurableObject } from "cloudflare:workers";
 import { Hono } from "hono";
 import { sValidator } from "@hono/standard-validator";
+import * as GraphEncryption from "../../lib/graph-encryption";
 import * as Repo from "./repo";
 import * as GraphSchema from "./schema";
 
@@ -19,25 +28,28 @@ const app = new Hono<{
 app.get("/health", (c) => c.json({ ok: true }));
 
 app.get("/graphs", async (c) => {
-  const graphs = await c.env.runtime.runPromise(Repo.listGraphs());
+  const graphs = await c.env.runtime.runPromise(
+    Repo.listGraphs().pipe(Effect.flatMap(GraphSchema.encodeApiArray)),
+  );
   return c.json(graphs);
+});
+
+const CreateGraphRequestSchema = Schema.Struct({
+  displayName: GraphSchema.DisplayNameSchema,
+  graphKeyEnvelope: GraphEncryption.GraphKeyEnvelopeSchema,
 });
 
 app.post(
   "/graphs",
-  sValidator(
-    "json",
-    Schema.Struct({
-      displayName: GraphSchema.DisplayNameSchema,
-    }).pipe(Schema.standardSchemaV1),
-  ),
+  sValidator("json", CreateGraphRequestSchema.pipe(Schema.standardSchemaV1)),
   async (c) => {
     const body = c.req.valid("json");
 
     const result = await c.env.runtime.runPromiseExit(
       Repo.createGraph({
         displayName: body.displayName,
-      }),
+        graphKeyEnvelope: body.graphKeyEnvelope,
+      }).pipe(Effect.flatMap(GraphSchema.encodeApiRecord)),
     );
 
     if (result._tag === "Success") {
@@ -50,8 +62,12 @@ app.post(
 
 app.get("/graphs/:graphId", async (c) => {
   const graph = await c.env.runtime.runPromise(
-    Repo.getGraph({
-      graphId: c.req.param("graphId"),
+    Effect.gen(function* () {
+      const graph = yield* Repo.getGraph({ graphId: c.req.param("graphId") });
+      return yield* Option.match(graph, {
+        onNone: () => Effect.succeedNone,
+        onSome: flow(GraphSchema.encodeApiRecord, Effect.asSome),
+      });
     }),
   );
 
@@ -73,9 +89,15 @@ app.patch(
     const body = c.req.valid("json");
 
     const result = await c.env.runtime.runPromiseExit(
-      Repo.renameGraph({
-        graphId: c.req.param("graphId"),
-        displayName: body.displayName,
+      Effect.gen(function* () {
+        const graph = yield* Repo.renameGraph({
+          graphId: c.req.param("graphId"),
+          displayName: body.displayName,
+        });
+        return yield* Option.match(graph, {
+          onNone: () => Effect.succeedNone,
+          onSome: flow(GraphSchema.encodeApiRecord, Effect.asSome),
+        });
       }),
     );
 

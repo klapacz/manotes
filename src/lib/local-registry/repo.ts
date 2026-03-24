@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import { Array, Cause, Effect, Exit, flow, Option, Stream } from "effect";
 import * as Schema from "./schema";
 import * as Errors from "./errors";
+import * as GraphEncryption from "../graph-encryption";
 
 const LOCAL_GRAPH_ID_LENGTH = 6;
 
@@ -15,7 +16,8 @@ export const migrate = Effect.gen(function* () {
       displayName TEXT NOT NULL UNIQUE,
       origin TEXT NOT NULL,
       graphId TEXT,
-      accountId TEXT
+      accountId TEXT,
+      graphKeyEnvelope TEXT
     );
 
     CREATE UNIQUE INDEX IF NOT EXISTS graphs_graph_id_idx
@@ -27,8 +29,8 @@ export const migrate = Effect.gen(function* () {
 export const listGraphs = Effect.fn("LocalRegistryRepo.listGraphs")(
   function* () {
     const sql = yield* SqlClient.SqlClient;
-    const rows = yield* sql<Schema.Record>`
-      SELECT localGraphId, displayName, origin, graphId, accountId
+    const rows = yield* sql<Schema.RawRecord>`
+      SELECT localGraphId, displayName, origin, graphId, accountId, graphKeyEnvelope
       FROM graphs
       ORDER BY displayName ASC
     `;
@@ -41,8 +43,8 @@ export const getGraph = Effect.fn("LocalRegistryRepo.getGraph")(function* (
   localGraphId: string,
 ) {
   const sql = yield* SqlClient.SqlClient;
-  const rows = yield* sql<Schema.Record>`
-    SELECT localGraphId, displayName, origin, graphId, accountId
+  const rows = yield* sql<Schema.RawRecord>`
+    SELECT localGraphId, displayName, origin, graphId, accountId, graphKeyEnvelope
     FROM graphs
     WHERE localGraphId = ${localGraphId}
     LIMIT 1
@@ -66,11 +68,12 @@ export const createGraph = Effect.fn("LocalRegistryRepo.createGraph")(
       origin: "local",
       graphId: null,
       accountId: null,
+      graphKeyEnvelope: null,
     }).pipe(Effect.map((record) => [record]));
 
-    const rows = yield* sql<Schema.Record>`
+    const rows = yield* sql<Schema.RawRecord>`
       INSERT INTO graphs ${sql.insert(newGraphs)}
-      RETURNING localGraphId, displayName, origin, graphId, accountId
+      RETURNING localGraphId, displayName, origin, graphId, accountId, graphKeyEnvelope
     `.pipe(
       Effect.catchTag("SqlError", (error) =>
         Effect.fail(Errors.remapDisplayNameSqlError(error, displayName)),
@@ -92,8 +95,8 @@ export const getGraphByGraphId = Effect.fn(
   "LocalRegistryRepo.getGraphByGraphId",
 )(function* (graphId: string) {
   const sql = yield* SqlClient.SqlClient;
-  const rows = yield* sql<Schema.Record>`
-    SELECT localGraphId, displayName, origin, graphId, accountId
+  const rows = yield* sql<Schema.RawRecord>`
+    SELECT localGraphId, displayName, origin, graphId, accountId, graphKeyEnvelope
     FROM graphs
     WHERE graphId = ${graphId}
     LIMIT 1
@@ -111,9 +114,11 @@ export const createCloudGraph = Effect.fn("LocalRegistryRepo.createCloudGraph")(
   function* ({
     graphId,
     displayName,
+    graphKeyEnvelope,
   }: {
     graphId: string;
     displayName: string;
+    graphKeyEnvelope: GraphEncryption.GraphKeyEnvelope;
   }) {
     // Return early if the graph already exists
     const existing = yield* getGraphByGraphId(graphId);
@@ -127,10 +132,11 @@ export const createCloudGraph = Effect.fn("LocalRegistryRepo.createCloudGraph")(
       origin: "cloud",
       graphId,
       accountId: null,
+      graphKeyEnvelope,
     });
-    const insertExit = yield* sql<Schema.Record>`
+    const insertExit = yield* sql<Schema.RawRecord>`
       INSERT INTO graphs ${sql.insert(values)}
-      RETURNING localGraphId, displayName, origin, graphId, accountId
+      RETURNING localGraphId, displayName, origin, graphId, accountId, graphKeyEnvelope
     `.pipe(Effect.exit);
 
     const rows = yield* Exit.match(insertExit, {
@@ -144,7 +150,9 @@ export const createCloudGraph = Effect.fn("LocalRegistryRepo.createCloudGraph")(
           if (Errors.isGraphIdUniquenessSqlError(failure.value.cause)) {
             const existing = yield* getGraphByGraphId(graphId);
 
-            if (Option.isSome(existing)) return [existing.value];
+            if (Option.isSome(existing)) {
+              return [yield* Schema.encodeRecord(existing.value)];
+            }
           }
 
           return yield* Effect.fail(
@@ -172,8 +180,8 @@ export function reactiveListGraph() {
       return sql
         .reactive(
           ["graphs"],
-          sql<Schema.Record>`
-            SELECT localGraphId, displayName, origin, graphId, accountId
+          sql<Schema.RawRecord>`
+            SELECT localGraphId, displayName, origin, graphId, accountId, graphKeyEnvelope
             FROM graphs
             ORDER BY displayName ASC
           `,

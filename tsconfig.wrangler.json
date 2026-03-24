@@ -15,6 +15,7 @@
     "src/lib/db.tables.ts",
     "src/lib/event.repo.ts",
     "src/lib/event.schema.ts",
+    "src/lib/graph-encryption.ts",
     "src/lib/opfs.service.ts",
     "src/lib/sql-sqlite-wasm/sqlite-client.ts",
     "src/lib/sql-sqlite-wasm/internal/opfs-worker.ts",

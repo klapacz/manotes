@@ -1,3 +1,4 @@
+import * as GraphEncryption from "./graph-encryption";
 import { Schema } from "effect";
 
 // TODO: share this Schema between frontend and backend
@@ -7,9 +8,14 @@ export const GraphSchema = Schema.Struct({
   graphId: Schema.NonEmptyString,
   displayName: DisplayNameSchema,
   createdAt: Schema.NonEmptyString,
+  graphKeyEnvelope: GraphEncryption.GraphKeyEnvelopeSchema,
 });
 
-export type Graph = typeof GraphSchema.Type;
+export type Graph = Schema.Schema.Type<typeof GraphSchema>;
+const CreateGraphRequestSchema = Schema.Struct({
+  displayName: DisplayNameSchema,
+  graphKeyEnvelope: GraphEncryption.GraphKeyEnvelopeSchema,
+});
 
 export class DisplayNameTakenError extends Error {
   constructor() {
@@ -29,18 +35,24 @@ export async function listGraphs(): Promise<ReadonlyArray<Graph>> {
   return Schema.decodeUnknownPromise(Schema.Array(GraphSchema))(json);
 }
 
-export async function createGraph(displayName: string): Promise<Graph> {
-  const normalizedDisplayName =
-    await Schema.decodeUnknownPromise(DisplayNameSchema)(displayName);
+export async function createGraph({
+  displayName,
+  graphKeyEnvelope,
+}: {
+  displayName: string;
+  graphKeyEnvelope: GraphEncryption.GraphKeyEnvelope;
+}): Promise<Graph> {
+  const encodedBody = Schema.encodeSync(CreateGraphRequestSchema)({
+    displayName,
+    graphKeyEnvelope,
+  });
 
   const response = await fetch("/api/graphs", {
     method: "POST",
     headers: {
       "content-type": "application/json",
     },
-    body: JSON.stringify({
-      displayName: normalizedDisplayName,
-    }),
+    body: JSON.stringify(encodedBody),
   });
 
   if (response.status === 409) {
