@@ -15,6 +15,7 @@ import { SqlLive } from "./db.service";
 type SetupOpts = {
   localGraphId: string;
   displayName: string;
+  graphId: string | null;
 };
 
 const runtimes = new Map<string, Type>();
@@ -50,6 +51,13 @@ async function create(opts: SetupOpts) {
   );
   const DBWithConfigLayer = Layer.provideMerge(SqlLive, ConfigLayer);
 
+  const GraphWorkerClientConfigLayer = Layer.succeed(
+    GraphWorkerClient.Config,
+    GraphWorkerClient.Config.of({
+      graphId: opts.graphId,
+    }),
+  );
+
   const AppLayer = Layer.mergeAll(
     EventRepo.Service.Default,
     NoteRepo.Service.Default,
@@ -62,7 +70,10 @@ async function create(opts: SetupOpts) {
     GraphWorkerClient.Service.Default,
     DB.Service.Default,
     Logger.minimumLogLevel(LogLevel.Debug),
-  ).pipe(Layer.provideMerge(DBWithConfigLayer));
+  ).pipe(
+    Layer.provide(GraphWorkerClientConfigLayer),
+    Layer.provideMerge(DBWithConfigLayer),
+  );
 
   return ManagedRuntime.make(AppLayer);
 }

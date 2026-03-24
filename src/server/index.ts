@@ -1,37 +1,70 @@
-export { GraphSyncDurableObject } from "./graph-sync/durable-object";
+import { Hono, type Context } from "hono";
+import { GraphRegistryDurableObject } from "./graph-registry/durable-object";
+import { GraphSyncDurableObject } from "./graph-sync/durable-object";
 
-export default {
-  fetch(request, env) {
-    const url = new URL(request.url);
+export { GraphSyncDurableObject, GraphRegistryDurableObject };
 
-    if (url.pathname === "/api/health") {
-      return Response.json({ ok: true });
-    }
+const app = new Hono<{ Bindings: Env }>();
 
-    const syncMatch = url.pathname.match(/^\/api\/sync\/([^/]+)(\/.*)?$/);
-    if (syncMatch) {
-      const graphName = syncMatch[1];
-      const restPath = syncMatch[2] ?? "/";
+app.get("/api/health", (c) => c.json({ ok: true }));
 
-      if (!graphName) {
-        return Response.json(
-          { error: "Graph name is required" },
-          { status: 400 },
-        );
-      }
+app.all("/api/graphs", (c) => proxyToGraphRegistry(c.req.raw, c.env));
+app.all("/api/graphs/:graphId", (c) => proxyToGraphRegistry(c.req.raw, c.env));
 
-      const durableObject = env.GRAPH_SYNC_DO.getByName(graphName);
-      const durableObjectUrl = new URL(request.url);
+app.all("/api/sync/:graphId", (c) =>
+  proxyToGraphSync({
+    context: c,
+    graphId: c.req.param("graphId"),
+    pathname: "/",
+  }),
+);
+app.all("/api/sync/:graphId/health", (c) =>
+  proxyToGraphSync({
+    context: c,
+    graphId: c.req.param("graphId"),
+    pathname: "/health",
+  }),
+);
 
-      durableObjectUrl.pathname = restPath;
+app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));
+app.all("*", () => new Response(null, { status: 404 }));
 
-      return durableObject.fetch(new Request(durableObjectUrl, request));
-    }
+export default app;
 
-    if (url.pathname.startsWith("/api/")) {
-      return Response.json({ error: "Not found" }, { status: 404 });
-    }
+async function proxyToGraphRegistry(request: Request, env: Env) {
+  const registry = env.GRAPH_REGISTRY_DO.getByName(env.ACCOUNT_ID);
+  return registry.fetch(request);
+}
 
-    return new Response(null, { status: 404 });
-  },
-} satisfies ExportedHandler<Env>;
+async function proxyToGraphSync({
+  context,
+  graphId,
+  pathname,
+}: {
+  context: Context<{ Bindings: Env }>;
+  graphId: string;
+  pathname: string;
+}) {
+  const registry = context.env.GRAPH_REGISTRY_DO.getByName(
+    context.env.ACCOUNT_ID,
+  );
+  const exists = await registry.graphExists(graphId).catch(() => null);
+
+  if (exists === false) {
+    return context.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (exists === null) {
+    return context.json(
+      { error: "Failed to authorize graph" },
+      { status: 500 },
+    );
+  }
+
+  const durableObject = context.env.GRAPH_SYNC_DO.getByName(graphId);
+  const durableObjectUrl = new URL(context.req.raw.url);
+
+  durableObjectUrl.pathname = pathname;
+
+  return durableObject.fetch(new Request(durableObjectUrl, context.req.raw));
+}

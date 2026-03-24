@@ -12,6 +12,7 @@ import * as BacklinkService from "./materializer/backlink/service";
 import * as MaterializerService from "./materializer.service";
 import * as NoteRepo from "./note.repo";
 import * as GraphSync from "./graph-sync/service";
+import * as GraphSyncContext from "./graph-sync/context";
 import * as GraphSyncEventLog from "./graph-sync/event-log.service";
 import {
   GraphDedicatedRpc,
@@ -25,10 +26,14 @@ const BootstrapRunner = WorkerRunner.layerSerialized(
   GraphDedicatedInitialMessage,
   {
     // Key must match the _tag "InitialMessage" exactly — see GraphDedicatedInitialMessage.
+    // This explicit `Layer.Layer<never, never, never>` contract is intentional.
+    // Do NOT remove it. If this stops type-checking, close the returned layer
+    // properly instead of weakening the signature.
     InitialMessage: ({
       port,
       localGraphId,
       displayName,
+      graphId,
     }): Layer.Layer<never, never, never> =>
       Layer.unwrapEffect(
         Effect.gen(function* () {
@@ -42,7 +47,7 @@ const BootstrapRunner = WorkerRunner.layerSerialized(
 
           // Return a layer so WorkerRunner keeps it alive in its internal scope.
           return RpcServer.layer(GraphDedicatedRpc).pipe(
-            Layer.provide(makeRpcHandler(localGraphId)),
+            Layer.provide(makeRpcHandler(localGraphId, graphId)),
             Layer.provide(RpcServer.layerProtocolWorkerRunner),
             // Listen on the transferred MessagePort instead of self.
             Layer.provide(BrowserWorkerRunner.layerMessagePort(port)),
@@ -74,13 +79,12 @@ BrowserRuntime.runMain(
 type Handlers = RpcGroup.HandlersFrom<RpcGroup.Rpcs<typeof GraphDedicatedRpc>>;
 
 /** RPC handler layer with graph-scoped materialization logic. */
-function makeRpcHandler(localGraphId: string) {
+function makeRpcHandler(localGraphId: string, graphId: string | null) {
   return GraphDedicatedRpc.toLayer(
     Effect.gen(function* () {
       yield* Effect.logInfo("RPC handler started");
 
       const materializer = yield* MaterializerService.Service;
-      const graphSync = yield* GraphSync.Service;
 
       yield* materializer.start().pipe(
         Effect.catchAllCause((cause) =>
@@ -89,12 +93,25 @@ function makeRpcHandler(localGraphId: string) {
         Effect.forkScoped,
       );
 
-      yield* graphSync.start().pipe(
-        Effect.catchAllCause((cause) =>
-          Effect.logError("Graph sync failed", cause),
-        ),
-        Effect.forkScoped,
-      );
+      if (graphId !== null) {
+        yield* Effect.gen(function* () {
+          const graphSync = yield* GraphSync.Service;
+
+          yield* graphSync.start().pipe(
+            Effect.catchAllCause((cause) =>
+              Effect.logError("Graph sync failed", cause),
+            ),
+            Effect.forkScoped,
+          );
+        }).pipe(
+          Effect.provide(GraphSyncEventLog.Service.Default),
+          Effect.provide(GraphSync.Service.Default),
+          Effect.provideService(
+            GraphSyncContext.Context,
+            GraphSyncContext.Context.of({ graphId }),
+          ),
+        );
+      }
 
       return {
         placeholder: Effect.fn("DedicatedWorker.placeholder")(function* () {
@@ -120,7 +137,6 @@ function buildServiceLayer(opts: {
     }),
   );
   const DBWithConfigLayer = Layer.provideMerge(SqlLive, ConfigLayer);
-
   return Layer.mergeAll(
     DB.Service.Default,
     EventRepo.Service.Default,
@@ -129,8 +145,6 @@ function buildServiceLayer(opts: {
     MaterializationCheckpointRepo.Service.Default,
     MaterializedEventService.Service.Default,
     MaterializerService.Service.Default,
-    GraphSync.Service.Default,
-    GraphSyncEventLog.Service.Default,
     Socket.layerWebSocketConstructorGlobal,
     Logger.minimumLogLevel(LogLevel.Debug),
   ).pipe(

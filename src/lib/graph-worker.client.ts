@@ -1,6 +1,7 @@
 import { BrowserWorker } from "@effect/platform-browser";
 import { Worker as PlatformWorker } from "@effect/platform";
 import {
+  Context,
   Duration,
   Effect,
   ExecutionStrategy,
@@ -18,6 +19,13 @@ import {
   GraphDedicatedInitialMessage,
 } from "./graph.worker-rpc";
 import * as LeaderElection from "./leader-election";
+
+export class Config extends Context.Tag("GraphWorkerClient.Config")<
+  Config,
+  {
+    readonly graphId: string | null;
+  }
+>() {}
 
 // Type for the SharedWorker RPC client
 type GraphSharedRpcClient = RpcClient.RpcClient<
@@ -38,9 +46,11 @@ const createDedicatedWorker = Effect.fn(
 )(function* ({
   localGraphId,
   displayName,
+  graphId,
 }: {
   localGraphId: string;
   displayName: string;
+  graphId: string | null;
 }) {
   // Create MessageChannel - ports will be distributed to both workers.
   const mc = new MessageChannel();
@@ -70,6 +80,7 @@ const createDedicatedWorker = Effect.fn(
         port: mc.port1,
         localGraphId,
         displayName,
+        graphId,
       }),
   }).pipe(Effect.provide(dedicatedWorkerLayer));
 
@@ -130,6 +141,7 @@ export class Service extends Effect.Service<Service>()(
     dependencies: [SharedRpcProtocol],
     scoped: Effect.gen(function* () {
       const config = yield* DB.Config;
+      const workerConfig = yield* Config;
       const localGraphId = config.localGraphId;
 
       yield* Effect.annotateLogsScoped({ localGraphId });
@@ -145,7 +157,11 @@ export class Service extends Effect.Service<Service>()(
 
       if (role === "leader") {
         // We're the leader - setup worker in the background (it doesn't have to be available right away)
-        yield* becomeLeader(sharedClient, config).pipe(Effect.forkScoped);
+        yield* becomeLeader(sharedClient, {
+          localGraphId,
+          displayName: config.displayName,
+          graphId: workerConfig.graphId,
+        }).pipe(Effect.forkScoped);
 
         return serviceApi;
       }
@@ -155,7 +171,11 @@ export class Service extends Effect.Service<Service>()(
         yield* Effect.logInfo("Waiting for leadership");
         yield* LeaderElection.waitForLeadership(localGraphId);
 
-        yield* becomeLeader(sharedClient, config);
+        yield* becomeLeader(sharedClient, {
+          localGraphId,
+          displayName: config.displayName,
+          graphId: workerConfig.graphId,
+        });
       }).pipe(Effect.forkScoped);
 
       return serviceApi;
@@ -171,6 +191,7 @@ const becomeLeader = Effect.fn("GraphWorkerClient.becomeLeader")(function* (
   config: {
     localGraphId: string;
     displayName: string;
+    graphId: string | null;
   },
 ) {
   yield* Effect.logInfo("Became leader");

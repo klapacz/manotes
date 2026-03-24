@@ -20,6 +20,7 @@ export const Route = createFileRoute("/$graph")({
     const runtime = await Runtime.setup({
       localGraphId,
       displayName: graph.value.displayName,
+      graphId: graph.value.graphId,
     });
 
     return { runtime, graph: graph.value };

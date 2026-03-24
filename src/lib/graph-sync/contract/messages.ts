@@ -29,7 +29,7 @@ export class CommittedEvent extends Schema.Class<CommittedEvent>(
 export class Connect extends Schema.TaggedClass<Connect>(
   "manotes/graph-sync/Connect",
 )("Connect", {
-  graphName: Schema.NonEmptyString,
+  graphId: Schema.NonEmptyString,
   lastCommitSeq: Schema.NonNegative,
 }) {}
 

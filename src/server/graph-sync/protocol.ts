@@ -49,7 +49,7 @@ const handleConnect = Effect.fn("GraphSyncProtocol.handleConnect")(function* (
   // ADR. We replay everything strictly after it, or just acknowledge that the
   // client is already caught up.
   //
-  // TODO(graph-sync): Validate `message.graphName` against the graph identity
+  // TODO(graph-sync): Validate `message.graphId` against the graph identity
   // selected by the router / Durable Object binding. Right now the routed DO
   // chooses the graph, but this field is otherwise ignored on the server.
   const maxCommitSeq = yield* Repo.getLastCommitSeq();

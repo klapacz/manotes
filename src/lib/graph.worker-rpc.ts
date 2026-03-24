@@ -64,6 +64,7 @@ export class GraphDedicatedInitialMessage extends Schema.TaggedRequest<GraphDedi
       port: Transferable.MessagePort,
       localGraphId: Schema.String,
       displayName: Schema.String,
+      graphId: Schema.Union(Schema.String, Schema.Null),
     },
     success: Schema.Void,
     failure: Schema.Never,

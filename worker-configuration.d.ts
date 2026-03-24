@@ -4,9 +4,11 @@
 declare namespace Cloudflare {
 	interface GlobalProps {
 		mainModule: typeof import("./src/server/index");
-		durableNamespaces: "GraphSyncDurableObject";
+		durableNamespaces: "GraphSyncDurableObject" | "GraphRegistryDurableObject";
 	}
 	interface Env {
+		ACCOUNT_ID: "single-user";
+		GRAPH_REGISTRY_DO: DurableObjectNamespace<import("./src/server/index").GraphRegistryDurableObject>;
 		GRAPH_SYNC_DO: DurableObjectNamespace<import("./src/server/index").GraphSyncDurableObject>;
 	}
 }

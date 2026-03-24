@@ -2,9 +2,9 @@
  * Implements machine side effects like log updates and socket writes.
  */
 import { Effect, Option } from "effect";
-import * as DB from "../../db.service";
 import * as Messages from "../contract/messages";
 import * as GraphSyncEventLog from "../event-log.service";
+import * as GraphSyncContext from "../context";
 import * as MachineContext from "./context";
 import type { NonEmptyReadonlyArray } from "effect/Array";
 
@@ -38,19 +38,19 @@ export const ensureLastCommitSeqEquals = Effect.fn(
 export const sendConnect = Effect.fn("GraphSyncMachineCommands.sendConnect")(
   function* () {
     const context = yield* MachineContext.GraphSyncMachineContext;
-    const config = yield* DB.Config;
+    const sync = yield* GraphSyncContext.Context;
     const eventLog = yield* GraphSyncEventLog.Service;
     const lastCommitSeq = yield* eventLog.getLastCommitSeq();
 
     yield* context.write(
       new Messages.Connect({
-        graphName: config.displayName,
+        graphId: sync.graphId,
         lastCommitSeq,
       }),
     );
 
     yield* Effect.logInfo("Sent connect to graph sync server", {
-      graphName: config.displayName,
+      graphId: sync.graphId,
       lastCommitSeq,
     });
   },

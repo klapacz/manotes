@@ -4,8 +4,8 @@
 import * as Socket from "@effect/platform/Socket";
 import { Effect, Queue, Stream } from "effect";
 import { decodeServerMessage } from "../contract/codec";
-import * as DB from "../../db.service";
 import * as EventRepo from "../../event.repo";
+import * as GraphSyncContext from "../context";
 import * as Model from "./model";
 import * as Runner from "./runner";
 
@@ -58,9 +58,10 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
  */
 const createSocket = Effect.fn("GraphSyncMachineSession.createSocket")(
   function* () {
-    const config = yield* DB.Config;
+    const sync = yield* GraphSyncContext.Context;
+
     const socketUrl = new URL(
-      `/api/sync/${encodeURIComponent(config.displayName)}`,
+      `/api/sync/${encodeURIComponent(sync.graphId)}`,
       self.location.origin,
     );
     socketUrl.protocol = socketUrl.protocol === "https:" ? "wss:" : "ws:";

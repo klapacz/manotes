@@ -9,12 +9,23 @@
         "name": "GRAPH_SYNC_DO",
         "class_name": "GraphSyncDurableObject",
       },
+      {
+        "name": "GRAPH_REGISTRY_DO",
+        "class_name": "GraphRegistryDurableObject",
+      },
     ],
+  },
+  "vars": {
+    "ACCOUNT_ID": "single-user"
   },
   "migrations": [
     {
       "tag": "v1",
       "new_sqlite_classes": ["GraphSyncDurableObject"],
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["GraphRegistryDurableObject"],
     },
   ],
   "assets": {
