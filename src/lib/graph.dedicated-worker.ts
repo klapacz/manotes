@@ -117,7 +117,6 @@ function buildServiceLayer(opts: {
       localGraphId: opts.localGraphId,
       displayName: opts.displayName,
       databasePath: `${opts.localGraphId}.sqlite3`,
-      allowCreate: false, // Worker assumes DB already exists and is migrated
     }),
   );
   const DBWithConfigLayer = Layer.provideMerge(SqlLive, ConfigLayer);

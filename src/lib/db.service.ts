@@ -3,7 +3,6 @@ import { Effect, Data, Context, Layer, Option } from "effect";
 import type { RunnableQuery as DrizzleQuery } from "drizzle-orm/runnable-query";
 
 import { drizzle as createDrizzle } from "drizzle-orm/sqlite-proxy";
-import * as OPFS from "./opfs.service";
 import { SqlClient } from "@effect/sql";
 import type { Primitive } from "@effect/sql/Statement";
 import type { Query } from "drizzle-orm";
@@ -12,17 +11,6 @@ import * as SqliteClient from "./sql-sqlite-wasm/sqlite-client";
 export const SqlLive = Layer.unwrapEffect(
   Effect.gen(function* () {
     const config = yield* Config;
-
-    const doesFileExist = yield* OPFS.getFileHandleFromOpfsRoot(
-      config.databasePath,
-    ).pipe(
-      Effect.map(() => true),
-      Effect.catchTag("NotFoundError", () => Effect.succeed(false)),
-    );
-
-    if (!doesFileExist && !config.allowCreate) {
-      return yield* new NotFoundError();
-    }
 
     return SqliteClient.layer({
       worker: Effect.gen(function* () {
@@ -58,7 +46,6 @@ export class Config extends Context.Tag("DB.Config")<
     localGraphId: string;
     displayName: string;
     databasePath: string;
-    allowCreate: boolean;
   }
 >() {}
 

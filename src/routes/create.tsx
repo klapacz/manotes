@@ -24,7 +24,6 @@ function RouteComponent() {
         return void navigate({
           to: "/$graph",
           params: { graph: exit.value.localGraphId },
-          search: { allowCreate: true },
         });
       }
 

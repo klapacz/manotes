@@ -1,13 +1,4 @@
-import {
-  Cause,
-  Data,
-  Exit,
-  Layer,
-  Logger,
-  LogLevel,
-  ManagedRuntime,
-  Option,
-} from "effect";
+import { Cause, Exit, Layer, Logger, LogLevel, ManagedRuntime } from "effect";
 import * as DB from "./db.service";
 import * as EventRepo from "./event.repo";
 import * as GraphWorkerClient from "./graph-worker.client";
@@ -21,25 +12,18 @@ import * as EditorNoteBootCache from "./editor/note-boot-cache.service";
 import * as EditorSyncService from "./editor-sync.service";
 import { SqlLive } from "./db.service";
 
-export type SetupResult = Data.TaggedEnum<{
-  Success: { runtime: Type };
-  DatabaseNotFound: { error: DB.NotFoundError };
-}>;
-export const setupResult = Data.taggedEnum<SetupResult>();
-
 type SetupOpts = {
   localGraphId: string;
   displayName: string;
-  allowCreate: boolean;
 };
 
 const runtimes = new Map<string, Type>();
 
-export async function setup(opts: SetupOpts): Promise<SetupResult> {
+export async function setup(opts: SetupOpts): Promise<Type> {
   // Use existing runtime if available
   const existingRuntime = runtimes.get(opts.localGraphId);
   if (existingRuntime) {
-    return setupResult.Success({ runtime: existingRuntime });
+    return existingRuntime;
   }
 
   const runtime = await create(opts);
@@ -47,12 +31,7 @@ export async function setup(opts: SetupOpts): Promise<SetupResult> {
 
   if (Exit.isSuccess(exit)) {
     runtimes.set(opts.localGraphId, runtime);
-    return setupResult.Success({ runtime });
-  }
-
-  const failure = Cause.failureOption(exit.cause);
-  if (Option.isSome(failure) && failure.value._tag === "DB.NotFoundError") {
-    return setupResult.DatabaseNotFound({ error: failure.value });
+    return runtime;
   }
 
   throw Cause.pretty(exit.cause);
@@ -66,7 +45,6 @@ async function create(opts: SetupOpts) {
     DB.Config.of({
       localGraphId: opts.localGraphId,
       displayName: opts.displayName,
-      allowCreate: opts.allowCreate,
       databasePath: `${opts.localGraphId}.sqlite3`,
     }),
   );
