@@ -1,5 +1,6 @@
 import type * as SqlError from "@effect/sql/SqlError";
 import { Array, Data, Effect, Match } from "effect";
+import { MAX_EVENTS_PER_COMMIT } from "../../lib/graph-sync/contract/limits";
 import * as Messages from "../../lib/graph-sync/contract/messages";
 import * as Errors from "./errors";
 import * as Repo from "./repo";
@@ -82,6 +83,12 @@ const handleCommit = Effect.fn("GraphSyncProtocol.handleCommit")(function* (
     });
 
     return createReplayOrDoneResponsePlan(missing, maxCommitSeq);
+  }
+
+  if (message.events.length > MAX_EVENTS_PER_COMMIT) {
+    return yield* new Errors.ProtocolViolationError({
+      reason: `Commit exceeds max batch size of ${MAX_EVENTS_PER_COMMIT} events`,
+    });
   }
 
   const committed = yield* Repo.insertEvents(message.events).pipe(

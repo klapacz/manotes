@@ -5,11 +5,13 @@ import { Array, Effect, Option, pipe } from "effect";
 import * as DB from "../db.service";
 import * as EventRepo from "../event.repo";
 import * as Messages from "./contract/messages";
+import { MAX_EVENTS_PER_COMMIT } from "./contract/limits";
 import * as Errors from "./machine/errors";
 import * as GraphSyncEncryption from "./encryption/service";
 import * as GraphSyncEncryptionSchema from "./encryption/schema";
 import type { NonEmptyReadonlyArray } from "effect/Array";
-export const PUSH_BATCH_SIZE = 100;
+
+export const PUSH_BATCH_SIZE = MAX_EVENTS_PER_COMMIT;
 
 export class Service extends Effect.Service<Service>()(
   "GraphSyncEventLogService",
