@@ -11,11 +11,12 @@ import * as NoteCache from "./note-cache.service";
 import * as EditorNoteBootCache from "./editor/note-boot-cache.service";
 import * as EditorSyncService from "./editor-sync.service";
 import { SqlLive } from "./db.service";
+import * as GraphSyncConfig from "./graph-sync/config";
 
-type SetupOpts = {
+export type SetupOpts = {
   localGraphId: string;
   displayName: string;
-  graphId: string | null;
+  graphSyncConfig: GraphSyncConfig.GraphSyncConfig;
 };
 
 const runtimes = new Map<string, Type>();
@@ -40,6 +41,11 @@ export async function setup(opts: SetupOpts): Promise<Type> {
 
 export type Type = Awaited<ReturnType<typeof create>>;
 
+export function get(localGraphId: string): Type | null {
+  const runtime = runtimes.get(localGraphId);
+  return runtime ?? null;
+}
+
 async function create(opts: SetupOpts) {
   const ConfigLayer = Layer.succeed(
     DB.Config,
@@ -51,11 +57,9 @@ async function create(opts: SetupOpts) {
   );
   const DBWithConfigLayer = Layer.provideMerge(SqlLive, ConfigLayer);
 
-  const GraphWorkerClientConfigLayer = Layer.succeed(
-    GraphWorkerClient.Config,
-    GraphWorkerClient.Config.of({
-      graphId: opts.graphId,
-    }),
+  const GraphSyncConfigLayer = Layer.succeed(
+    GraphSyncConfig.Config,
+    GraphSyncConfig.Config.of(opts.graphSyncConfig),
   );
 
   const AppLayer = Layer.mergeAll(
@@ -71,7 +75,7 @@ async function create(opts: SetupOpts) {
     DB.Service.Default,
     Logger.minimumLogLevel(LogLevel.Debug),
   ).pipe(
-    Layer.provide(GraphWorkerClientConfigLayer),
+    Layer.provide(GraphSyncConfigLayer),
     Layer.provideMerge(DBWithConfigLayer),
   );
 

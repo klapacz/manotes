@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { Rpc, RpcGroup } from "@effect/rpc";
 import { Transferable } from "@effect/platform";
+import * as GraphSyncConfig from "./graph-sync/config";
 
 /** Initial message sent from main thread to SharedWorker. */
 export const GraphSharedInitialMessageSchema = Schema.Struct({
@@ -51,7 +52,7 @@ export class GraphDedicatedRpc extends RpcGroup.make(
 
 /**
  * Initial message for the dedicated worker (not RPC).
- * Carries the `MessagePort`, local graph id, and display name.
+ * Carries the `MessagePort`, local graph id, display name, and graph sync config.
  *
  * IMPORTANT: The _tag MUST be exactly "InitialMessage" — `layerSerialized`'s
  * `HandlersContext` type hardcodes this key to track Layer requirements.
@@ -64,7 +65,7 @@ export class GraphDedicatedInitialMessage extends Schema.TaggedRequest<GraphDedi
       port: Transferable.MessagePort,
       localGraphId: Schema.String,
       displayName: Schema.String,
-      graphId: Schema.Union(Schema.String, Schema.Null),
+      graphSyncConfig: GraphSyncConfig.GraphSyncConfigSchema,
     },
     success: Schema.Void,
     failure: Schema.Never,

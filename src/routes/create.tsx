@@ -4,6 +4,7 @@ import { Cause, Exit, Match, Option, Boolean } from "effect";
 import { createSignal } from "solid-js";
 import * as LocalRegistry from "../lib/local-registry";
 import * as GraphEncryption from "../lib/graph-encryption";
+import { Runtime } from "../lib";
 import { constant } from "effect/Function";
 import { Button, buttonVariants } from "../components/ui/button";
 import * as RemoteGraphRegistry from "../lib/remote-graph-registry";
@@ -51,6 +52,19 @@ function RouteComponent() {
                 accountId: DEFAULT_ACCOUNT_ID,
               }),
             );
+
+          if (Exit.isSuccess(localGraphExit)) {
+            // @effect-diagnostics-next-line floatingEffect:off
+            await Runtime.setup({
+              localGraphId: localGraphExit.value.localGraphId,
+              displayName: localGraphExit.value.displayName,
+              graphSyncConfig: {
+                mode: "cloud",
+                graphId: graph.graphId,
+                graphKey: wrapped.graphKey,
+              },
+            });
+          }
 
           return localGraphExit;
         }),

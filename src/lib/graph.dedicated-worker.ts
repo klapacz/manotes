@@ -19,6 +19,7 @@ import {
   GraphDedicatedInitialMessage,
 } from "./graph.worker-rpc";
 import { SqlLive } from "./db.service";
+import * as GraphSyncConfig from "./graph-sync/config";
 
 // Bootstrap runner - receives MessagePort via initial message and installs
 // the RPC server layer into the serialized runner context.
@@ -33,7 +34,7 @@ const BootstrapRunner = WorkerRunner.layerSerialized(
       port,
       localGraphId,
       displayName,
-      graphId,
+      graphSyncConfig,
     }): Layer.Layer<never, never, never> =>
       Layer.unwrapEffect(
         Effect.gen(function* () {
@@ -43,11 +44,12 @@ const BootstrapRunner = WorkerRunner.layerSerialized(
           const serviceLayer = buildServiceLayer({
             localGraphId,
             displayName,
+            graphSyncConfig,
           });
 
           // Return a layer so WorkerRunner keeps it alive in its internal scope.
           return RpcServer.layer(GraphDedicatedRpc).pipe(
-            Layer.provide(makeRpcHandler(localGraphId, graphId)),
+            Layer.provide(makeRpcHandler(localGraphId, graphSyncConfig)),
             Layer.provide(RpcServer.layerProtocolWorkerRunner),
             // Listen on the transferred MessagePort instead of self.
             Layer.provide(BrowserWorkerRunner.layerMessagePort(port)),
@@ -79,7 +81,10 @@ BrowserRuntime.runMain(
 type Handlers = RpcGroup.HandlersFrom<RpcGroup.Rpcs<typeof GraphDedicatedRpc>>;
 
 /** RPC handler layer with graph-scoped materialization logic. */
-function makeRpcHandler(localGraphId: string, graphId: string | null) {
+function makeRpcHandler(
+  localGraphId: string,
+  graphSyncConfig: GraphSyncConfig.GraphSyncConfig,
+) {
   return GraphDedicatedRpc.toLayer(
     Effect.gen(function* () {
       yield* Effect.logInfo("RPC handler started");
@@ -93,7 +98,7 @@ function makeRpcHandler(localGraphId: string, graphId: string | null) {
         Effect.forkScoped,
       );
 
-      if (graphId !== null) {
+      if (graphSyncConfig.mode === "cloud") {
         yield* Effect.gen(function* () {
           const graphSync = yield* GraphSync.Service;
 
@@ -108,7 +113,7 @@ function makeRpcHandler(localGraphId: string, graphId: string | null) {
           Effect.provide(GraphSync.Service.Default),
           Effect.provideService(
             GraphSyncContext.Context,
-            GraphSyncContext.Context.of({ graphId }),
+            GraphSyncContext.Context.of({ graphId: graphSyncConfig.graphId }),
           ),
         );
       }
@@ -127,6 +132,7 @@ function makeRpcHandler(localGraphId: string, graphId: string | null) {
 function buildServiceLayer(opts: {
   localGraphId: string;
   displayName: string;
+  graphSyncConfig: GraphSyncConfig.GraphSyncConfig;
 }) {
   const ConfigLayer = Layer.succeed(
     DB.Config,
@@ -137,6 +143,10 @@ function buildServiceLayer(opts: {
     }),
   );
   const DBWithConfigLayer = Layer.provideMerge(SqlLive, ConfigLayer);
+  const GraphSyncConfigLayer = Layer.succeed(
+    GraphSyncConfig.Config,
+    GraphSyncConfig.Config.of(opts.graphSyncConfig),
+  );
   return Layer.mergeAll(
     DB.Service.Default,
     EventRepo.Service.Default,
@@ -150,6 +160,7 @@ function buildServiceLayer(opts: {
   ).pipe(
     // Keep DB.Config in the final layer output because downstream effects
     // still read it directly even after the service graph has been built.
+    Layer.provide(GraphSyncConfigLayer),
     Layer.provideMerge(DBWithConfigLayer),
   );
 }

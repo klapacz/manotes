@@ -13,26 +13,38 @@ export const Route = createFileRoute("/$graph")({
       LocalRegistry.Repo.getGraph(localGraphId),
     );
 
-    if (Option.isNone(graph)) {
-      throw redirect({ to: "/" });
+    // Check if the graph exists
+    if (Option.isNone(graph)) throw redirect({ to: "/" });
+
+    // Use the existing runtime if it exists
+    const existingRuntime = Runtime.get(localGraphId);
+    if (existingRuntime) {
+      return { runtime: existingRuntime, graph: graph.value };
     }
 
+    // If the graph is in cloud mode, redirect to unlock page
+    if (graph.value.mode === "cloud") {
+      throw redirect({ to: "/$graph/unlock", params: { graph: localGraphId } });
+    }
+
+    // If the graph is in local mode, setup a new runtime
     const runtime = await Runtime.setup({
       localGraphId,
       displayName: graph.value.displayName,
-      graphId: graph.value.graphId,
+      graphSyncConfig: { mode: "local" },
     });
-
     return { runtime, graph: graph.value };
   },
-  loader: async ({ context }) => ({ runtime: context.runtime }),
+  loader: async ({ context }) => ({
+    runtime: context.runtime,
+  }),
 });
 
 function RouteComponent() {
   const data = Route.useLoaderData();
 
   return (
-    <RuntimeProvider runtime={() => data().runtime}>
+    <RuntimeProvider runtime={() => data().runtime!}>
       <SidebarProvider defaultOpenMobile={true}>
         <AppSidebar />
         <SidebarInset>
