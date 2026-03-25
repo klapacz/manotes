@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/solid-router";
-import { Effect, Stream } from "effect";
+import { Effect, pipe, Stream, Array, flow } from "effect";
 import type { JSX } from "solid-js";
 import { Index, createEffect, createSignal, onCleanup } from "solid-js";
 import { NoteRepo, createRuntimeStreamStore } from "../lib";
@@ -11,6 +11,7 @@ import {
   CommandItem,
   CommandList,
 } from "./ui/command";
+import { suggestDailyNoteIds } from "../lib/daily-note";
 
 export const NoteSearchCommand = (props: {
   children?: (open: () => void) => JSX.Element;
@@ -19,19 +20,27 @@ export const NoteSearchCommand = (props: {
   const [noteFilter, setNoteFilter] = createSignal("");
   const [isCommandOpen, setIsCommandOpen] = createSignal(false);
 
-  const noteSearch = createRuntimeStreamStore(
+  const notes = createRuntimeStreamStore(
     () => {
       const filter = noteFilter();
+
+      const dailyNotes = pipe(
+        suggestDailyNoteIds(filter),
+        Array.map((note) => ({ ...note, isDaily: true })),
+      );
 
       return NoteRepo.Service.pipe(
         Effect.flatMap((repo) => repo.reactiveSearchPreview(filter)),
         Stream.unwrap,
-        Stream.map((notes) => ({
-          notes: notes.map((note) => ({ id: note.id, title: note.title })),
-        })),
+        Stream.map(
+          flow(
+            Array.prependAll(dailyNotes),
+            Array.map((note) => ({ id: note.id, title: note.title })),
+          ),
+        ),
       );
     },
-    { notes: [] as Array<{ id: string; title: string }> },
+    [] as { id: string; title: string }[],
   );
 
   createEffect(() => {
@@ -68,7 +77,7 @@ export const NoteSearchCommand = (props: {
         <CommandList>
           <CommandEmpty>No matching notes.</CommandEmpty>
           <CommandGroup heading="Notes">
-            <Index each={noteSearch.notes}>
+            <Index each={notes}>
               {(note) => (
                 <CommandItem
                   value={note().id}
