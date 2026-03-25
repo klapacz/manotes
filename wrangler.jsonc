@@ -1,8 +1,16 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "manotes",
+  "name": "manotes-sand",
   "compatibility_date": "2026-03-01",
+  "workers_dev": false,
+  "preview_urls": false,
   "main": "./src/server/index.ts",
+  "routes": [
+    {
+      "pattern": "sand.manotes.dev",
+      "custom_domain": true,
+    },
+  ],
   "durable_objects": {
     "bindings": [
       {
@@ -14,9 +22,6 @@
         "class_name": "GraphRegistryDurableObject",
       },
     ],
-  },
-  "vars": {
-    "ACCOUNT_ID": "single-user"
   },
   "migrations": [
     {
