@@ -161,24 +161,31 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
       );
     });
 
-    const reactiveSearch = Effect.fn("NoteRepo.reactiveSearch")(function* (
-      filter: string,
-    ) {
-      const stream = yield* db.reactiveQuery((db) => {
-        const where = and(
-          eq(Tables.notes.isDaily, 0),
-          like(Tables.notes.title, `%${filter.trim()}%`),
+    const reactiveSearchPreview = Effect.fn("NoteRepo.reactiveSearch")(
+      function* (filter: string) {
+        const stream = yield* db.reactiveQuery((db) => {
+          const where = and(
+            eq(Tables.notes.isDaily, 0),
+            like(Tables.notes.title, `%${filter.trim()}%`),
+          );
+
+          return db
+            .select({
+              id: Tables.notes.id,
+              title: Tables.notes.title,
+              isDaily: Tables.notes.isDaily,
+              updatedAt: Tables.notes.updatedAt,
+            })
+            .from(Tables.notes)
+            .limit(100)
+            .where(where);
+        });
+
+        return stream.pipe(
+          Stream.mapEffect(Schema.decode(Schema.Array(NoteSchema.Preview))),
         );
-
-        return db.select().from(Tables.notes).where(where);
-      });
-
-      return stream.pipe(
-        Stream.mapEffect((records) =>
-          pipe(records, Schema.decode(Schema.Array(NoteSchema.Record))),
-        ),
-      );
-    });
+      },
+    );
 
     return {
       create,
@@ -189,7 +196,7 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
       list,
       reactiveList,
       reactiveFindPreviewById,
-      reactiveSearch,
+      reactiveSearchPreview: reactiveSearchPreview,
     };
   }),
 }) {}

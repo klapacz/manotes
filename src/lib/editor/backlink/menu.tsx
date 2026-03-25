@@ -42,7 +42,7 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
     );
 
     return NoteRepo.Service.pipe(
-      Effect.flatMap((repo) => repo.reactiveSearch(query)),
+      Effect.flatMap((repo) => repo.reactiveSearchPreview(query)),
       Stream.unwrap,
       Stream.map(
         flow(

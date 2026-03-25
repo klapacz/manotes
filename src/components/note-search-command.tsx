@@ -24,7 +24,7 @@ export const NoteSearchCommand = (props: {
       const filter = noteFilter();
 
       return NoteRepo.Service.pipe(
-        Effect.flatMap((repo) => repo.reactiveSearch(filter)),
+        Effect.flatMap((repo) => repo.reactiveSearchPreview(filter)),
         Stream.unwrap,
         Stream.map((notes) => ({
           notes: notes.map((note) => ({ id: note.id, title: note.title })),
