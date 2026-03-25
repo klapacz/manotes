@@ -192,7 +192,7 @@ const textDecoder = new TextDecoder();
  * So this cast exists only to satisfy the browser typings at the exact
  * `crypto.subtle` boundary. It does not transform or copy the bytes.
  */
-function castArray(
+export function castArray(
   arrayBufferLike: Uint8Array<ArrayBufferLike>,
 ): Uint8Array<ArrayBuffer> {
   return arrayBufferLike as Uint8Array<ArrayBuffer>;

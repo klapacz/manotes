@@ -113,7 +113,10 @@ function makeRpcHandler(
           Effect.provide(GraphSync.Service.Default),
           Effect.provideService(
             GraphSyncContext.Context,
-            GraphSyncContext.Context.of({ graphId: graphSyncConfig.graphId }),
+            GraphSyncContext.Context.of({
+              graphId: graphSyncConfig.graphId,
+              graphKey: graphSyncConfig.graphKey,
+            }),
           ),
         );
       }

@@ -9,6 +9,7 @@ The Effect repository is cloned to `.reference/effect` for local API lookups and
 ## Style guide
 
 Always be concise.
+Keep schema definitions next to their encode/decode helpers.
 
 ## Version Control
 
