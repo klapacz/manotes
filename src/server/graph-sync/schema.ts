@@ -4,7 +4,8 @@ import * as Messages from "../../lib/graph-sync/contract/messages";
 export const Record = Schema.Struct({
   commitSeq: Schema.NonNegative,
   id: Schema.NonEmptyString,
-  noteId: Schema.NonEmptyString,
+  streamRef: Schema.Uint8ArrayFromSelf,
+  // Opaque encrypted event-envelope bytes. The server never decrypts them.
   payload: Schema.instanceOf(Uint8Array<ArrayBufferLike>),
   createdAt: Schema.DateTimeUtc,
 });

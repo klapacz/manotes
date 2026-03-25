@@ -40,10 +40,3 @@ const AuthenticatedMetadataMsgPack = MsgPack.schema(
 export const encodeAuthenticatedMetadata = Schema.encode(
   AuthenticatedMetadataMsgPack,
 );
-
-export const decodeBase64UrlBytes = Schema.decode(
-  Schema.Uint8ArrayFromBase64Url,
-);
-export const encodeBase64UrlBytes = Schema.encode(
-  Schema.Uint8ArrayFromBase64Url,
-);

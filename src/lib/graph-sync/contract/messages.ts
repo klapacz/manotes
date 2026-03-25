@@ -7,7 +7,9 @@ export class PendingEvent extends Schema.Class<PendingEvent>(
   "GraphSyncPendingEvent",
 )({
   id: Schema.NonEmptyString,
-  noteId: Schema.NonEmptyString,
+  streamRef: Schema.Uint8ArrayFromSelf,
+  // Opaque encrypted event-envelope bytes. The sync server stores and replays
+  // them without interpreting note content.
   payload: Schema.instanceOf(Uint8Array<ArrayBufferLike>),
   createdAt: Schema.DateTimeUtc,
 }) {
@@ -18,7 +20,9 @@ export class CommittedEvent extends Schema.Class<CommittedEvent>(
   "GraphSyncCommittedEvent",
 )({
   id: Schema.NonEmptyString,
-  noteId: Schema.NonEmptyString,
+  streamRef: Schema.Uint8ArrayFromSelf,
+  // Opaque encrypted event-envelope bytes. Clients decrypt them locally after
+  // replay or commit acknowledgement.
   payload: Schema.instanceOf(Uint8Array<ArrayBufferLike>),
   createdAt: Schema.DateTimeUtc,
   commitSeq: Schema.Positive,

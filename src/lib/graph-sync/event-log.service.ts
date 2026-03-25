@@ -100,15 +100,12 @@ export class Service extends Effect.Service<Service>()(
                   onNone: Effect.fnUntraced(function* () {
                     // Replayed remote events arrive through the same local log so
                     // downstream materialization and tab sync keep using one path.
-                    const streamRef = yield* GraphSyncEncryptionSchema.decodeBase64UrlBytes(
-                      event.noteId,
-                    );
                     const envelope = yield* GraphSyncEncryptionSchema.decodeEnvelope(
                       event.payload,
                     );
                     const decrypted = yield* graphSyncEncryption.decryptEventBody({
                       id: event.id,
-                      streamRef,
+                      streamRef: event.streamRef,
                       createdAt: event.createdAt,
                       envelope,
                     });
@@ -153,16 +150,13 @@ export class Service extends Effect.Service<Service>()(
               noteId: event.noteId,
               payload: event.payload,
             });
-            const encodedStreamRef = yield* GraphSyncEncryptionSchema.encodeBase64UrlBytes(
-              streamRef,
-            );
             const encodedEnvelope = yield* GraphSyncEncryptionSchema.encodeEnvelope(
               encryptedPayload,
             );
 
             return new Messages.PendingEvent({
               id: event.id,
-              noteId: encodedStreamRef,
+              streamRef,
               payload: encodedEnvelope,
               createdAt: event.createdAt,
             });

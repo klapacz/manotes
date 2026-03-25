@@ -15,7 +15,8 @@ class ExecutionPlan<E, R> extends Data.TaggedClass("ExecutionPlan")<{
 }> {}
 
 // Server-side protocol entrypoint: either bootstrap a reconnecting client
-// with the missing committed suffix, or reconcile a new commit attempt.
+// with the missing committed suffix, or reconcile a new commit attempt over
+// opaque encrypted event payloads keyed by stable stream references.
 export function getExecutionPlan(message: Messages.ClientMessage) {
   return Match.value(message).pipe(
     Match.tag(
