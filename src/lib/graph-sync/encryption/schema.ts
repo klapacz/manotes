@@ -8,6 +8,10 @@ export const EnvelopeSchema = Schema.Struct({
 });
 export type Envelope = Schema.Schema.Type<typeof EnvelopeSchema>;
 
+const EnvelopeMsgPack = MsgPack.schema(EnvelopeSchema);
+export const decodeEnvelope = Schema.decode(EnvelopeMsgPack);
+export const encodeEnvelope = Schema.encode(EnvelopeMsgPack);
+
 export const BodySchema = Schema.Struct({
   noteId: Schema.NonEmptyString,
   payload: Schema.Uint8ArrayFromSelf,
@@ -35,4 +39,11 @@ const AuthenticatedMetadataMsgPack = MsgPack.schema(
 );
 export const encodeAuthenticatedMetadata = Schema.encode(
   AuthenticatedMetadataMsgPack,
+);
+
+export const decodeBase64UrlBytes = Schema.decode(
+  Schema.Uint8ArrayFromBase64Url,
+);
+export const encodeBase64UrlBytes = Schema.encode(
+  Schema.Uint8ArrayFromBase64Url,
 );

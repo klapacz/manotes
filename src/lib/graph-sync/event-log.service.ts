@@ -6,16 +6,23 @@ import * as DB from "../db.service";
 import * as EventRepo from "../event.repo";
 import * as Messages from "./contract/messages";
 import * as Errors from "./machine/errors";
+import * as GraphSyncEncryption from "./encryption/service";
+import * as GraphSyncEncryptionSchema from "./encryption/schema";
 import type { NonEmptyReadonlyArray } from "effect/Array";
 export const PUSH_BATCH_SIZE = 100;
 
 export class Service extends Effect.Service<Service>()(
   "GraphSyncEventLogService",
   {
-    dependencies: [DB.Service.Default, EventRepo.Service.Default],
+    dependencies: [
+      DB.Service.Default,
+      EventRepo.Service.Default,
+      GraphSyncEncryption.Service.Default,
+    ],
     effect: Effect.gen(function* () {
       const db = yield* DB.Service;
       const eventRepo = yield* EventRepo.Service;
+      const graphSyncEncryption = yield* GraphSyncEncryption.Service;
 
       const getLastCommitSeq = Effect.fn(
         "GraphSyncEventLogService.getLastCommitSeq",
@@ -93,11 +100,23 @@ export class Service extends Effect.Service<Service>()(
                   onNone: Effect.fnUntraced(function* () {
                     // Replayed remote events arrive through the same local log so
                     // downstream materialization and tab sync keep using one path.
-                    // TODO: use Schema for transformation after migration to effect v4
+                    const streamRef = yield* GraphSyncEncryptionSchema.decodeBase64UrlBytes(
+                      event.noteId,
+                    );
+                    const envelope = yield* GraphSyncEncryptionSchema.decodeEnvelope(
+                      event.payload,
+                    );
+                    const decrypted = yield* graphSyncEncryption.decryptEventBody({
+                      id: event.id,
+                      streamRef,
+                      createdAt: event.createdAt,
+                      envelope,
+                    });
+
                     yield* eventRepo.create({
-                      noteId: event.noteId,
+                      noteId: decrypted.noteId,
                       type: "update",
-                      payload: event.payload,
+                      payload: decrypted.payload,
                       createdAt: event.createdAt,
                       id: event.id,
                       commitSeq: event.commitSeq,
@@ -121,18 +140,33 @@ export class Service extends Effect.Service<Service>()(
         if (!Array.isNonEmptyReadonlyArray(pending)) return Option.none();
 
         const baseCommitSeq = yield* eventRepo.getLastCommitSeq();
-        // TODO: use Schema for transformation after migration to effect v4
-        const events = pipe(
+        const events = yield* Effect.forEach(
           pending,
-          Array.map(
-            (event) =>
-              new Messages.PendingEvent({
-                id: event.id,
-                noteId: event.noteId,
-                payload: event.payload,
-                createdAt: event.createdAt,
-              }),
-          ),
+          Effect.fnUntraced(function* (event) {
+            const streamRef = yield* graphSyncEncryption.deriveNoteStreamRef(
+              event.noteId,
+            );
+            const encryptedPayload = yield* graphSyncEncryption.encryptEventBody({
+              id: event.id,
+              streamRef,
+              createdAt: event.createdAt,
+              noteId: event.noteId,
+              payload: event.payload,
+            });
+            const encodedStreamRef = yield* GraphSyncEncryptionSchema.encodeBase64UrlBytes(
+              streamRef,
+            );
+            const encodedEnvelope = yield* GraphSyncEncryptionSchema.encodeEnvelope(
+              encryptedPayload,
+            );
+
+            return new Messages.PendingEvent({
+              id: event.id,
+              noteId: encodedStreamRef,
+              payload: encodedEnvelope,
+              createdAt: event.createdAt,
+            });
+          }),
         );
 
         return Option.some({

@@ -13,6 +13,7 @@ import * as MaterializerService from "./materializer.service";
 import * as NoteRepo from "./note.repo";
 import * as GraphSync from "./graph-sync/service";
 import * as GraphSyncContext from "./graph-sync/context";
+import * as GraphSyncEncryption from "./graph-sync/encryption/service";
 import * as GraphSyncEventLog from "./graph-sync/event-log.service";
 import {
   GraphDedicatedRpc,
@@ -99,6 +100,22 @@ function makeRpcHandler(
       );
 
       if (graphSyncConfig.mode === "cloud") {
+        const graphSyncLayer = Layer.mergeAll(
+          GraphSyncEncryption.Service.Default,
+          GraphSyncEventLog.Service.Default,
+          GraphSync.Service.Default,
+        ).pipe(
+          Layer.provideMerge(
+            Layer.succeed(
+              GraphSyncContext.Context,
+              GraphSyncContext.Context.of({
+                graphId: graphSyncConfig.graphId,
+                graphKey: graphSyncConfig.graphKey,
+              }),
+            ),
+          ),
+        );
+
         yield* Effect.gen(function* () {
           const graphSync = yield* GraphSync.Service;
 
@@ -108,17 +125,7 @@ function makeRpcHandler(
             ),
             Effect.forkScoped,
           );
-        }).pipe(
-          Effect.provide(GraphSyncEventLog.Service.Default),
-          Effect.provide(GraphSync.Service.Default),
-          Effect.provideService(
-            GraphSyncContext.Context,
-            GraphSyncContext.Context.of({
-              graphId: graphSyncConfig.graphId,
-              graphKey: graphSyncConfig.graphKey,
-            }),
-          ),
-        );
+        }).pipe(Effect.provide(graphSyncLayer));
       }
 
       return {
