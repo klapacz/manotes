@@ -39,27 +39,42 @@ export function IncomingBacklinksFetcher(props: {
   );
 }
 
+export function IncomingBacklinks(props: { children: JSX.Element }) {
+  return (
+    <section class="rounded-md bg-bg-subtle py-4">{props.children}</section>
+  );
+}
+
+export function IncomingBacklinksHeader() {
+  return (
+    <h2 class="px-4 pb-6 text-xs uppercase tracking-wide text-fg-subtle">
+      Backlinks
+    </h2>
+  );
+}
+
+export function IncomingBacklinksList(props: { children: JSX.Element }) {
+  return <div class="flex flex-col gap-4">{props.children}</div>;
+}
+
 export function IncomingBacklinksSection(props: {
   backlinks: BacklinkService.IncomingBacklinkPreview[];
 }): JSX.Element {
   return (
-    <section class="rounded-md bg-bg-subtle py-4">
-      <h2 class="px-4 pb-6 text-xs uppercase tracking-wide text-fg-subtle">
-        Backlinks
-      </h2>
-
+    <IncomingBacklinks>
+      <IncomingBacklinksHeader />
       <Show when={props.backlinks.length > 0}>
-        <div class="flex flex-col gap-4">
+        <IncomingBacklinksList>
           <For each={props.backlinks}>
             {(backlink) => <BacklinkSnippet backlink={backlink} />}
           </For>
-        </div>
+        </IncomingBacklinksList>
       </Show>
-    </section>
+    </IncomingBacklinks>
   );
 }
 
-function BacklinkSnippet(props: {
+export function BacklinkSnippet(props: {
   backlink: BacklinkService.IncomingBacklinkPreview;
 }): JSX.Element {
   const editor = createEditor({

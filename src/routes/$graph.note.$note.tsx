@@ -1,12 +1,16 @@
 import { createFileRoute, redirect } from "@tanstack/solid-router";
 import { Effect, Option } from "effect";
 import { createSignal, Show } from "solid-js";
+import { WindowVirtualizer } from "virtua/solid";
 import Editor, { type BootState } from "../editor";
 import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
 import * as NoteRepo from "../lib/note.repo";
 import {
+  BacklinkSnippet,
+  IncomingBacklinks,
   IncomingBacklinksFetcher,
-  IncomingBacklinksSection,
+  IncomingBacklinksHeader,
+  IncomingBacklinksList,
 } from "../components/incoming-backlinks";
 
 export const Route = createFileRoute("/$graph/note/$note")({
@@ -72,7 +76,16 @@ function RouteComponent() {
 
             <IncomingBacklinksFetcher noteId={n().id}>
               {(backlinks) => (
-                <IncomingBacklinksSection backlinks={backlinks} />
+                <Show when={backlinks.length > 0}>
+                  <IncomingBacklinks>
+                    <IncomingBacklinksHeader />
+                    <IncomingBacklinksList>
+                      <WindowVirtualizer data={backlinks}>
+                        {(backlink) => <BacklinkSnippet backlink={backlink} />}
+                      </WindowVirtualizer>
+                    </IncomingBacklinksList>
+                  </IncomingBacklinks>
+                </Show>
               )}
             </IncomingBacklinksFetcher>
           </div>
