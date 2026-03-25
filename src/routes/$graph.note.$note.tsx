@@ -51,7 +51,7 @@ function RouteComponent() {
     <Show
       when={Option.getOrNull(data().note)}
       fallback={
-        <div class="mx-auto max-w-3xl px-6 py-10 text-fg-subtle">
+        <div class="mx-auto max-w-4xl px-6 py-10 text-fg-subtle">
           Note not found.
         </div>
       }
@@ -62,7 +62,7 @@ function RouteComponent() {
           setDocVisible(state._tag !== "Loading");
 
         return (
-          <div class="mx-auto max-w-3xl px-6 py-10 space-y-12">
+          <div class="mx-auto max-w-4xl px-6 py-10 space-y-12">
             <div
               class="transition-opacity duration-150 ease-out"
               classList={{ "opacity-0": !docVisible() }}

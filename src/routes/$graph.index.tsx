@@ -218,7 +218,7 @@ function DailyNotes() {
       >
         {(date) => (
           <div class="border-b border-border-subtle">
-            <div class="mx-auto max-w-3xl space-y-8 px-6 py-10">
+            <div class="mx-auto max-w-4xl space-y-8 px-6 py-10">
               <Editor
                 noteId={date.toString()}
                 isDaily={true}
