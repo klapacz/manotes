@@ -1,17 +1,24 @@
 import { Schema } from "effect";
 import * as GraphEncryption from "../graph-encryption";
 
-export const Record = Schema.Struct({
-  localGraphId: Schema.String,
-  displayName: Schema.String,
-  origin: Schema.Literal("local", "cloud"),
-  graphId: Schema.Union(Schema.String, Schema.Null),
-  accountId: Schema.Union(Schema.String, Schema.Null),
-  graphKeyEnvelope: Schema.Union(
-    Schema.parseJson(GraphEncryption.GraphKeyEnvelopeSchema),
-    Schema.Null,
-  ),
-});
+export const Record = Schema.Union(
+  Schema.Struct({
+    localGraphId: Schema.String,
+    displayName: Schema.String,
+    mode: Schema.Literal("local"),
+    graphId: Schema.Null,
+    accountId: Schema.Null,
+    graphKeyEnvelope: Schema.Null,
+  }),
+  Schema.Struct({
+    localGraphId: Schema.String,
+    displayName: Schema.String,
+    mode: Schema.Literal("cloud"),
+    graphId: Schema.String,
+    accountId: Schema.String,
+    graphKeyEnvelope: Schema.parseJson(GraphEncryption.GraphKeyEnvelopeSchema),
+  }),
+);
 
 export type Record = Schema.Schema.Type<typeof Record>;
 export type RawRecord = Schema.Schema.Encoded<typeof Record>;

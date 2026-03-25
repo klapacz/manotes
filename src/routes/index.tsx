@@ -7,6 +7,7 @@ import * as RemoteGraphRegistry from "../lib/remote-graph-registry";
 import { useNavigate } from "@tanstack/solid-router";
 import { Exit, Cause, Option, Boolean } from "effect";
 import { constant } from "effect/Function";
+import { DEFAULT_ACCOUNT_ID } from "../lib/constant";
 
 export const Route = createFileRoute("/")({
   component: RouteComponent,
@@ -46,6 +47,7 @@ function RouteComponent() {
           graphId: graph.graphId,
           displayName: graph.displayName,
           graphKeyEnvelope: graph.graphKeyEnvelope,
+          accountId: DEFAULT_ACCOUNT_ID,
         }),
       );
 
@@ -74,8 +76,8 @@ function RouteComponent() {
     },
   }));
 
-  const graphOriginLabel = (origin: LocalRegistry.Schema.Record["origin"]) => {
-    if (origin === "cloud") return "synced";
+  const graphModeLabel = (mode: LocalRegistry.Schema.Record["mode"]) => {
+    if (mode === "cloud") return "synced";
     return "local";
   };
 
@@ -115,7 +117,7 @@ function RouteComponent() {
               >
                 <span class="font-medium">{graph.displayName}</span>
                 <span class="text-xs uppercase tracking-wide text-fg-subtle">
-                  {graphOriginLabel(graph.origin)}
+                  {graphModeLabel(graph.mode)}
                 </span>
               </Link>
             )}

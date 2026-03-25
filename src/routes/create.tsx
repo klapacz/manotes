@@ -7,6 +7,7 @@ import * as GraphEncryption from "../lib/graph-encryption";
 import { constant } from "effect/Function";
 import { Button, buttonVariants } from "../components/ui/button";
 import * as RemoteGraphRegistry from "../lib/remote-graph-registry";
+import { DEFAULT_ACCOUNT_ID } from "../lib/constant";
 
 export const Route = createFileRoute("/create")({
   component: RouteComponent,
@@ -47,6 +48,7 @@ function RouteComponent() {
                 graphId: graph.graphId,
                 displayName: graph.displayName,
                 graphKeyEnvelope: graph.graphKeyEnvelope,
+                accountId: DEFAULT_ACCOUNT_ID,
               }),
             );
 

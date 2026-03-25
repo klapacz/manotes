@@ -44,7 +44,7 @@ For MVP, each local graph record stores:
 {
   localGraphId: string
   displayName: string
-  origin: "local" | "cloud"
+  mode: "local" | "cloud"
   graphId: string | null
   accountId: string | null
 }
