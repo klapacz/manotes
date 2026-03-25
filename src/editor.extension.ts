@@ -1,4 +1,10 @@
-import { defineBaseCommands, defineBaseKeymap, union } from "prosekit/core";
+import {
+  defineBaseCommands,
+  defineBaseKeymap,
+  defineKeymap,
+  union,
+} from "prosekit/core";
+import { createMoveListCommand } from "prosemirror-flat-list";
 import { defineGapCursor } from "prosekit/extensions/gap-cursor";
 import { defineVirtualSelection } from "prosekit/extensions/virtual-selection";
 import { defineModClickPrevention } from "prosekit/extensions/mod-click-prevention";
@@ -26,6 +32,12 @@ export function defineAppExtension(options: DefineAppSchemaOptions) {
     defineVirtualSelection(),
     defineModClickPrevention(),
     defineTaskListToggle(),
+    // Using createMoveListCommand directly because defineKeymap needs raw
+    // ProseMirror commands, and prosekit doesn't re-export this from flat-list.
+    defineKeymap({
+      "Alt-ArrowUp": createMoveListCommand("up"),
+      "Alt-ArrowDown": createMoveListCommand("down"),
+    }),
     defineCodeBlockBackspace(),
     // Browser runtime (node views, clipboard)
     defineBacklinkRuntime(),
