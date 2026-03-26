@@ -60,6 +60,12 @@ const handleConnect = Effect.fn("GraphSyncProtocol.handleConnect")(function* (
     upToCommitSeq: maxCommitSeq,
   });
 
+  yield* Effect.log("Fetched events for replay", {
+    afterSeq: message.lastCommitSeq,
+    upToCommitSeq: maxCommitSeq,
+    eventsLength: events.length,
+  });
+
   return createReplayOrDoneResponsePlan(events, maxCommitSeq);
 });
 

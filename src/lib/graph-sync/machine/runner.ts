@@ -22,8 +22,12 @@ export const run = Effect.fn("GraphSyncMachineRunner.run")(function* ({
   }) as Model.State;
 
   return yield* Stream.fromQueue(inputQueue).pipe(
-    Stream.runFoldEffect(initialState, (currentState, signal) =>
-      step(currentState, signal),
+    Stream.runFoldEffect(
+      initialState,
+      Effect.fn(function* (currentState, signal) {
+        yield* Effect.logDebug("Received Message", { currentState, signal });
+        return yield* step(currentState, signal);
+      }),
     ),
     Effect.provideService(MachineContext.GraphSyncMachineContext, {
       write: (message) =>
