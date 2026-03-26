@@ -2,7 +2,6 @@ import { defineNodeSpec, union } from "prosekit/core";
 import { defineText } from "prosekit/extensions/text";
 import { defineParagraph } from "prosekit/extensions/paragraph";
 import { defineHeading } from "prosekit/extensions/heading";
-import { defineList } from "prosekit/extensions/list";
 import { defineBlockquote } from "prosekit/extensions/blockquote";
 import { defineImage } from "prosekit/extensions/image";
 import { defineHorizontalRule } from "prosekit/extensions/horizontal-rule";
@@ -16,6 +15,7 @@ import { defineStrike } from "prosekit/extensions/strike";
 import { defineCode } from "prosekit/extensions/code";
 import { defineLink } from "prosekit/extensions/link";
 import { defineBacklinkSpec } from "./lib/editor/backlink/spec";
+import { defineAppListSpec } from "./lib/editor/list/extension";
 
 export type DefineAppSchemaOptions = {
   isDaily: boolean;
@@ -40,7 +40,7 @@ export function defineAppSchema(options: DefineAppSchemaOptions) {
     defineText(),
     defineParagraph(),
     defineHeading(),
-    defineList(),
+    defineAppListSpec(),
     defineBlockquote(),
     defineImage(),
     defineHorizontalRule(),

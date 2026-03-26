@@ -10,26 +10,26 @@ describe("extractBacklinkContexts", () => {
       n.heading(1, "Note title"),
       n.paragraph("Content before list"),
       n.list(
-        { kind: "bullet", collapsed: true },
+        { kind: "toggle", collapsed: true },
         n.paragraph("Grandparent"),
         n.list(
-          { kind: "bullet", collapsed: true },
+          { kind: "toggle", collapsed: true },
           n.paragraph("Parent"),
           n.list(
-            { kind: "bullet", collapsed: true },
+            { kind: "toggle", collapsed: true },
             n.paragraph("Sibling before"),
           ),
           n.list(
-            { kind: "bullet", collapsed: true },
+            { kind: "toggle", collapsed: true },
             n.paragraph(
               "Text before backlink ",
               n.backlink("test-id"),
               " Text after backlink",
             ),
-            n.list({ kind: "bullet", collapsed: true }, n.paragraph("Child")),
+            n.list({ kind: "toggle", collapsed: true }, n.paragraph("Child")),
           ),
           n.list(
-            { kind: "bullet", collapsed: true },
+            { kind: "toggle", collapsed: true },
             n.paragraph("Sibling after"),
           ),
         ),
@@ -45,16 +45,16 @@ describe("extractBacklinkContexts", () => {
       }),
     ).toEqual([
       n.list(
-        { kind: "bullet", collapsed: false },
+        { kind: "toggle", collapsed: false },
         n.paragraph("Parent"),
         n.list(
-          { kind: "bullet", collapsed: false },
+          { kind: "toggle", collapsed: false },
           n.paragraph(
             "Text before backlink ",
             n.backlink("test-id"),
             " Text after backlink",
           ),
-          n.list({ kind: "bullet", collapsed: false }, n.paragraph("Child")),
+          n.list({ kind: "toggle", collapsed: false }, n.paragraph("Child")),
         ),
       ),
     ]);
@@ -142,10 +142,10 @@ describe("extractBacklinkContexts", () => {
     const content = n.doc(
       n.heading(1, "Note title"),
       n.list(
-        { kind: "bullet", collapsed: true },
+        { kind: "toggle", collapsed: true },
         n.paragraph("Parent"),
         n.list(
-          { kind: "bullet", collapsed: true },
+          { kind: "toggle", collapsed: true },
           n.paragraph(
             "Before ",
             n.backlink("test-id"),
@@ -153,7 +153,7 @@ describe("extractBacklinkContexts", () => {
             n.backlink("test-id"),
             " after",
           ),
-          n.list({ kind: "bullet", collapsed: true }, n.paragraph("Child")),
+          n.list({ kind: "toggle", collapsed: true }, n.paragraph("Child")),
         ),
       ),
     );
@@ -166,10 +166,10 @@ describe("extractBacklinkContexts", () => {
       }),
     ).toEqual([
       n.list(
-        { kind: "bullet", collapsed: false },
+        { kind: "toggle", collapsed: false },
         n.paragraph("Parent"),
         n.list(
-          { kind: "bullet", collapsed: false },
+          { kind: "toggle", collapsed: false },
           n.paragraph(
             "Before ",
             n.backlink("test-id"),
@@ -177,7 +177,7 @@ describe("extractBacklinkContexts", () => {
             n.backlink("test-id"),
             " after",
           ),
-          n.list({ kind: "bullet", collapsed: false }, n.paragraph("Child")),
+          n.list({ kind: "toggle", collapsed: false }, n.paragraph("Child")),
         ),
       ),
     ]);
@@ -187,14 +187,14 @@ describe("extractBacklinkContexts", () => {
     const content = n.doc(
       n.heading(1, "Note title"),
       n.list(
-        { kind: "bullet", collapsed: true },
+        { kind: "toggle", collapsed: true },
         n.paragraph("Parent"),
         n.list(
-          { kind: "bullet", collapsed: true },
+          { kind: "toggle", collapsed: true },
           n.paragraph("Child A ", n.backlink("test-id")),
         ),
         n.list(
-          { kind: "bullet", collapsed: true },
+          { kind: "toggle", collapsed: true },
           n.paragraph("Child B ", n.backlink("test-id")),
         ),
       ),
@@ -208,18 +208,18 @@ describe("extractBacklinkContexts", () => {
       }),
     ).toEqual([
       n.list(
-        { kind: "bullet", collapsed: false },
+        { kind: "toggle", collapsed: false },
         n.paragraph("Parent"),
         n.list(
-          { kind: "bullet", collapsed: false },
+          { kind: "toggle", collapsed: false },
           n.paragraph("Child A ", n.backlink("test-id")),
         ),
       ),
       n.list(
-        { kind: "bullet", collapsed: false },
+        { kind: "toggle", collapsed: false },
         n.paragraph("Parent"),
         n.list(
-          { kind: "bullet", collapsed: false },
+          { kind: "toggle", collapsed: false },
           n.paragraph("Child B ", n.backlink("test-id")),
         ),
       ),
@@ -230,13 +230,13 @@ describe("extractBacklinkContexts", () => {
     const content = n.doc(
       n.heading(1, "Note title"),
       n.list(
-        { kind: "bullet", collapsed: true },
+        { kind: "toggle", collapsed: true },
         n.paragraph("Parent"),
         n.list(
-          { kind: "bullet", collapsed: true },
+          { kind: "toggle", collapsed: true },
           n.paragraph("Child A ", n.backlink("test-id")),
           n.list(
-            { kind: "bullet", collapsed: true },
+            { kind: "toggle", collapsed: true },
             n.paragraph("Child B ", n.backlink("test-id")),
           ),
         ),
@@ -251,22 +251,22 @@ describe("extractBacklinkContexts", () => {
       }),
     ).toEqual([
       n.list(
-        { kind: "bullet", collapsed: false },
+        { kind: "toggle", collapsed: false },
         n.paragraph("Parent"),
         n.list(
-          { kind: "bullet", collapsed: false },
+          { kind: "toggle", collapsed: false },
           n.paragraph("Child A ", n.backlink("test-id")),
           n.list(
-            { kind: "bullet", collapsed: false },
+            { kind: "toggle", collapsed: false },
             n.paragraph("Child B ", n.backlink("test-id")),
           ),
         ),
       ),
       n.list(
-        { kind: "bullet", collapsed: false },
+        { kind: "toggle", collapsed: false },
         n.paragraph("Child A ", n.backlink("test-id")),
         n.list(
-          { kind: "bullet", collapsed: false },
+          { kind: "toggle", collapsed: false },
           n.paragraph("Child B ", n.backlink("test-id")),
         ),
       ),

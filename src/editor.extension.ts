@@ -12,6 +12,7 @@ import { defineTaskListToggle } from "./editor.task-list-toggle.extension";
 import { defineCodeBlockBackspace } from "./lib/editor/code-block-backspace/extension";
 import { defineBacklinkCommands } from "./lib/editor/backlink/spec";
 import { defineBacklinkRuntime } from "./lib/editor/backlink/extension";
+import { defineAppListExtension } from "./lib/editor/list/extension";
 import { defineAppSchema, type DefineAppSchemaOptions } from "./editor.schema";
 import { defineTitlePlaceholder } from "./lib/editor/title-placeholder/extension";
 
@@ -27,6 +28,7 @@ export function defineAppExtension(options: DefineAppSchemaOptions) {
     defineBaseCommands(),
     defineBacklinkCommands(),
     // Keymaps & plugins
+    defineAppListExtension(),
     defineBaseKeymap(),
     defineGapCursor(),
     defineVirtualSelection(),
