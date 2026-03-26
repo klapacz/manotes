@@ -19,7 +19,6 @@ import type { AppExtension } from "../../../editor.extension";
 import { suggestDailyNoteIds } from "../../daily-note";
 
 const BACKLINK_REGEX = /\[\[([^\]\n]*)$/u;
-const BACKLINK_RESULT_LIMIT = 8;
 type BacklinkNote = {
   id: string;
   title: string;
@@ -48,7 +47,6 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
         flow(
           Array.prependAll(dailyNotes),
           Array.filter((note) => note.id !== props.currentNoteId),
-          Array.take(BACKLINK_RESULT_LIMIT),
           Array.map(Struct.pick("id", "title", "isDaily")),
         ),
       ),

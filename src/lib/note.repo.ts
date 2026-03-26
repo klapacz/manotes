@@ -196,7 +196,7 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
       list,
       reactiveList,
       reactiveFindPreviewById,
-      reactiveSearchPreview: reactiveSearchPreview,
+      reactiveSearchPreview,
     };
   }),
 }) {}
