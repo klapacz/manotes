@@ -2,10 +2,11 @@
  * Orchestrates socket lifecycle and feeds inputs into the machine runner.
  */
 import * as Socket from "@effect/platform/Socket";
-import { Effect, Queue, Stream } from "effect";
+import { Effect, Queue, Ref, Stream } from "effect";
 import { decodeServerMessage } from "../contract/codec";
 import * as EventRepo from "../../event.repo";
 import * as GraphSyncContext from "../context";
+import * as Status from "../status";
 import * as Model from "./model";
 import * as Runner from "./runner";
 
@@ -17,17 +18,22 @@ import * as Runner from "./runner";
  */
 export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
   const eventRepo = yield* EventRepo.Service;
+  const statusRef = yield* Status.Ref;
   const inputQueue = yield* Queue.unbounded<Model.Input>();
 
   const hasPendingStream = yield* eventRepo.streamHasPending();
 
   yield* hasPendingStream.pipe(
     Stream.changes,
-    Stream.filter((hasPending) => hasPending),
-    // Pending notifications are wake-up hints only; the machine re-reads the
-    // actual pending rows before sending a commit.
-    Stream.runForEach(() =>
-      Queue.offer(inputQueue, Model.Input.PendingEvents()),
+    Stream.runForEach((hasPending) =>
+      Effect.gen(function* () {
+        yield* Ref.update(statusRef, (prev) => ({ ...prev, hasPending }));
+        // Pending notifications are wake-up hints only; the machine re-reads the
+        // actual pending rows before sending a commit.
+        if (hasPending) {
+          yield* Queue.offer(inputQueue, Model.Input.PendingEvents());
+        }
+      }),
     ),
     Effect.forkScoped,
   );

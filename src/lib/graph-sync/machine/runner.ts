@@ -1,8 +1,9 @@
 /**
  * Runs the graph sync state machine over queued session inputs.
  */
-import { Effect, Match, Queue, Stream } from "effect";
+import { Effect, Match, Queue, Ref, Stream } from "effect";
 import { encodeClientMessage } from "../contract/codec";
+import * as Status from "../status";
 import * as MachineContext from "./context";
 import * as Model from "./model";
 import * as StateHandlers from "./state-handlers";
@@ -14,6 +15,8 @@ export const run = Effect.fn("GraphSyncMachineRunner.run")(function* ({
   inputQueue: Queue.Dequeue<Model.Input>;
   write: Model.Write;
 }) {
+  const status = yield* Status.Ref;
+
   // `runFoldEffect` infers the accumulator from the initial value here, so
   // without widening it, TypeScript locks the fold state to `Bootstrapping`
   // and rejects the `Ready` / `Committing` transitions.
@@ -26,7 +29,14 @@ export const run = Effect.fn("GraphSyncMachineRunner.run")(function* ({
       initialState,
       Effect.fn(function* (currentState, signal) {
         yield* Effect.logDebug("Received Message", { currentState, signal });
-        return yield* step(currentState, signal);
+        const nextState = yield* step(currentState, signal);
+
+        yield* Ref.update(status, (prev) => ({
+          ...prev,
+          syncState: nextState._tag,
+        }));
+
+        return nextState;
       }),
     ),
     Effect.provideService(MachineContext.GraphSyncMachineContext, {

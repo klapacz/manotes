@@ -87,7 +87,11 @@ const SharedInitialMessageLayer = RpcWorker.layerInitialMessage(
   GraphSharedInitialMessageSchema,
   Effect.gen(function* () {
     const config = yield* DB.Config;
-    return { localGraphId: config.localGraphId };
+    const graphSyncConfig = yield* GraphSyncConfig.Config;
+    return {
+      localGraphId: config.localGraphId,
+      graphSyncMode: graphSyncConfig.mode,
+    };
   }),
 );
 

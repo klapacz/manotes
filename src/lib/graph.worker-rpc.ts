@@ -6,10 +6,33 @@ import * as GraphSyncConfig from "./graph-sync/config";
 /** Initial message sent from main thread to SharedWorker. */
 export const GraphSharedInitialMessageSchema = Schema.Struct({
   localGraphId: Schema.String,
+  graphSyncMode: Schema.Literal("local", "cloud"),
 });
 
 export type GraphSharedInitialMessage =
   typeof GraphSharedInitialMessageSchema.Type;
+
+export class SyncStatusLocal extends Schema.Class<SyncStatusLocal>(
+  "SyncStatusLocal",
+)({
+  mode: Schema.Literal("local"),
+}) {}
+
+export class SyncStatusCloud extends Schema.Class<SyncStatusCloud>(
+  "SyncStatusCloud",
+)({
+  mode: Schema.Literal("cloud"),
+  syncState: Schema.Literal(
+    "Disconnected",
+    "Bootstrapping",
+    "Ready",
+    "Committing",
+  ),
+  hasPending: Schema.Boolean,
+}) {}
+
+export const SyncStatus = Schema.Union(SyncStatusLocal, SyncStatusCloud);
+export type SyncStatus = typeof SyncStatus.Type;
 
 export class DedicatedWorkerHealth extends Schema.Class<DedicatedWorkerHealth>(
   "DedicatedWorkerHealth",
@@ -39,6 +62,12 @@ export class GraphSharedWorkerRpc extends RpcGroup.make(
     error: Schema.Never,
     stream: true,
   }),
+  Rpc.make("syncStatusStream", {
+    payload: {},
+    success: SyncStatus,
+    error: Schema.Never,
+    stream: true,
+  }),
 ) {}
 
 /** Internal RPC surface (SharedWorker -> Dedicated Worker via MessagePort). */
@@ -47,6 +76,12 @@ export class GraphDedicatedRpc extends RpcGroup.make(
     payload: {},
     success: Schema.Void,
     error: Schema.Never,
+  }),
+  Rpc.make("syncStatusStream", {
+    payload: {},
+    success: SyncStatus,
+    error: Schema.Never,
+    stream: true,
   }),
 ) {}
 

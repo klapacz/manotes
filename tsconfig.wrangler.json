@@ -10,6 +10,7 @@
     "worker-configuration.d.ts",
     "src/server/**/*.ts",
     "src/lib/graph-sync/**/*.ts",
+    "src/lib/graph.worker-rpc.ts",
     "src/lib/db.service.ts",
     "src/lib/schema/primitives.ts",
     "src/lib/db.tables.ts",

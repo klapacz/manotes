@@ -1,7 +1,14 @@
 import { BrowserRuntime, BrowserWorkerRunner } from "@effect/platform-browser";
 import { WorkerRunner } from "@effect/platform";
 import * as Socket from "@effect/platform/Socket";
-import { Effect, Layer, Logger, LogLevel } from "effect";
+import {
+  Effect,
+  Layer,
+  Logger,
+  LogLevel,
+  Stream,
+  SubscriptionRef,
+} from "effect";
 import { RpcServer } from "@effect/rpc";
 import type { RpcGroup } from "@effect/rpc";
 import * as DB from "./db.service";
@@ -18,7 +25,10 @@ import * as GraphSyncEventLog from "./graph-sync/event-log.service";
 import {
   GraphDedicatedRpc,
   GraphDedicatedInitialMessage,
+  SyncStatusCloud,
+  SyncStatusLocal,
 } from "./graph.worker-rpc";
+import * as GraphSyncStatus from "./graph-sync/status";
 import { SqlLive } from "./db.service";
 import * as GraphSyncConfig from "./graph-sync/config";
 
@@ -100,18 +110,29 @@ function makeRpcHandler(
       );
 
       if (graphSyncConfig.mode === "cloud") {
+        const syncStatusRef = yield* SubscriptionRef.make(
+          new SyncStatusCloud({
+            mode: "cloud",
+            syncState: "Disconnected",
+            hasPending: false,
+          }),
+        );
+
         const graphSyncLayer = Layer.mergeAll(
           GraphSyncEncryption.Service.Default,
           GraphSyncEventLog.Service.Default,
           GraphSync.Service.Default,
         ).pipe(
           Layer.provideMerge(
-            Layer.succeed(
-              GraphSyncContext.Context,
-              GraphSyncContext.Context.of({
-                graphId: graphSyncConfig.graphId,
-                graphKey: graphSyncConfig.graphKey,
-              }),
+            Layer.merge(
+              Layer.succeed(
+                GraphSyncContext.Context,
+                GraphSyncContext.Context.of({
+                  graphId: graphSyncConfig.graphId,
+                  graphKey: graphSyncConfig.graphKey,
+                }),
+              ),
+              Layer.succeed(GraphSyncStatus.Ref, syncStatusRef),
             ),
           ),
         );
@@ -126,12 +147,23 @@ function makeRpcHandler(
             Effect.forkScoped,
           );
         }).pipe(Effect.provide(graphSyncLayer));
+
+        return {
+          placeholder: Effect.fn("DedicatedWorker.placeholder")(function* () {
+            yield* Effect.logInfo("Placeholder RPC invoked");
+          }),
+          syncStatusStream: () => syncStatusRef.changes,
+        } satisfies Handlers;
       }
 
       return {
         placeholder: Effect.fn("DedicatedWorker.placeholder")(function* () {
           yield* Effect.logInfo("Placeholder RPC invoked");
         }),
+        syncStatusStream: () =>
+          Stream.make(new SyncStatusLocal({ mode: "local" })).pipe(
+            Stream.concat(Stream.never),
+          ),
       } satisfies Handlers;
     }).pipe(Effect.annotateLogs({ worker: "dedicated", localGraphId })),
   );

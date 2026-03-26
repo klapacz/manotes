@@ -26,6 +26,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
 } from "./ui/sidebar";
+import { SyncStatusIndicator } from "./sync-status-indicator";
 import { WorkerHealthBanner } from "./worker-health-banner";
 
 const EMPTY_YJS_UPDATE = Y.encodeStateAsUpdate(new Y.Doc());
@@ -210,6 +211,7 @@ export const AppSidebar = () => {
       </SidebarContent>
 
       <SidebarGroup>
+        <SyncStatusIndicator />
         <WorkerHealthBanner />
       </SidebarGroup>
     </Sidebar>

@@ -9,10 +9,12 @@ import {
   Layer,
   Logger,
   LogLevel,
+  Match,
   Option,
   Ref,
   Scope,
   ScopedRef,
+  Stream,
   SubscriptionRef,
 } from "effect";
 import { RpcServer, RpcClient, RpcSerialization } from "@effect/rpc";
@@ -23,6 +25,9 @@ import {
   GraphSharedInitialMessageSchema,
   GraphDedicatedRpc,
   DedicatedWorkerHealth,
+  SyncStatusLocal,
+  SyncStatusCloud,
+  type SyncStatus,
 } from "./graph.worker-rpc";
 
 // ============================================================================
@@ -81,6 +86,10 @@ const RpcHandler = GraphSharedWorkerRpc.toLayer(
 
     const dedicatedWorkerHealth = yield* createDedicatedWorkerHealth;
 
+    const syncStatusRef = yield* SubscriptionRef.make<SyncStatus>(
+      getDisconnectedSyncStatus(initialMessage.graphSyncMode),
+    );
+
     return {
       // Called by the leader tab to register its Dedicated Worker's MessagePort.
       // On leader failover, this is called again by the new leader with a new port.
@@ -98,7 +107,7 @@ const RpcHandler = GraphSharedWorkerRpc.toLayer(
           // Swapping the ScopedRef value guarantees old connection cleanup.
           const connected = yield* ScopedRef.set(
             dedicatedWorkerRef,
-            acquireDedicatedConnection(payload.port).pipe(
+            acquireDedicatedConnection(payload.port, syncStatusRef).pipe(
               Effect.map(Option.some),
             ),
           ).pipe(
@@ -167,6 +176,8 @@ const RpcHandler = GraphSharedWorkerRpc.toLayer(
       ),
 
       healthStream: () => dedicatedWorkerHealth.ref.changes,
+
+      syncStatusStream: () => syncStatusRef.changes,
     };
   }),
 );
@@ -217,13 +228,23 @@ BrowserRuntime.runMain(
 
 const acquireDedicatedConnection = Effect.fn(
   "SharedWorker.acquireDedicatedConnection",
-)(function* (port: MessagePort) {
+)(function* (
+  port: MessagePort,
+  syncStatusRef: SubscriptionRef.SubscriptionRef<SyncStatus>,
+) {
   // Close this transferred port when the ScopedRef entry is released.
   // Register the finalizer first so client setup failures still close it.
   yield* Effect.addFinalizer(() => Effect.sync(() => port.close()));
 
+  // Reset sync status when this connection is released (failover, failure, etc.)
+  yield* Effect.addFinalizer(() =>
+    Ref.update(syncStatusRef, (current) =>
+      getDisconnectedSyncStatus(current.mode),
+    ),
+  );
+
   const layer = Layer.mergeAll(
-    RpcClient.layerProtocolWorker({ size: 1 }).pipe(
+    RpcClient.layerProtocolWorker({ size: 1, concurrency: 16 }).pipe(
       Layer.provide(BrowserWorker.layerPlatform(() => port)),
     ),
     RpcSerialization.layerJson,
@@ -235,5 +256,37 @@ const acquireDedicatedConnection = Effect.fn(
   const client = yield* RpcClient.make(GraphDedicatedRpc).pipe(
     Effect.provide(context),
   );
+
+  // Subscribe to the dedicated worker's sync status and pipe to the local ref.
+  yield* client.syncStatusStream({}).pipe(
+    Stream.runForEach((status) => Ref.set(syncStatusRef, status)),
+    Effect.catchAllCause((cause) =>
+      Effect.gen(function* () {
+        yield* Effect.logWarning(
+          "syncStatusStream from dedicated worker failed",
+          cause,
+        );
+        yield* Ref.update(syncStatusRef, (current) =>
+          getDisconnectedSyncStatus(current.mode),
+        );
+      }),
+    ),
+    Effect.forkScoped,
+  );
+
   return client;
 });
+
+const getDisconnectedSyncStatus = Match.type<SyncStatus["mode"]>().pipe(
+  Match.when(
+    "cloud",
+    () =>
+      new SyncStatusCloud({
+        mode: "cloud",
+        syncState: "Disconnected",
+        hasPending: false,
+      }),
+  ),
+  Match.when("local", () => new SyncStatusLocal({ mode: "local" })),
+  Match.exhaustive,
+);
