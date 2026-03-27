@@ -1,0 +1,13 @@
+{
+  "name": "@manotes/shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./graph-sync/contract/*": "./src/graph-sync/contract/*.ts",
+    "./graph-encryption": "./src/graph-encryption.ts"
+  },
+  "dependencies": {
+    "@effect/platform": "^0.94.1",
+    "effect": "3.17.14"
+  }
+}

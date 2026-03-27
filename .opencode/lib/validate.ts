@@ -1,9 +1,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { extractFrontmatter } from "./frontmatter";
 
-export type ValidationResult<T> =
-  | { success: true; data: T }
-  | { success: false; errors: string[] };
+export type ValidationResult<T> = { success: true; data: T } | { success: false; errors: string[] };
 
 /**
  * Validates frontmatter against a Standard Schema.
@@ -23,9 +21,7 @@ export async function validateFrontmatter<T>(
 
   if (result.issues) {
     const errors = result.issues.map((issue) => {
-      const path = issue.path
-        ?.map((p) => (typeof p === "object" ? p.key : p))
-        .join(".");
+      const path = issue.path?.map((p) => (typeof p === "object" ? p.key : p)).join(".");
       return path ? `${path}: ${issue.message}` : issue.message;
     });
     return { success: false, errors };

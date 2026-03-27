@@ -42,11 +42,11 @@ For MVP, each local graph record stores:
 
 ```ts
 {
-  localGraphId: string
-  displayName: string
-  mode: "local" | "cloud"
-  graphId: string | null
-  accountId: string | null
+  localGraphId: string;
+  displayName: string;
+  mode: "local" | "cloud";
+  graphId: string | null;
+  accountId: string | null;
 }
 ```
 

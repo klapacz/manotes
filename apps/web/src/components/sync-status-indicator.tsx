@@ -1,0 +1,46 @@
+import { Effect, Match, Stream } from "effect";
+import { Show } from "solid-js";
+import { createRuntimeStreamStore } from "../lib";
+import * as GraphWorkerClient from "../lib/graph-worker.client";
+import { SyncStatusLocal } from "../lib/graph.worker-rpc";
+import { cx } from "../lib/cva";
+
+export function SyncStatusIndicator() {
+  const status = createRuntimeStreamStore(
+    () =>
+      GraphWorkerClient.Service.pipe(
+        Effect.map((svc) => svc.client.syncStatusStream({})),
+        Stream.unwrap,
+        Stream.debounce("300 millis"),
+      ),
+    new SyncStatusLocal({ mode: "local" }),
+  );
+
+  return (
+    <Show when={status.mode === "cloud" ? status : null}>
+      {(cloud) => (
+        <div
+          class={cx(
+            "rounded-md border px-3 py-2 text-xs",
+            Match.value(cloud().syncState).pipe(
+              Match.whenOr(
+                "Ready",
+                "Committing",
+                () => "bg-success-bg-subtle border-success-border text-success-fg-subtle",
+              ),
+              Match.whenOr(
+                "Bootstrapping",
+                "Disconnected",
+                () => "bg-warning-bg-subtle border-warning-border text-warning-fg-subtle",
+              ),
+              Match.exhaustive,
+            ),
+          )}
+        >
+          Sync: {cloud().syncState}
+          <Show when={cloud().hasPending}> &middot; pending changes</Show>
+        </div>
+      )}
+    </Show>
+  );
+}

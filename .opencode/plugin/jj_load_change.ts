@@ -15,8 +15,7 @@ import { EXCLUDE_FILTER } from "../lib/jj-filters";
  *   %abc:log    -> commit message/description
  *   %abc:show   -> description + diff combined
  */
-const changePattern =
-  /%(?<id>[a-zA-Z][a-zA-Z0-9]*)(:(?<format>diff|stat|log|show))?/g;
+const changePattern = /%(?<id>[a-zA-Z][a-zA-Z0-9]*)(:(?<format>diff|stat|log|show))?/g;
 
 // Type-safe format options derived from the regex
 type Format = "diff" | "stat" | "log" | "show";
@@ -69,10 +68,7 @@ export const JjLoadChangePlugin: Plugin = async (ctx) => {
 ${result.trim()}
 </jujutsu-change>`);
             } else {
-              expandedText = expandedText.replace(
-                fullMatch,
-                `[empty ${fmt} for ${id}]`,
-              );
+              expandedText = expandedText.replace(fullMatch, `[empty ${fmt} for ${id}]`);
             }
           } catch {
             expandedText = expandedText.replace(fullMatch, `[error: ${id}]`);

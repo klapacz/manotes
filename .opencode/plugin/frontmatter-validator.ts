@@ -12,11 +12,11 @@ export const FrontmatterValidatorPlugin: Plugin = async (ctx) => {
       if (!file) return;
 
       const config = validationConfigs.find(
-        (c) =>
-          file.startsWith(c.plugin.prefix) && file.endsWith(c.plugin.suffix),
+        (c) => file.startsWith(c.plugin.prefix) && file.endsWith(c.plugin.suffix),
       );
       if (!config) return;
 
+      // @ts-ignore we don't have bun types installed
       const content = await Bun.file(file)
         .text()
         .catch(() => null);

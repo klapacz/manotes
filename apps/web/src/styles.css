@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+@import "tw-animate-css";
+
+@import "@fontsource-variable/source-sans-3";
+@import "@fontsource/bitter/600.css";
+@import "./colors.css";
+
+@custom-variant dark (&:is([data-kb-theme="dark"] *));
+
+@theme inline {
+  --color-bg: var(--color-sand-1);
+  --color-bg-subtle: var(--color-sand-2);
+  --color-control: var(--color-sand-3);
+  --color-control-hover: var(--color-sand-4);
+  --color-control-active: var(--color-sand-5);
+  --color-border-subtle: var(--color-sand-6);
+  --color-border: var(--color-sand-7);
+  --color-border-hover: var(--color-sand-8);
+  --color-solid: var(--color-sand-9);
+  --color-solid-hover: var(--color-sand-10);
+  --color-fg-subtle: var(--color-sand-11);
+  --color-fg: var(--color-sand-12);
+  --color-fg-solid: oklch(1 0 0);
+
+  --color-primary-bg: var(--color-green-1);
+  --color-primary-bg-subtle: var(--color-green-2);
+  --color-primary-control: var(--color-green-3);
+  --color-primary-control-hover: var(--color-green-4);
+  --color-primary-control-active: var(--color-green-5);
+  --color-primary-border-subtle: var(--color-green-6);
+  --color-primary-border: var(--color-green-7);
+  --color-primary-border-hover: var(--color-green-8);
+  --color-primary-solid: var(--color-green-9);
+  --color-primary-solid-hover: var(--color-green-10);
+  --color-primary-fg-subtle: var(--color-green-11);
+  --color-primary-fg: var(--color-green-12);
+  --color-primary-fg-solid: oklch(1 0 0);
+
+  --color-success-bg: var(--color-green-1);
+  --color-success-bg-subtle: var(--color-green-2);
+  --color-success-control: var(--color-green-3);
+  --color-success-control-hover: var(--color-green-4);
+  --color-success-control-active: var(--color-green-5);
+  --color-success-border-subtle: var(--color-green-6);
+  --color-success-border: var(--color-green-7);
+  --color-success-border-hover: var(--color-green-8);
+  --color-success-solid: var(--color-green-9);
+  --color-success-solid-hover: var(--color-green-10);
+  --color-success-fg-subtle: var(--color-green-11);
+  --color-success-fg: var(--color-green-12);
+  --color-success-fg-solid: oklch(1 0 0);
+
+  --color-warning-bg: var(--color-amber-1);
+  --color-warning-bg-subtle: var(--color-amber-2);
+  --color-warning-control: var(--color-amber-3);
+  --color-warning-control-hover: var(--color-amber-4);
+  --color-warning-control-active: var(--color-amber-5);
+  --color-warning-border-subtle: var(--color-amber-6);
+  --color-warning-border: var(--color-amber-7);
+  --color-warning-border-hover: var(--color-amber-8);
+  --color-warning-solid: var(--color-amber-9);
+  --color-warning-solid-hover: var(--color-amber-10);
+  --color-warning-fg-subtle: var(--color-amber-11);
+  --color-warning-fg: var(--color-amber-12);
+  --color-warning-fg-solid: oklch(1 0 0);
+
+  --color-error-bg: var(--color-ruby-1);
+  --color-error-bg-subtle: var(--color-ruby-2);
+  --color-error-control: var(--color-ruby-3);
+  --color-error-control-hover: var(--color-ruby-4);
+  --color-error-control-active: var(--color-ruby-5);
+  --color-error-border-subtle: var(--color-ruby-6);
+  --color-error-border: var(--color-ruby-7);
+  --color-error-border-hover: var(--color-ruby-8);
+  --color-error-solid: var(--color-ruby-9);
+  --color-error-solid-hover: var(--color-ruby-10);
+  --color-error-fg-subtle: var(--color-ruby-11);
+  --color-error-fg: var(--color-ruby-12);
+  --color-error-fg-solid: oklch(1 0 0);
+
+  --font-sans: "Source Sans 3 Variable", sans-serif;
+  --font-title-serif: "Bitter", Georgia, serif;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --color-overlay: var(--color-black-a6);
+  --color-selection: color-mix(in oklch, var(--color-primary-solid) 30%, transparent);
+}
+
+:root {
+  color-scheme: light;
+  --radius: 0.625rem;
+}
+
+[data-kb-theme="dark"] {
+  color-scheme: dark;
+  --color-overlay: var(--color-black-a7);
+}
+
+@layer base {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 150ms;
+  }
+
+  [data-slot="sidebar"] {
+    view-transition-name: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none !important;
+    }
+  }
+
+  * {
+    @apply border-border outline-primary-border/50;
+  }
+
+  body {
+    @apply bg-bg text-fg;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 4px;
+  }
+}

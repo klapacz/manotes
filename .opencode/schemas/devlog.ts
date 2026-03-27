@@ -16,9 +16,6 @@ const SnippetSchema = BaseSchema.extend({
   diff_file: z.string().min(1, "Diff file path is required for snippets"),
 });
 
-export const DevlogSchema = z.discriminatedUnion("type", [
-  ShippedSchema,
-  SnippetSchema,
-]);
+export const DevlogSchema = z.discriminatedUnion("type", [ShippedSchema, SnippetSchema]);
 
 export type Devlog = z.infer<typeof DevlogSchema>;
