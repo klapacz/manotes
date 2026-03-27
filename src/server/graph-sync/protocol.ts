@@ -1,6 +1,9 @@
 import type * as SqlError from "@effect/sql/SqlError";
 import { Array, Data, Effect, Match } from "effect";
-import { MAX_EVENTS_PER_COMMIT } from "../../lib/graph-sync/contract/limits";
+import {
+  MAX_EVENTS_PER_COMMIT,
+  MAX_EVENTS_PER_REPLAY,
+} from "../../lib/graph-sync/contract/limits";
 import * as Messages from "../../lib/graph-sync/contract/messages";
 import * as Errors from "./errors";
 import * as Repo from "./repo";
@@ -115,18 +118,14 @@ function createReplayOrDoneResponsePlan(
 ) {
   // `Replay` is optional data; `ReplayDone` is the protocol boundary that tells
   // the client the catch-up cycle is complete and which tip it reached.
-  if (Array.isNonEmptyReadonlyArray(events)) {
-    return new ResponsePlan({
-      reply: [
-        new Messages.Replay({ events }),
-        new Messages.ReplayDone({ upToCommitSeq }),
-      ],
-      broadcast: [],
-    });
-  }
+  // Events are chunked to keep each WebSocket frame under Cloudflare's size
+  // limits. The client state machine already handles multiple `Replay` messages.
+  const replayMessages = Array.chunksOf(events, MAX_EVENTS_PER_REPLAY).map(
+    (chunk) => new Messages.Replay({ events: chunk }),
+  );
 
   return new ResponsePlan({
-    reply: [new Messages.ReplayDone({ upToCommitSeq })],
+    reply: [...replayMessages, new Messages.ReplayDone({ upToCommitSeq })],
     broadcast: [],
   });
 }
