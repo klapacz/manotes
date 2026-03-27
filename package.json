@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm -r --parallel run dev"
+    "dev": "pnpm -r --parallel run dev",
+    "deploy": "vp check && vp run -t web#build && vp run web#deploy"
   },
   "devDependencies": {
     "@typescript/native-preview": "7.0.0-dev.20260327.2",

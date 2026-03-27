@@ -6,7 +6,8 @@
     "dev": "vp dev",
     "build": "vp build",
     "serve": "vp preview",
-    "test": "vp test run"
+    "test": "vp test run",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@corvu/calendar": "^0.1.2",
