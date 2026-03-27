@@ -126,8 +126,11 @@ export default function Editor(props: Props): JSX.Element {
     onCleanup(() => {
       disposed = true;
       setBootState(BootState.Loading());
-      void r.runPromise(Fiber.interrupt(fiber));
-      doc.destroy();
+      void r.runPromise(
+        Fiber.interrupt(fiber).pipe(
+          Effect.andThen(Effect.sync(() => doc.destroy())),
+        ),
+      );
     });
   });
 

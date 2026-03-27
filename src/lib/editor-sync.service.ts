@@ -91,6 +91,29 @@ export class Service extends Effect.Service<Service>()(
         });
       });
 
+      const persistChunk = Effect.fn("persistChunk")(function* (
+        noteId: string,
+        chunk: Chunk.Chunk<OutcomingUpdateCtx>,
+      ) {
+        const allUpdateCtxs = Chunk.toArray(chunk);
+
+        yield* Effect.log("Saving updates, count:", allUpdateCtxs.length);
+
+        const merged = Y.mergeUpdates(
+          pipe(
+            allUpdateCtxs,
+            Array.map((updateCtx) => updateCtx.update),
+          ),
+        );
+
+        yield* eventRepo.create({
+          payload: merged,
+          createdAt: yield* DateTime.now,
+          type: "update",
+          noteId: noteId,
+        });
+      });
+
       const saveOutcomingUpdates = Effect.fn("saveOutcomingUpdates")(function* (
         doc: Y.Doc,
         noteId: string,
@@ -103,28 +126,10 @@ export class Service extends Effect.Service<Service>()(
           ),
         ).pipe(
           Stream.filter((updateCtx) => updateCtx.origin !== REMOTE_ORIGIN),
-          streamDebounceNoDrop("1 second"),
-          Stream.runForEach((chunk) =>
-            Effect.gen(function* () {
-              const allUpdateCtxs = Chunk.toArray(chunk);
-
-              yield* Effect.log("Saving updates, count:", allUpdateCtxs.length);
-
-              const merged = Y.mergeUpdates(
-                pipe(
-                  allUpdateCtxs,
-                  Array.map((updateCtx) => updateCtx.update),
-                ),
-              );
-
-              yield* eventRepo.create({
-                payload: merged,
-                createdAt: yield* DateTime.now,
-                type: "update",
-                noteId: noteId,
-              });
-            }),
+          streamDebounceNoDrop("1 second", (remaining) =>
+            persistChunk(noteId, remaining).pipe(Effect.orDie),
           ),
+          Stream.runForEach((chunk) => persistChunk(noteId, chunk)),
         );
       });
 
