@@ -1,5 +1,5 @@
 import { Effect, pipe, Stream } from "effect";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import * as DB from "../../db.service";
 import * as Tables from "../../db.tables";
 import * as BacklinkSchema from "./schema";
@@ -54,7 +54,10 @@ export class Service extends Effect.Service<Service>()(
               eq(Tables.notes.id, Tables.backlinks.sourceId),
             )
             .where(eq(Tables.backlinks.targetId, targetId))
-            .orderBy(desc(Tables.notes.updatedAt)),
+            .orderBy(
+              desc(Tables.notes.isDaily),
+              sql`CASE WHEN ${Tables.notes.isDaily} THEN ${Tables.notes.id} ELSE ${Tables.notes.updatedAt} END DESC`,
+            ),
         );
 
         return yield* pipe(rows, BacklinkSchema.decodeIncomingBacklinks);
@@ -78,7 +81,10 @@ export class Service extends Effect.Service<Service>()(
               eq(Tables.notes.id, Tables.backlinks.sourceId),
             )
             .where(eq(Tables.backlinks.targetId, targetId))
-            .orderBy(desc(Tables.notes.updatedAt)),
+            .orderBy(
+              desc(Tables.notes.isDaily),
+              sql`CASE WHEN ${Tables.notes.isDaily} THEN ${Tables.notes.id} ELSE ${Tables.notes.updatedAt} END DESC`,
+            ),
         );
 
         return stream.pipe(
