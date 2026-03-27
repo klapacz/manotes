@@ -6,13 +6,7 @@
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
     "composite": true,
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "paths": {
-      "@manotes/shared": ["../../packages/shared/src/index.ts"],
-      "@manotes/shared/*": ["../../packages/shared/src/*"]
-    }
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "drizzle/**/*.ts"],
-  "exclude": ["src/server/**/*.ts"],
-  "references": [{ "path": "../../packages/shared" }]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "drizzle/**/*.ts"]
 }

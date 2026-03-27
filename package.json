@@ -3,13 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vp dev --config apps/web/vite.config.ts",
-    "build": "vp build --config apps/web/vite.config.ts",
-    "typecheck": "tsc -b apps/web apps/worker packages/shared",
-    "test": "vp test run",
-    "prepare": "vp config"
+    "dev": "pnpm -r --parallel run dev"
   },
   "devDependencies": {
+    "@typescript/native-preview": "7.0.0-dev.20260327.2",
     "vite-plus": "catalog:"
   },
   "packageManager": "pnpm@10.33.0"

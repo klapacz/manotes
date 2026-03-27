@@ -3,8 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "cf:typegen": "wrangler types --config wrangler.jsonc",
-    "typecheck": "tsc -b"
+    "cf:typegen": "wrangler types --config wrangler.jsonc"
   },
   "dependencies": {
     "@effect/sql": "0.45.0",
@@ -16,7 +15,7 @@
     "nanoid": "^5.1.6"
   },
   "devDependencies": {
-    "typescript": "^5.7.2",
+    "@typescript/native-preview": "7.0.0-dev.20260327.2",
     "wrangler": "^4.71.0"
   }
 }

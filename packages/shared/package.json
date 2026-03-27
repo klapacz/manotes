@@ -3,11 +3,22 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./graph-sync/contract/*": "./src/graph-sync/contract/*.ts",
-    "./graph-encryption": "./src/graph-encryption.ts"
+    "./graph-encryption": "./dist/graph-encryption.mjs",
+    "./graph-sync/contract/codec": "./dist/graph-sync/contract/codec.mjs",
+    "./graph-sync/contract/limits": "./dist/graph-sync/contract/limits.mjs",
+    "./graph-sync/contract/messages": "./dist/graph-sync/contract/messages.mjs",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch"
   },
   "dependencies": {
     "@effect/platform": "^0.94.1",
     "effect": "3.17.14"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "7.0.0-dev.20260327.2",
+    "vite-plus": "catalog:"
   }
 }

@@ -4,12 +4,7 @@
     "lib": ["ES2024", "WebWorker", "DOM"],
     "types": [],
     "composite": true,
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.wrangler.tsbuildinfo",
-    "paths": {
-      "@manotes/shared": ["../../packages/shared/src/index.ts"],
-      "@manotes/shared/*": ["../../packages/shared/src/*"]
-    }
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.wrangler.tsbuildinfo"
   },
-  "include": ["worker-configuration.d.ts", "src/**/*.ts"],
-  "references": [{ "path": "../../packages/shared" }]
+  "include": ["worker-configuration.d.ts", "src/**/*.ts"]
 }
