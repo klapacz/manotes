@@ -1,7 +1,7 @@
 import * as Context from "effect/Context";
 import * as Layer from "effect/Layer";
 import { SqlClient } from "@effect/sql";
-import * as SqliteClient from "../sql-sqlite-wasm/sqlite-client";
+import * as SqliteClient from "@manotes/sql-sqlite-wasm/sqlite-client";
 import * as Primitives from "../primitives";
 import { Effect, ManagedRuntime, Stream } from "effect";
 import * as Repo from "./repo";

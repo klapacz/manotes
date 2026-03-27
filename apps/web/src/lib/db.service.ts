@@ -6,7 +6,7 @@ import { drizzle as createDrizzle } from "drizzle-orm/sqlite-proxy";
 import { SqlClient } from "@effect/sql";
 import type { Primitive } from "@effect/sql/Statement";
 import type { Query } from "drizzle-orm";
-import * as SqliteClient from "./sql-sqlite-wasm/sqlite-client";
+import * as SqliteClient from "@manotes/sql-sqlite-wasm/sqlite-client";
 
 export const SqlLive = Layer.unwrapEffect(
   Effect.gen(function* () {

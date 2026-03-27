@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { run } from "../sql-sqlite-wasm/opfs-worker";
+import { run } from "@manotes/sql-sqlite-wasm/opfs-worker";
 
 // Wait for config message with dbName before initializing the database.
 // The sqlite-client posts this as an initMessage right after worker creation.

@@ -4,3 +4,8 @@ declare module "wa-sqlite/src/examples/OPFSCoopSyncVFS" {
     static create(name: string, module: unknown): Promise<SQLiteVFS>;
   }
 }
+
+declare module "wa-sqlite/dist/wa-sqlite.wasm?url" {
+  const string: string;
+  export default string;
+}
