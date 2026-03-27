@@ -4,6 +4,7 @@
   "type": "module",
   "exports": {
     "./graph-encryption": "./dist/graph-encryption.mjs",
+    "./graph-registry/contract": "./dist/graph-registry/contract.mjs",
     "./graph-sync/contract/codec": "./dist/graph-sync/contract/codec.mjs",
     "./graph-sync/contract/limits": "./dist/graph-sync/contract/limits.mjs",
     "./graph-sync/contract/messages": "./dist/graph-sync/contract/messages.mjs",
@@ -15,6 +16,7 @@
   },
   "dependencies": {
     "@effect/platform": "^0.94.1",
+    "@effect/rpc": "^0.73.0",
     "effect": "3.17.14"
   },
   "devDependencies": {

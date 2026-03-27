@@ -1,151 +1,127 @@
-import { SqlClient } from "@effect/sql";
+import * as HttpServerRequest from "@effect/platform/HttpServerRequest";
+import * as HttpServerResponse from "@effect/platform/HttpServerResponse";
+import type * as HttpApp from "@effect/platform/HttpApp";
+import { RpcServer, RpcSerialization } from "@effect/rpc";
 import { SqliteClient } from "@effect/sql-sqlite-do";
-import { Cause, Effect, flow, ManagedRuntime, Option, Predicate, Schema } from "effect";
+import { Context, Effect, Layer, ManagedRuntime, Option, Predicate, Scope } from "effect";
 import { DurableObject } from "cloudflare:workers";
-import { Hono } from "hono";
-import { sValidator } from "@hono/standard-validator";
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
+import { GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
+import type { DisplayNameTakenError } from "@manotes/shared/graph-registry/contract";
 import * as Repo from "./repo";
-import * as GraphSchema from "./schema";
 
-type GraphRegistryRuntime = ManagedRuntime.ManagedRuntime<SqlClient.SqlClient, never>;
+// ---------------------------------------------------------------------------
+// RPC HttpApp tag
+// ---------------------------------------------------------------------------
 
-const app = new Hono<{
-  Bindings: Env & { runtime: GraphRegistryRuntime };
-}>().basePath("/api");
+class RpcHttpApp extends Context.Tag("GraphRegistry.RpcHttpApp")<
+  RpcHttpApp,
+  HttpApp.Default<never, Scope.Scope>
+>() {}
 
-app.get("/health", (c) => c.json({ ok: true }));
+// ---------------------------------------------------------------------------
+// RPC handler implementations
+// ---------------------------------------------------------------------------
 
-app.get("/graphs", async (c) => {
-  const graphs = await c.env.runtime.runPromise(
-    Repo.listGraphs().pipe(Effect.flatMap(GraphSchema.encodeApiArray)),
-  );
-  return c.json(graphs);
-});
+const HandlersLayer = GraphRegistryRpc.toLayer(
+  Effect.gen(function* () {
+    const repo = yield* Repo.Service;
 
-const CreateGraphRequestSchema = Schema.Struct({
-  displayName: GraphSchema.DisplayNameSchema,
-  graphKeyEnvelope: GraphEncryption.GraphKeyEnvelopeSchema,
-});
-
-app.post(
-  "/graphs",
-  sValidator("json", CreateGraphRequestSchema.pipe(Schema.standardSchemaV1)),
-  async (c) => {
-    const body = c.req.valid("json");
-
-    const result = await c.env.runtime.runPromiseExit(
-      Repo.createGraph({
-        displayName: body.displayName,
-        graphKeyEnvelope: body.graphKeyEnvelope,
-      }).pipe(Effect.flatMap(GraphSchema.encodeApiRecord)),
-    );
-
-    if (result._tag === "Success") {
-      return c.json(result.value, 201);
-    }
-
-    return handleFailure(result.cause);
-  },
-);
-
-app.get("/graphs/:graphId", async (c) => {
-  const graph = await c.env.runtime.runPromise(
-    Effect.gen(function* () {
-      const graph = yield* Repo.getGraph({ graphId: c.req.param("graphId") });
-      return yield* Option.match(graph, {
-        onNone: () => Effect.succeedNone,
-        onSome: flow(GraphSchema.encodeApiRecord, Effect.asSome),
-      });
-    }),
-  );
-
-  return Option.match(graph, {
-    onNone: () => c.json({ error: "Not found" }, 404),
-    onSome: (value) => c.json(value),
-  });
-});
-
-app.patch(
-  "/graphs/:graphId",
-  sValidator(
-    "json",
-    Schema.Struct({
-      displayName: GraphSchema.DisplayNameSchema,
-    }).pipe(Schema.standardSchemaV1),
-  ),
-  async (c) => {
-    const body = c.req.valid("json");
-
-    const result = await c.env.runtime.runPromiseExit(
-      Effect.gen(function* () {
-        const graph = yield* Repo.renameGraph({
-          graphId: c.req.param("graphId"),
-          displayName: body.displayName,
-        });
-        return yield* Option.match(graph, {
-          onNone: () => Effect.succeedNone,
-          onSome: flow(GraphSchema.encodeApiRecord, Effect.asSome),
-        });
+    return {
+      listGraphs: Effect.fn("GraphRegistry.listGraphs")(function* () {
+        return yield* repo.listGraphs().pipe(Effect.orDie);
       }),
-    );
 
-    if (result._tag === "Success") {
-      return Option.match(result.value, {
-        onNone: () => c.json({ error: "Not found" }, 404),
-        onSome: (value) => c.json(value),
-      });
-    }
+      createGraph: Effect.fn("GraphRegistry.createGraph")(function* ({
+        displayName,
+        graphKeyEnvelope,
+      }) {
+        return yield* narrowError(repo.createGraph({ displayName, graphKeyEnvelope }));
+      }),
 
-    return handleFailure(result.cause);
-  },
+      getGraph: Effect.fn("GraphRegistry.getGraph")(function* ({ graphId }) {
+        return yield* repo.getGraph({ graphId }).pipe(Effect.orDie);
+      }),
+
+      renameGraph: Effect.fn("GraphRegistry.renameGraph")(function* ({ graphId, displayName }) {
+        return yield* narrowError(repo.renameGraph({ graphId, displayName }));
+      }),
+    };
+  }),
 );
 
-app.all("*", (c) => c.json({ error: "Not found" }, 404));
+// ---------------------------------------------------------------------------
+// Layer that creates the long-lived RPC HttpApp
+// ---------------------------------------------------------------------------
+
+const RpcHttpAppLayer = Layer.scoped(RpcHttpApp, RpcServer.toHttpApp(GraphRegistryRpc));
+
+// ---------------------------------------------------------------------------
+// Durable Object
+// ---------------------------------------------------------------------------
 
 export class GraphRegistryDurableObject extends DurableObject<Env> {
   private readonly runtime = ManagedRuntime.make(
-    SqliteClient.layer({
-      db: this.ctx.storage.sql,
-      spanAttributes: {
-        durableObject: "GraphRegistryDurableObject",
-      },
-    }),
+    RpcHttpAppLayer.pipe(
+      Layer.provide(HandlersLayer),
+      Layer.provide(RpcSerialization.layerJson),
+      Layer.provideMerge(Repo.Service.Default),
+      Layer.provideMerge(
+        SqliteClient.layer({
+          db: this.ctx.storage.sql,
+          spanAttributes: { durableObject: "GraphRegistryDurableObject" },
+        }),
+      ),
+    ),
   );
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-
     void ctx.blockConcurrencyWhile(() => this.runtime.runPromise(Repo.migrate));
   }
 
   async fetch(request: Request): Promise<Response> {
-    return app.fetch(request, {
-      ...this.env,
-      runtime: this.runtime,
-    });
+    return this.runtime.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const httpApp = yield* RpcHttpApp;
+          const response = yield* httpApp.pipe(
+            Effect.provideService(
+              HttpServerRequest.HttpServerRequest,
+              HttpServerRequest.fromWeb(request),
+            ),
+          );
+          return HttpServerResponse.toWeb(response);
+        }),
+      ),
+    );
   }
 
   async graphExists(graphId: string): Promise<boolean> {
-    const graph = await this.runtime.runPromise(
-      Repo.getGraph({
-        graphId,
+    return this.runtime.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* Repo.Service;
+        const graph = yield* repo.getGraph({ graphId });
+        return Option.isSome(graph);
       }),
     );
-
-    return Option.isSome(graph);
   }
 }
 
-function handleFailure(cause: Cause.Cause<unknown>) {
-  const failure = Cause.failureOption(cause);
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-  if (
-    Option.isSome(failure) &&
-    Predicate.isTagged(failure.value, "GraphRegistry.DisplayNameTakenError")
-  ) {
-    return Response.json({ error: "A graph with that name already exists." }, { status: 409 });
-  }
-
-  return Response.json({ error: Cause.pretty(cause) }, { status: 500 });
+/**
+ * Keep `DisplayNameTakenError` in the error channel and turn every other
+ * error (SqlError, ParseError, …) into a defect.
+ */
+function narrowError<A, R, E>(
+  effect: Effect.Effect<A, DisplayNameTakenError | E, R>,
+): Effect.Effect<A, DisplayNameTakenError, R> {
+  return effect.pipe(
+    Effect.catchAll((e) => {
+      if (Predicate.isTagged(e, "GraphRegistry.DisplayNameTakenError")) return Effect.fail(e);
+      return Effect.die(e);
+    }),
+  );
 }

@@ -8,8 +8,7 @@ const app = new Hono<{ Bindings: Env }>();
 
 app.get("/api/health", (c) => c.json({ ok: true }));
 
-app.all("/api/graphs", (c) => proxyToGraphRegistry(c.req.raw, c.env));
-app.all("/api/graphs/:graphId", (c) => proxyToGraphRegistry(c.req.raw, c.env));
+app.post("/api/rpc/graph-registry", (c) => proxyToGraphRegistry(c.req.raw, c.env));
 
 app.all("/api/sync/:graphId", (c) =>
   proxyToGraphSync({

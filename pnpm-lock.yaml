@@ -186,6 +186,12 @@ importers:
 
   apps/worker:
     dependencies:
+      '@effect/platform':
+        specifier: ^0.94.1
+        version: 0.94.1(effect@3.17.14)
+      '@effect/rpc':
+        specifier: ^0.73.0
+        version: 0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
       '@effect/sql':
         specifier: 0.45.0
         version: 0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
@@ -220,6 +226,9 @@ importers:
       '@effect/platform':
         specifier: ^0.94.1
         version: 0.94.1(effect@3.17.14)
+      '@effect/rpc':
+        specifier: ^0.73.0
+        version: 0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
       effect:
         specifier: 3.17.14
         version: 3.17.14

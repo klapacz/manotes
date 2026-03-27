@@ -1,21 +1,10 @@
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import { Schema } from "effect";
+import { FetchHttpClient } from "@effect/platform";
+import { RpcClient, RpcSerialization } from "@effect/rpc";
+import { Cause, Effect, Exit, Layer, ManagedRuntime, Option } from "effect";
+import { Graph, GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
+import type { GraphKeyEnvelope } from "@manotes/shared/graph-encryption";
 
-// TODO: share this Schema between frontend and backend
-export const DisplayNameSchema = Schema.Trim.pipe(Schema.nonEmptyString());
-
-export const GraphSchema = Schema.Struct({
-  graphId: Schema.NonEmptyString,
-  displayName: DisplayNameSchema,
-  createdAt: Schema.NonEmptyString,
-  graphKeyEnvelope: GraphEncryption.GraphKeyEnvelopeSchema,
-});
-
-export type Graph = Schema.Schema.Type<typeof GraphSchema>;
-const CreateGraphRequestSchema = Schema.Struct({
-  displayName: DisplayNameSchema,
-  graphKeyEnvelope: GraphEncryption.GraphKeyEnvelopeSchema,
-});
+export { Graph };
 
 export class DisplayNameTakenError extends Error {
   constructor() {
@@ -23,16 +12,27 @@ export class DisplayNameTakenError extends Error {
   }
 }
 
+// ---------------------------------------------------------------------------
+// RPC client setup
+// ---------------------------------------------------------------------------
+
+const GraphRegistryClientLayer = RpcClient.layerProtocolHttp({
+  url: "/api/rpc/graph-registry",
+}).pipe(Layer.provide(RpcSerialization.layerJson), Layer.provide(FetchHttpClient.layer));
+
+const runtime = ManagedRuntime.make(GraphRegistryClientLayer);
+
+// ---------------------------------------------------------------------------
+// Public API — returns Promises for TanStack Query compatibility
+// ---------------------------------------------------------------------------
+
 export async function listGraphs(): Promise<ReadonlyArray<Graph>> {
-  const response = await fetch("/api/graphs");
-
-  if (!response.ok) {
-    throw new Error(`Failed to load graphs (${response.status})`);
-  }
-
-  const json = await response.json();
-
-  return Schema.decodeUnknownPromise(Schema.Array(GraphSchema))(json);
+  return runtime.runPromise(
+    Effect.gen(function* () {
+      const client = yield* RpcClient.make(GraphRegistryRpc);
+      return yield* client.listGraphs();
+    }).pipe(Effect.scoped),
+  );
 }
 
 export async function createGraph({
@@ -40,30 +40,27 @@ export async function createGraph({
   graphKeyEnvelope,
 }: {
   displayName: string;
-  graphKeyEnvelope: GraphEncryption.GraphKeyEnvelope;
+  graphKeyEnvelope: GraphKeyEnvelope;
 }): Promise<Graph> {
-  const encodedBody = Schema.encodeSync(CreateGraphRequestSchema)({
-    displayName,
-    graphKeyEnvelope,
-  });
+  const exit = await runtime.runPromiseExit(
+    Effect.gen(function* () {
+      const client = yield* RpcClient.make(GraphRegistryRpc);
+      return yield* client.createGraph({ displayName, graphKeyEnvelope });
+    }).pipe(Effect.scoped),
+  );
 
-  const response = await fetch("/api/graphs", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(encodedBody),
-  });
+  if (Exit.isSuccess(exit)) return exit.value;
 
-  if (response.status === 409) {
+  const failure = Cause.failureOption(exit.cause);
+  if (
+    Option.isSome(failure) &&
+    "_tag" in failure.value &&
+    failure.value._tag === "GraphRegistry.DisplayNameTakenError"
+  ) {
     throw new DisplayNameTakenError();
   }
 
-  if (!response.ok) {
-    throw new Error(`Failed to create graph (${response.status})`);
-  }
+  console.error("Error creating graph:", failure);
 
-  const json = await response.json();
-
-  return Schema.decodeUnknownPromise(GraphSchema)(json);
+  throw new Error(`Failed to create graph`);
 }
