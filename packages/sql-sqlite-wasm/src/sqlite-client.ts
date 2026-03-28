@@ -1,37 +1,39 @@
 /**
  * @since 1.0.0
  */
-import * as Reactivity from "@effect/experimental/Reactivity";
-import * as Client from "@effect/sql/SqlClient";
-import type { Connection } from "@effect/sql/SqlConnection";
-import { SqlError } from "@effect/sql/SqlError";
-import * as Statement from "@effect/sql/Statement";
-import type { ConfigError } from "effect/ConfigError";
-import * as Context from "effect/Context";
+import * as Reactivity from "effect/unstable/reactivity/Reactivity";
+import * as Client from "effect/unstable/sql/SqlClient";
+import type { Connection } from "effect/unstable/sql/SqlConnection";
+import { classifySqliteError, SqlError } from "effect/unstable/sql/SqlError";
+import * as Statement from "effect/unstable/sql/Statement";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
-import * as FiberRef from "effect/FiberRef";
+import * as Fiber from "effect/Fiber";
 import { identity } from "effect/Function";
-import { globalValue } from "effect/GlobalValue";
 import * as Layer from "effect/Layer";
+import * as Semaphore from "effect/Semaphore";
+import * as ServiceMap from "effect/ServiceMap";
 import * as Scope from "effect/Scope";
 import * as ScopedRef from "effect/ScopedRef";
+import * as Stream from "effect/Stream";
 import type { OpfsWorkerMessage } from "./internal/opfs-worker";
 
 const ATTR_DB_SYSTEM_NAME = "db.system.name";
+const classifyError = (cause: unknown, message: string, operation: string) =>
+  classifySqliteError(cause, { message, operation });
 
 /**
  * @category type ids
  * @since 1.0.0
  */
-export const TypeId: unique symbol = Symbol.for("@effect/sql-sqlite-wasm/SqliteClient");
+export const TypeId = "~@effect/sql-sqlite-wasm/SqliteClient";
 
 /**
  * @category type ids
  * @since 1.0.0
  */
-export type TypeId = typeof TypeId;
+export type TypeId = "~@effect/sql-sqlite-wasm/SqliteClient";
 
 /**
  * @category models
@@ -51,7 +53,7 @@ export interface SqliteClient extends Client.SqlClient {
  * @category tags
  * @since 1.0.0
  */
-export const SqliteClient = Context.GenericTag<SqliteClient>(
+export const SqliteClient = ServiceMap.Service<SqliteClient>(
   "@effect/sql-sqlite-wasm/SqliteClient",
 );
 
@@ -109,10 +111,10 @@ export const make = (
       const onMessage = (event: any) => {
         const [id, error, results] = event.data;
         if (id === "ready") {
-          Deferred.unsafeDone(readyDeferred, Exit.void);
+          Deferred.doneUnsafe(readyDeferred, Exit.void);
           return;
         } else if (id === "update_hook") {
-          reactivity.unsafeInvalidate({ [error]: [results] });
+          reactivity.invalidateUnsafe({ [error]: [results] });
           return;
         } else {
           const resume = pending.get(id);
@@ -122,8 +124,7 @@ export const make = (
             resume(
               Exit.fail(
                 new SqlError({
-                  cause: error as string,
-                  message: "Failed to execute statement",
+                  reason: classifyError(error as string, "Failed to execute statement", "execute"),
                 }),
               ),
             );
@@ -160,7 +161,7 @@ export const make = (
       }
 
       const send = (id: number, message: OpfsWorkerMessage, transferables?: ReadonlyArray<any>) =>
-        Effect.async<any, SqlError>((resume) => {
+        Effect.callback<any, SqlError>((resume) => {
           pending.set(id, resume);
           postMessage(message, transferables);
         });
@@ -170,9 +171,9 @@ export const make = (
         params: ReadonlyArray<unknown> = [],
         rowMode: "object" | "array" = "object",
       ): Effect.Effect<Array<any>, SqlError, never> => {
-        const rows = Effect.withFiberRuntime<[Array<string>, Array<any>], SqlError>((fiber) => {
+        const rows = Effect.withFiber<[Array<string>, Array<any>], SqlError>((fiber) => {
           const id = currentId++;
-          return send(id, [id, sql, params], fiber.getFiberRef(currentTransferables));
+          return send(id, [id, sql, params], fiber.getRef(Transferables));
         });
         return rowMode === "object"
           ? Effect.map(rows, extractObject)
@@ -193,7 +194,7 @@ export const make = (
           return this.execute(sql, params, transformRows);
         },
         executeStream() {
-          return Effect.dieMessage("executeStream not implemented");
+          return Stream.die("executeStream not implemented");
         },
         export: Effect.suspend(() => {
           const id = currentId++;
@@ -210,16 +211,16 @@ export const make = (
 
     const connectionRef = yield* ScopedRef.fromAcquire(makeConnection);
 
-    const semaphore = yield* Effect.makeSemaphore(1);
+    const semaphore = yield* Semaphore.make(1);
     const acquirer = semaphore.withPermits(1)(ScopedRef.get(connectionRef));
-    const transactionAcquirer = Effect.uninterruptibleMask((restore) =>
-      Effect.zipRight(
-        Effect.zipRight(
-          restore(semaphore.take(1)),
-          Effect.tap(Effect.scope, (scope) => Scope.addFinalizer(scope, semaphore.release(1))),
-        ),
-        ScopedRef.get(connectionRef),
-      ),
+    const transactionAcquirer = Effect.uninterruptibleMask(
+      Effect.fnUntraced(function* (restore) {
+        const fiber = Fiber.getCurrent()!;
+        const scope = ServiceMap.getUnsafe(fiber.services, Scope.Scope);
+        yield* restore(semaphore.take(1));
+        yield* Scope.addFinalizer(scope, semaphore.release(1));
+        return yield* ScopedRef.get(connectionRef);
+      }),
     );
 
     return Object.assign(
@@ -259,9 +260,9 @@ const extractRows = (rows: [Array<string>, Array<any>]) => rows[1];
  * @category tranferables
  * @since 1.0.0
  */
-export const currentTransferables: FiberRef.FiberRef<ReadonlyArray<Transferable>> = globalValue(
+export const Transferables = ServiceMap.Reference<ReadonlyArray<Transferable>>(
   "@effect/sql-sqlite-wasm/currentTransferables",
-  () => FiberRef.unsafeMake<ReadonlyArray<Transferable>>([]),
+  { defaultValue: () => [] },
 );
 
 /**
@@ -271,7 +272,7 @@ export const currentTransferables: FiberRef.FiberRef<ReadonlyArray<Transferable>
 export const withTransferables =
   (transferables: ReadonlyArray<Transferable>) =>
   <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
-    Effect.locally(effect, currentTransferables, transferables);
+    Effect.provideService(effect, Transferables, transferables);
 
 /**
  * @category layers
@@ -279,9 +280,9 @@ export const withTransferables =
  */
 export const layer = (
   config: SqliteClientConfig,
-): Layer.Layer<SqliteClient | Client.SqlClient, ConfigError | SqlError> =>
-  Layer.scopedContext(
+): Layer.Layer<SqliteClient | Client.SqlClient, SqlError> =>
+  Layer.effectServices(
     Effect.map(make(config), (client) =>
-      Context.make(SqliteClient, client).pipe(Context.add(Client.SqlClient, client)),
+      ServiceMap.make(SqliteClient, client).pipe(ServiceMap.add(Client.SqlClient, client)),
     ),
   ).pipe(Layer.provide(Reactivity.layer));

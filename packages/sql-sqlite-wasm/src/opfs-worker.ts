@@ -2,13 +2,16 @@
  * @since 1.0.0
  */
 /// <reference lib="webworker" />
-import { SqlError } from "@effect/sql/SqlError";
 import * as WaSqlite from "wa-sqlite";
 import SQLiteESMFactory from "wa-sqlite/dist/wa-sqlite.mjs";
 import wasmUrl from "wa-sqlite/dist/wa-sqlite.wasm?url";
 import { OPFSCoopSyncVFS } from "wa-sqlite/src/examples/OPFSCoopSyncVFS";
 import * as Effect from "effect/Effect";
+import { classifySqliteError, SqlError } from "effect/unstable/sql/SqlError";
 import type { OpfsWorkerMessage } from "./internal/opfs-worker.js";
+
+const classifyError = (cause: unknown, message: string, operation: string) =>
+  classifySqliteError(cause, { message, operation });
 
 /**
  * @category models
@@ -32,7 +35,10 @@ export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> =>
     const db = yield* Effect.acquireRelease(
       Effect.tryPromise({
         try: () => sqlite3.open_v2(options.dbName, undefined, "opfs"),
-        catch: (cause) => new SqlError({ cause, message: "Failed to open database" }),
+        catch: (cause) =>
+          new SqlError({
+            reason: classifyError(cause, "Failed to open database", "openDatabase"),
+          }),
       }),
       (db) =>
         Effect.promise(async () => {
@@ -40,7 +46,7 @@ export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> =>
         }),
     );
 
-    return yield* Effect.async<void>((resume) => {
+    return yield* Effect.callback<void>((resume) => {
       let updateBroadcast: BroadcastChannel | undefined;
 
       const onMessage = async (event: any) => {
@@ -78,12 +84,15 @@ export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> =>
               updateBroadcast.onmessage = (e) => {
                 options.port.postMessage(["update_hook", e.data[0], e.data[1]]);
               };
-              sqlite3.update_hook(db, (_op, _db, table, rowid) => {
-                if (!table) return;
-                options.port.postMessage(["update_hook", table, Number(rowid)]);
-                // Broadcast to other workers
-                updateBroadcast!.postMessage([table, Number(rowid)]);
-              });
+              sqlite3.update_hook(
+                db,
+                (_op: unknown, _db: unknown, table: unknown, rowid: unknown) => {
+                  if (!table) return;
+                  options.port.postMessage(["update_hook", table, Number(rowid)]);
+                  // Broadcast to other workers
+                  updateBroadcast!.postMessage([table, Number(rowid)]);
+                },
+              );
               return;
             }
             default: {
