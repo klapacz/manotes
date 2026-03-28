@@ -1,18 +1,18 @@
 /**
  * Encodes and decodes graph sync wire messages with MsgPack.
  */
-import * as MsgPack from "@effect/platform/MsgPack";
+import * as Msgpack from "effect/unstable/encoding/Msgpack";
 import { Schema } from "effect";
 import { ClientMessage, ServerMessage } from "./messages";
 
-const ClientMessageMsgPack = MsgPack.schema(ClientMessage);
+const ClientMessageMsgPack = Msgpack.schema(ClientMessage);
 
-const ServerMessageMsgPack = MsgPack.schema(ServerMessage);
+const ServerMessageMsgPack = Msgpack.schema(ServerMessage);
 
-export const decodeClientMessage = Schema.decode(ClientMessageMsgPack);
+export const decodeClientMessage = Schema.decodeEffect(ClientMessageMsgPack);
 
-export const encodeClientMessage = Schema.encode(ClientMessageMsgPack);
+export const encodeClientMessage = Schema.encodeEffect(ClientMessageMsgPack);
 
-export const decodeServerMessage = Schema.decode(ServerMessageMsgPack);
+export const decodeServerMessage = Schema.decodeEffect(ServerMessageMsgPack);
 
 export const encodeServerMessageUnsafe = Schema.encodeSync(ServerMessageMsgPack);

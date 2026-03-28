@@ -1,10 +1,10 @@
 import { Schema } from "effect";
-import { Rpc, RpcGroup } from "@effect/rpc";
+import { Rpc, RpcGroup } from "effect/unstable/rpc";
 import * as GraphEncryption from "../graph-encryption";
 
-export const DisplayNameSchema = Schema.Trim.pipe(Schema.nonEmptyString());
+export const DisplayNameSchema = Schema.Trim.pipe(Schema.check(Schema.isNonEmpty()));
 
-export class DisplayNameTakenError extends Schema.TaggedError<DisplayNameTakenError>()(
+export class DisplayNameTakenError extends Schema.TaggedErrorClass<DisplayNameTakenError>()(
   "GraphRegistry.DisplayNameTakenError",
   { displayName: Schema.String },
 ) {}
@@ -31,14 +31,14 @@ export class GraphRegistryRpc extends RpcGroup.make(
   }),
   Rpc.make("getGraph", {
     payload: { graphId: Schema.NonEmptyString },
-    success: Schema.OptionFromSelf(Graph),
+    success: Schema.Option(Graph),
   }),
   Rpc.make("renameGraph", {
     payload: {
       graphId: Schema.NonEmptyString,
       displayName: DisplayNameSchema,
     },
-    success: Schema.OptionFromSelf(Graph),
+    success: Schema.Option(Graph),
     error: DisplayNameTakenError,
   }),
 ) {}
