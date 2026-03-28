@@ -1,4 +1,4 @@
-import { Data, Effect, Stream, Option } from "effect";
+import { Data, Stream, Option } from "effect";
 import { defineClipboardSerializer, definePlugin, union } from "prosekit/core";
 import type { ProseMirrorNode } from "prosekit/pm/model";
 import { Plugin } from "prosekit/pm/state";
@@ -42,9 +42,8 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
         );
       }
 
-      return NoteCache.Service.pipe(
-        Effect.flatMap((cache) => cache.changes(noteId())),
-        Stream.unwrapScoped,
+      return NoteCache.Service.use((cache) => cache.changes(noteId())).pipe(
+        Stream.unwrap,
         Stream.map(
           Option.match({
             onSome: ({ title }): BacklinkLabelEntry => BacklinkLabelEntry.Resolved({ title }),

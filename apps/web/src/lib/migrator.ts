@@ -1,8 +1,8 @@
 // migrate.ts
-import { Data, Effect, LogLevel } from "effect";
+import { Data, Effect } from "effect";
+import { SqlClient, SqlError } from "effect/unstable/sql";
 import { migrations } from "../../drizzle/migrations";
 import * as DB from "./db.service";
-import { SqlClient, SqlError } from "@effect/sql";
 
 class Error extends Data.TaggedError("Migrator.Error")<{
   cause: SqlError.SqlError;
@@ -26,7 +26,7 @@ export const migrate = Effect.gen(function* () {
         );`,
       );
 
-      yield* Effect.logWithLevel(LogLevel.Debug, "Table created");
+      yield* Effect.logDebug("Table created");
 
       const appliedMigrations = yield* sql.unsafe<{
         id: number;
@@ -35,7 +35,7 @@ export const migrate = Effect.gen(function* () {
         created_at: number;
       }>(`SELECT * FROM ${MIGRATIONS_TABLE_NAME};`);
 
-      yield* Effect.logWithLevel(LogLevel.Debug, "Applied migrations fetched");
+      yield* Effect.logDebug("Applied migrations fetched");
 
       for (const migration of migrations) {
         const hash = yield* createHash(migration.sql);

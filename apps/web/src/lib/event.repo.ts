@@ -1,19 +1,19 @@
-import { Effect, pipe, Schema, Option, Stream } from "effect";
+import { Effect, Layer, Option, pipe, Schema, ServiceMap, Stream } from "effect";
 import * as DB from "./db.service";
 import * as EventSchema from "./event.schema";
 import * as Tables from "./db.tables";
 import { and, asc, eq, gt, isNull, lte, max } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-const decodeAll = Schema.decode(Schema.Array(EventSchema.Record));
+const decodeRecord = Schema.decodeEffect(EventSchema.Record);
+const decodeAll = Schema.decodeEffect(Schema.Array(EventSchema.Record));
 
-export class Service extends Effect.Service<Service>()("EventRepo.Service", {
-  dependencies: [DB.Service.Default],
-  effect: Effect.gen(function* () {
+export class Service extends ServiceMap.Service<Service>()("EventRepo.Service", {
+  make: Effect.gen(function* () {
     const db = yield* DB.Service;
 
     const create = Effect.fn("EventRepo.create")(function* (event: typeof EventSchema.Create.Type) {
-      const encoded = yield* pipe(event, Schema.encode(EventSchema.Create));
+      const encoded = yield* pipe(event, Schema.encodeEffect(EventSchema.Create));
 
       const record = yield* db.find((db) =>
         db
@@ -29,13 +29,10 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
           .returning(),
       );
 
-      return yield* pipe(
-        record,
-        Option.match({
-          onNone: () => new DB.NotFoundError(),
-          onSome: (record) => pipe(record, Schema.decode(EventSchema.Record)),
-        }),
-      );
+      return yield* Option.match(record, {
+        onNone: () => new DB.NotFoundError(),
+        onSome: decodeRecord,
+      });
     });
 
     const deleteByLocalSeq = Effect.fn("EventRepo.delete")(function* (localSeq: number) {
@@ -43,13 +40,10 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
         db.delete(Tables.events).where(eq(Tables.events.localSeq, localSeq)).returning(),
       );
 
-      return yield* pipe(
-        record,
-        Option.match({
-          onNone: () => new DB.NotFoundError(),
-          onSome: (record) => pipe(record, Schema.decode(EventSchema.Record)),
-        }),
-      );
+      return yield* Option.match(record, {
+        onNone: () => new DB.NotFoundError(),
+        onSome: decodeRecord,
+      });
     });
 
     const findByEventId = Effect.fn("EventRepo.findByEventId")(function* (eventId: string) {
@@ -61,7 +55,7 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
         return Option.none();
       }
 
-      const decoded = yield* pipe(record.value, Schema.decode(EventSchema.Record));
+      const decoded = yield* decodeRecord(record.value);
 
       return Option.some(decoded);
     });
@@ -168,7 +162,7 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
           .orderBy(asc(Tables.events.localSeq)),
       );
 
-      return stream.pipe(Stream.mapEffect(decodeAll));
+      return stream.pipe(Stream.mapEffect((events) => decodeAll(events)));
     });
 
     const streamUpdatesAfterGlobalId = Effect.fn("EventRepo.streamUpdatesAfterGlobalId")(function* (
@@ -184,7 +178,7 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
           .limit(limit),
       );
 
-      return stream.pipe(Stream.mapEffect(decodeAll));
+      return stream.pipe(Stream.mapEffect((events) => decodeAll(events)));
     });
 
     const markCommitted = Effect.fn("EventRepo.markCommitted")(function* ({
@@ -208,7 +202,7 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
         record,
         Option.match({
           onNone: () => new DB.NotFoundError(),
-          onSome: (record) => pipe(record, Schema.decode(EventSchema.Record)),
+          onSome: decodeRecord,
         }),
       );
     });
@@ -227,4 +221,6 @@ export class Service extends Effect.Service<Service>()("EventRepo.Service", {
       streamUpdatesAfterGlobalId,
     };
   }),
-}) {}
+}) {
+  static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
+}

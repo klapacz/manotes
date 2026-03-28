@@ -1,4 +1,14 @@
-import { Array as Arr, Effect, Option, Order, pipe, Record, Stream } from "effect";
+import {
+  Array as Arr,
+  Effect,
+  Layer,
+  Option,
+  Order,
+  pipe,
+  Record,
+  ServiceMap,
+  Stream,
+} from "effect";
 import * as Y from "yjs";
 import * as DB from "./db.service";
 import * as EventRepo from "./event.repo";
@@ -10,15 +20,8 @@ import { formatDailyNoteTitle, parseDailyNoteId } from "./daily-note";
 
 const MAX_FETCHED_UNDONE_EVENTS = 100;
 
-export class Service extends Effect.Service<Service>()("Materializer.Service", {
-  dependencies: [
-    DB.Service.Default,
-    EventRepo.Service.Default,
-    NoteRepo.Service.Default,
-    BacklinkService.Service.Default,
-    MaterializationCheckpointRepo.Service.Default,
-  ],
-  effect: Effect.gen(function* () {
+export class Service extends ServiceMap.Service<Service>()("Materializer.Service", {
+  make: Effect.gen(function* () {
     const db = yield* DB.Service;
     const eventRepo = yield* EventRepo.Service;
     const noteRepo = yield* NoteRepo.Service;
@@ -43,7 +46,7 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
           upToLocalSeq,
         });
 
-        if (!Arr.isNonEmptyReadonlyArray(events)) return;
+        if (!Arr.isReadonlyArrayNonEmpty(events)) return;
 
         const yDoc = yield* applyMaterializationUpdates(note.materializedYUpdate, events);
 
@@ -77,7 +80,7 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
         upToLocalSeq,
       });
 
-      if (!Arr.isNonEmptyReadonlyArray(events)) return;
+      if (!Arr.isReadonlyArrayNonEmpty(events)) return;
 
       const yDoc = yield* applyMaterializationUpdates(null, events);
 
@@ -115,58 +118,64 @@ export class Service extends Effect.Service<Service>()("Materializer.Service", {
       const initialCursor = yield* checkpointRepo.getLastAppliedLocalSeq();
       yield* Effect.logInfo(`Starting materializer at global cursor ${initialCursor}`);
 
-      yield* Effect.iterate(initialCursor, {
-        while: () => true,
-        body: (lastAppliedLocalSeq) =>
+      let lastAppliedLocalSeq = initialCursor;
+
+      while (true) {
+        const stream = yield* eventRepo.streamUpdatesAfterGlobalId(
+          lastAppliedLocalSeq,
+          MAX_FETCHED_UNDONE_EVENTS,
+        );
+
+        const nextBatch = yield* stream.pipe(
+          Stream.filter(Arr.isReadonlyArrayNonEmpty),
+          Stream.runHead,
+        );
+
+        if (Option.isNone(nextBatch)) {
+          continue;
+        }
+
+        const batch = nextBatch.value;
+        const newestLocalSeq = Arr.lastNonEmpty(batch).localSeq;
+        const targets = buildMaterializationTargets(batch);
+
+        yield* db.transaction(
           Effect.gen(function* () {
-            const stream = yield* eventRepo.streamUpdatesAfterGlobalId(
-              lastAppliedLocalSeq,
-              MAX_FETCHED_UNDONE_EVENTS,
+            yield* Effect.forEach(
+              targets,
+              (target) =>
+                materializeNoteUpTo({
+                  noteId: target.noteId,
+                  upToLocalSeq: target.upToLocalSeq,
+                }),
+              {
+                concurrency: 1,
+                discard: true,
+              },
             );
 
-            const nextBatch = yield* stream.pipe(
-              Stream.filter(Arr.isNonEmptyReadonlyArray),
-              Stream.runHead,
-            );
-
-            if (Option.isNone(nextBatch)) {
-              return lastAppliedLocalSeq;
-            }
-
-            const batch = nextBatch.value;
-            const newestLocalSeq = Arr.lastNonEmpty(batch).localSeq;
-            const targets = buildMaterializationTargets(batch);
-
-            yield* db.transaction(
-              Effect.gen(function* () {
-                yield* Effect.forEach(
-                  targets,
-                  (target) =>
-                    materializeNoteUpTo({
-                      noteId: target.noteId,
-                      upToLocalSeq: target.upToLocalSeq,
-                    }),
-                  {
-                    concurrency: 1,
-                    discard: true,
-                  },
-                );
-
-                yield* checkpointRepo.setLastAppliedLocalSeq(newestLocalSeq);
-              }),
-            );
-
-            yield* Effect.logInfo(`Processed ${batch.length} events up to ${newestLocalSeq}`);
-            return newestLocalSeq;
+            yield* checkpointRepo.setLastAppliedLocalSeq(newestLocalSeq);
           }),
-      });
+        );
+
+        yield* Effect.logInfo(`Processed ${batch.length} events up to ${newestLocalSeq}`);
+        lastAppliedLocalSeq = newestLocalSeq;
+      }
     });
 
     return {
       start,
     };
   }),
-}) {}
+}) {
+  static readonly layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(DB.Service.layer),
+    Layer.provide(EventRepo.Service.layer),
+    Layer.provide(NoteRepo.Service.layer),
+    Layer.provide(BacklinkService.Service.layer),
+    Layer.provide(MaterializationCheckpointRepo.Service.layer),
+  );
+}
 
 const applyMaterializationUpdates = Effect.fn("MaterializerService.applyMaterializationUpdates")(
   function* (
@@ -232,7 +241,7 @@ function buildMaterializationTargets(
       Arr.max(
         noteEvents,
         pipe(
-          Order.number,
+          Order.Number,
           Order.mapInput((event: { noteId: string; localSeq: number }) => event.localSeq),
         ),
       ),
@@ -246,7 +255,7 @@ function buildMaterializationTargets(
     // 4) Process targets in ascending event localSeq order for deterministic replay.
     Arr.sort(
       pipe(
-        Order.number,
+        Order.Number,
         Order.mapInput((record: MaterializationTarget) => record.upToLocalSeq),
       ),
     ),

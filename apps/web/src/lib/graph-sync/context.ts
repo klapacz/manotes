@@ -1,9 +1,9 @@
-import { Context as EffectContext } from "effect";
+import { ServiceMap } from "effect";
 
-export class Context extends EffectContext.Tag("GraphSync.Context")<
+export class Context extends ServiceMap.Service<
   Context,
   {
     readonly graphId: string;
     readonly graphKey: Uint8Array;
   }
->() {}
+>()("GraphSync.Context") {}

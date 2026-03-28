@@ -1,5 +1,5 @@
 import { Data } from "effect";
-import type { SqlError } from "@effect/sql";
+import type { SqlError } from "effect/unstable/sql";
 
 export class DisplayNameTakenError extends Data.TaggedError("LocalRegistry.DisplayNameTakenError")<{
   displayName: string;

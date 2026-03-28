@@ -27,16 +27,18 @@ export function findFirstH1Text(node: UnknownNodeJSON): string {
   return extractText(firstHeading).trim();
 }
 
-const decodeHeadingAttrs = Schema.decodeUnknownOption(Schema.Struct({ level: Schema.Number }), {
-  exact: false,
+const HeadingAttrsSchema = Schema.Struct({
+  level: Schema.optional(Schema.Number),
 });
+
+const decodeHeadingAttrs = Schema.decodeUnknownOption(HeadingAttrsSchema);
 
 function getHeadingLevel(attrs: UnknownNodeJSON["attrs"]): number | null {
   return pipe(
     decodeHeadingAttrs(attrs),
     Option.match({
       onNone: () => null,
-      onSome: ({ level }) => level,
+      onSome: ({ level }) => level ?? null,
     }),
   );
 }

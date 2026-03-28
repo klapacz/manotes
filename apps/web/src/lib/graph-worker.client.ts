@@ -1,8 +1,6 @@
 import { BrowserWorker } from "@effect/platform-browser";
-import { Worker as PlatformWorker } from "@effect/platform";
-import { Duration, Effect, ExecutionStrategy, Exit, Layer, Schedule, Scope } from "effect";
-import { RpcClient, RpcGroup, RpcWorker } from "@effect/rpc";
-import type { RpcClientError } from "@effect/rpc";
+import { Duration, Effect, Exit, Layer, Schedule, Scope, ServiceMap } from "effect";
+import { RpcClient, RpcClientError, RpcGroup, RpcWorker } from "effect/unstable/rpc";
 import * as DB from "./db.service";
 import * as GraphSyncConfig from "./graph-sync/config";
 import {
@@ -51,18 +49,25 @@ const createDedicatedWorker = Effect.fn("GraphWorkerClient.createDedicatedWorker
     (worker) => Effect.sync(() => worker.terminate()),
   );
 
-  const dedicatedWorkerLayer = BrowserWorker.layer(() => worker);
-
-  // Send port1 to the dedicated worker via initial message.
-  yield* PlatformWorker.makeSerialized<GraphDedicatedInitialMessage>({
-    initialMessage: () =>
+  const [initialMessage, transferables] = yield* RpcWorker.makeInitialMessage(
+    GraphDedicatedInitialMessage,
+    Effect.succeed(
       new GraphDedicatedInitialMessage({
         port: mc.port1,
         localGraphId,
         displayName,
         graphSyncConfig,
       }),
-  }).pipe(Effect.provide(dedicatedWorkerLayer));
+    ),
+  );
+
+  // Send port1 to the dedicated worker via initial message.
+  yield* Effect.sync(() =>
+    worker.postMessage(
+      [0, { _tag: "InitialMessage", value: initialMessage }],
+      transferables as any,
+    ),
+  );
 
   yield* Effect.logInfo("Created dedicated worker");
 
@@ -83,12 +88,12 @@ const SharedInitialMessageLayer = RpcWorker.layerInitialMessage(
 );
 
 /** SharedWorker RPC protocol layer. */
-const SharedRpcProtocol = Layer.unwrapEffect(
+const SharedRpcProtocol = Layer.unwrap(
   Effect.gen(function* () {
     const config = yield* DB.Config;
 
     // Create SharedWorker layer
-    const sharedWorkerLayer = BrowserWorker.layerPlatform(
+    const sharedWorkerLayer = BrowserWorker.layer(
       () =>
         new SharedWorker(new URL("./graph.shared-worker.ts", import.meta.url), {
           type: "module",
@@ -119,9 +124,8 @@ const SharedRpcProtocol = Layer.unwrapEffect(
  * Leader election ensures only one Dedicated Worker exists per graph.
  * Followers use the SharedWorker which forwards to the leader's Dedicated Worker.
  */
-export class Service extends Effect.Service<Service>()("GraphWorkerClient.Service", {
-  dependencies: [SharedRpcProtocol],
-  scoped: Effect.gen(function* () {
+export class Service extends ServiceMap.Service<Service>()("GraphWorkerClient.Service", {
+  make: Effect.gen(function* () {
     const config = yield* DB.Config;
     const graphSyncConfig = yield* GraphSyncConfig.Config;
     const localGraphId = config.localGraphId;
@@ -162,7 +166,9 @@ export class Service extends Effect.Service<Service>()("GraphWorkerClient.Servic
 
     return serviceApi;
   }),
-}) {}
+}) {
+  static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(SharedRpcProtocol));
+}
 
 /**
  * Becomes the leader: creates dedicated worker and sends port to SharedWorker. Retries on failure.
@@ -199,7 +205,7 @@ const becomeLeader = Effect.fn("GraphWorkerClient.becomeLeader")(function* (
   //   reused after failure.
   yield* Effect.gen(function* () {
     const scope = yield* Effect.scope;
-    const workerScope = yield* Scope.fork(scope, ExecutionStrategy.sequential);
+    const workerScope = yield* Scope.fork(scope, "sequential");
 
     yield* Effect.gen(function* () {
       // This can hang if the dedicated worker crashes during module evaluation
@@ -216,7 +222,7 @@ const becomeLeader = Effect.fn("GraphWorkerClient.becomeLeader")(function* (
 
       yield* Effect.logInfo("MessagePort sent to SharedWorker");
     }).pipe(
-      Scope.extend(workerScope),
+      Scope.provide(workerScope),
       Effect.onError((cause) => Scope.close(workerScope, Exit.failCause(cause))),
     );
   }).pipe(Effect.retry(retrySchedule), Effect.withLogSpan("workerSetup"));

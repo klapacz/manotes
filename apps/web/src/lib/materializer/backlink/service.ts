@@ -1,4 +1,4 @@
-import { Effect, Stream } from "effect";
+import { Effect, Layer, ServiceMap, Stream } from "effect";
 import type { UnknownNodeJSON } from "../../node-json";
 import { buildBacklinkPreviewDoc } from "./preview";
 import { collectBacklinkTargetIds } from "./target";
@@ -12,9 +12,8 @@ export type IncomingBacklinkPreview = {
   preview: UnknownNodeJSON;
 };
 
-export class Service extends Effect.Service<Service>()("Materializer.Backlink.Service", {
-  dependencies: [Repo.Service.Default],
-  effect: Effect.gen(function* () {
+export class Service extends ServiceMap.Service<Service>()("Materializer.Backlink.Service", {
+  make: Effect.gen(function* () {
     const repo = yield* Repo.Service;
 
     const listIncomingPreviews = Effect.fn("Materializer.Backlink.listIncomingPreviews")(function* (
@@ -47,7 +46,9 @@ export class Service extends Effect.Service<Service>()("Materializer.Backlink.Se
       replaceForSourceNote,
     };
   }),
-}) {}
+}) {
+  static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(Repo.Service.layer));
+}
 
 function toIncomingBacklinkPreview(
   note: BacklinkSchema.IncomingBacklinkNote,

@@ -51,7 +51,7 @@ function RouteComponent() {
         });
       }
 
-      const isDisplayNameTakenError = Cause.failureOption(exit.cause).pipe(
+      const isDisplayNameTakenError = Cause.findErrorOption(exit.cause).pipe(
         Option.map((failure) => failure._tag === "LocalRegistry.DisplayNameTakenError"),
         Option.getOrElse(constant(false)),
       );

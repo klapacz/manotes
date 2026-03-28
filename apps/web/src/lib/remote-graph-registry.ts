@@ -1,6 +1,6 @@
-import { FetchHttpClient } from "@effect/platform";
-import { RpcClient, RpcSerialization } from "@effect/rpc";
+import { FetchHttpClient } from "effect/unstable/http";
 import { Cause, Effect, Exit, Layer, ManagedRuntime, Option } from "effect";
+import { RpcClient, RpcSerialization } from "effect/unstable/rpc";
 import { Graph, GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
 import type { GraphKeyEnvelope } from "@manotes/shared/graph-encryption";
 
@@ -51,7 +51,7 @@ export async function createGraph({
 
   if (Exit.isSuccess(exit)) return exit.value;
 
-  const failure = Cause.failureOption(exit.cause);
+  const failure = Cause.findErrorOption(exit.cause);
   if (
     Option.isSome(failure) &&
     "_tag" in failure.value &&

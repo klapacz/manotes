@@ -1,25 +1,24 @@
 /**
  * Supervises the client graph sync session and retries after disconnects.
  */
-import { Effect, Ref, Schedule } from "effect";
+import { Effect, Layer, Schedule, ServiceMap, SubscriptionRef } from "effect";
 import * as EventRepo from "../event.repo";
 import * as GraphSyncEventLog from "./event-log.service";
 import * as Session from "./machine/session";
 import * as Status from "./status";
 import { SyncStatusCloud } from "../graph.worker-rpc";
 
-export class Service extends Effect.Service<Service>()("GraphSyncService", {
-  dependencies: [EventRepo.Service.Default, GraphSyncEventLog.Service.Default],
-  effect: Effect.gen(function* () {
+export class Service extends ServiceMap.Service<Service>()("GraphSyncService", {
+  make: Effect.gen(function* () {
     const status = yield* Status.Ref;
 
     return {
       start: Effect.fn("GraphSyncService.start")(function* () {
         return yield* Session.run().pipe(
-          Effect.tapErrorCause(
+          Effect.tapCause(
             Effect.fn(function* (cause) {
               yield* Effect.logWarning("Graph sync socket closed", cause);
-              yield* Ref.update(
+              yield* SubscriptionRef.update(
                 status,
                 (prev) =>
                   new SyncStatusCloud({
@@ -31,10 +30,15 @@ export class Service extends Effect.Service<Service>()("GraphSyncService", {
             }),
           ),
           Effect.retry(
-            Schedule.exponential("250 millis").pipe(Schedule.union(Schedule.spaced("5 seconds"))),
+            Schedule.exponential("250 millis").pipe(Schedule.either(Schedule.spaced("1 minute"))),
           ),
         );
       }),
     };
   }),
-}) {}
+}) {
+  static readonly layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(EventRepo.Service.layer),
+    Layer.provide(GraphSyncEventLog.Service.layer),
+  );
+}

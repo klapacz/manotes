@@ -1,4 +1,4 @@
-import { Cause, Exit, Layer, Logger, LogLevel, ManagedRuntime } from "effect";
+import { Cause, Exit, Layer, ManagedRuntime, References } from "effect";
 import * as DB from "./db.service";
 import * as EventRepo from "./event.repo";
 import * as GraphWorkerClient from "./graph-worker.client";
@@ -63,17 +63,17 @@ async function create(opts: SetupOpts) {
   );
 
   const AppLayer = Layer.mergeAll(
-    EventRepo.Service.Default,
-    NoteRepo.Service.Default,
-    BacklinkService.Service.Default,
-    NoteCache.Service.Default,
-    EditorNoteBootCache.Service.Default,
-    MaterializationCheckpointRepo.Service.Default,
-    MaterializedEventService.Service.Default,
-    EditorSyncService.Service.Default,
-    GraphWorkerClient.Service.Default,
-    DB.Service.Default,
-    Logger.minimumLogLevel(LogLevel.Debug),
+    EventRepo.Service.layer,
+    NoteRepo.Service.layer,
+    BacklinkService.Service.layer,
+    NoteCache.Service.layer,
+    EditorNoteBootCache.Service.layer,
+    MaterializationCheckpointRepo.Service.layer,
+    MaterializedEventService.Service.layer,
+    EditorSyncService.Service.layer,
+    GraphWorkerClient.Service.layer,
+    DB.Service.layer,
+    Layer.succeed(References.MinimumLogLevel, "Debug"),
   ).pipe(Layer.provide(GraphSyncConfigLayer), Layer.provideMerge(DBWithConfigLayer));
 
   return ManagedRuntime.make(AppLayer);

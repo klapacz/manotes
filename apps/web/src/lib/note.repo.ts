@@ -1,17 +1,21 @@
-import { Effect, pipe, Schema, Option, Stream, Array, flow } from "effect";
+import { Array, Effect, flow, Layer, Option, pipe, Schema, ServiceMap, Stream } from "effect";
 import * as DB from "./db.service";
 import * as NoteSchema from "./note.schema";
 import * as Tables from "./db.tables";
 import { and, eq, like } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
-  dependencies: [DB.Service.Default],
-  effect: Effect.gen(function* () {
+const decodeRecord = Schema.decodeEffect(NoteSchema.Record);
+const decodeRecordArray = Schema.decodeEffect(Schema.Array(NoteSchema.Record));
+const decodePreview = Schema.decodeEffect(NoteSchema.Preview);
+const decodePreviewArray = Schema.decodeEffect(Schema.Array(NoteSchema.Preview));
+
+export class Service extends ServiceMap.Service<Service>()("NoteRepo.Service", {
+  make: Effect.gen(function* () {
     const db = yield* DB.Service;
 
     const create = Effect.fn("NoteRepo.create")(function* (note: typeof NoteSchema.Create.Type) {
-      const encoded = yield* pipe(note, Schema.encode(NoteSchema.Create));
+      const encoded = yield* pipe(note, Schema.encodeEffect(NoteSchema.Create));
 
       const id = encoded.id ?? nanoid();
 
@@ -31,32 +35,26 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
           .returning(),
       );
 
-      return yield* pipe(
-        record,
-        Option.match({
-          onNone: () => new DB.NotFoundError(),
-          onSome: (record) => pipe(record, Schema.decode(NoteSchema.Record)),
-        }),
-      );
+      return yield* Option.match(record, {
+        onNone: () => new DB.NotFoundError(),
+        onSome: decodeRecord,
+      });
     });
 
     const updateById = Effect.fn("NoteRepo.updateById")(function* (
       id: string,
       updates: typeof NoteSchema.Update.Type,
     ) {
-      const encoded = yield* pipe(updates, Schema.encode(NoteSchema.Update));
+      const encoded = yield* pipe(updates, Schema.encodeEffect(NoteSchema.Update));
 
       const record = yield* db.find((db) =>
         db.update(Tables.notes).set(encoded).where(eq(Tables.notes.id, id)).returning(),
       );
 
-      return yield* pipe(
-        record,
-        Option.match({
-          onNone: () => new DB.NotFoundError(),
-          onSome: (record) => pipe(record, Schema.decode(NoteSchema.Record)),
-        }),
-      );
+      return yield* Option.match(record, {
+        onNone: () => new DB.NotFoundError(),
+        onSome: decodeRecord,
+      });
     });
 
     const findById = Effect.fn("NoteRepo.findById")(function* (id: string) {
@@ -66,8 +64,7 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
 
       if (Option.isNone(record)) return Option.none();
 
-      const decoded = yield* pipe(record.value, Schema.decode(NoteSchema.Record));
-      return Option.some(decoded);
+      return yield* decodeRecord(record.value).pipe(Effect.asSome);
     });
 
     const getById = Effect.fn("NoteRepo.getById")(function* (id: string) {
@@ -89,7 +86,7 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
             Array.head,
             Option.match({
               onNone: () => Effect.succeedNone,
-              onSome: flow(Schema.decode(NoteSchema.Record), Effect.map(Option.some)),
+              onSome: flow(decodeRecord, Effect.asSome),
             }),
           ),
         ),
@@ -99,17 +96,13 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
     const list = Effect.fn("NoteRepo.list")(function* () {
       const records = yield* db.query((db) => db.select().from(Tables.notes));
 
-      return yield* Effect.forEach(records, (record) =>
-        pipe(record, Schema.decode(NoteSchema.Record)),
-      );
+      return yield* decodeRecordArray(records);
     });
 
     const reactiveList = Effect.fn("NoteRepo.reactiveList")(function* () {
       const stream = yield* db.reactiveQuery((db) => db.select().from(Tables.notes));
 
-      return stream.pipe(
-        Stream.mapEffect((n) => pipe(n, Schema.decode(Schema.Array(NoteSchema.Record)))),
-      );
+      return stream.pipe(Stream.mapEffect((n) => decodeRecordArray(n)));
     });
 
     const reactiveFindPreviewById = Effect.fn("NoteRepo.reactiveFindPreviewById")(function* (
@@ -133,7 +126,7 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
             Array.head,
             Option.match({
               onNone: () => Effect.succeedNone,
-              onSome: flow(Schema.decode(NoteSchema.Preview), Effect.map(Option.some)),
+              onSome: flow(decodePreview, Effect.asSome),
             }),
           ),
         ),
@@ -159,7 +152,7 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
           .where(where);
       });
 
-      return stream.pipe(Stream.mapEffect(Schema.decode(Schema.Array(NoteSchema.Preview))));
+      return stream.pipe(Stream.mapEffect((rows) => decodePreviewArray(rows)));
     });
 
     return {
@@ -174,4 +167,6 @@ export class Service extends Effect.Service<Service>()("NoteRepo.Service", {
       reactiveSearchPreview,
     };
   }),
-}) {}
+}) {
+  static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
+}

@@ -1,7 +1,8 @@
-import { Schema } from "effect";
+import { Schema, SchemaGetter } from "effect";
 
-export const BooleanFromInt = Schema.transform(Schema.Number, Schema.Boolean, {
-  strict: true,
-  decode: (value) => value !== 0,
-  encode: (value) => (value ? 1 : 0),
-});
+export const BooleanFromInt = Schema.Number.pipe(
+  Schema.decodeTo(Schema.Boolean, {
+    decode: SchemaGetter.transform((value: number) => value !== 0),
+    encode: SchemaGetter.transform((value: boolean) => (value ? 1 : 0)),
+  }),
+);

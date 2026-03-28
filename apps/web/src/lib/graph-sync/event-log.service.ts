@@ -1,7 +1,7 @@
 /**
  * Wraps local event-log reads and writes used by graph sync.
  */
-import { Array, Effect, Option, pipe } from "effect";
+import { Array, Effect, Layer, Option, pipe, ServiceMap } from "effect";
 import * as DB from "../db.service";
 import * as EventRepo from "../event.repo";
 import * as Messages from "@manotes/shared/graph-sync/contract/messages";
@@ -13,13 +13,8 @@ import type { NonEmptyReadonlyArray } from "effect/Array";
 
 export const PUSH_BATCH_SIZE = MAX_EVENTS_PER_COMMIT;
 
-export class Service extends Effect.Service<Service>()("GraphSyncEventLogService", {
-  dependencies: [
-    DB.Service.Default,
-    EventRepo.Service.Default,
-    GraphSyncEncryption.Service.Default,
-  ],
-  effect: Effect.gen(function* () {
+export class Service extends ServiceMap.Service<Service>()("GraphSyncEventLogService", {
+  make: Effect.gen(function* () {
     const db = yield* DB.Service;
     const eventRepo = yield* EventRepo.Service;
     const graphSyncEncryption = yield* GraphSyncEncryption.Service;
@@ -55,7 +50,7 @@ export class Service extends Effect.Service<Service>()("GraphSyncEventLogService
           Array.dropWhile((event) => event.commitSeq <= lastCommitSeq),
         );
 
-        if (!Array.isNonEmptyReadonlyArray(unappliedEvents)) return;
+        if (!Array.isReadonlyArrayNonEmpty(unappliedEvents)) return;
 
         yield* db.transaction(
           Effect.forEach(
@@ -97,7 +92,9 @@ export class Service extends Effect.Service<Service>()("GraphSyncEventLogService
                   onNone: Effect.fnUntraced(function* () {
                     // Replayed remote events arrive through the same local log so
                     // downstream materialization and tab sync keep using one path.
-                    const envelope = yield* GraphSyncEncryptionSchema.decodeEnvelope(event.payload);
+                    const envelope = yield* GraphSyncEncryptionSchema.decodeEnvelope(
+                      new Uint8Array(event.payload),
+                    );
                     const decrypted = yield* graphSyncEncryption.decryptEventBody({
                       id: event.id,
                       streamRef: event.streamRef,
@@ -128,7 +125,7 @@ export class Service extends Effect.Service<Service>()("GraphSyncEventLogService
      */
     const getPendingCommit = Effect.fn("GraphSyncEventLogService.getPendingCommit")(function* () {
       const pending = yield* eventRepo.findPending(PUSH_BATCH_SIZE);
-      if (!Array.isNonEmptyReadonlyArray(pending)) return Option.none();
+      if (!Array.isReadonlyArrayNonEmpty(pending)) return Option.none();
 
       const baseCommitSeq = yield* eventRepo.getLastCommitSeq();
       const events = yield* Effect.forEach(
@@ -166,4 +163,10 @@ export class Service extends Effect.Service<Service>()("GraphSyncEventLogService
       getPendingCommit,
     };
   }),
-}) {}
+}) {
+  static readonly layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(DB.Service.layer),
+    Layer.provide(EventRepo.Service.layer),
+    Layer.provide(GraphSyncEncryption.Service.layer),
+  );
+}

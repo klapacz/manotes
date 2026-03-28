@@ -44,13 +44,10 @@ export const Route = createFileRoute("/$graph/")({
     return null;
   },
   validateSearch: Schema.Struct({
-    date: Schema.optional(TemporalSchema.PlainDateString).pipe(
-      Schema.withDefaults({
-        decoding: () => Temporal.Now.plainDateISO().toString(),
-        constructor: () => Temporal.Now.plainDateISO().toString(),
-      }),
+    date: TemporalSchema.PlainDateString.pipe(
+      Schema.withDecodingDefault(() => Temporal.Now.plainDateISO().toString()),
     ),
-  }).pipe(Schema.standardSchemaV1),
+  }).pipe(Schema.toStandardSchemaV1),
 });
 
 function RouteComponent() {

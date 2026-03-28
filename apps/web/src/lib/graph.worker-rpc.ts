@@ -1,33 +1,33 @@
 import { Schema } from "effect";
-import { Rpc, RpcGroup } from "@effect/rpc";
-import { Transferable } from "@effect/platform";
+import { Rpc, RpcGroup } from "effect/unstable/rpc";
+import { Transferable } from "effect/unstable/workers";
 import * as GraphSyncConfig from "./graph-sync/config";
 
 /** Initial message sent from main thread to SharedWorker. */
 export const GraphSharedInitialMessageSchema = Schema.Struct({
   localGraphId: Schema.String,
-  graphSyncMode: Schema.Literal("local", "cloud"),
+  graphSyncMode: Schema.Literals(["local", "cloud"]),
 });
 
 export type GraphSharedInitialMessage = typeof GraphSharedInitialMessageSchema.Type;
 
 export class SyncStatusLocal extends Schema.Class<SyncStatusLocal>("SyncStatusLocal")({
-  mode: Schema.Literal("local"),
+  mode: Schema.Literals(["local"]),
 }) {}
 
 export class SyncStatusCloud extends Schema.Class<SyncStatusCloud>("SyncStatusCloud")({
-  mode: Schema.Literal("cloud"),
-  syncState: Schema.Literal("Disconnected", "Bootstrapping", "Ready", "Committing"),
+  mode: Schema.Literals(["cloud"]),
+  syncState: Schema.Literals(["Disconnected", "Bootstrapping", "Ready", "Committing"]),
   hasPending: Schema.Boolean,
 }) {}
 
-export const SyncStatus = Schema.Union(SyncStatusLocal, SyncStatusCloud);
+export const SyncStatus = Schema.Union([SyncStatusLocal, SyncStatusCloud]);
 export type SyncStatus = typeof SyncStatus.Type;
 
 export class DedicatedWorkerHealth extends Schema.Class<DedicatedWorkerHealth>(
   "DedicatedWorkerHealth",
 )({
-  status: Schema.Literal("healthy", "degraded", "down"),
+  status: Schema.Literals(["healthy", "degraded", "down"]),
   consecutiveFailures: Schema.Number,
   lastFailure: Schema.String,
 }) {}
@@ -75,24 +75,12 @@ export class GraphDedicatedRpc extends RpcGroup.make(
   }),
 ) {}
 
-/**
- * Initial message for the dedicated worker (not RPC).
- * Carries the `MessagePort`, local graph id, display name, and graph sync config.
- *
- * IMPORTANT: The _tag MUST be exactly "InitialMessage" — `layerSerialized`'s
- * `HandlersContext` type hardcodes this key to track Layer requirements.
- * Any other name silently drops unsatisfied dependencies from the type.
- */
-export class GraphDedicatedInitialMessage extends Schema.TaggedRequest<GraphDedicatedInitialMessage>()(
-  "InitialMessage",
-  {
-    payload: {
-      port: Transferable.MessagePort,
-      localGraphId: Schema.String,
-      displayName: Schema.String,
-      graphSyncConfig: GraphSyncConfig.GraphSyncConfigSchema,
-    },
-    success: Schema.Void,
-    failure: Schema.Never,
-  },
-) {}
+/** Initial message for the dedicated worker (not RPC). */
+export class GraphDedicatedInitialMessage extends Schema.Class<GraphDedicatedInitialMessage>(
+  "GraphDedicatedInitialMessage",
+)({
+  port: Transferable.MessagePort,
+  localGraphId: Schema.String,
+  displayName: Schema.String,
+  graphSyncConfig: GraphSyncConfig.GraphSyncConfigSchema,
+}) {}

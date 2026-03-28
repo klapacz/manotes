@@ -64,7 +64,7 @@ function tryAcquireLeadershipLock(
   lockName: string,
 ): Effect.Effect<Option.Option<LeadershipLock>, never, Scope.Scope> {
   return Effect.acquireRelease(
-    Effect.async<Option.Option<LeadershipLock>>((resume) => {
+    Effect.callback<Option.Option<LeadershipLock>>((resume) => {
       // Multiple completion paths can race (callback + abort/rejection).
       // Effect.async ignores additional resume calls, so we can safely "try" to
       // resume in each path without adding extra guards.
@@ -101,7 +101,7 @@ function acquireLeadershipLock(
   lockName: string,
 ): Effect.Effect<LeadershipLock, never, Scope.Scope> {
   return Effect.acquireRelease(
-    Effect.async<LeadershipLock>((resume, signal) => {
+    Effect.callback<LeadershipLock>((resume, signal) => {
       // Blocking variant: waits in queue and supports interruption.
       navigator.locks
         .request(lockName, { signal }, async (lock) => {

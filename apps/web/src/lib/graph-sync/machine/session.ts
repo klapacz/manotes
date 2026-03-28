@@ -1,8 +1,8 @@
 /**
  * Orchestrates socket lifecycle and feeds inputs into the machine runner.
  */
-import * as Socket from "@effect/platform/Socket";
-import { Effect, Queue, Ref, Stream } from "effect";
+import * as Socket from "effect/unstable/socket/Socket";
+import { Effect, Queue, Stream, SubscriptionRef } from "effect";
 import { decodeServerMessage } from "@manotes/shared/graph-sync/contract/codec";
 import * as EventRepo from "../../event.repo";
 import * as GraphSyncContext from "../context";
@@ -28,7 +28,7 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
     Stream.changes,
     Stream.runForEach((hasPending) =>
       Effect.gen(function* () {
-        yield* Ref.update(
+        yield* SubscriptionRef.update(
           statusRef,
           (prev) => new SyncStatusCloud({ mode: prev.mode, syncState: prev.syncState, hasPending }),
         );
@@ -49,7 +49,7 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
   yield* socket
     .run(
       Effect.fn("GraphSyncMachineSession.handleSocketData")(function* (data) {
-        const message = yield* decodeServerMessage(data);
+        const message = yield* decodeServerMessage(new Uint8Array(data));
         yield* Queue.offer(inputQueue, Model.Input.ServerMessage({ message }));
       }),
       {

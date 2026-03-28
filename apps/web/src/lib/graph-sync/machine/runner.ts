@@ -1,7 +1,7 @@
 /**
  * Runs the graph sync state machine over queued session inputs.
  */
-import { Effect, Match, Queue, Ref, Stream } from "effect";
+import { Effect, Match, Queue, Stream, SubscriptionRef } from "effect";
 import { encodeClientMessage } from "@manotes/shared/graph-sync/contract/codec";
 import * as Status from "../status";
 import * as MachineContext from "./context";
@@ -27,12 +27,12 @@ export const run = Effect.fn("GraphSyncMachineRunner.run")(function* ({
 
   return yield* Stream.fromQueue(inputQueue).pipe(
     Stream.runFoldEffect(
-      initialState,
+      () => initialState,
       Effect.fn(function* (currentState, signal) {
         yield* Effect.logDebug("Received Message", { currentState, signal });
         const nextState = yield* step(currentState, signal);
 
-        yield* Ref.update(
+        yield* SubscriptionRef.update(
           status,
           (prev) =>
             new SyncStatusCloud({

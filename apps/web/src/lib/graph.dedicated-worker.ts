@@ -1,9 +1,7 @@
 import { BrowserRuntime, BrowserWorkerRunner } from "@effect/platform-browser";
-import { WorkerRunner } from "@effect/platform";
-import * as Socket from "@effect/platform/Socket";
-import { Effect, Layer, Logger, LogLevel, Stream, SubscriptionRef } from "effect";
-import { RpcServer } from "@effect/rpc";
-import type { RpcGroup } from "@effect/rpc";
+import * as Socket from "effect/unstable/socket/Socket";
+import { Effect, Layer, References, Stream, SubscriptionRef } from "effect";
+import { RpcGroup, RpcServer, RpcWorker } from "effect/unstable/rpc";
 import * as DB from "./db.service";
 import * as EventRepo from "./event.repo";
 import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
@@ -25,53 +23,55 @@ import * as GraphSyncStatus from "./graph-sync/status";
 import { SqlLive } from "./db.service";
 import * as GraphSyncConfig from "./graph-sync/config";
 
-// Bootstrap runner - receives MessagePort via initial message and installs
-// the RPC server layer into the serialized runner context.
-const BootstrapRunner = WorkerRunner.layerSerialized(GraphDedicatedInitialMessage, {
-  // Key must match the _tag "InitialMessage" exactly — see GraphDedicatedInitialMessage.
-  // This explicit `Layer.Layer<never, never, never>` contract is intentional.
-  // Do NOT remove it. If this stops type-checking, close the returned layer
-  // properly instead of weakening the signature.
-  InitialMessage: ({
-    port,
+const bootstrapEffect = Effect.gen(function* () {
+  // Build the bootstrap layers (WorkerRunner on `self`) using the Layer.unwrap
+  // build scope. This prevents the scope from closing after receiving the initial
+  // message — in v4, BrowserWorkerRunner cleanup calls self.close() which would
+  // terminate the worker.
+  const bootstrapServices = yield* Layer.buildWithScope(
+    RpcServer.layerProtocolWorkerRunner.pipe(Layer.provide(BrowserWorkerRunner.layer)),
+    yield* Effect.scope,
+  );
+
+  const { port, localGraphId, displayName, graphSyncConfig } = yield* RpcWorker.initialMessage(
+    GraphDedicatedInitialMessage,
+  ).pipe(Effect.provideServices(bootstrapServices));
+
+  yield* Effect.annotateLogsScoped({ worker: "dedicated", localGraphId });
+  yield* Effect.logInfo("Received port");
+
+  // Build the service layer for the RPC server
+  const serviceLayer = buildServiceLayer({
     localGraphId,
     displayName,
     graphSyncConfig,
-  }): Layer.Layer<never, never, never> =>
-    Layer.unwrapEffect(
-      Effect.gen(function* () {
-        yield* Effect.logInfo(`Received port`);
+  });
 
-        // Build the service layer for the RPC server
-        const serviceLayer = buildServiceLayer({
-          localGraphId,
-          displayName,
-          graphSyncConfig,
-        });
-
-        // Return a layer so WorkerRunner keeps it alive in its internal scope.
-        return RpcServer.layer(GraphDedicatedRpc).pipe(
-          Layer.provide(makeRpcHandler(localGraphId, graphSyncConfig)),
-          Layer.provide(RpcServer.layerProtocolWorkerRunner),
-          // Listen on the transferred MessagePort instead of self.
-          Layer.provide(BrowserWorkerRunner.layerMessagePort(port)),
-          Layer.provide(serviceLayer),
-          Layer.orDie,
-        );
-      }).pipe(Effect.annotateLogs({ worker: "dedicated", localGraphId })),
+  // Return a layer so WorkerRunner keeps it alive in its internal scope.
+  // Layer.fresh forces a new MemoMap so that RpcServer.layerProtocolWorkerRunner
+  // is built fresh here (backed by the MessagePort) rather than reusing the
+  // memoized bootstrap instance (backed by `self`).
+  return Layer.fresh(
+    RpcServer.layer(GraphDedicatedRpc).pipe(
+      Layer.provide(makeRpcHandler(localGraphId, graphSyncConfig)),
+      Layer.provide(RpcServer.layerProtocolWorkerRunner),
+      // Listen on the transferred MessagePort instead of self.
+      Layer.provide(BrowserWorkerRunner.layerMessagePort(port)),
+      Layer.provide(serviceLayer),
+      Layer.orDie,
     ),
+  );
 });
 
-// Launch the bootstrap runner
-const RpcWorkerServer = BootstrapRunner.pipe(Layer.provide(BrowserWorkerRunner.layer));
+// Bootstrap runner - receives MessagePort via initial message and installs
+// the RPC server layer into the serialized runner context.
+const BootstrapRunner = Layer.unwrap(bootstrapEffect);
 
 BrowserRuntime.runMain(
-  WorkerRunner.launch(RpcWorkerServer).pipe(
-    Effect.provideService(
-      Socket.WebSocketConstructor,
-      (url, protocols) => new WebSocket(url, protocols),
-    ),
-    Effect.tapErrorCause((error) => Effect.logError("Dedicated worker fatal error", error)),
+  Effect.scoped(Layer.launch(BootstrapRunner)).pipe(
+    Effect.tapCause((error) => {
+      return Effect.logError("Dedicated worker fatal error", error);
+    }),
   ),
 );
 
@@ -86,7 +86,7 @@ function makeRpcHandler(localGraphId: string, graphSyncConfig: GraphSyncConfig.G
       const materializer = yield* MaterializerService.Service;
 
       yield* materializer.start().pipe(
-        Effect.catchAllCause((cause) => Effect.logError("Materializer failed", cause)),
+        Effect.catchCause((cause) => Effect.logError("Materializer failed", cause)),
         Effect.forkScoped,
       );
 
@@ -100,9 +100,9 @@ function makeRpcHandler(localGraphId: string, graphSyncConfig: GraphSyncConfig.G
         );
 
         const graphSyncLayer = Layer.mergeAll(
-          GraphSyncEncryption.Service.Default,
-          GraphSyncEventLog.Service.Default,
-          GraphSync.Service.Default,
+          GraphSyncEncryption.Service.layer,
+          GraphSyncEventLog.Service.layer,
+          GraphSync.Service.layer,
         ).pipe(
           Layer.provideMerge(
             Layer.merge(
@@ -122,7 +122,7 @@ function makeRpcHandler(localGraphId: string, graphSyncConfig: GraphSyncConfig.G
           const graphSync = yield* GraphSync.Service;
 
           yield* graphSync.start().pipe(
-            Effect.catchAllCause((cause) => Effect.logError("Graph sync failed", cause)),
+            Effect.catchCause((cause) => Effect.logError("Graph sync failed", cause)),
             Effect.forkScoped,
           );
         }).pipe(Effect.provide(graphSyncLayer));
@@ -131,7 +131,7 @@ function makeRpcHandler(localGraphId: string, graphSyncConfig: GraphSyncConfig.G
           placeholder: Effect.fn("DedicatedWorker.placeholder")(function* () {
             yield* Effect.logInfo("Placeholder RPC invoked");
           }),
-          syncStatusStream: () => syncStatusRef.changes,
+          syncStatusStream: () => SubscriptionRef.changes(syncStatusRef),
         } satisfies Handlers;
       }
 
@@ -167,15 +167,15 @@ function buildServiceLayer(opts: {
     GraphSyncConfig.Config.of(opts.graphSyncConfig),
   );
   return Layer.mergeAll(
-    DB.Service.Default,
-    EventRepo.Service.Default,
-    NoteRepo.Service.Default,
-    BacklinkService.Service.Default,
-    MaterializationCheckpointRepo.Service.Default,
-    MaterializedEventService.Service.Default,
-    MaterializerService.Service.Default,
+    DB.Service.layer,
+    EventRepo.Service.layer,
+    NoteRepo.Service.layer,
+    BacklinkService.Service.layer,
+    MaterializationCheckpointRepo.Service.layer,
+    MaterializedEventService.Service.layer,
+    MaterializerService.Service.layer,
     Socket.layerWebSocketConstructorGlobal,
-    Logger.minimumLogLevel(LogLevel.Debug),
+    Layer.succeed(References.MinimumLogLevel, "Debug"),
   ).pipe(
     // Keep DB.Config in the final layer output because downstream effects
     // still read it directly even after the service graph has been built.

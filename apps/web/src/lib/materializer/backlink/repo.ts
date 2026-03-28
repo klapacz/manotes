@@ -1,12 +1,11 @@
-import { Effect, pipe, Stream } from "effect";
+import { Effect, Layer, ServiceMap, Stream } from "effect";
 import { desc, eq, sql } from "drizzle-orm";
 import * as DB from "../../db.service";
 import * as Tables from "../../db.tables";
 import * as BacklinkSchema from "./schema";
 
-export class Service extends Effect.Service<Service>()("Materializer.BacklinkRepo.Service", {
-  dependencies: [DB.Service.Default],
-  effect: Effect.gen(function* () {
+export class Service extends ServiceMap.Service<Service>()("Materializer.BacklinkRepo.Service", {
+  make: Effect.gen(function* () {
     const db = yield* DB.Service;
 
     const replaceForSource = Effect.fn("Materializer.BacklinkRepo.replaceForSource")(function* (
@@ -56,7 +55,7 @@ export class Service extends Effect.Service<Service>()("Materializer.BacklinkRep
           ),
       );
 
-      return yield* pipe(rows, BacklinkSchema.decodeIncomingBacklinks);
+      return yield* BacklinkSchema.decodeIncomingBacklinks(rows);
     });
 
     const reactiveListIncomingNotes = Effect.fn(
@@ -80,7 +79,7 @@ export class Service extends Effect.Service<Service>()("Materializer.BacklinkRep
           ),
       );
 
-      return stream.pipe(Stream.mapEffect(BacklinkSchema.decodeIncomingBacklinks));
+      return stream.pipe(Stream.mapEffect((rows) => BacklinkSchema.decodeIncomingBacklinks(rows)));
     });
 
     return {
@@ -89,4 +88,6 @@ export class Service extends Effect.Service<Service>()("Materializer.BacklinkRep
       replaceForSource,
     };
   }),
-}) {}
+}) {
+  static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
+}

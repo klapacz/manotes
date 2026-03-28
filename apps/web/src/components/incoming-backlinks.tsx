@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/solid-router";
-import { Effect, Stream } from "effect";
+import { Stream } from "effect";
 import { createEffect, For, onCleanup, Show, type JSX } from "solid-js";
 import { ProseKit } from "prosekit/solid";
 import { createEditor, union } from "prosekit/core";
@@ -21,9 +21,8 @@ export function IncomingBacklinksFetcher(props: {
       {(noteId) => (
         <RunStream
           stream={() =>
-            EditorNoteBootCache.Service.pipe(
-              Effect.flatMap((cache) => cache.incomingBacklinkChanges(noteId)),
-              Stream.unwrapScoped,
+            EditorNoteBootCache.Service.use((cache) => cache.incomingBacklinkChanges(noteId)).pipe(
+              Stream.unwrap,
             )
           }
           staticInitialValue={[]}

@@ -1,9 +1,8 @@
-import * as Context from "effect/Context";
+import { Effect, ManagedRuntime, ServiceMap, Stream } from "effect";
 import * as Layer from "effect/Layer";
-import { SqlClient } from "@effect/sql";
+import { SqlClient } from "effect/unstable/sql";
 import * as SqliteClient from "@manotes/sql-sqlite-wasm/sqlite-client";
 import * as Primitives from "../primitives";
-import { Effect, ManagedRuntime, Stream } from "effect";
 import * as Repo from "./repo";
 
 const REGISTRY_DATABASE_PATH = "local-registry.sqlite3";
@@ -26,11 +25,13 @@ const RegistryBaseLayer = SqliteClient.layer({
   initMessage: { dbName: REGISTRY_DATABASE_PATH },
 });
 
-const RegistryLive = Layer.scopedContext(
+const RegistryLive = Layer.unwrap(
   Effect.gen(function* () {
     const context = yield* Layer.build(RegistryBaseLayer);
     yield* Repo.migrate.pipe(Effect.provide(context));
-    return context.pipe(Context.pick(SqliteClient.SqliteClient, SqlClient.SqlClient));
+    return Layer.succeedServices(
+      context.pipe(ServiceMap.pick(SqliteClient.SqliteClient, SqlClient.SqlClient)),
+    );
   }),
 );
 

@@ -1,6 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@latest
+  vite-plus: latest
+  vitest: npm:@voidzero-dev/vite-plus-test@latest
 
 ignoredBuiltDependencies:
   - esbuild
@@ -9,16 +13,13 @@ ignoredBuiltDependencies:
 
 onlyBuiltDependencies:
   - workerd
-
-patchedDependencies:
-  drizzle-orm: patches/drizzle-orm.patch
-catalog:
-  vite: npm:@voidzero-dev/vite-plus-core@latest
-  vitest: npm:@voidzero-dev/vite-plus-test@latest
-  vite-plus: latest
 overrides:
   vite: "catalog:"
   vitest: "catalog:"
+
+patchedDependencies:
+  drizzle-orm: patches/drizzle-orm.patch
+  effect@4.0.0-beta.42: patches/effect@4.0.0-beta.42.patch
 peerDependencyRules:
   allowAny:
     - vite

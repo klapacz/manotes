@@ -1,7 +1,7 @@
 /**
  * Defines the graph sync machine's inputs, states, and write type.
  */
-import * as Socket from "@effect/platform/Socket";
+import * as Socket from "effect/unstable/socket/Socket";
 import { Data, Effect } from "effect";
 import * as Messages from "@manotes/shared/graph-sync/contract/messages";
 

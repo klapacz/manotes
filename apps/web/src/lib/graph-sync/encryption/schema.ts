@@ -1,36 +1,36 @@
-import * as MsgPack from "@effect/platform/MsgPack";
+import { Msgpack } from "effect/unstable/encoding";
 import { Schema } from "effect";
 
 export const EnvelopeSchema = Schema.Struct({
-  version: Schema.Literal(0),
+  version: Schema.Literals([0]),
   iv: Schema.Uint8ArrayFromBase64,
   ciphertext: Schema.Uint8ArrayFromBase64,
 });
 export type Envelope = Schema.Schema.Type<typeof EnvelopeSchema>;
 
-const EnvelopeMsgPack = MsgPack.schema(EnvelopeSchema);
-export const decodeEnvelope = Schema.decode(EnvelopeMsgPack);
-export const encodeEnvelope = Schema.encode(EnvelopeMsgPack);
+const EnvelopeMsgPack = Msgpack.schema(EnvelopeSchema);
+export const decodeEnvelope = Schema.decodeEffect(EnvelopeMsgPack);
+export const encodeEnvelope = Schema.encodeEffect(EnvelopeMsgPack);
 
 export const BodySchema = Schema.Struct({
   noteId: Schema.NonEmptyString,
-  payload: Schema.Uint8ArrayFromSelf,
+  payload: Schema.Uint8Array,
 });
 export type Body = Schema.Schema.Type<typeof BodySchema>;
 
-const BodyMsgPack = MsgPack.schema(BodySchema);
-export const decodeBody = Schema.decode(BodyMsgPack);
-export const encodeBody = Schema.encode(BodyMsgPack);
+const BodyMsgPack = Msgpack.schema(BodySchema);
+export const decodeBody = Schema.decodeEffect(BodyMsgPack);
+export const encodeBody = Schema.encodeEffect(BodyMsgPack);
 
 export type CreatedAt = Schema.Schema.Type<typeof Schema.DateTimeUtc>;
 
 export const AuthenticatedMetadataSchema = Schema.Struct({
-  version: Schema.Literal(0),
+  version: Schema.Literals([0]),
   id: Schema.NonEmptyString,
-  streamRef: Schema.Uint8ArrayFromSelf,
-  createdAt: Schema.DateTimeUtc,
+  streamRef: Schema.Uint8Array,
+  createdAt: Schema.DateTimeUtcFromString,
 });
 export type AuthenticatedMetadata = Schema.Schema.Type<typeof AuthenticatedMetadataSchema>;
 
-const AuthenticatedMetadataMsgPack = MsgPack.schema(AuthenticatedMetadataSchema);
-export const encodeAuthenticatedMetadata = Schema.encode(AuthenticatedMetadataMsgPack);
+const AuthenticatedMetadataMsgPack = Msgpack.schema(AuthenticatedMetadataSchema);
+export const encodeAuthenticatedMetadata = Schema.encodeEffect(AuthenticatedMetadataMsgPack);

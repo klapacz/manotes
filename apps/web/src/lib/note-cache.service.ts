@@ -1,4 +1,4 @@
-import { Effect, Option, RcMap, Stream } from "effect";
+import { Effect, Layer, Option, RcMap, ServiceMap, Stream } from "effect";
 import * as NoteRepo from "./note.repo";
 import * as NoteSchema from "./note.schema";
 
@@ -6,9 +6,8 @@ export type NotePreview = typeof NoteSchema.Preview.Type;
 
 const ENTRY_IDLE_TTL = "5 seconds";
 
-export class Service extends Effect.Service<Service>()("NoteCache.Service", {
-  dependencies: [NoteRepo.Service.Default],
-  scoped: Effect.gen(function* () {
+export class Service extends ServiceMap.Service<Service>()("NoteCache.Service", {
+  make: Effect.gen(function* () {
     const noteRepo = yield* NoteRepo.Service;
     const entries = yield* RcMap.make({
       idleTimeToLive: ENTRY_IDLE_TTL,
@@ -46,4 +45,6 @@ export class Service extends Effect.Service<Service>()("NoteCache.Service", {
       changes,
     };
   }),
-}) {}
+}) {
+  static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(NoteRepo.Service.layer));
+}

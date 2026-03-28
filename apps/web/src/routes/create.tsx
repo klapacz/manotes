@@ -70,7 +70,7 @@ function RouteComponent() {
 
       Exit.match(exit, {
         onFailure: (cause) => {
-          const isDisplayNameTakenError = Cause.failureOption(cause).pipe(
+          const isDisplayNameTakenError = Cause.findErrorOption(cause).pipe(
             Option.map((failure) => failure._tag === "LocalRegistry.DisplayNameTakenError"),
             Option.getOrElse(constant(false)),
           );

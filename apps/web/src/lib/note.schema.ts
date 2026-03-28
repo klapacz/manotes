@@ -1,20 +1,17 @@
-import { Schema } from "effect";
+import { Schema, SchemaGetter } from "effect";
 import type { UnknownNodeJSON } from "./node-json";
 import * as SchemaPrimitives from "./schema/primitives";
 
-export const Content = Schema.transform(
-  Schema.String,
-  Schema.declare<UnknownNodeJSON>((_x): _x is UnknownNodeJSON => true),
-  {
-    encode: (value) => JSON.stringify(value),
-    decode: (value) => JSON.parse(value),
-  },
+const ContentValue = Schema.declare<UnknownNodeJSON>((_x): _x is UnknownNodeJSON => true);
+
+export const Content = Schema.String.pipe(
+  Schema.decodeTo(ContentValue, {
+    decode: SchemaGetter.transform((value: string) => JSON.parse(value) as UnknownNodeJSON),
+    encode: SchemaGetter.transform((value: UnknownNodeJSON) => JSON.stringify(value)),
+  }),
 );
 
-export const MaterializedYUpdate = Schema.Union(
-  Schema.Null,
-  Schema.instanceOf(Uint8Array<ArrayBufferLike>),
-);
+export const MaterializedYUpdate = Schema.Union([Schema.Null, Schema.Uint8Array]);
 
 export const Record = Schema.Struct({
   id: Schema.String,
@@ -22,8 +19,8 @@ export const Record = Schema.Struct({
   content: Content,
   isDaily: SchemaPrimitives.BooleanFromInt,
   materializedYUpdate: MaterializedYUpdate,
-  createdAt: Schema.DateTimeUtc,
-  updatedAt: Schema.DateTimeUtc,
+  createdAt: Schema.DateTimeUtcFromString,
+  updatedAt: Schema.DateTimeUtcFromString,
   lastEventLocalSeq: Schema.Number,
 });
 
@@ -31,7 +28,7 @@ export const Preview = Schema.Struct({
   id: Schema.String,
   title: Schema.String,
   isDaily: SchemaPrimitives.BooleanFromInt,
-  updatedAt: Schema.DateTimeUtc,
+  updatedAt: Schema.DateTimeUtcFromString,
 });
 
 export const Create = Schema.Struct({
@@ -40,8 +37,8 @@ export const Create = Schema.Struct({
   content: Content,
   isDaily: Schema.optional(SchemaPrimitives.BooleanFromInt),
   materializedYUpdate: Schema.optional(MaterializedYUpdate),
-  createdAt: Schema.DateTimeUtc,
-  updatedAt: Schema.DateTimeUtc,
+  createdAt: Schema.DateTimeUtcFromString,
+  updatedAt: Schema.DateTimeUtcFromString,
   lastEventLocalSeq: Schema.optional(Schema.Number),
 });
 
@@ -50,7 +47,7 @@ export const Update = Schema.Struct({
   content: Schema.optional(Content),
   isDaily: Schema.optional(SchemaPrimitives.BooleanFromInt),
   materializedYUpdate: Schema.optional(MaterializedYUpdate),
-  createdAt: Schema.optional(Schema.DateTimeUtc),
-  updatedAt: Schema.optional(Schema.DateTimeUtc),
+  createdAt: Schema.optional(Schema.DateTimeUtcFromString),
+  updatedAt: Schema.optional(Schema.DateTimeUtcFromString),
   lastEventLocalSeq: Schema.optional(Schema.Number),
 });

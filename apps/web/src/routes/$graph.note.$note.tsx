@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/solid-router";
-import { Effect, Option } from "effect";
+import { Option } from "effect";
 import { createSignal, Show } from "solid-js";
 import { WindowVirtualizer } from "virtua/solid";
 import Editor, { type BootState } from "../editor";
@@ -16,7 +16,7 @@ import {
 export const Route = createFileRoute("/$graph/note/$note")({
   loader: async ({ context, params }) => {
     const note = await context.runtime.runPromise(
-      NoteRepo.Service.pipe(Effect.flatMap((repo) => repo.findById(params.note))),
+      NoteRepo.Service.use((repo) => repo.findById(params.note)),
     );
 
     if (Option.isNone(note)) {
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/$graph/note/$note")({
     }
 
     await context.runtime.runPromise(
-      EditorNoteBootCache.Service.pipe(Effect.flatMap((cache) => cache.preload(params.note))),
+      EditorNoteBootCache.Service.use((cache) => cache.preload(params.note)),
     );
 
     return { note };

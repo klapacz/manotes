@@ -1,4 +1,4 @@
-import { Data, Effect } from "effect";
+import { Data, Effect, Layer, ServiceMap } from "effect";
 import { castArray } from "@manotes/shared/graph-encryption";
 import * as GraphSyncContext from "../context";
 import * as EncryptionSchema from "./schema";
@@ -15,8 +15,8 @@ export class InvalidEncryptedEventError extends Data.TaggedError(
   "GraphSyncEncryption.InvalidEncryptedEventError",
 )<{ cause: unknown }> {}
 
-export class Service extends Effect.Service<Service>()("GraphSyncEncryption.Service", {
-  effect: Effect.gen(function* () {
+export class Service extends ServiceMap.Service<Service>()("GraphSyncEncryption.Service", {
+  make: Effect.gen(function* () {
     const context = yield* GraphSyncContext.Context;
     const graphKey = castArray(context.graphKey);
 
@@ -151,7 +151,9 @@ export class Service extends Effect.Service<Service>()("GraphSyncEncryption.Serv
       decryptEventBody,
     };
   }),
-}) {}
+}) {
+  static readonly layer = Layer.effect(this, this.make);
+}
 
 // AES-GCM requires a unique IV for each encryption operation under the same
 // key. Event payload encryption reuses one graph key for the whole sync session,

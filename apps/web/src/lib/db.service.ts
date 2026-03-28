@@ -1,14 +1,13 @@
-import { Effect, Data, Context, Layer, Option } from "effect";
+import { Data, Effect, Layer, Option, ServiceMap } from "effect";
 
 import type { RunnableQuery as DrizzleQuery } from "drizzle-orm/runnable-query";
 
 import { drizzle as createDrizzle } from "drizzle-orm/sqlite-proxy";
-import { SqlClient } from "@effect/sql";
-import type { Primitive } from "@effect/sql/Statement";
+import { SqlClient } from "effect/unstable/sql";
 import type { Query } from "drizzle-orm";
 import * as SqliteClient from "@manotes/sql-sqlite-wasm/sqlite-client";
 
-export const SqlLive = Layer.unwrapEffect(
+export const SqlLive = Layer.unwrap(
   Effect.gen(function* () {
     const config = yield* Config;
 
@@ -37,17 +36,17 @@ export class Error extends Data.TaggedError("DB.Error")<{ cause: unknown }> {}
 
 export class NotFoundError extends Data.TaggedError("DB.NotFoundError")<{}> {}
 
-export class Config extends Context.Tag("DB.Config")<
+export class Config extends ServiceMap.Service<
   Config,
   {
     localGraphId: string;
     displayName: string;
     databasePath: string;
   }
->() {}
+>()("DB.Config") {}
 
-export class Service extends Effect.Service<Service>()("DB", {
-  effect: Effect.gen(function* () {
+export class Service extends ServiceMap.Service<Service>()("DB", {
+  make: Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
 
     // dummy drizzle proxy - we use drizzle only for query building
@@ -65,7 +64,7 @@ export class Service extends Effect.Service<Service>()("DB", {
 
       return sql.reactive(
         yield* getUsedTables(query),
-        sql.unsafe<T[number]>(statement.sql, statement.params as Primitive[]),
+        sql.unsafe<T[number]>(statement.sql, statement.params as ReadonlyArray<unknown>),
       );
     });
 
@@ -73,12 +72,15 @@ export class Service extends Effect.Service<Service>()("DB", {
       const query = cb(drizzle);
       const statement = yield* queryToSQL(query);
 
-      return yield* sql.unsafe<T[number]>(statement.sql, statement.params as Primitive[]);
+      return yield* sql.unsafe<T[number]>(
+        statement.sql,
+        statement.params as ReadonlyArray<unknown>,
+      );
     });
 
     const find = Effect.fn("DB.find")(function* <T extends object[]>(cb: QueryCallbackFn<T>) {
       const [result] = yield* query(cb);
-      return Option.fromNullable(result as T[number]);
+      return Option.fromNullishOr(result as T[number]);
     });
 
     return {
@@ -88,7 +90,9 @@ export class Service extends Effect.Service<Service>()("DB", {
       find,
     };
   }),
-}) {}
+}) {
+  static readonly layer = Layer.effect(this, this.make);
+}
 
 const queryToSQL = Effect.fnUntraced(function* (query: DrizzleQuery<any, "sqlite">) {
   if (!("toSQL" in query) || typeof query.toSQL !== "function") {

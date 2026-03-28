@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/solid-router";
-import { Effect, pipe, Stream, Array, flow } from "effect";
+import { pipe, Stream, Array, flow } from "effect";
 import type { JSX } from "solid-js";
 import { Index, createEffect, createSignal, onCleanup } from "solid-js";
 import { NoteRepo, createRuntimeStreamStore } from "../lib";
@@ -27,8 +27,7 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
         Array.map((note) => ({ ...note, isDaily: true })),
       );
 
-      return NoteRepo.Service.pipe(
-        Effect.flatMap((repo) => repo.reactiveSearchPreview(filter)),
+      return NoteRepo.Service.use((repo) => repo.reactiveSearchPreview(filter)).pipe(
         Stream.unwrap,
         Stream.map(
           flow(

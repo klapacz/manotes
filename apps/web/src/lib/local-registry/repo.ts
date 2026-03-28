@@ -1,4 +1,4 @@
-import { SqlClient } from "@effect/sql";
+import { SqlClient } from "effect/unstable/sql";
 import { nanoid } from "nanoid";
 import { Array, Cause, Effect, Exit, flow, Option, Stream } from "effect";
 import * as Schema from "./schema";
@@ -81,7 +81,7 @@ export const createGraph = Effect.fn("LocalRegistryRepo.createGraph")(function* 
   const head = Array.head(created);
 
   if (Option.isNone(head)) {
-    return yield* Effect.dieMessage("Graph insert returned no rows");
+    return yield* Effect.die(new Error("Graph insert returned no rows"));
   }
 
   return head.value;
@@ -140,7 +140,7 @@ export const createCloudGraph = Effect.fn("LocalRegistryRepo.createCloudGraph")(
     onSuccess: Effect.succeed,
     onFailure: (cause) =>
       Effect.gen(function* () {
-        const failure = Cause.failureOption(cause);
+        const failure = Cause.findErrorOption(cause);
         if (Option.isNone(failure)) return yield* Effect.failCause(cause);
 
         // On unique constraint violation, check if the graph already exists
@@ -160,14 +160,14 @@ export const createCloudGraph = Effect.fn("LocalRegistryRepo.createCloudGraph")(
   const head = Array.head(created);
 
   if (Option.isNone(head)) {
-    return yield* Effect.dieMessage("Graph insert returned no rows");
+    return yield* Effect.die(new Error("Graph insert returned no rows"));
   }
 
   return head.value;
 });
 
 export function reactiveListGraph() {
-  return Stream.unwrapScoped(
+  return Stream.unwrap(
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
 
@@ -180,7 +180,7 @@ export function reactiveListGraph() {
             ORDER BY displayName ASC
           `,
         )
-        .pipe(Stream.mapEffect(Schema.decodeArray));
+        .pipe(Stream.mapEffect((rows) => Schema.decodeArray(rows)));
     }),
   );
 }

@@ -86,7 +86,7 @@ export default function Editor(props: Props): JSX.Element {
     let disposed = false;
 
     const fiber = r.runFork(
-      Effect.catchAllCause(
+      Effect.catchCause(
         Effect.gen(function* () {
           const service = yield* EditorSyncService.Service;
           const ready = yield* Deferred.make<void>();
@@ -102,7 +102,7 @@ export default function Editor(props: Props): JSX.Element {
           );
         }),
         (cause) =>
-          Cause.isInterruptedOnly(cause)
+          Cause.hasInterruptsOnly(cause)
             ? Effect.void
             : Effect.sync(() => {
                 if (disposed) return;

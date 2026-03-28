@@ -1,7 +1,7 @@
-import { Effect, pipe, Stream, Data, Deferred } from "effect";
+import { Chunk, Data, Deferred, Effect, Layer, pipe, Queue, ServiceMap, Stream } from "effect";
 import * as Y from "yjs";
 import * as EventRepo from "./event.repo";
-import { Array, Chunk, DateTime, Option } from "effect";
+import { Array, DateTime, Option } from "effect";
 import * as NoteSchema from "./note.schema";
 import * as EditorNoteBootCache from "./editor/note-boot-cache.service";
 import { streamDebounceNoDrop } from "./stream-debounce-no-drop";
@@ -18,9 +18,8 @@ export type SetupInput = {
   isDaily: boolean;
 };
 
-export class Service extends Effect.Service<Service>()("EditorSyncService.Service", {
-  dependencies: [EventRepo.Service.Default, EditorNoteBootCache.Service.Default],
-  effect: Effect.gen(function* () {
+export class Service extends ServiceMap.Service<Service>()("EditorSyncService.Service", {
+  make: Effect.gen(function* () {
     const eventRepo = yield* EventRepo.Service;
     const noteBootCache = yield* EditorNoteBootCache.Service;
 
@@ -40,47 +39,40 @@ export class Service extends Effect.Service<Service>()("EditorSyncService.Servic
       noteId: string,
       initialLastKnownLocalSeq: number,
     ) {
-      yield* Effect.iterate(initialLastKnownLocalSeq, {
-        while: () => true,
-        body: (lastKnownLocalSeq) =>
-          Effect.gen(function* () {
-            yield* Effect.logDebug("Last known localSeq:", lastKnownLocalSeq);
+      let lastKnownLocalSeq = initialLastKnownLocalSeq;
 
-            const reactiveStream = yield* eventRepo.streamUpdatesForNote({
-              noteId,
-              afterLocalSeq: lastKnownLocalSeq,
-            });
+      while (true) {
+        yield* Effect.logDebug("Last known localSeq:", lastKnownLocalSeq);
 
-            const firstBatch = yield* reactiveStream.pipe(
-              Stream.filterMap((events) =>
-                Array.isNonEmptyReadonlyArray(events) ? Option.some(events) : Option.none(),
-              ),
-              Stream.runHead,
-            );
+        const reactiveStream = yield* eventRepo.streamUpdatesForNote({
+          noteId,
+          afterLocalSeq: lastKnownLocalSeq,
+        });
 
-            if (Option.isNone(firstBatch)) {
-              yield* Effect.logError("Stream ended without events");
-              return lastKnownLocalSeq;
-            }
+        const firstBatch = yield* reactiveStream.pipe(
+          Stream.filter(Array.isReadonlyArrayNonEmpty),
+          Stream.runHead,
+        );
 
-            const events = firstBatch.value;
-            yield* Effect.logDebug("Received batch of events", events.length);
+        if (Option.isNone(firstBatch)) {
+          yield* Effect.logError("Stream ended without events");
+          continue;
+        }
 
-            yield* Effect.forEach(events, (event) =>
-              Effect.sync(() => Y.applyUpdate(doc, event.payload, REMOTE_ORIGIN)),
-            );
+        const events = firstBatch.value;
+        yield* Effect.logDebug("Received batch of events", events.length);
 
-            const lastEvent = Array.lastNonEmpty(events);
-            const nextLastKnownLocalSeq = lastEvent.localSeq;
+        yield* Effect.forEach(events, (event) =>
+          Effect.sync(() => Y.applyUpdate(doc, event.payload, REMOTE_ORIGIN)),
+        );
 
-            return nextLastKnownLocalSeq;
-          }),
-      });
+        lastKnownLocalSeq = Array.lastNonEmpty(events).localSeq;
+      }
     });
 
     const persistChunk = Effect.fn("persistChunk")(function* (
       noteId: string,
-      chunk: Chunk.Chunk<OutcomingUpdateCtx>,
+      chunk: Chunk.NonEmptyChunk<OutcomingUpdateCtx>,
     ) {
       const allUpdateCtxs = Chunk.toArray(chunk);
 
@@ -105,12 +97,19 @@ export class Service extends Effect.Service<Service>()("EditorSyncService.Servic
       doc: Y.Doc,
       noteId: string,
     ) {
-      yield* Stream.asyncPush<OutcomingUpdateCtx>((emit) =>
-        Effect.sync(() =>
-          doc.on("update", (update, origin, _doc) => {
-            emit.single(new OutcomingUpdateCtx({ update, origin }));
-          }),
-        ),
+      yield* Stream.callback<OutcomingUpdateCtx>((queue) =>
+        Effect.sync(() => {
+          const listener = (update: Uint8Array<ArrayBufferLike>, origin: unknown) => {
+            Queue.offerUnsafe(queue, new OutcomingUpdateCtx({ update, origin }));
+          };
+
+          doc.on("update", listener);
+
+          return pipe(
+            Effect.sync(() => doc.off("update", listener)),
+            Effect.andThen(Queue.end(queue)),
+          );
+        }),
       ).pipe(
         Stream.filter((updateCtx) => updateCtx.origin !== REMOTE_ORIGIN),
         streamDebounceNoDrop("1 second", (remaining) =>
@@ -153,4 +152,9 @@ export class Service extends Effect.Service<Service>()("EditorSyncService.Servic
       setupDoc,
     };
   }),
-}) {}
+}) {
+  static readonly layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(EventRepo.Service.layer),
+    Layer.provide(EditorNoteBootCache.Service.layer),
+  );
+}

@@ -1,4 +1,4 @@
-import { Effect, flow, Stream, Array, Struct, pipe } from "effect";
+import { flow, Stream, Array, pipe, Struct } from "effect";
 import { useEditor } from "prosekit/solid";
 import {
   AutocompleteEmpty,
@@ -40,14 +40,13 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
       Array.map((note) => ({ ...note, isDaily: true })),
     );
 
-    return NoteRepo.Service.pipe(
-      Effect.flatMap((repo) => repo.reactiveSearchPreview(query)),
+    return NoteRepo.Service.use((repo) => repo.reactiveSearchPreview(query)).pipe(
       Stream.unwrap,
       Stream.map(
         flow(
           Array.prependAll(dailyNotes),
           Array.filter((note) => note.id !== props.currentNoteId),
-          Array.map(Struct.pick("id", "title", "isDaily")),
+          Array.map(Struct.pick(["id", "title", "isDaily"])),
         ),
       ),
     );

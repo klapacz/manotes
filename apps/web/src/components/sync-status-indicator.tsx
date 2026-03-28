@@ -1,4 +1,4 @@
-import { Effect, Match, Stream } from "effect";
+import { Match, Stream } from "effect";
 import { Show } from "solid-js";
 import { createRuntimeStreamStore } from "../lib";
 import * as GraphWorkerClient from "../lib/graph-worker.client";
@@ -8,8 +8,7 @@ import { cx } from "../lib/cva";
 export function SyncStatusIndicator() {
   const status = createRuntimeStreamStore(
     () =>
-      GraphWorkerClient.Service.pipe(
-        Effect.map((svc) => svc.client.syncStatusStream({})),
+      GraphWorkerClient.Service.useSync((svc) => svc.client.syncStatusStream({})).pipe(
         Stream.unwrap,
         Stream.debounce("300 millis"),
       ),
