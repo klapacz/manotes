@@ -1,18 +1,18 @@
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import { Schema } from "effect";
 
-export const DisplayNameSchema = Schema.Trim.pipe(Schema.nonEmptyString());
+export const DisplayNameSchema = Schema.Trim.pipe(Schema.check(Schema.isNonEmpty()));
 
 export const Record = Schema.Struct({
   graphId: Schema.NonEmptyString,
   displayName: DisplayNameSchema,
   createdAt: Schema.NonEmptyString,
-  graphKeyEnvelope: Schema.parseJson(GraphEncryption.GraphKeyEnvelopeSchema),
+  graphKeyEnvelope: Schema.fromJsonString(GraphEncryption.GraphKeyEnvelopeSchema),
 });
 
-export type Record = Schema.Schema.Type<typeof Record>;
-export type RawRecord = Schema.Schema.Encoded<typeof Record>;
+export type Record = typeof Record.Type;
+export type RawRecord = typeof Record.Encoded;
 
-export const encodeRecord = Schema.encode(Record);
-export const decodeRecord = Schema.decode(Record);
-export const decodeArray = Schema.decode(Schema.Array(Record));
+export const encodeRecord = Schema.encodeEffect(Record);
+export const decodeRecord = Schema.decodeEffect(Record);
+export const decodeArray = Schema.decodeEffect(Schema.Array(Record));

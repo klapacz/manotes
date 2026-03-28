@@ -1,8 +1,9 @@
-import { Data } from "effect";
+import { Schema } from "effect";
 
-export class ProtocolViolationError extends Data.TaggedError("GraphSyncProtocolViolationError")<{
-  reason: string;
-}> {
+export class ProtocolViolationError extends Schema.TaggedErrorClass<ProtocolViolationError>()(
+  "GraphSyncProtocolViolationError",
+  { reason: Schema.String },
+) {
   get message(): string {
     return this.reason;
   }

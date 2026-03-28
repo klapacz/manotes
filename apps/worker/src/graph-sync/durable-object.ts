@@ -1,15 +1,5 @@
 import { SqliteClient } from "@effect/sql-sqlite-do";
-import {
-  Cause,
-  Effect,
-  Exit,
-  ManagedRuntime,
-  Match,
-  Boolean,
-  Option,
-  pipe,
-  Predicate,
-} from "effect";
+import { Cause, Effect, Exit, ManagedRuntime, Match, Boolean, Predicate } from "effect";
 import { DurableObject } from "cloudflare:workers";
 import * as Codec from "@manotes/shared/graph-sync/contract/codec";
 import * as Messages from "@manotes/shared/graph-sync/contract/messages";
@@ -49,7 +39,7 @@ export class GraphSyncDurableObject extends DurableObject<Env> {
   }
 
   async webSocketMessage(ws: WebSocket, rawMessage: string | ArrayBuffer): Promise<void> {
-    const messageExit = this.parseWebSocketMessage(rawMessage);
+    const messageExit = this.parseWebSocketMessageExit(rawMessage);
 
     if (Exit.isFailure(messageExit)) {
       this.handleWebSocketFailure(ws, messageExit.cause);
@@ -67,18 +57,19 @@ export class GraphSyncDurableObject extends DurableObject<Env> {
   }
 
   private parseWebSocketMessage(message: string | ArrayBuffer) {
-    return pipe(
-      webSocketMessageToUint8Array(message),
-      Codec.decodeClientMessage,
-      Effect.catchTag("ParseError", () =>
+    return Codec.decodeClientMessage(webSocketMessageToUint8Array(message)).pipe(
+      Effect.catchTag("SchemaError", () =>
         Effect.fail(
           new Errors.ProtocolViolationError({
             reason: "Malformed client message",
           }),
         ),
       ),
-      Effect.runSyncExit,
     );
+  }
+
+  private parseWebSocketMessageExit(message: string | ArrayBuffer) {
+    return this.parseWebSocketMessage(message).pipe(Effect.runSyncExit);
   }
 
   private executeWebSocketMessage(message: Messages.ClientMessage) {
@@ -108,15 +99,15 @@ export class GraphSyncDurableObject extends DurableObject<Env> {
     ws: WebSocket,
     cause: Cause.Cause<Errors.ProtocolViolationError | E>,
   ): void {
-    const failure = Cause.failureOption(cause);
+    const failure = cause.reasons.find(Cause.isFailReason);
 
     if (
-      Option.isSome(failure) &&
-      Predicate.isTagged(failure.value, "GraphSyncProtocolViolationError")
+      failure !== undefined &&
+      Predicate.isTagged(failure.error, "GraphSyncProtocolViolationError")
     ) {
       this.runtime.runFork(
         Effect.logWarning("Graph sync protocol violation", {
-          reason: failure.value.reason,
+          reason: failure.error.reason,
         }),
       );
       ws.close(1002, "Protocol violation");

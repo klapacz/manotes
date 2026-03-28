@@ -186,18 +186,9 @@ importers:
 
   apps/worker:
     dependencies:
-      '@effect/platform':
-        specifier: ^0.94.1
-        version: 0.94.1(effect@3.17.14)
-      '@effect/rpc':
-        specifier: ^0.73.0
-        version: 0.73.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
-      '@effect/sql':
-        specifier: 0.45.0
-        version: 0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
       '@effect/sql-sqlite-do':
-        specifier: 0.23.0
-        version: 0.23.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)
+        specifier: 4.0.0-beta.42
+        version: 4.0.0-beta.42(effect@4.0.0-beta.42)
       '@hono/standard-validator':
         specifier: ^0.2.2
         version: 0.2.2(@standard-schema/spec@1.1.0)(hono@4.12.9)
@@ -205,8 +196,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/shared
       effect:
-        specifier: 3.17.14
-        version: 3.17.14
+        specifier: 4.0.0-beta.42
+        version: 4.0.0-beta.42
       hono:
         specifier: ^4.12.9
         version: 4.12.9
@@ -563,12 +554,10 @@ packages:
       '@effect/platform': ^0.94.0
       effect: ^3.19.13
 
-  '@effect/sql-sqlite-do@0.23.0':
-    resolution: {integrity: sha512-CuNaYzEhzZ7g7s2Xe2m8Lv5hFdh+1797WIzhDNfLKsX5Zj2bY+tfaPAbxJSQL1/sRhDdBYYc7fibe4dr3J1PCg==}
+  '@effect/sql-sqlite-do@4.0.0-beta.42':
+    resolution: {integrity: sha512-gwis/i1SfdYwbr5Wv0dr/ozZsR5ZQJudQRGq4whWZWWb0dw7gxtfpMqX2ktU1b+qGA1rwjXy5Q8WlOd7nE19Xw==}
     peerDependencies:
-      '@effect/experimental': ^0.55.0
-      '@effect/sql': ^0.45.0
-      effect: ^3.17.14
+      effect: ^4.0.0-beta.42
 
   '@effect/sql@0.45.0':
     resolution: {integrity: sha512-250w6apb25GTj5T5zxXN1Yw3RJPeaE4xozghOImx5iZn/DHYXWPrTvEM9b/RNmSX5+JaeComObeNgpZbMzKfVQ==}
@@ -4214,11 +4203,9 @@ snapshots:
       effect: 3.17.14
       msgpackr: 1.11.5
 
-  '@effect/sql-sqlite-do@0.23.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)':
+  '@effect/sql-sqlite-do@4.0.0-beta.42(effect@4.0.0-beta.42)':
     dependencies:
-      '@effect/experimental': 0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
-      '@effect/sql': 0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)
-      effect: 3.17.14
+      effect: 4.0.0-beta.42
 
   '@effect/sql@0.45.0(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.94.1(effect@3.17.14))(effect@3.17.14)':
     dependencies:

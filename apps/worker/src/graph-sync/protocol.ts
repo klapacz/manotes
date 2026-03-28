@@ -1,5 +1,5 @@
-import type * as SqlError from "@effect/sql/SqlError";
 import { Array, Data, Effect, Match } from "effect";
+import type * as SqlError from "effect/unstable/sql/SqlError";
 import {
   MAX_EVENTS_PER_COMMIT,
   MAX_EVENTS_PER_REPLAY,

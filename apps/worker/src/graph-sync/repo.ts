@@ -1,5 +1,5 @@
-import { SqlClient } from "@effect/sql";
 import { Effect, Array, Order } from "effect";
+import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as Messages from "@manotes/shared/graph-sync/contract/messages";
 import * as EventSchema from "./schema";
 import type { NonEmptyReadonlyArray } from "effect/Array";
@@ -48,15 +48,15 @@ export const getEventsBetweenSeq = Effect.fn("GraphSyncRepo.getEventsBetweenSeq"
 export const insertEvents = Effect.fn("GraphSyncRepo.insertEvents")(function* (
   events: NonEmptyReadonlyArray<Messages.PendingEvent>,
 ) {
-  const newEvents = EventSchema.encodeCreateRecords(events);
+  const newEvents = yield* EventSchema.encodeCreateRecords(events);
   const sql = yield* SqlClient.SqlClient;
   const rows = yield* sql<EventSchema.RawRecord>`
     INSERT INTO events ${sql.insert(newEvents)}
     RETURNING commitSeq, id, streamRef, payload, createdAt
   `;
 
-  if (!Array.isNonEmptyReadonlyArray(rows)) {
-    return yield* Effect.dieMessage("Non-empty insert returned no rows");
+  if (!Array.isReadonlyArrayNonEmpty(rows)) {
+    return yield* Effect.die(new Error("Non-empty insert returned no rows"));
   }
 
   const committed = yield* EventSchema.decodeNonEmptyArray(rows);
@@ -67,6 +67,6 @@ export const insertEvents = Effect.fn("GraphSyncRepo.insertEvents")(function* (
 });
 
 const OrderEventByCommitSeq = Order.mapInput(
-  Order.number,
+  Order.Number,
   (event: Messages.CommittedEvent) => event.commitSeq,
 );

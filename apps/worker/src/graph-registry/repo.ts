@@ -1,15 +1,15 @@
-import type * as SqlError from "@effect/sql/SqlError";
-import { SqlClient } from "@effect/sql";
 import { nanoid } from "nanoid";
-import { Array, Effect, flow, Option } from "effect";
+import { Array, Effect, Layer, flow, Option, ServiceMap } from "effect";
+import * as SqlClient from "effect/unstable/sql/SqlClient";
+import type * as SqlError from "effect/unstable/sql/SqlError";
 import type * as GraphEncryption from "@manotes/shared/graph-encryption";
-import * as Schema from "./schema";
 import { DisplayNameTakenError } from "@manotes/shared/graph-registry/contract";
+import * as Schema from "./schema";
 
 const GRAPH_ID_LENGTH = 12;
 
-export class Service extends Effect.Service<Service>()("GraphRegistryRepo.Service", {
-  effect: Effect.gen(function* () {
+export class Service extends ServiceMap.Service<Service>()("GraphRegistryRepo.Service", {
+  make: Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
 
     const listGraphs = Effect.fn("GraphRegistryRepo.listGraphs")(function* () {
@@ -69,7 +69,7 @@ export class Service extends Effect.Service<Service>()("GraphRegistryRepo.Servic
       const head = Array.head(created);
 
       if (Option.isNone(head)) {
-        return yield* Effect.dieMessage("Graph insert returned no rows");
+        return yield* Effect.die(new Error("Graph insert returned no rows"));
       }
 
       return head.value;
@@ -108,7 +108,9 @@ export class Service extends Effect.Service<Service>()("GraphRegistryRepo.Servic
       renameGraph,
     };
   }),
-}) {}
+}) {
+  static readonly layer = Layer.effect(this, this.make);
+}
 
 export const migrate = Effect.gen(function* () {
   const sql = (yield* SqlClient.SqlClient).withoutTransforms();

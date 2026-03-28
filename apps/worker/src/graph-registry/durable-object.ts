@@ -1,22 +1,25 @@
-import * as HttpServerRequest from "@effect/platform/HttpServerRequest";
-import * as HttpServerResponse from "@effect/platform/HttpServerResponse";
-import type * as HttpApp from "@effect/platform/HttpApp";
-import { RpcServer, RpcSerialization } from "@effect/rpc";
-import { SqliteClient } from "@effect/sql-sqlite-do";
-import { Context, Effect, Layer, ManagedRuntime, Option, Predicate, Scope } from "effect";
 import { DurableObject } from "cloudflare:workers";
-import { GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
-import type { DisplayNameTakenError } from "@manotes/shared/graph-registry/contract";
+import { SqliteClient } from "@effect/sql-sqlite-do";
+import { DisplayNameTakenError, GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
+import { Effect, Layer, ManagedRuntime, Option, Predicate, Scope, ServiceMap } from "effect";
+import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
+import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
+import * as RpcSerialization from "effect/unstable/rpc/RpcSerialization";
+import * as RpcServer from "effect/unstable/rpc/RpcServer";
 import * as Repo from "./repo";
 
 // ---------------------------------------------------------------------------
 // RPC HttpApp tag
 // ---------------------------------------------------------------------------
 
-class RpcHttpApp extends Context.Tag("GraphRegistry.RpcHttpApp")<
+class RpcHttpApp extends ServiceMap.Service<
   RpcHttpApp,
-  HttpApp.Default<never, Scope.Scope>
->() {}
+  Effect.Effect<
+    HttpServerResponse.HttpServerResponse,
+    never,
+    Scope.Scope | HttpServerRequest.HttpServerRequest
+  >
+>()("GraphRegistry.RpcHttpApp") {}
 
 // ---------------------------------------------------------------------------
 // RPC handler implementations
@@ -53,7 +56,7 @@ const HandlersLayer = GraphRegistryRpc.toLayer(
 // Layer that creates the long-lived RPC HttpApp
 // ---------------------------------------------------------------------------
 
-const RpcHttpAppLayer = Layer.scoped(RpcHttpApp, RpcServer.toHttpApp(GraphRegistryRpc));
+const RpcHttpAppLayer = Layer.effect(RpcHttpApp, RpcServer.toHttpEffect(GraphRegistryRpc));
 
 // ---------------------------------------------------------------------------
 // Durable Object
@@ -64,7 +67,7 @@ export class GraphRegistryDurableObject extends DurableObject<Env> {
     RpcHttpAppLayer.pipe(
       Layer.provide(HandlersLayer),
       Layer.provide(RpcSerialization.layerJson),
-      Layer.provideMerge(Repo.Service.Default),
+      Layer.provideMerge(Repo.Service.layer),
       Layer.provideMerge(
         SqliteClient.layer({
           db: this.ctx.storage.sql,
@@ -119,7 +122,7 @@ function narrowError<A, R, E>(
   effect: Effect.Effect<A, DisplayNameTakenError | E, R>,
 ): Effect.Effect<A, DisplayNameTakenError, R> {
   return effect.pipe(
-    Effect.catchAll((e) => {
+    Effect.catch((e) => {
       if (Predicate.isTagged(e, "GraphRegistry.DisplayNameTakenError")) return Effect.fail(e);
       return Effect.die(e);
     }),
