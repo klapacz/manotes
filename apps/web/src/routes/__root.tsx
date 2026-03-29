@@ -1,3 +1,4 @@
+import { RegistryProvider } from "@effect/atom-solid";
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/solid-router";
 import { TanStackRouterDevtools } from "@tanstack/solid-router-devtools";
 import type { QueryClient } from "@tanstack/solid-query";
@@ -16,7 +17,9 @@ function RootComponent() {
     <>
       <HeadContent />
 
-      <Outlet />
+      <RegistryProvider>
+        <Outlet />
+      </RegistryProvider>
       <TanStackRouterDevtools position="bottom-right" />
 
       <Scripts />

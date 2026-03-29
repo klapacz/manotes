@@ -25,7 +25,7 @@ const RegistryBaseLayer = SqliteClient.layer({
   initMessage: { dbName: REGISTRY_DATABASE_PATH },
 });
 
-const RegistryLive = Layer.unwrap(
+export const RegistryLive = Layer.unwrap(
   Effect.gen(function* () {
     const context = yield* Layer.build(RegistryBaseLayer);
     yield* Repo.migrate.pipe(Effect.provide(context));

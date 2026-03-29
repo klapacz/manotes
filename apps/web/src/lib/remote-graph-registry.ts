@@ -16,7 +16,7 @@ export class DisplayNameTakenError extends Error {
 // RPC client setup
 // ---------------------------------------------------------------------------
 
-const GraphRegistryClientLayer = RpcClient.layerProtocolHttp({
+export const GraphRegistryClientLayer = RpcClient.layerProtocolHttp({
   url: "/api/rpc/graph-registry",
 }).pipe(Layer.provide(RpcSerialization.layerJson), Layer.provide(FetchHttpClient.layer));
 

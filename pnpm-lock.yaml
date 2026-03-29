@@ -38,12 +38,12 @@ importers:
       '@corvu/calendar':
         specifier: ^0.1.2
         version: 0.1.2(solid-js@1.9.10)
+      '@effect/atom-solid':
+        specifier: 4.0.0-beta.42
+        version: 4.0.0-beta.42(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))(solid-js@1.9.10)
       '@effect/platform-browser':
         specifier: 4.0.0-beta.42
         version: 4.0.0-beta.42(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))
-      '@effectify/solid-effect-atom':
-        specifier: ^0.1.5
-        version: 0.1.5(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))(solid-js@1.9.10)
       '@fontsource-variable/source-sans-3':
         specifier: ^5.2.9
         version: 5.2.9
@@ -503,26 +503,11 @@ packages:
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
 
-  '@effect-atom/atom@0.3.2':
-    resolution: {integrity: sha512-vnwdE0/rzuma7zTg+aUUZAqzGvWb7WuveZTpTG22PgSLT87nMDHdYKF+WGvFRj0mZb+uYDtOAeViMMHM2mi3XQ==}
+  '@effect/atom-solid@4.0.0-beta.42':
+    resolution: {integrity: sha512-AiFH5o0IS9TZD2dczYwo/m6UdSXHqVw9kn9Yn4L9pJAIXmwYpQU5K3wjVCeV9ElMf+n3ArJe2SdOVwbmR5HTQg==}
     peerDependencies:
-      '@effect/experimental': ^0.56.0
-      '@effect/platform': ^0.92.0
-      '@effect/rpc': ^0.71.0
-      effect: ^3.18.0
-
-  '@effect/experimental@0.55.0':
-    resolution: {integrity: sha512-vUzWXSqBrPyVJXcZqmASZR1c5GqmeeJp/OZspT265GdHaqvt8PiLfKear9Lh48vzm6nKySnVT0mQrcygo+1qlA==}
-    peerDependencies:
-      '@effect/platform': ^0.91.0
-      effect: ^3.17.14
-      ioredis: ^5
-      lmdb: ^3
-    peerDependenciesMeta:
-      ioredis:
-        optional: true
-      lmdb:
-        optional: true
+      effect: ^4.0.0-beta.42
+      solid-js: '>=1 <2'
 
   '@effect/language-service@0.75.1':
     resolution: {integrity: sha512-g9xD2tAQgRFpYC2YgpZq02VeSL5fBbFJ0B/g1o+14NuNmwtaYJc7SjiLWAA9eyhJHosNrn6h1Ye+Kx6j5mN0AA==}
@@ -533,27 +518,10 @@ packages:
     peerDependencies:
       effect: ^4.0.0-beta.42
 
-  '@effect/platform@0.94.1':
-    resolution: {integrity: sha512-SlL8OMTogHmMNnFLnPAHHo3ua1yrB1LNQOVQMiZsqYu9g3216xjr0gn5WoDgCxUyOdZcseegMjWJ7dhm/2vnfg==}
-    peerDependencies:
-      effect: ^3.19.14
-
-  '@effect/rpc@0.73.0':
-    resolution: {integrity: sha512-iMPf6tTriz8sK0l5x4koFId8Hz5nFptHYg8WqyjHGIIVLTpZxuiSqhmXZG7FnAs5N2n6uCEws4wWGcIgXNUrFg==}
-    peerDependencies:
-      '@effect/platform': ^0.94.0
-      effect: ^3.19.13
-
   '@effect/sql-sqlite-do@4.0.0-beta.42':
     resolution: {integrity: sha512-gwis/i1SfdYwbr5Wv0dr/ozZsR5ZQJudQRGq4whWZWWb0dw7gxtfpMqX2ktU1b+qGA1rwjXy5Q8WlOd7nE19Xw==}
     peerDependencies:
       effect: ^4.0.0-beta.42
-
-  '@effectify/solid-effect-atom@0.1.5':
-    resolution: {integrity: sha512-aW9qSKxg1AviAxsg3xVkRc+wj7E3KsWFwSAJdLLyQ/CrCWQWLNWCgXn7S8+1XXZNRJ0Y1KkFogNUvfmRispBDA==}
-    peerDependencies:
-      effect: 3.17.14
-      solid-js: 1.9.9
 
   '@emnapi/runtime@1.8.1':
     resolution: {integrity: sha512-mehfKSMWjjNol8659Z8KxEMrdSJDDot5SXMq00dM8BN4o+CLNXQ0xH2V7EchNHV4RmbZLmmPdEaXZc5H2FXmDg==}
@@ -3576,10 +3544,6 @@ packages:
     peerDependencies:
       browserslist: '>= 4.21.0'
 
-  uuid@11.1.0:
-    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
-    hasBin: true
-
   uuid@13.0.0:
     resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
     hasBin: true
@@ -4139,18 +4103,10 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
-  '@effect-atom/atom@0.3.2(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))':
+  '@effect/atom-solid@4.0.0-beta.42(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))(solid-js@1.9.10)':
     dependencies:
-      '@effect/experimental': 0.55.0(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))
-      '@effect/platform': 0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))
-      '@effect/rpc': 0.73.0(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))
       effect: 4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)
-
-  '@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))':
-    dependencies:
-      '@effect/platform': 0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))
-      effect: 4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)
-      uuid: 11.1.0
+      solid-js: 1.9.10
 
   '@effect/language-service@0.75.1': {}
 
@@ -4159,32 +4115,9 @@ snapshots:
       effect: 4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)
       multipasta: 0.2.7
 
-  '@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))':
-    dependencies:
-      effect: 4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)
-      find-my-way-ts: 0.1.6
-      msgpackr: 1.11.9
-      multipasta: 0.2.7
-
-  '@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))':
-    dependencies:
-      '@effect/platform': 0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))
-      effect: 4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)
-      msgpackr: 1.11.9
-
   '@effect/sql-sqlite-do@4.0.0-beta.42(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))':
     dependencies:
       effect: 4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)
-
-  '@effectify/solid-effect-atom@0.1.5(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))(solid-js@1.9.10)':
-    dependencies:
-      '@effect-atom/atom': 0.3.2(@effect/experimental@0.55.0(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(@effect/rpc@0.73.0(@effect/platform@0.94.1(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)))(effect@4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043))
-      effect: 4.0.0-beta.42(patch_hash=049c16e301b7a32dd2ce206bd869bd6aa9c2db904df1d8d00339825b235c3043)
-      solid-js: 1.9.10
-    transitivePeerDependencies:
-      - '@effect/experimental'
-      - '@effect/platform'
-      - '@effect/rpc'
 
   '@emnapi/runtime@1.8.1':
     dependencies:
@@ -7113,8 +7046,6 @@ snapshots:
       browserslist: 4.28.0
       escalade: 3.2.0
       picocolors: 1.1.1
-
-  uuid@11.1.0: {}
 
   uuid@13.0.0: {}
 

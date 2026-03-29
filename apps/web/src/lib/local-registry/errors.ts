@@ -1,5 +1,6 @@
 import { Data } from "effect";
 import type { SqlError } from "effect/unstable/sql";
+import type { SqlErrorReason } from "effect/unstable/sql/SqlError";
 
 export class DisplayNameTakenError extends Data.TaggedError("LocalRegistry.DisplayNameTakenError")<{
   displayName: string;
@@ -13,26 +14,20 @@ export function remapDisplayNameSqlError(error: SqlError.SqlError, displayName: 
   return error;
 }
 
-export function isDisplayNameUniquenessSqlError(error: unknown): boolean {
-  let message: string;
-
-  if (error instanceof Error) {
-    message = error.message;
-  } else {
-    message = String(error);
-  }
-
-  return message.includes("UNIQUE constraint failed") && message.includes("graphs.displayName");
+export function isDisplayNameUniquenessSqlError(reason: SqlErrorReason): boolean {
+  return (
+    reason._tag === "UnknownError" &&
+    typeof reason.cause === "string" &&
+    reason.cause.includes("UNIQUE constraint failed") &&
+    reason.cause.includes("graphs.displayName")
+  );
 }
 
-export function isGraphIdUniquenessSqlError(error: unknown): boolean {
-  let message: string;
-
-  if (error instanceof Error) {
-    message = error.message;
-  } else {
-    message = String(error);
-  }
-
-  return message.includes("UNIQUE constraint failed") && message.includes("graphs.graphId");
+export function isGraphIdUniquenessSqlError(reason: SqlErrorReason): boolean {
+  return (
+    reason._tag === "UnknownError" &&
+    typeof reason.cause === "string" &&
+    reason.cause.includes("UNIQUE constraint failed") &&
+    reason.cause.includes("graphs.graphId")
+  );
 }
