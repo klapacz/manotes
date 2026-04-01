@@ -4,14 +4,13 @@ import { Option } from "effect";
 import { AppSidebar } from "../components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "../components/ui/sidebar";
 import * as LocalRegistry from "../lib/local-registry";
+import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 
 export const Route = createFileRoute("/$graph")({
   component: RouteComponent,
   beforeLoad: async ({ params }) => {
     const localGraphId = params.graph;
-    const graph = await LocalRegistry.Runtime.runtime.runPromise(
-      LocalRegistry.Repo.getGraph(localGraphId),
-    );
+    const graph = await GraphAccessRuntime.rt.runPromise(LocalRegistry.Repo.getGraph(localGraphId));
 
     // Check if the graph exists
     if (Option.isNone(graph)) throw redirect({ to: "/" });

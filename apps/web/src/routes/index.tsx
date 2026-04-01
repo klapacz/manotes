@@ -2,31 +2,28 @@ import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
 import * as LocalRegistry from "../lib/local-registry";
 import { For } from "solid-js";
 import { buttonVariants } from "../components/ui/button";
-import * as RemoteGraphRegistry from "../lib/remote-graph-registry";
-import { Layer, Effect, Array, pipe, Match } from "effect";
+import * as RemoteRegistryRpc from "../lib/graph-access/remote-registry/rpc";
+import { Effect, Array, pipe, Match } from "effect";
 import { DEFAULT_ACCOUNT_ID } from "../lib/constant";
-import { AsyncResult, Atom } from "effect/unstable/reactivity";
-import { RegistryLive } from "../lib/local-registry/runtime";
+import { AsyncResult } from "effect/unstable/reactivity";
 import { useAtomValue, useAtom } from "@effect/atom-solid";
-import { GraphRegistryClientLayer } from "../lib/remote-graph-registry";
 import { RpcClient } from "effect/unstable/rpc";
 import { GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
+import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 
 export const Route = createFileRoute("/")({
   component: RouteComponent,
 });
 
-const rt = Atom.runtime(Layer.merge(RegistryLive, GraphRegistryClientLayer));
-
-const localGraphsAtom = rt.atom(LocalRegistry.Repo.listGraphs);
-const cloudGraphsAtom = rt.atom(
+const localGraphsAtom = GraphAccessRuntime.atom.atom(LocalRegistry.Repo.listGraphs);
+const cloudGraphsAtom = GraphAccessRuntime.atom.atom(
   Effect.gen(function* () {
     const client = yield* RpcClient.make(GraphRegistryRpc);
     return yield* client.listGraphs();
   }),
 );
 
-const cloudGraphsNotOnDeviceAtom = rt.atom(
+const cloudGraphsNotOnDeviceAtom = GraphAccessRuntime.atom.atom(
   Effect.fnUntraced(function* (ctx) {
     const [localGraphs, cloudGraphs] = yield* Effect.all([
       ctx.result(localGraphsAtom),
@@ -43,8 +40,8 @@ const cloudGraphsNotOnDeviceAtom = rt.atom(
   }),
 );
 
-const openCloudGraphAtom = rt.fn(
-  Effect.fnUntraced(function* (graph: RemoteGraphRegistry.Graph) {
+const openCloudGraphAtom = GraphAccessRuntime.atom.fn(
+  Effect.fnUntraced(function* (graph: RemoteRegistryRpc.Graph) {
     return yield* LocalRegistry.Repo.createCloudGraph({
       graphId: graph.graphId,
       displayName: graph.displayName,

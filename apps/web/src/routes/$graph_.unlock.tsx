@@ -5,6 +5,7 @@ import { createSignal, Show } from "solid-js";
 import { Runtime } from "../lib";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import * as LocalRegistry from "../lib/local-registry";
+import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 
 export const Route = createFileRoute("/$graph_/unlock")({
   beforeLoad: async ({ params }) => {
@@ -18,9 +19,7 @@ export const Route = createFileRoute("/$graph_/unlock")({
     });
   },
   loader: async ({ params }) => {
-    const graph = await LocalRegistry.Runtime.runtime.runPromise(
-      LocalRegistry.Repo.getGraph(params.graph),
-    );
+    const graph = await GraphAccessRuntime.rt.runPromise(LocalRegistry.Repo.getGraph(params.graph));
     // Graph not found
     if (Option.isNone(graph)) throw redirect({ to: "/" });
     // Let's unlock the cloud graph

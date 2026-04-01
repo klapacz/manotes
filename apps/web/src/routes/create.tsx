@@ -1,107 +1,78 @@
-import { useMutation } from "@tanstack/solid-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/solid-router";
-import { Cause, Exit, Match, Option, Boolean } from "effect";
+import { useAtom } from "@effect/atom-solid";
+import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
+import { Effect } from "effect";
+import { AsyncResult } from "effect/unstable/reactivity";
+import { RpcClient } from "effect/unstable/rpc";
 import { createSignal } from "solid-js";
-import * as LocalRegistry from "../lib/local-registry";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import { Runtime } from "../lib";
-import { constant } from "effect/Function";
+import { GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
 import { Button, buttonVariants } from "../components/ui/button";
-import * as RemoteGraphRegistry from "../lib/remote-graph-registry";
 import { DEFAULT_ACCOUNT_ID } from "../lib/constant";
+import { Runtime } from "../lib";
+import * as LocalRegistry from "../lib/local-registry";
+import * as GraphAccessRuntime from "../lib/graph-access/runtime";
+import { Show } from "solid-js";
 
 export const Route = createFileRoute("/create")({
   component: RouteComponent,
 });
 
+type CreateGraphInput = {
+  mode: "cloud" | "local";
+  displayName: string;
+  password: string;
+};
+
+const createGraphAtom = GraphAccessRuntime.atom.fn(
+  Effect.fnUntraced(function* ({ mode, displayName, password }: CreateGraphInput) {
+    if (mode === "local") {
+      return yield* LocalRegistry.Repo.createGraph(displayName);
+    }
+
+    const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(password));
+    const client = yield* RpcClient.make(GraphRegistryRpc);
+    const graph = yield* client.createGraph({
+      displayName,
+      graphKeyEnvelope: wrapped.envelope,
+    });
+    const localGraph = yield* LocalRegistry.Repo.createCloudGraph({
+      graphId: graph.graphId,
+      displayName: graph.displayName,
+      graphKeyEnvelope: graph.graphKeyEnvelope,
+      accountId: DEFAULT_ACCOUNT_ID,
+    });
+
+    yield* Effect.tryPromise(() =>
+      Runtime.setup({
+        localGraphId: localGraph.localGraphId,
+        displayName: localGraph.displayName,
+        graphSyncConfig: {
+          mode: "cloud",
+          graphId: graph.graphId,
+          graphKey: wrapped.graphKey,
+        },
+      }),
+    );
+
+    return localGraph;
+  }),
+);
+
 function RouteComponent() {
-  const navigate = useNavigate();
   const [displayName, setDisplayName] = createSignal("");
   const [password, setPassword] = createSignal("");
-  const [error, setError] = createSignal<string | null>(null);
-  const createGraphMutation = useMutation(() => ({
-    async mutationFn({
-      mode,
-      displayName,
-      password,
-    }: {
-      mode: "local" | "cloud";
-      displayName: string;
-      password: string;
-    }) {
-      const exit = await Match.value(mode).pipe(
-        Match.when("local", () =>
-          LocalRegistry.Runtime.runtime.runPromiseExit(LocalRegistry.Repo.createGraph(displayName)),
-        ),
-        Match.when("cloud", async () => {
-          const wrapped = await GraphEncryption.createGraphKey(password);
-
-          const graph = await RemoteGraphRegistry.createGraph({
-            displayName,
-            graphKeyEnvelope: wrapped.envelope,
-          });
-
-          const localGraphExit = await LocalRegistry.Runtime.runtime.runPromiseExit(
-            LocalRegistry.Repo.createCloudGraph({
-              graphId: graph.graphId,
-              displayName: graph.displayName,
-              graphKeyEnvelope: graph.graphKeyEnvelope,
-              accountId: DEFAULT_ACCOUNT_ID,
-            }),
-          );
-
-          if (Exit.isSuccess(localGraphExit)) {
-            // @effect-diagnostics-next-line floatingEffect:off
-            await Runtime.setup({
-              localGraphId: localGraphExit.value.localGraphId,
-              displayName: localGraphExit.value.displayName,
-              graphSyncConfig: {
-                mode: "cloud",
-                graphId: graph.graphId,
-                graphKey: wrapped.graphKey,
-              },
-            });
-          }
-
-          return localGraphExit;
-        }),
-        Match.exhaustive,
-      );
-
-      Exit.match(exit, {
-        onFailure: (cause) => {
-          const isDisplayNameTakenError = Cause.findErrorOption(cause).pipe(
-            Option.map((failure) => failure._tag === "LocalRegistry.DisplayNameTakenError"),
-            Option.getOrElse(constant(false)),
-          );
-
-          setError(
-            Boolean.match(isDisplayNameTakenError, {
-              onTrue: constant("A graph with that name already exists."),
-              onFalse: constant("Failed to create graph."),
-            }),
-          );
-        },
-        onSuccess: (graph) => {
-          void navigate({
-            to: "/$graph",
-            params: { graph: graph.localGraphId },
-          });
-        },
-      });
-    },
-  }));
+  const [validationError, setValidationError] = createSignal<string | null>(null);
+  const [createGraphResult, createGraph] = useAtom(createGraphAtom);
 
   function handleSubmit(event: SubmitEvent & { currentTarget: HTMLFormElement }) {
     event.preventDefault();
 
     const trimmedName = displayName().trim();
     if (!trimmedName) {
-      setError("Graph name is required.");
+      setValidationError("Graph name is required.");
       return;
     }
 
-    setError(null);
     const submitter = event.submitter;
     let mode: "local" | "cloud" = "local";
 
@@ -112,11 +83,12 @@ function RouteComponent() {
     const normalizedPassword = GraphEncryption.normalizePassword(password());
 
     if (mode === "cloud" && !normalizedPassword) {
-      setError("Password is required for synced graphs.");
+      setValidationError("Password is required for synced graphs.");
       return;
     }
 
-    createGraphMutation.mutate({
+    setValidationError(null);
+    createGraph({
       mode,
       displayName: trimmedName,
       password: normalizedPassword,
@@ -153,21 +125,44 @@ function RouteComponent() {
           />
         </label>
 
-        {error() ? (
-          <p class="text-sm text-error-fg" role="alert">
-            {error()}
-          </p>
-        ) : null}
+        <Show when={validationError()}>
+          {(error) => (
+            <p class="text-sm text-error-fg" role="alert">
+              {error()}
+            </p>
+          )}
+        </Show>
+
+        {AsyncResult.matchWithError(createGraphResult(), {
+          onInitial: () => null,
+          onSuccess: (graph) => (
+            <Navigate to="/$graph" params={{ graph: graph.value.localGraphId }} />
+          ),
+          onError: (error) => (
+            <p class="text-sm text-error-fg" role="alert">
+              {error._tag == "LocalRegistry.DisplayNameTakenError"
+                ? "A graph with that name already exists."
+                : error._tag == "GraphRegistry.DisplayNameTakenError"
+                  ? "A synced graph with that name already exists."
+                  : "Failed to create graph."}
+            </p>
+          ),
+          onDefect: () => (
+            <p class="text-sm text-error-fg" role="alert">
+              Failed to create graph.
+            </p>
+          ),
+        })}
 
         <div class="flex gap-3">
-          <Button type="submit" data-mode="local" disabled={createGraphMutation.isPending}>
+          <Button type="submit" data-mode="local" disabled={createGraphResult().waiting}>
             Create local graph
           </Button>
           <Button
             type="submit"
             variant="outline"
             data-mode="cloud"
-            disabled={createGraphMutation.isPending}
+            disabled={createGraphResult().waiting}
           >
             Create synced graph
           </Button>
