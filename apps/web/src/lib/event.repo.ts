@@ -1,4 +1,4 @@
-import { Effect, Layer, Option, pipe, Schema, ServiceMap, Stream } from "effect";
+import { Array, Effect, Layer, Option, pipe, Schema, ServiceMap, Stream } from "effect";
 import * as DB from "./db.service";
 import * as EventSchema from "./event.schema";
 import * as Tables from "./db.tables";
@@ -7,6 +7,7 @@ import { nanoid } from "nanoid";
 
 const decodeRecord = Schema.decodeEffect(EventSchema.Record);
 const decodeAll = Schema.decodeEffect(Schema.Array(EventSchema.Record));
+const IMPORT_BACKUP_BATCH_SIZE = 180;
 
 export class Service extends ServiceMap.Service<Service>()("EventRepo.Service", {
   make: Effect.gen(function* () {
@@ -71,6 +72,52 @@ export class Service extends ServiceMap.Service<Service>()("EventRepo.Service", 
       );
 
       return yield* pipe(events, decodeAll);
+    });
+
+    const listAllForBackup = Effect.fn("EventRepo.listAllForBackup")(function* () {
+      const events = yield* db.query((db) =>
+        db.select().from(Tables.events).orderBy(asc(Tables.events.localSeq)),
+      );
+
+      return yield* pipe(events, decodeAll);
+    });
+
+    const importBackupEvents = Effect.fn("EventRepo.importBackupEvents")(function* (
+      events: ReadonlyArray<typeof EventSchema.Create.Type>,
+    ) {
+      if (events.length === 0) return;
+
+      const encodedEvents = yield* pipe(
+        events,
+        Schema.encodeEffect(Schema.Array(EventSchema.Create)),
+      );
+
+      yield* db.transaction(
+        Effect.forEach(
+          // Large backups can exceed SQLite's bound-variable limit if we try to
+          // insert every row in a single VALUES statement.
+          Array.chunksOf(encodedEvents, IMPORT_BACKUP_BATCH_SIZE),
+          (chunk) =>
+            db.query((db) =>
+              db
+                .insert(Tables.events)
+                .values(
+                  chunk.map((event) => ({
+                    noteId: event.noteId,
+                    type: event.type,
+                    payload: event.payload,
+                    createdAt: event.createdAt,
+                    id: event.id ?? nanoid(),
+                  })),
+                )
+                .returning(),
+            ),
+          {
+            concurrency: 1,
+            discard: true,
+          },
+        ),
+      );
     });
 
     const getLastCommitSeq = Effect.fn("EventRepo.getLastCommitSeq")(function* () {
@@ -212,9 +259,11 @@ export class Service extends ServiceMap.Service<Service>()("EventRepo.Service", 
       deleteByLocalSeq,
       findByEventId,
       getLastCommitSeq,
+      importBackupEvents,
       findPending,
       findUpdatesForNote,
       findUpdatesForNoteBetweenIds,
+      listAllForBackup,
       markCommitted,
       streamHasPending,
       streamUpdatesForNote,

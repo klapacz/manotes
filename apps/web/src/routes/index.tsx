@@ -71,9 +71,14 @@ function RouteComponent() {
 
       <div class="flex items-center justify-between">
         <h2 class="text-sm font-medium uppercase tracking-wide text-fg-subtle">On This Device</h2>
-        <Link to="/create" class={buttonVariants({ variant: "outline" })}>
-          New graph
-        </Link>
+        <div class="flex gap-3">
+          <Link to="/import" class={buttonVariants({ variant: "outline" })}>
+            Import backup
+          </Link>
+          <Link to="/create" class={buttonVariants({ variant: "outline" })}>
+            New graph
+          </Link>
+        </div>
       </div>
 
       {AsyncResult.match(localGraphs(), {

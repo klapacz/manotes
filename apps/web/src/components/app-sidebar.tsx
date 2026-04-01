@@ -8,6 +8,8 @@ import { Temporal } from "temporal-polyfill";
 import { requestScrollToDate } from "../lib/daily-note";
 import * as Y from "yjs";
 import { MaterializedEventService, useRuntime } from "../lib";
+import * as GraphBackupFile from "../lib/graph-backup/file";
+import * as GraphBackupService from "../lib/graph-backup/service";
 import { PlusIcon, SearchIcon } from "./icons";
 import { NoteSearchCommand } from "./note-search-command";
 import { Button } from "./ui/button";
@@ -38,7 +40,7 @@ const monthFormatter = new Intl.DateTimeFormat("en", {
   month: "long",
 });
 
-export const AppSidebar = () => {
+export const AppSidebar = (props: { graphDisplayName: string }) => {
   const searchDate = useLocation({
     select: (location) => location.search.date,
   });
@@ -78,6 +80,20 @@ export const AppSidebar = () => {
   });
 
   const [displayedMonth, setDisplayedMonth] = createWritableMemo(() => selectedDate() ?? undefined);
+
+  const exportBackupMutation = useMutation(() => ({
+    mutationFn: async () => {
+      await runtime().runPromise(
+        Effect.gen(function* () {
+          const backup = yield* GraphBackupService.exportBackup({
+            sourceGraphDisplayName: props.graphDisplayName,
+          });
+
+          yield* GraphBackupFile.downloadBackupFile(backup);
+        }),
+      );
+    },
+  }));
 
   return (
     <Sidebar>
@@ -191,9 +207,20 @@ export const AppSidebar = () => {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarGroup>
+      <SidebarGroup class="gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => exportBackupMutation.mutate()}
+          disabled={exportBackupMutation.isPending}
+        >
+          Export backup
+        </Button>
         <SyncStatusIndicator />
         <WorkerHealthBanner />
+        <Show when={exportBackupMutation.isError}>
+          <p class="text-error-fg text-xs">Failed to export backup</p>
+        </Show>
       </SidebarGroup>
     </Sidebar>
   );

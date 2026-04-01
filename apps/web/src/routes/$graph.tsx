@@ -36,6 +36,7 @@ export const Route = createFileRoute("/$graph")({
   },
   loader: async ({ context }) => ({
     runtime: context.runtime,
+    graph: context.graph,
   }),
 });
 
@@ -45,7 +46,7 @@ function RouteComponent() {
   return (
     <RuntimeProvider runtime={() => data().runtime!}>
       <SidebarProvider defaultOpenMobile={true}>
-        <AppSidebar />
+        <AppSidebar graphDisplayName={data().graph.displayName} />
         <SidebarInset>
           <div class="flex-1 overflow-auto">
             <Outlet />

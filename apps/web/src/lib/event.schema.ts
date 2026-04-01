@@ -14,6 +14,7 @@ export const Record = Schema.Struct({
   id: EventId,
   commitSeq: CommitSeq,
 });
+export type Record = typeof Record.Type;
 
 export const Create = Schema.Struct({
   noteId: Schema.NonEmptyString,
@@ -23,3 +24,4 @@ export const Create = Schema.Struct({
   id: Schema.optional(Schema.NonEmptyString),
   commitSeq: Schema.optional(Schema.Number),
 });
+export type Create = typeof Create.Type;
