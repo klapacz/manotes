@@ -3,13 +3,14 @@ import * as LocalRegistry from "../lib/graph-access/local-registry";
 import { For } from "solid-js";
 import { buttonVariants } from "../components/ui/button";
 import * as RemoteRegistryRpc from "../lib/graph-access/remote-registry/rpc";
+import * as Session from "../lib/graph-access/session";
 import { Effect, Array, pipe, Match } from "effect";
-import { DEFAULT_ACCOUNT_ID } from "../lib/constant";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { useAtomValue, useAtom } from "@effect/atom-solid";
 import { RpcClient } from "effect/unstable/rpc";
 import { GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
+import type { FnContext } from "effect/unstable/reactivity/Atom";
 
 export const Route = createFileRoute("/")({
   component: RouteComponent,
@@ -41,12 +42,14 @@ const cloudGraphsNotOnDeviceAtom = GraphAccessRuntime.atom.atom(
 );
 
 const openCloudGraphAtom = GraphAccessRuntime.atom.fn(
-  Effect.fnUntraced(function* (graph: RemoteRegistryRpc.Graph) {
+  Effect.fnUntraced(function* (graph: RemoteRegistryRpc.Graph, get: FnContext) {
+    const session = yield* get.result(Session.atom);
+
     return yield* LocalRegistry.Repo.createCloudGraph({
       graphId: graph.graphId,
       displayName: graph.displayName,
       graphKeyEnvelope: graph.graphKeyEnvelope,
-      accountId: DEFAULT_ACCOUNT_ID,
+      accountId: session.accountId,
     });
   }),
 );

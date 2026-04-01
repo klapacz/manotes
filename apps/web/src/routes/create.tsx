@@ -7,11 +7,12 @@ import { createSignal } from "solid-js";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import { GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
 import { Button, buttonVariants } from "../components/ui/button";
-import { DEFAULT_ACCOUNT_ID } from "../lib/constant";
 import { Runtime } from "../lib";
+import * as Session from "../lib/graph-access/session";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import { Show } from "solid-js";
+import type { FnContext } from "effect/unstable/reactivity/Atom";
 
 export const Route = createFileRoute("/create")({
   component: RouteComponent,
@@ -24,12 +25,13 @@ type CreateGraphInput = {
 };
 
 const createGraphAtom = GraphAccessRuntime.atom.fn(
-  Effect.fnUntraced(function* ({ mode, displayName, password }: CreateGraphInput) {
+  Effect.fnUntraced(function* ({ mode, displayName, password }: CreateGraphInput, get: FnContext) {
     if (mode === "local") {
       return yield* LocalRegistry.Repo.createGraph(displayName);
     }
 
     const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(password));
+    const session = yield* get.result(Session.atom);
     const client = yield* RpcClient.make(GraphRegistryRpc);
     const graph = yield* client.createGraph({
       displayName,
@@ -39,7 +41,7 @@ const createGraphAtom = GraphAccessRuntime.atom.fn(
       graphId: graph.graphId,
       displayName: graph.displayName,
       graphKeyEnvelope: graph.graphKeyEnvelope,
-      accountId: DEFAULT_ACCOUNT_ID,
+      accountId: session.accountId,
     });
 
     yield* Effect.tryPromise(() =>

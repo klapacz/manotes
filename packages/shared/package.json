@@ -8,6 +8,7 @@
     "./graph-sync/contract/codec": "./dist/graph-sync/contract/codec.mjs",
     "./graph-sync/contract/limits": "./dist/graph-sync/contract/limits.mjs",
     "./graph-sync/contract/messages": "./dist/graph-sync/contract/messages.mjs",
+    "./session/api": "./dist/session/api.mjs",
     "./package.json": "./package.json"
   },
   "scripts": {

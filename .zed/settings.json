@@ -4,10 +4,15 @@
 // see the documentation: https://zed.dev/docs/configuring-zed#settings-files
 {
   "lsp": {
+    "tsgo": {
+      "settings": {
+        "package_version": "7.0.0-dev.20260327.2"
+      }
+    },
     "oxlint": {
       "initialization_options": {
         "settings": {
-          "configPath": "./.oxlintrc.json",
+          "configPath": "./vite.config.ts",
           "run": "onType",
           "disableNestedConfig": false,
           "fixKind": "safe_fix",

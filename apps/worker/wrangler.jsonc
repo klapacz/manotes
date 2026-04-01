@@ -18,8 +18,16 @@
       "invocation_logs": true,
     },
   },
+  "vars": {
+    "ACCESS_TEAM_DOMAIN": "klapacz.cloudflareaccess.com",
+    "ACCESS_AUD": "b2965dda7282615f5deb119c72292be21cc1097184d84a5189bf0de701c3d78c",
+  },
   "durable_objects": {
     "bindings": [
+      {
+        "name": "ACCOUNTS_DO",
+        "class_name": "AccountsDurableObject",
+      },
       {
         "name": "GRAPH_SYNC_DO",
         "class_name": "GraphSyncDurableObject",
@@ -38,6 +46,10 @@
     {
       "tag": "v2",
       "new_sqlite_classes": ["GraphRegistryDurableObject"],
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": ["AccountsDurableObject"],
     },
   ],
   "assets": {

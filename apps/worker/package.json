@@ -7,11 +7,11 @@
   },
   "dependencies": {
     "@effect/sql-sqlite-do": "4.0.0-beta.42",
-    "@hono/standard-validator": "^0.2.2",
     "@manotes/shared": "workspace:*",
     "effect": "4.0.0-beta.42",
-    "hono": "^4.12.9",
-    "nanoid": "^5.1.6"
+    "jose": "6.2.2",
+    "nanoid": "^5.1.6",
+    "vite": "catalog:"
   },
   "devDependencies": {
     "@typescript/native-preview": "7.0.0-dev.20260327.2",
