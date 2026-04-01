@@ -4,7 +4,7 @@ import { Option } from "effect";
 import { createSignal, Show } from "solid-js";
 import { Runtime } from "../lib";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import * as LocalRegistry from "../lib/local-registry";
+import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 
 export const Route = createFileRoute("/$graph_/unlock")({

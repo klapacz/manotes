@@ -3,7 +3,7 @@ import { Runtime, RuntimeProvider } from "../lib";
 import { Option } from "effect";
 import { AppSidebar } from "../components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "../components/ui/sidebar";
-import * as LocalRegistry from "../lib/local-registry";
+import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 
 export const Route = createFileRoute("/$graph")({

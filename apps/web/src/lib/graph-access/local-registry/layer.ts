@@ -10,7 +10,7 @@ const BaseLayer = SqliteClient.layer({
     const worker = yield* Effect.acquireRelease(
       Effect.sync(
         () =>
-          new Worker(new URL("../db/worker.ts", import.meta.url), {
+          new Worker(new URL("../../db/worker.ts", import.meta.url), {
             type: "module",
             name: "wa-sqlite-worker-local-registry",
           }),

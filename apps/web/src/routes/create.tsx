@@ -9,7 +9,7 @@ import { GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
 import { Button, buttonVariants } from "../components/ui/button";
 import { DEFAULT_ACCOUNT_ID } from "../lib/constant";
 import { Runtime } from "../lib";
-import * as LocalRegistry from "../lib/local-registry";
+import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import { Show } from "solid-js";
 

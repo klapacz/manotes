@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
-import * as LocalRegistry from "../lib/local-registry";
+import * as LocalRegistry from "../lib/graph-access/local-registry";
 import { For } from "solid-js";
 import { buttonVariants } from "../components/ui/button";
 import * as RemoteRegistryRpc from "../lib/graph-access/remote-registry/rpc";
