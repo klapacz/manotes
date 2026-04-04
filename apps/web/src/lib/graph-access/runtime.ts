@@ -9,6 +9,7 @@ import * as KeyStoreService from "./key-store/service";
 import * as SessionService from "./session/service";
 import * as GraphRuntime from "./graph-runtime";
 import * as LocalRegistryLayer from "./local-registry/layer";
+import * as Observability from "../observability";
 import * as RemoteRegistryService from "./remote-registry/service";
 
 export const registry = AtomRegistry.make({ defaultIdleTTL: 400 });
@@ -24,7 +25,11 @@ const GraphAccessLayer = Layer.mergeAll(
   CommandsRename.Service.layer,
   CommandsSync.Service.layer,
   CommandsUnlock.Service.layer,
-).pipe(Layer.provideMerge(Layer.succeed(AtomRegistry.AtomRegistry, registry)));
+).pipe(
+  Layer.provideMerge(Layer.succeed(AtomRegistry.AtomRegistry, registry)),
+  Layer.provideMerge(Observability.layer("manotes-web")),
+);
+
 const memoMap = Layer.makeMemoMapUnsafe();
 
 export const atom = Atom.context({ memoMap })(GraphAccessLayer);

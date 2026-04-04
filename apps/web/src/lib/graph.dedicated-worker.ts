@@ -23,6 +23,7 @@ import * as GraphSyncStatus from "./graph-sync/status";
 import * as GraphRuntimeDBResolution from "./graph-access/graph-runtime/db-resolution";
 import { SqlLive } from "./db.service";
 import * as GraphSyncConfig from "./graph-sync/config";
+import * as Observability from "./observability";
 
 const bootstrapEffect = Effect.gen(function* () {
   // Build the bootstrap layers (WorkerRunner on `self`) using the Layer.unwrap
@@ -66,9 +67,12 @@ const bootstrapEffect = Effect.gen(function* () {
 // Bootstrap runner - receives MessagePort via initial message and installs
 // the RPC server layer into the serialized runner context.
 const BootstrapRunner = Layer.unwrap(bootstrapEffect);
+const DedicatedWorkerRunner = BootstrapRunner.pipe(
+  Layer.provideMerge(Observability.layer("manotes-web-dedicated-worker")),
+);
 
 BrowserRuntime.runMain(
-  Effect.scoped(Layer.launch(BootstrapRunner)).pipe(
+  Effect.scoped(Layer.launch(DedicatedWorkerRunner)).pipe(
     Effect.tapCause((error) => {
       return Effect.logError("Dedicated worker fatal error", error);
     }),

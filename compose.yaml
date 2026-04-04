@@ -1,0 +1,16 @@
+services:
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
+    container_name: aspire-dashboard
+    ports:
+      - "18888:18888"
+      - "16036:16036"
+      - "4317:18889"
+      - "4318:18890"
+    environment:
+      ASPIRE_DASHBOARD_MCP_ENDPOINT_URL: "http://0.0.0.0:16036"
+      DASHBOARD__MCP__AUTHMODE: "ApiKey"
+      DASHBOARD__MCP__PRIMARYAPIKEY: "local"
+      DASHBOARD__OTLP__CORS__ALLOWEDORIGINS: http://localhost:5173
+      DASHBOARD__OTLP__CORS__ALLOWEDHEADERS: "*"
+    restart: unless-stopped

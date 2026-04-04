@@ -4,6 +4,7 @@ import { DisplayNameTakenError, GraphRegistryRpc } from "@manotes/shared/graph-r
 import { Effect, Layer, ManagedRuntime, Option, Predicate, Scope, Context } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 import { RpcSerialization, RpcServer } from "effect/unstable/rpc";
+import * as ObservabilityLayer from "../lib/observability/layer";
 import * as Repo from "./repo";
 
 // ---------------------------------------------------------------------------
@@ -72,6 +73,7 @@ export class GraphRegistryDurableObject extends DurableObject<Env> {
           spanAttributes: { durableObject: "GraphRegistryDurableObject" },
         }),
       ),
+      Layer.provideMerge(ObservabilityLayer.layer("manotes-do-graph-registry")),
     ),
   );
 

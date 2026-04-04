@@ -1,5 +1,5 @@
 import { SqliteClient } from "@effect/sql-sqlite-do";
-import { Cause, Effect, Exit, ManagedRuntime, Match, Boolean, Predicate } from "effect";
+import { Cause, Effect, Exit, ManagedRuntime, Match, Boolean, Layer, Predicate } from "effect";
 import { DurableObject } from "cloudflare:workers";
 import * as Codec from "@manotes/shared/graph-sync/contract/codec";
 import * as Messages from "@manotes/shared/graph-sync/contract/messages";
@@ -7,6 +7,7 @@ import * as Protocol from "./protocol";
 import * as Repo from "./repo";
 import * as Errors from "./errors";
 import { webSocketMessageToUint8Array } from "./websocket-message";
+import * as ObservabilityLayer from "../lib/observability/layer";
 
 export class GraphSyncDurableObject extends DurableObject<Env> {
   private readonly runtime = ManagedRuntime.make(
@@ -15,7 +16,7 @@ export class GraphSyncDurableObject extends DurableObject<Env> {
       spanAttributes: {
         durableObject: "GraphSyncDurableObject",
       },
-    }),
+    }).pipe(Layer.provideMerge(ObservabilityLayer.layer("manotes-do-graph-sync"))),
   );
 
   constructor(ctx: DurableObjectState, env: Env) {

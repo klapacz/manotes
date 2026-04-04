@@ -19,6 +19,7 @@ import * as SessionService from "../session/service";
 import * as SyncSessionWatcher from "./sync-session-watcher";
 import * as DBResolution from "./db-resolution";
 import * as Lock from "./lock";
+import * as Observability from "../../observability";
 
 export type SetupOpts = {
   localGraphId: string;
@@ -77,6 +78,7 @@ export const makeLayer = (opts: SetupOpts) =>
         Layer.provide(graphSyncConfigLayer),
         Layer.provideMerge(makeMigratedDatabaseLayer(opts)),
         Layer.provideMerge(sessionServiceLayer),
+        Layer.provideMerge(Observability.layer("manotes-web")),
       );
     }),
   );

@@ -28,6 +28,7 @@ import {
   SyncStatusCloud,
   type SyncStatus,
 } from "./graph.worker-rpc";
+import * as Observability from "./observability";
 
 // ============================================================================
 // SharedWorker - Request Router
@@ -203,6 +204,7 @@ const RpcWorkerServer = RpcServer.layer(GraphSharedWorkerRpc).pipe(
   Layer.provide(RpcServer.layerProtocolWorkerRunner),
   Layer.provide(BrowserWorkerRunner.layer),
   Layer.provide(Layer.succeed(References.MinimumLogLevel, "Debug")),
+  Layer.provideMerge(Observability.layer("manotes-web-shared-worker")),
 );
 
 BrowserRuntime.runMain(

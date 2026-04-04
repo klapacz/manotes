@@ -2,6 +2,7 @@ import { Data, Effect, Layer, ManagedRuntime } from "effect";
 import { Struct } from "effect";
 import { DurableObject } from "cloudflare:workers";
 import { SqliteClient } from "@effect/sql-sqlite-do";
+import * as ObservabilityLayer from "../lib/observability/layer";
 import * as Repo from "./repo";
 
 export const NAMESPACE_KEY = "accounts-v1";
@@ -24,6 +25,7 @@ export class AccountsDurableObject extends DurableObject<Env> {
           spanAttributes: { durableObject: "AccountsDurableObject" },
         }),
       ),
+      Layer.provideMerge(ObservabilityLayer.layer("manotes-do-accounts")),
     ),
   );
 
