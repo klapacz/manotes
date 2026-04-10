@@ -1,25 +1,26 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
-import * as LocalRegistry from "../lib/graph-access/local-registry";
 import { For } from "solid-js";
 import { buttonVariants } from "../components/ui/button";
-import * as RemoteRegistryRpc from "../lib/graph-access/remote-registry/rpc";
+import * as LocalRegistry from "../lib/graph-access/local-registry";
+import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
 import * as Session from "../lib/graph-access/session";
-import { Effect, Array, pipe, Match } from "effect";
+import { Effect, Array, pipe } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { useAtomValue, useAtom } from "@effect/atom-solid";
-import { RpcClient } from "effect/unstable/rpc";
-import { GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import type { FnContext } from "effect/unstable/reactivity/Atom";
+import { GraphListItem } from "./-index/GraphListItem";
 
 export const Route = createFileRoute("/")({
   component: RouteComponent,
 });
 
+// TODO: These atoms cache one-shot reads and are not refreshed after upload/open mutations,
+// so the home screen can keep showing stale local/cloud graph lists until reload.
 const localGraphsAtom = GraphAccessRuntime.atom.atom(LocalRegistry.Repo.listGraphs);
 const cloudGraphsAtom = GraphAccessRuntime.atom.atom(
-  Effect.gen(function* () {
-    const client = yield* RpcClient.make(GraphRegistryRpc);
+  Effect.fnUntraced(function* (get) {
+    const client = yield* get.result(RemoteRegistryClient.atom);
     return yield* client.listGraphs();
   }),
 );
@@ -42,7 +43,7 @@ const cloudGraphsNotOnDeviceAtom = GraphAccessRuntime.atom.atom(
 );
 
 const openCloudGraphAtom = GraphAccessRuntime.atom.fn(
-  Effect.fnUntraced(function* (graph: RemoteRegistryRpc.Graph, get: FnContext) {
+  Effect.fnUntraced(function* (graph: RemoteRegistryClient.Graph, get: FnContext) {
     const session = yield* get.result(Session.atom);
 
     return yield* LocalRegistry.Repo.createCloudGraph({
@@ -52,12 +53,6 @@ const openCloudGraphAtom = GraphAccessRuntime.atom.fn(
       accountId: session.accountId,
     });
   }),
-);
-
-const graphModeLabel = Match.type<LocalRegistry.Schema.Record["mode"]>().pipe(
-  Match.when("cloud", () => "synced"),
-  Match.when("local", () => "local"),
-  Match.exhaustive,
 );
 
 function RouteComponent() {
@@ -95,18 +90,7 @@ function RouteComponent() {
                 </div>
               }
             >
-              {(graph) => (
-                <Link
-                  to="/$graph"
-                  params={{ graph: graph.localGraphId }}
-                  class="flex items-center justify-between rounded-xl border border-border px-4 py-3 transition-colors hover:bg-bg-subtle"
-                >
-                  <span class="font-medium">{graph.displayName}</span>
-                  <span class="text-xs uppercase tracking-wide text-fg-subtle">
-                    {graphModeLabel(graph.mode)}
-                  </span>
-                </Link>
-              )}
+              {(graph) => <GraphListItem graph={graph} />}
             </For>
           </div>
         ),

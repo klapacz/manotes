@@ -23,6 +23,8 @@ const runtimes = new Map<string, Type>();
 
 export async function setup(opts: SetupOpts): Promise<Type> {
   // Use existing runtime if available
+  // TODO: This cache key assumes a graph's runtime config never changes.
+  // Promoting a local graph to cloud mode reuses the stale local-only runtime.
   const existingRuntime = runtimes.get(opts.localGraphId);
   if (existingRuntime) {
     return existingRuntime;

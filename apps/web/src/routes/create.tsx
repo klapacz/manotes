@@ -2,12 +2,11 @@ import { useAtom } from "@effect/atom-solid";
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
 import { Effect } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
-import { RpcClient } from "effect/unstable/rpc";
 import { createSignal } from "solid-js";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import { GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
 import { Button, buttonVariants } from "../components/ui/button";
 import { Runtime } from "../lib";
+import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
 import * as Session from "../lib/graph-access/session";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
@@ -25,14 +24,17 @@ type CreateGraphInput = {
 };
 
 const createGraphAtom = GraphAccessRuntime.atom.fn(
-  Effect.fnUntraced(function* ({ mode, displayName, password }: CreateGraphInput, get: FnContext) {
+  Effect.fn("GraphAccess.createGraph")(function* (
+    { mode, displayName, password }: CreateGraphInput,
+    get: FnContext,
+  ) {
     if (mode === "local") {
       return yield* LocalRegistry.Repo.createGraph(displayName);
     }
 
     const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(password));
     const session = yield* get.result(Session.atom);
-    const client = yield* RpcClient.make(GraphRegistryRpc);
+    const client = yield* get.result(RemoteRegistryClient.atom);
     const graph = yield* client.createGraph({
       displayName,
       graphKeyEnvelope: wrapped.envelope,

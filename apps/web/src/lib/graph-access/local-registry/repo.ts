@@ -1,4 +1,4 @@
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/unstable/sql";
 import { nanoid } from "nanoid";
 import { Array, Cause, Effect, Exit, flow, Option, Stream } from "effect";
 import * as Schema from "./schema";
@@ -85,6 +85,20 @@ export const createGraph = Effect.fn("LocalRegistryRepo.createGraph")(function* 
   }
 
   return head.value;
+});
+
+export const updateGraph = SqlSchema.findOne({
+  Request: Schema.Record,
+  Result: Schema.Record,
+  execute: Effect.fn(function* (values) {
+    const sql = yield* SqlClient.SqlClient;
+
+    return yield* sql`
+      UPDATE graphs SET ${sql.update(values, ["localGraphId"])}
+      WHERE localGraphId = ${values.localGraphId}
+      RETURNING localGraphId, displayName, mode, graphId, accountId, graphKeyEnvelope
+    `;
+  }),
 });
 
 export const getGraphByGraphId = Effect.fn("LocalRegistryRepo.getGraphByGraphId")(function* (
