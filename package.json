@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm -r --parallel run dev",
+    "dev": "process-compose up",
     "deploy": "vp check && vp run -t web#build && vp run web#deploy"
   },
   "devDependencies": {

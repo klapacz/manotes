@@ -4,6 +4,7 @@ import * as EventRepo from "./event.repo";
 import * as GraphWorkerClient from "./graph-worker.client";
 import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
 import * as MaterializedEventService from "./materialized-event.service";
+import * as BrowserExtensionTabNoteService from "./browser-extension/tab-note/service";
 import * as BacklinkService from "./materializer/backlink/service";
 import * as Migrator from "./migrator";
 import * as NoteRepo from "./note.repo";
@@ -72,6 +73,7 @@ async function create(opts: SetupOpts) {
     EditorNoteBootCache.Service.layer,
     MaterializationCheckpointRepo.Service.layer,
     MaterializedEventService.Service.layer,
+    BrowserExtensionTabNoteService.Service.layer,
     EditorSyncService.Service.layer,
     GraphWorkerClient.Service.layer,
     DB.Service.layer,

@@ -1,18 +1,14 @@
 import { Option, pipe, Schema } from "effect";
-import { createEditor, jsonFromNode } from "prosekit/core";
+import { jsonFromNode } from "prosekit/core";
 import * as Y from "yjs";
 import { yXmlFragmentToProseMirrorRootNode } from "y-prosemirror";
-import { defineAppSchema } from "../editor.schema";
 import type { UnknownNodeJSON } from "./node-json";
+import { getAppSchema } from "./prosemirror/app-schema";
+import { getProsemirrorXmlFragment } from "./prosemirror/yjs";
 
 export function yDocToNodeJSON(opts: { yDoc: Y.Doc; isDaily: boolean }): UnknownNodeJSON {
-  const xmlFragment = opts.yDoc.getXmlFragment("prosemirror");
-  const rootNode = yXmlFragmentToProseMirrorRootNode(
-    xmlFragment,
-    createEditor({
-      extension: defineAppSchema({ isDaily: opts.isDaily }),
-    }).schema,
-  );
+  const xmlFragment = getProsemirrorXmlFragment(opts.yDoc);
+  const rootNode = yXmlFragmentToProseMirrorRootNode(xmlFragment, getAppSchema(opts.isDaily));
   return jsonFromNode(rootNode);
 }
 

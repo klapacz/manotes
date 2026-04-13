@@ -18,6 +18,8 @@ export const commandListClass = "max-h-[300px] scroll-py-1 overflow-x-hidden ove
 
 export const commandEmptyClass = "py-6 text-center text-sm";
 
+export const commandGroupHeadingClass = "text-fg-subtle px-2 py-1.5 text-xs font-medium";
+
 export const commandItemBaseClass =
   "[&_svg:not([class*='text-'])]:text-fg-subtle relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
 
@@ -105,6 +107,16 @@ export const CommandEmpty = (props: CommandEmptyProps) => {
       class={cx(commandEmptyClass, props.class)}
       {...rest}
     />
+  );
+};
+
+export type CommandLabelProps = ComponentProps<"div">;
+
+export const CommandLabel = (props: CommandLabelProps) => {
+  const [, rest] = splitProps(props, ["class"]);
+
+  return (
+    <div data-slot="command-label" class={cx(commandGroupHeadingClass, props.class)} {...rest} />
   );
 };
 

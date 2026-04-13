@@ -1,17 +1,13 @@
-import { createEditor, nodeFromJSON } from "prosekit/core";
+import { nodeFromJSON } from "prosekit/core";
 import { Fragment, type Node, type ResolvedPos } from "prosekit/pm/model";
-import { defineAppSchema } from "../../editor.schema";
 import type { UnknownNodeJSON } from "../node-json";
+import { getAppSchema } from "./app-schema";
 
 /**
  * Creates an application-schema ProseMirror node from serialized JSON content.
  */
 export function appNodeFromJSON(options: { content: UnknownNodeJSON; isDaily: boolean }): Node {
-  const editor = createEditor({
-    extension: defineAppSchema({ isDaily: options.isDaily }),
-  });
-
-  return nodeFromJSON(options.content, { schema: editor.schema });
+  return nodeFromJSON(options.content, { schema: getAppSchema(options.isDaily) });
 }
 
 /**

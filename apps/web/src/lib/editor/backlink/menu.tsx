@@ -6,19 +6,24 @@ import {
   AutocompleteList,
   AutocompletePopover,
 } from "prosekit/solid/autocomplete";
-import { createSignal, For } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 import {
+  CommandLabel,
   commandEmptyClass,
   commandItemBaseClass,
   commandListClass,
   commandSurfaceClass,
 } from "../../../components/ui/command";
-import { NoteRepo, createRuntimeStreamStore } from "../..";
+import { NoteRepo, createRuntimeStreamStore, useRuntime } from "../..";
 import { cx } from "../../cva";
 import type { AppExtension } from "../../../editor.extension";
 import { suggestDailyNoteIds } from "../../daily-note";
+import * as BrowserExtensionClient from "../../browser-extension/client";
+import * as BrowserExtensionTabNoteService from "../../browser-extension/tab-note/service";
+import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
 
 const BACKLINK_REGEX = /\[\[([^\]\n]*)$/u;
+
 type BacklinkNote = {
   id: string;
   title: string;
@@ -51,6 +56,14 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
       ),
     );
   }, [] as BacklinkNote[]);
+
+  const tabs = createRuntimeStreamStore(
+    () =>
+      open()
+        ? BrowserExtensionClient.watchTabs
+        : Stream.succeed([] as BrowserExtension.TabCandidate[]),
+    [] as BrowserExtension.TabCandidate[],
+  );
 
   const handleQueryChange = (fallbackQuery: string) => {
     try {
@@ -85,15 +98,21 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
     editor().commands.insertText({ text: " " });
   };
 
-  const handleValueChange = (value: string) => {
-    const note = notes.find((result) => result.id === value);
-    if (!note) return;
-
+  const onSelect = (note: BacklinkNote) => {
     // Autocomplete emits valueChange and also runs its internal submit handler.
     // Deferring insertion avoids the submit deletion step removing the node.
     queueMicrotask(() => {
       insertBacklink(note);
     });
+  };
+
+  const runtime = useRuntime();
+  const onTabSelect = async (tab: BrowserExtension.TabCandidate) => {
+    const note = await runtime().runPromise(
+      BrowserExtensionTabNoteService.Service.use((service) => service.createFromTab(tab)),
+    );
+
+    onSelect(note);
   };
 
   return (
@@ -103,19 +122,48 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
       onOpenChange={setOpen}
       onQueryChange={handleQueryChange}
     >
-      <AutocompleteList filter={() => true} onValueChange={handleValueChange}>
-        <AutocompleteEmpty class={commandEmptyClass}>No matching notes</AutocompleteEmpty>
+      <AutocompleteList filter={() => true}>
+        <AutocompleteEmpty class={commandEmptyClass}>No matching notes or tabs</AutocompleteEmpty>
 
-        <For each={notes}>
-          {(note) => (
-            <AutocompleteItem
-              class={cx(commandItemBaseClass, "data-focused:bg-control-hover data-focused:text-fg")}
-              value={note.id}
-            >
-              {note.title}
-            </AutocompleteItem>
-          )}
-        </For>
+        <Show when={notes.length > 0}>
+          <CommandLabel>Notes</CommandLabel>
+
+          <For each={notes}>
+            {(note) => (
+              <AutocompleteItem
+                class={cx(
+                  commandItemBaseClass,
+                  "data-focused:bg-control-hover data-focused:text-fg",
+                )}
+                onSelect={() => onSelect(note)}
+                value={note.id}
+              >
+                {note.title}
+              </AutocompleteItem>
+            )}
+          </For>
+        </Show>
+
+        <Show when={tabs.length > 0}>
+          <CommandLabel>Tabs</CommandLabel>
+          <For each={tabs}>
+            {(tab) => (
+              <AutocompleteItem
+                class={cx(
+                  commandItemBaseClass,
+                  "data-focused:bg-control-hover data-focused:text-fg",
+                )}
+                onSelect={() => onTabSelect(tab)}
+                value={tab.id.toString()}
+              >
+                <div class="min-w-0">
+                  <div class="truncate">{tab.title}</div>
+                  <div class="truncate text-xs text-fg-subtle">{tab.url}</div>
+                </div>
+              </AutocompleteItem>
+            )}
+          </For>
+        </Show>
       </AutocompleteList>
     </AutocompletePopover>
   );

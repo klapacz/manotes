@@ -17,6 +17,7 @@ import { defineAppExtension } from "./editor.extension";
 import { EditorSyncService, useRuntime } from "./lib";
 import { defineVirtualDailyHeading } from "./editor.virtual-daily-heading.extension";
 import { formatDailyNoteTitle } from "./lib/daily-note";
+import { getProsemirrorXmlFragment } from "./lib/prosemirror/yjs";
 import { Cause, Data, Fiber, Effect, Deferred } from "effect";
 import BacklinkMenu from "./lib/editor/backlink/menu";
 import { MatchTagged } from "./lib/compoennts/match-tagged";
@@ -161,7 +162,7 @@ export interface YjsOptions {
  */
 export function defineYjs(options: YjsOptions) {
   const { doc, sync, undo } = options;
-  const fragment = options.fragment ?? doc.getXmlFragment("prosemirror");
+  const fragment = options.fragment ?? getProsemirrorXmlFragment(doc);
 
   return withPriority(
     union([
