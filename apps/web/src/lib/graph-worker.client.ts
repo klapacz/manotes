@@ -39,14 +39,41 @@ const createDedicatedWorker = Effect.fn("GraphWorkerClient.createDedicatedWorker
   // Effect's close protocol cleans up ports/fibers, but doesn't terminate
   // the worker process (it would linger idle). Matters during retries.
   const worker = yield* Effect.acquireRelease(
-    Effect.sync(
-      () =>
-        new Worker(new URL("./graph.dedicated-worker.ts", import.meta.url), {
-          type: "module",
-          name: `graph-dedicated-${localGraphId}`,
-        }),
+    Effect.sync(() => {
+      // Safari can evaluate the module worker after `new Worker(...)` returns.
+      // We therefore wait for Effect's worker runner to announce readiness
+      // before sending the RPC initial message.
+      const ready = Promise.withResolvers<void>();
+      const worker = new Worker(new URL("./graph.dedicated-worker.ts", import.meta.url), {
+        type: "module",
+        name: `graph-dedicated-${localGraphId}`,
+      });
+
+      const onMessage = (event: MessageEvent) => {
+        // Effect's browser worker runner sends `[0]` as its "ready" handshake.
+        // We only care about that one control message here; everything else is
+        // handled by Effect's own worker transport after bootstrap completes.
+        if (Array.isArray(event.data) && event.data[0] === 0) ready.resolve();
+      };
+      worker.addEventListener("message", onMessage);
+
+      return { worker, onMessage, ready: ready.promise };
+    }),
+    Effect.fnUntraced(function* ({ worker, onMessage }) {
+      yield* Effect.sync(() => {
+        worker.removeEventListener("message", onMessage);
+        worker.terminate();
+      });
+    }),
+  ).pipe(
+    Effect.flatMap(
+      Effect.fnUntraced(function* ({ worker, ready }) {
+        // Install cleanup first, then wait for readiness. If the timeout fires,
+        // the surrounding scope still owns the worker and will terminate it.
+        yield* Effect.promise(() => ready).pipe(Effect.timeout("5 seconds"));
+        return worker;
+      }),
     ),
-    (worker) => Effect.sync(() => worker.terminate()),
   );
 
   const [initialMessage, transferables] = yield* RpcWorker.makeInitialMessage(
