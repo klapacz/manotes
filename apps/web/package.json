@@ -23,7 +23,6 @@
     "@standard-schema/spec": "^1.1.0",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/router-plugin": "^1.133.21",
-    "@tanstack/solid-query": "^5.90.23",
     "@tanstack/solid-router": "^1.133.20",
     "@tanstack/solid-router-devtools": "^1.133.20",
     "@tanstack/solid-start": "^1.133.20",
