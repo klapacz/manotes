@@ -1,9 +1,9 @@
 import { useAtom } from "@effect/atom-solid";
 import { Navigate } from "@tanstack/solid-router";
-import { Effect, Option } from "effect";
+import { Effect, Option, Schema } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
 import type { FnContext } from "effect/unstable/reactivity/Atom";
-import { createSignal, Show, splitProps, type ValidComponent } from "solid-js";
+import { createSignal, splitProps, type ValidComponent } from "solid-js";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
@@ -18,8 +18,7 @@ import {
   DialogTrigger,
   type DialogTriggerProps,
 } from "../../components/ui/dialog";
-import { Form } from "../../components/ui/form";
-import { TextField, TextFieldInput, TextFieldLabel } from "../../components/ui/text-field";
+import { AppForm, useAppForm } from "../../components/ui/form";
 import { Runtime } from "../../lib";
 import * as GraphAccessErrors from "../../lib/graph-access/errors";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
@@ -31,6 +30,10 @@ type UploadGraphInput = {
   password: string;
   localGraphId: string;
 };
+
+const UploadGraphFormSchema = Schema.Struct({
+  password: Schema.Trim.pipe(Schema.check(Schema.isNonEmpty())),
+}).pipe(Schema.toStandardSchemaV1);
 
 const uploadGraphAtom = GraphAccessRuntime.atom.fn(
   Effect.fn("GraphAccess.uploadGraph")(function* (opts: UploadGraphInput, get: FnContext) {
@@ -91,34 +94,30 @@ type Props<T extends ValidComponent = typeof Button> = {
 } & DialogTriggerProps<T>;
 
 export function UploadGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
-  const [password, setPassword] = createSignal("");
   const [open, setOpen] = createSignal(false);
-  const [validationError, setValidationError] = createSignal<string | null>(null);
-  const [uploadGraphResult, uploadGraph] = useAtom(uploadGraphAtom);
+  const [uploadGraphResult, uploadGraph] = useAtom(uploadGraphAtom, { mode: "promise" });
   const [local, triggerProps] = splitProps(props as Props, ["graph"]);
-
-  function handleSubmit(event: SubmitEvent & { currentTarget: HTMLFormElement }) {
-    event.preventDefault();
-
-    const normalizedPassword = GraphEncryption.normalizePassword(password());
-    if (!normalizedPassword) return setValidationError("Password is required.");
-
-    setValidationError(null);
-    uploadGraph({
-      localGraphId: props.graph.localGraphId,
-      password: normalizedPassword,
-    });
-  }
+  const form = useAppForm(() => ({
+    defaultValues: {
+      password: "",
+    },
+    validators: {
+      onDynamic: UploadGraphFormSchema,
+    },
+    async onSubmit({ value }) {
+      await uploadGraph({
+        localGraphId: props.graph.localGraphId,
+        password: GraphEncryption.normalizePassword(value.password),
+      });
+    },
+  }));
 
   return (
     <Dialog
       open={open()}
       onOpenChange={(open) => {
         if (uploadGraphResult().waiting) return;
-        if (open) {
-          setValidationError(null);
-          setPassword("");
-        }
+        if (open) form.reset();
         setOpen(open);
       }}
     >
@@ -126,34 +125,13 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
 
       <DialogPortal>
         <DialogContent showCloseButton={!uploadGraphResult().waiting}>
-          <Form spacing="compact" onSubmit={handleSubmit}>
+          <AppForm form={form} AppForm={form.AppForm} spacing="compact">
             <DialogHeader>
               <DialogTitle>Upload graph</DialogTitle>
               <DialogDescription>
                 Enter a password to encrypt and sync {local.graph.displayName}.
               </DialogDescription>
             </DialogHeader>
-
-            <TextField>
-              <TextFieldLabel for="upload-graph-password">Password</TextFieldLabel>
-              <TextFieldInput
-                id="upload-graph-password"
-                type="password"
-                value={password()}
-                onInput={(event) => setPassword(event.currentTarget.value)}
-                placeholder="Required to upload this graph"
-                autofocus
-                disabled={uploadGraphResult().waiting}
-              />
-            </TextField>
-
-            <Show when={validationError()}>
-              {(error) => (
-                <Alert variant="destructive">
-                  <AlertDescription>{error()}</AlertDescription>
-                </Alert>
-              )}
-            </Show>
 
             {AsyncResult.matchWithError(uploadGraphResult(), {
               onInitial: () => null,
@@ -180,6 +158,17 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
               ),
             })}
 
+            <form.AppField name="password">
+              {(field) => (
+                <field.TextField
+                  type="password"
+                  label="Password"
+                  placeholder="Required to upload this graph"
+                  autofocus
+                />
+              )}
+            </form.AppField>
+
             <DialogFooter>
               <Button
                 type="button"
@@ -189,11 +178,9 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={uploadGraphResult().waiting}>
-                Upload graph
-              </Button>
+              <form.SubmitButton>Upload graph</form.SubmitButton>
             </DialogFooter>
-          </Form>
+          </AppForm>
         </DialogContent>
       </DialogPortal>
     </Dialog>

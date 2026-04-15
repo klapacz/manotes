@@ -1,12 +1,9 @@
 import { useAtom } from "@effect/atom-solid";
 import { createFileRoute, Navigate, redirect } from "@tanstack/solid-router";
-import { Effect, Option } from "effect";
+import { Effect, Option, Schema } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
-import { createSignal, Show } from "solid-js";
 import { Alert, AlertDescription } from "../components/ui/alert";
-import { Button } from "../components/ui/button";
-import { Form } from "../components/ui/form";
-import { TextField, TextFieldInput, TextFieldLabel } from "../components/ui/text-field";
+import { AppForm, useAppForm } from "../components/ui/form";
 import { Runtime } from "../lib";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
@@ -16,6 +13,10 @@ type UnlockGraphInput = {
   graph: Extract<LocalRegistry.Schema.Record, { mode: "cloud" }>;
   password: string;
 };
+
+const UnlockGraphFormSchema = Schema.Struct({
+  password: Schema.Trim.pipe(Schema.check(Schema.isNonEmpty())),
+}).pipe(Schema.toStandardSchemaV1);
 
 const unlockGraphAtom = GraphAccessRuntime.atom.fn(
   Effect.fn("RoutesGraphUnlock.unlockGraph")(function* ({ graph, password }: UnlockGraphInput) {
@@ -79,26 +80,21 @@ export const Route = createFileRoute("/$graph_/unlock")({
 function RouteComponent() {
   const data = Route.useLoaderData();
 
-  const [password, setPassword] = createSignal("");
-  const [validationError, setValidationError] = createSignal<string | null>(null);
-  const [unlockGraphResult, unlockGraph] = useAtom(unlockGraphAtom);
-
-  function handleSubmit(event: SubmitEvent & { currentTarget: HTMLFormElement }) {
-    event.preventDefault();
-
-    const normalizedPassword = GraphEncryption.normalizePassword(password());
-
-    if (!normalizedPassword) {
-      setValidationError("Password is required.");
-      return;
-    }
-
-    setValidationError(null);
-    unlockGraph({
-      graph: data().graph,
-      password: normalizedPassword,
-    });
-  }
+  const [unlockGraphResult, unlockGraph] = useAtom(unlockGraphAtom, { mode: "promise" });
+  const form = useAppForm(() => ({
+    defaultValues: {
+      password: "",
+    },
+    validators: {
+      onDynamic: UnlockGraphFormSchema,
+    },
+    async onSubmit({ value }) {
+      await unlockGraph({
+        graph: data().graph,
+        password: GraphEncryption.normalizePassword(value.password),
+      });
+    },
+  }));
 
   return (
     <main class="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center gap-6 px-6 py-12">
@@ -109,27 +105,7 @@ function RouteComponent() {
         </p>
       </header>
 
-      <Form onSubmit={handleSubmit}>
-        <TextField>
-          <TextFieldLabel for="unlock-graph-password">Password</TextFieldLabel>
-          <TextFieldInput
-            id="unlock-graph-password"
-            type="password"
-            value={password()}
-            onInput={(event) => setPassword(event.currentTarget.value)}
-            autofocus
-            disabled={unlockGraphResult().waiting}
-          />
-        </TextField>
-
-        <Show when={validationError()}>
-          {(error) => (
-            <Alert variant="destructive">
-              <AlertDescription>{error()}</AlertDescription>
-            </Alert>
-          )}
-        </Show>
-
+      <AppForm form={form} AppForm={form.AppForm}>
         {AsyncResult.matchWithError(unlockGraphResult(), {
           onInitial: () => null,
           onSuccess: (graph) => (
@@ -151,10 +127,12 @@ function RouteComponent() {
           ),
         })}
 
-        <Button type="submit" disabled={unlockGraphResult().waiting}>
-          Unlock graph
-        </Button>
-      </Form>
+        <form.AppField name="password">
+          {(field) => <field.TextField type="password" label="Password" autofocus />}
+        </form.AppField>
+
+        <form.SubmitButton>Unlock graph</form.SubmitButton>
+      </AppForm>
     </main>
   );
 }

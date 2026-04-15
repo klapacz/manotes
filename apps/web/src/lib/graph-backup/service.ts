@@ -2,7 +2,6 @@ import { Array as Arr, DateTime, Effect, Struct } from "effect";
 import * as EventRepo from "../event.repo";
 import * as EventSchema from "../event.schema";
 import * as LocalRegistry from "../graph-access/local-registry";
-import * as GraphAccessRuntime from "../graph-access/runtime";
 import * as Runtime from "../runtime";
 import * as BackupSchema from "./schema";
 
@@ -38,7 +37,7 @@ export function getSuggestedGraphName({
   return stem.length > 0 ? stem : "Imported graph";
 }
 
-export const exportBackup = Effect.fn("GraphBackup.exportBackup")(function* ({
+export const exportBackup = Effect.fn("GraphBackupService.exportBackup")(function* ({
   sourceGraphDisplayName,
 }: {
   sourceGraphDisplayName: string;
@@ -54,28 +53,26 @@ export const exportBackup = Effect.fn("GraphBackup.exportBackup")(function* ({
   });
 });
 
-export async function importBackupToNewGraph({
-  backup,
-  displayName,
-}: {
-  backup: BackupSchema.Bundle;
-  displayName: string;
-}) {
-  // TODO: rewrite it to proper effect
-  const graph = await GraphAccessRuntime.rt.runPromise(LocalRegistry.Repo.createGraph(displayName));
+export const importBackupToNewGraph = Effect.fn("GraphBackupService.importBackupToNewGraph")(
+  function* ({ backup, displayName }: { backup: BackupSchema.Bundle; displayName: string }) {
+    const graph = yield* LocalRegistry.Repo.createGraph(displayName);
+    const runtime = yield* Effect.tryPromise(() =>
+      Runtime.setup({
+        localGraphId: graph.localGraphId,
+        displayName: graph.displayName,
+        graphSyncConfig: { mode: "local" },
+      }),
+    );
 
-  const runtime = await Runtime.setup({
-    localGraphId: graph.localGraphId,
-    displayName: graph.displayName,
-    graphSyncConfig: { mode: "local" },
-  });
+    yield* Effect.tryPromise(() =>
+      runtime.rt.runPromise(
+        Effect.gen(function* () {
+          const eventRepo = yield* EventRepo.Service;
+          yield* eventRepo.importBackupEvents(backup.events);
+        }),
+      ),
+    );
 
-  await runtime.rt.runPromise(
-    Effect.gen(function* () {
-      const eventRepo = yield* EventRepo.Service;
-      yield* eventRepo.importBackupEvents(backup.events);
-    }),
-  );
-
-  return graph;
-}
+    return graph;
+  },
+);
