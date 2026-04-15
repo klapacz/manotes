@@ -70,7 +70,7 @@ export async function importBackupToNewGraph({
     graphSyncConfig: { mode: "local" },
   });
 
-  await runtime.runPromise(
+  await runtime.rt.runPromise(
     Effect.gen(function* () {
       const eventRepo = yield* EventRepo.Service;
       yield* eventRepo.importBackupEvents(backup.events);

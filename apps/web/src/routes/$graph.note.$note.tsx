@@ -15,7 +15,7 @@ import {
 
 export const Route = createFileRoute("/$graph/note/$note")({
   loader: async ({ context, params }) => {
-    const note = await context.runtime.runPromise(
+    const note = await context.runtime.rt.runPromise(
       NoteRepo.Service.use((repo) => repo.findById(params.note)),
     );
 
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/$graph/note/$note")({
       });
     }
 
-    await context.runtime.runPromise(
+    await context.runtime.rt.runPromise(
       EditorNoteBootCache.Service.use((cache) => cache.preload(params.note)),
     );
 

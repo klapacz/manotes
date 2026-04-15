@@ -9,7 +9,7 @@ import {
 } from "prosekit/solid";
 import { createEffect, type JSX } from "solid-js";
 import * as NoteCache from "../../note-cache.service";
-import { createRuntimeStreamStore } from "../../runtime.primitives";
+import { RtAtom, createSyncedAtom } from "../..";
 import { Link } from "@tanstack/solid-router";
 import { type BacklinkAttrs } from "./spec";
 import { formatDailyNoteTitle } from "../../daily-note";
@@ -33,25 +33,32 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
   return function BacklinkView(props: SolidNodeViewProps): JSX.Element {
     const noteId = () => (props.node.attrs as BacklinkAttrs).id;
     const isDaily = () => Boolean((props.node.attrs as BacklinkAttrs).isDaily);
-    const state: BacklinkLabelEntry = createRuntimeStreamStore(() => {
-      if (isDaily()) {
-        return Stream.succeed(
-          BacklinkLabelEntry.Resolved({
-            title: formatDailyNoteTitle(noteId()),
-          }),
-        );
-      }
+    const noteIdAtom = createSyncedAtom(noteId);
+    const isDailyAtom = createSyncedAtom(isDaily);
+    const state: BacklinkLabelEntry = RtAtom.useStore(
+      RtAtom.atom((get) => {
+        const noteId = get(noteIdAtom);
 
-      return NoteCache.Service.use((cache) => cache.changes(noteId())).pipe(
-        Stream.unwrap,
-        Stream.map(
-          Option.match({
-            onSome: ({ title }): BacklinkLabelEntry => BacklinkLabelEntry.Resolved({ title }),
-            onNone: BacklinkLabelEntry.Missing,
-          }),
-        ),
-      );
-    }, BacklinkLabelEntry.Loading());
+        if (get(isDailyAtom)) {
+          return Stream.succeed(
+            BacklinkLabelEntry.Resolved({
+              title: formatDailyNoteTitle(noteId),
+            }),
+          );
+        }
+
+        return NoteCache.Service.use((cache) => cache.changes(noteId)).pipe(
+          Stream.unwrap,
+          Stream.map(
+            Option.match({
+              onSome: ({ title }): BacklinkLabelEntry => BacklinkLabelEntry.Resolved({ title }),
+              onNone: BacklinkLabelEntry.Missing,
+            }),
+          ),
+        );
+      }),
+      BacklinkLabelEntry.Loading(),
+    );
 
     createEffect(() => {
       BacklinkLabelEntry.$match({

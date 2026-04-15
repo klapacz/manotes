@@ -1,19 +1,20 @@
 import { Match, Stream } from "effect";
 import { Show } from "solid-js";
-import { createRuntimeStreamStore } from "../lib";
+import { RtAtom } from "../lib";
 import * as GraphWorkerClient from "../lib/graph-worker.client";
 import { SyncStatusLocal } from "../lib/graph.worker-rpc";
 import { cx } from "../lib/cva";
 
+const initialStatus = new SyncStatusLocal({ mode: "local" });
+const SyncStatus = RtAtom.atom(
+  GraphWorkerClient.Service.useSync((svc) => svc.client.syncStatusStream({})).pipe(
+    Stream.unwrap,
+    Stream.debounce("300 millis"),
+  ),
+);
+
 export function SyncStatusIndicator() {
-  const status = createRuntimeStreamStore(
-    () =>
-      GraphWorkerClient.Service.useSync((svc) => svc.client.syncStatusStream({})).pipe(
-        Stream.unwrap,
-        Stream.debounce("300 millis"),
-      ),
-    new SyncStatusLocal({ mode: "local" }),
-  );
+  const status = RtAtom.useStore(SyncStatus, initialStatus);
 
   return (
     <Show when={status.mode === "cloud" ? status : null}>

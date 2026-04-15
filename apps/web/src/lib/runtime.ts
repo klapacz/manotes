@@ -1,4 +1,5 @@
 import { Cause, Exit, Layer, ManagedRuntime, References } from "effect";
+import { Atom } from "effect/unstable/reactivity";
 import * as DB from "./db.service";
 import * as EventRepo from "./event.repo";
 import * as GraphWorkerClient from "./graph-worker.client";
@@ -22,34 +23,7 @@ export type SetupOpts = {
 
 const runtimes = new Map<string, Type>();
 
-export async function setup(opts: SetupOpts): Promise<Type> {
-  // Use existing runtime if available
-  // TODO: This cache key assumes a graph's runtime config never changes.
-  // Promoting a local graph to cloud mode reuses the stale local-only runtime.
-  const existingRuntime = runtimes.get(opts.localGraphId);
-  if (existingRuntime) {
-    return existingRuntime;
-  }
-
-  const runtime = await create(opts);
-  const exit = await runtime.runPromiseExit(Migrator.migrate);
-
-  if (Exit.isSuccess(exit)) {
-    runtimes.set(opts.localGraphId, runtime);
-    return runtime;
-  }
-
-  throw Cause.pretty(exit.cause);
-}
-
-export type Type = Awaited<ReturnType<typeof create>>;
-
-export function get(localGraphId: string): Type | null {
-  const runtime = runtimes.get(localGraphId);
-  return runtime ?? null;
-}
-
-async function create(opts: SetupOpts) {
+const makeLayer = (opts: SetupOpts) => {
   const ConfigLayer = Layer.succeed(
     DB.Config,
     DB.Config.of({
@@ -65,7 +39,7 @@ async function create(opts: SetupOpts) {
     GraphSyncConfig.Config.of(opts.graphSyncConfig),
   );
 
-  const AppLayer = Layer.mergeAll(
+  return Layer.mergeAll(
     EventRepo.Service.layer,
     NoteRepo.Service.layer,
     BacklinkService.Service.layer,
@@ -79,6 +53,46 @@ async function create(opts: SetupOpts) {
     DB.Service.layer,
     Layer.succeed(References.MinimumLogLevel, "Debug"),
   ).pipe(Layer.provide(GraphSyncConfigLayer), Layer.provideMerge(DBWithConfigLayer));
+};
 
-  return ManagedRuntime.make(AppLayer);
+type AppLayer = ReturnType<typeof makeLayer>;
+
+export interface Type {
+  rt: ManagedRuntime.ManagedRuntime<Layer.Success<AppLayer>, Layer.Error<AppLayer>>;
+  atom: Atom.AtomRuntime<Layer.Success<AppLayer>, Layer.Error<AppLayer>>;
+}
+
+export async function setup(opts: SetupOpts): Promise<Type> {
+  // Use existing runtime if available
+  // TODO: This cache key assumes a graph's runtime config never changes.
+  // Promoting a local graph to cloud mode reuses the stale local-only runtime.
+  const existingRuntime = runtimes.get(opts.localGraphId);
+  if (existingRuntime) {
+    return existingRuntime;
+  }
+
+  const runtime = await create(opts);
+  const exit = await runtime.rt.runPromiseExit(Migrator.migrate);
+
+  if (Exit.isSuccess(exit)) {
+    runtimes.set(opts.localGraphId, runtime);
+    return runtime;
+  }
+
+  throw Cause.pretty(exit.cause);
+}
+
+export function get(localGraphId: string): Type | null {
+  const runtime = runtimes.get(localGraphId);
+  return runtime ?? null;
+}
+
+async function create(opts: SetupOpts) {
+  const AppLayer = makeLayer(opts);
+  const memoMap = Layer.makeMemoMapUnsafe();
+
+  return {
+    rt: ManagedRuntime.make(AppLayer, { memoMap }),
+    atom: Atom.context({ memoMap })(AppLayer),
+  };
 }

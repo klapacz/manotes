@@ -23,14 +23,14 @@ export const Route = createFileRoute("/$graph/")({
     const nextDate = selectedDate.add({ days: 1 }).toString();
     const currentDate = selectedDate.toString();
 
-    await context.runtime.runPromise(
+    await context.runtime.rt.runPromise(
       Effect.gen(function* () {
         const noteBootCache = yield* EditorNoteBootCache.Service;
         yield* noteBootCache.preload(currentDate);
       }),
     );
 
-    void context.runtime.runPromiseExit(
+    void context.runtime.rt.runPromiseExit(
       Effect.gen(function* () {
         const noteBootCache = yield* EditorNoteBootCache.Service;
 

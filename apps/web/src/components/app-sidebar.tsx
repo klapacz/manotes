@@ -1,13 +1,13 @@
-import { useMutation } from "@tanstack/solid-query";
 import { useLocation, useNavigate } from "@tanstack/solid-router";
 import { DateTime, Effect } from "effect";
+import { AsyncResult } from "effect/unstable/reactivity";
 import { nanoid } from "nanoid";
 import { createWritableMemo } from "@solid-primitives/memo";
-import { Index, Show, createMemo } from "solid-js";
+import { Index, createMemo } from "solid-js";
 import { Temporal } from "temporal-polyfill";
 import { requestScrollToDate } from "../lib/daily-note";
 import * as Y from "yjs";
-import { MaterializedEventService, useRuntime } from "../lib";
+import { MaterializedEventService, RtAtom } from "../lib";
 import * as GraphBackupFile from "../lib/graph-backup/file";
 import * as GraphBackupService from "../lib/graph-backup/service";
 import { PlusIcon, SearchIcon } from "./icons";
@@ -28,6 +28,29 @@ import { WorkerHealthBanner } from "./worker-health-banner";
 
 const EMPTY_YJS_UPDATE = Y.encodeStateAsUpdate(new Y.Doc());
 
+const CreateNote = RtAtom.fn(
+  Effect.fn("ComponentsAppSidebar.createNote")(function* (_: void) {
+    const service = yield* MaterializedEventService.Service;
+    const noteId = nanoid();
+
+    return yield* service.create({
+      noteId,
+      payload: EMPTY_YJS_UPDATE,
+      createdAt: yield* DateTime.now,
+    });
+  }),
+);
+
+const ExportBackup = RtAtom.fn(
+  Effect.fn("ComponentsAppSidebar.exportBackup")(function* (sourceGraphDisplayName: string) {
+    const backup = yield* GraphBackupService.exportBackup({
+      sourceGraphDisplayName,
+    });
+
+    yield* GraphBackupFile.downloadBackupFile(backup);
+  }),
+);
+
 const weekdayLongFormatter = new Intl.DateTimeFormat("en", {
   weekday: "long",
 });
@@ -44,33 +67,20 @@ export const AppSidebar = (props: { graphDisplayName: string }) => {
   const searchDate = useLocation({
     select: (location) => location.search.date,
   });
-  const runtime = useRuntime();
   const navigate = useNavigate();
+  const [createNoteResult, createNote] = RtAtom.use(CreateNote, { mode: "promise" });
+  const [exportBackupResult, exportBackup] = RtAtom.use(ExportBackup, { mode: "promise" });
 
-  const createNoteMutation = useMutation(() => ({
-    mutationFn: async () => {
-      const noteId = nanoid();
-
-      return runtime().runPromise(
-        Effect.gen(function* () {
-          const service = yield* MaterializedEventService.Service;
-
-          return yield* service.create({
-            noteId,
-            payload: EMPTY_YJS_UPDATE,
-            createdAt: yield* DateTime.now,
-          });
-        }),
-      );
-    },
-    onSuccess(note) {
+  async function handleCreateNote() {
+    try {
+      const note = await createNote();
       void navigate({
         from: "/$graph",
         to: "/$graph/note/$note",
         params: { note: note.id },
       });
-    },
-  }));
+    } catch {}
+  }
 
   const selectedDate = createMemo(() => {
     const rawDate = searchDate();
@@ -81,19 +91,11 @@ export const AppSidebar = (props: { graphDisplayName: string }) => {
 
   const [displayedMonth, setDisplayedMonth] = createWritableMemo(() => selectedDate() ?? undefined);
 
-  const exportBackupMutation = useMutation(() => ({
-    mutationFn: async () => {
-      await runtime().runPromise(
-        Effect.gen(function* () {
-          const backup = yield* GraphBackupService.exportBackup({
-            sourceGraphDisplayName: props.graphDisplayName,
-          });
-
-          yield* GraphBackupFile.downloadBackupFile(backup);
-        }),
-      );
-    },
-  }));
+  async function handleExportBackup() {
+    try {
+      await exportBackup(props.graphDisplayName);
+    } catch {}
+  }
 
   return (
     <Sidebar>
@@ -115,17 +117,20 @@ export const AppSidebar = (props: { graphDisplayName: string }) => {
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={() => createNoteMutation.mutate()}
-            disabled={createNoteMutation.isPending}
+            onClick={() => void handleCreateNote()}
+            disabled={createNoteResult().waiting}
             title="Create note"
           >
             <PlusIcon />
           </Button>
         </div>
       </div>
-      <Show when={createNoteMutation.isError}>
-        <p class="text-error-fg px-4 py-1 text-xs">Failed to create note</p>
-      </Show>
+      {AsyncResult.matchWithError(createNoteResult(), {
+        onInitial: () => null,
+        onSuccess: () => null,
+        onError: () => <p class="text-error-fg px-4 py-1 text-xs">Failed to create note</p>,
+        onDefect: () => <p class="text-error-fg px-4 py-1 text-xs">Failed to create note</p>,
+      })}
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
@@ -211,16 +216,19 @@ export const AppSidebar = (props: { graphDisplayName: string }) => {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => exportBackupMutation.mutate()}
-          disabled={exportBackupMutation.isPending}
+          onClick={() => void handleExportBackup()}
+          disabled={exportBackupResult().waiting}
         >
           Export backup
         </Button>
         <SyncStatusIndicator />
         <WorkerHealthBanner />
-        <Show when={exportBackupMutation.isError}>
-          <p class="text-error-fg text-xs">Failed to export backup</p>
-        </Show>
+        {AsyncResult.matchWithError(exportBackupResult(), {
+          onInitial: () => null,
+          onSuccess: () => null,
+          onError: () => <p class="text-error-fg text-xs">Failed to export backup</p>,
+          onDefect: () => <p class="text-error-fg text-xs">Failed to export backup</p>,
+        })}
       </SidebarGroup>
     </Sidebar>
   );

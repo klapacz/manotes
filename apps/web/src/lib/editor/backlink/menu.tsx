@@ -1,4 +1,4 @@
-import { flow, Stream, Array, pipe, Struct } from "effect";
+import { Effect, flow, Stream, Array, pipe, Struct } from "effect";
 import { useEditor } from "prosekit/solid";
 import {
   AutocompleteEmpty,
@@ -6,7 +6,7 @@ import {
   AutocompleteList,
   AutocompletePopover,
 } from "prosekit/solid/autocomplete";
-import { createSignal, For, Show } from "solid-js";
+import { For, Show } from "solid-js";
 import {
   CommandLabel,
   commandEmptyClass,
@@ -14,7 +14,7 @@ import {
   commandListClass,
   commandSurfaceClass,
 } from "../../../components/ui/command";
-import { NoteRepo, createRuntimeStreamStore, useRuntime } from "../..";
+import { NoteRepo, RtAtom, createAtomState, createSyncedAtom } from "../..";
 import { cx } from "../../cva";
 import type { AppExtension } from "../../../editor.extension";
 import { suggestDailyNoteIds } from "../../daily-note";
@@ -30,38 +30,51 @@ type BacklinkNote = {
   isDaily: boolean;
 };
 
+const CreateTabNote = RtAtom.fn(
+  Effect.fn("LibEditorBacklinkMenu.createTabNote")(function* (tab: BrowserExtension.TabCandidate) {
+    const service = yield* BrowserExtensionTabNoteService.Service;
+    return yield* service.createFromTab(tab);
+  }),
+);
+
 export default function BacklinkMenu(props: { currentNoteId: string }) {
   const editor = useEditor<AppExtension>();
 
-  const [rawQuery, setRawQuery] = createSignal("");
-  const [open, setOpen] = createSignal(false);
+  const [, setRawQuery, rawQueryAtom] = createAtomState("");
+  const currentNoteIdAtom = createSyncedAtom(() => props.currentNoteId);
+  const [, setOpen, openAtom] = createAtomState(false);
 
-  const notes = createRuntimeStreamStore(() => {
-    const query = rawQuery();
-    if (!open()) return Stream.succeed([]);
+  const notes = RtAtom.useStore(
+    RtAtom.atom((get) => {
+      const query = get(rawQueryAtom);
+      const currentNoteId = get(currentNoteIdAtom);
+      if (!get(openAtom)) return Stream.succeed([] as BacklinkNote[]);
 
-    const dailyNotes = pipe(
-      suggestDailyNoteIds(query),
-      Array.map((note) => ({ ...note, isDaily: true })),
-    );
+      const dailyNotes = pipe(
+        suggestDailyNoteIds(query),
+        Array.map((note) => ({ ...note, isDaily: true })),
+      );
 
-    return NoteRepo.Service.use((repo) => repo.reactiveSearchPreview(query)).pipe(
-      Stream.unwrap,
-      Stream.map(
-        flow(
-          Array.prependAll(dailyNotes),
-          Array.filter((note) => note.id !== props.currentNoteId),
-          Array.map(Struct.pick(["id", "title", "isDaily"])),
+      return NoteRepo.Service.use((repo) => repo.reactiveSearchPreview(query)).pipe(
+        Stream.unwrap,
+        Stream.map(
+          flow(
+            Array.prependAll(dailyNotes),
+            Array.filter((note) => note.id !== currentNoteId),
+            Array.map(Struct.pick(["id", "title", "isDaily"])),
+          ),
         ),
-      ),
-    );
-  }, [] as BacklinkNote[]);
+      );
+    }),
+    [] as BacklinkNote[],
+  );
 
-  const tabs = createRuntimeStreamStore(
-    () =>
-      open()
+  const tabs = RtAtom.useStore(
+    RtAtom.atom((get) =>
+      get(openAtom)
         ? BrowserExtensionClient.watchTabs
         : Stream.succeed([] as BrowserExtension.TabCandidate[]),
+    ),
     [] as BrowserExtension.TabCandidate[],
   );
 
@@ -106,13 +119,13 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
     });
   };
 
-  const runtime = useRuntime();
-  const onTabSelect = async (tab: BrowserExtension.TabCandidate) => {
-    const note = await runtime().runPromise(
-      BrowserExtensionTabNoteService.Service.use((service) => service.createFromTab(tab)),
-    );
+  const [, createTabNote] = RtAtom.use(CreateTabNote, { mode: "promise" });
 
-    onSelect(note);
+  const onTabSelect = async (tab: BrowserExtension.TabCandidate) => {
+    try {
+      const note = await createTabNote(tab);
+      onSelect(note);
+    } catch {}
   };
 
   return (

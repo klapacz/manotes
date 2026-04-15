@@ -13,6 +13,8 @@ export * as OPFS from "./opfs.service";
 export * as BrowserExtensionClient from "./browser-extension/client";
 
 export * as Runtime from "./runtime";
+export * from "./rt-atom";
+export * from "./runtime-atom";
 
 export * from "./primitives";
 export * from "./runtime.primitives";

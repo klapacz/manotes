@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/solid-router";
 import { pipe, Stream, Array, flow } from "effect";
 import type { JSX } from "solid-js";
 import { Index, createEffect, createSignal, onCleanup } from "solid-js";
-import { NoteRepo, createRuntimeStreamStore } from "../lib";
+import { NoteRepo, RtAtom, createAtomState } from "../lib";
 import {
   CommandDialog,
   CommandEmpty,
@@ -15,13 +15,12 @@ import { suggestDailyNoteIds } from "../lib/daily-note";
 
 export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.Element }) => {
   const navigate = useNavigate();
-  const [noteFilter, setNoteFilter] = createSignal("");
+  const [noteFilter, setNoteFilter, noteFilterAtom] = createAtomState("");
   const [isCommandOpen, setIsCommandOpen] = createSignal(false);
 
-  const notes = createRuntimeStreamStore(
-    () => {
-      const filter = noteFilter();
-
+  const notes = RtAtom.useStore(
+    RtAtom.atom((get) => {
+      const filter = get(noteFilterAtom);
       const dailyNotes = pipe(
         suggestDailyNoteIds(filter),
         Array.map((note) => ({ ...note, isDaily: true })),
@@ -36,7 +35,7 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
           ),
         ),
       );
-    },
+    }),
     [] as { id: string; title: string }[],
   );
 

@@ -8,27 +8,34 @@ import { defineAppExtension } from "../editor.extension";
 import * as BacklinkService from "../lib/materializer/backlink/service";
 import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
 import * as NoteLink from "../lib/note/link";
-import { RunStream } from "../lib";
+import { RtAtom } from "../lib";
+
+function IncomingBacklinksStore(props: {
+  noteId: string;
+  children: (backlinks: BacklinkService.IncomingBacklinkPreview[]) => JSX.Element;
+}) {
+  const backlinks = RtAtom.useStore(
+    RtAtom.atom(
+      EditorNoteBootCache.Service.use((cache) => cache.incomingBacklinkChanges(props.noteId)).pipe(
+        Stream.unwrap,
+      ),
+    ),
+    [] as BacklinkService.IncomingBacklinkPreview[],
+  );
+
+  return props.children(backlinks);
+}
 
 export function IncomingBacklinksFetcher(props: {
   noteId: string;
   children: (backlinks: BacklinkService.IncomingBacklinkPreview[]) => JSX.Element;
 }) {
   return (
-    // Key by noteId so virtualized/reused rows fully reset the stream store
+    // Key by noteId so virtualized/reused rows fully reset the atom-backed store
     // instead of briefly showing backlinks from the previous note.
     <Show when={props.noteId} keyed>
       {(noteId) => (
-        <RunStream
-          stream={() =>
-            EditorNoteBootCache.Service.use((cache) => cache.incomingBacklinkChanges(noteId)).pipe(
-              Stream.unwrap,
-            )
-          }
-          staticInitialValue={[]}
-        >
-          {props.children}
-        </RunStream>
+        <IncomingBacklinksStore noteId={noteId}>{props.children}</IncomingBacklinksStore>
       )}
     </Show>
   );

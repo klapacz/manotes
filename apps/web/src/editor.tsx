@@ -3,7 +3,7 @@ import "./editor.css";
 import { createEditor, Priority, union, withPriority } from "prosekit/core";
 import { Selection } from "prosekit/pm/state";
 import { ProseKit } from "prosekit/solid";
-import { createEffect, createMemo, createSignal, on, onCleanup, Show, type JSX } from "solid-js";
+import { createEffect, createMemo, on, Show, type JSX } from "solid-js";
 import * as Y from "yjs";
 import {
   defineYjsCommands,
@@ -14,11 +14,12 @@ import {
   type YjsUndoPluginOptions,
 } from "prosekit/extensions/yjs";
 import { defineAppExtension } from "./editor.extension";
-import { EditorSyncService, useRuntime } from "./lib";
+import { EditorSyncService, RtAtom, createSyncedAtom } from "./lib";
 import { defineVirtualDailyHeading } from "./editor.virtual-daily-heading.extension";
 import { formatDailyNoteTitle } from "./lib/daily-note";
 import { getProsemirrorXmlFragment } from "./lib/prosemirror/yjs";
-import { Cause, Data, Fiber, Effect, Deferred } from "effect";
+import { Cause, Data, Deferred, Effect, SubscriptionRef } from "effect";
+import { AsyncResult, type Atom } from "effect/unstable/reactivity";
 import BacklinkMenu from "./lib/editor/backlink/menu";
 import { MatchTagged } from "./lib/compoennts/match-tagged";
 
@@ -28,7 +29,13 @@ export type BootState = Data.TaggedEnum<{
   Error: { message: string };
 }>;
 
+type BootStateSnapshot = {
+  doc: Y.Doc;
+  state: BootState;
+};
+
 const BootState = Data.taggedEnum<BootState>();
+const EDITOR_LOAD_ERROR_MESSAGE = "Failed to load note content.";
 
 type Props = EditorSyncService.SetupInput & {
   onFocusIn?: () => void;
@@ -38,8 +45,6 @@ type Props = EditorSyncService.SetupInput & {
 };
 
 export default function Editor(props: Props): JSX.Element {
-  const runtime = useRuntime();
-
   // The editor stack is recreated per note-id boundary so future route/view
   // changes can swap notes in-place without leaking Y.Doc/editor state.
   const state = createMemo(
@@ -74,55 +79,80 @@ export default function Editor(props: Props): JSX.Element {
     ),
   );
 
-  const [bootState, _setBootState] = createSignal<BootState>(BootState.Loading());
-  const setBootState = (state: BootState) => {
-    _setBootState(state);
-    props.onBootStateChange?.(state);
-  };
+  const editorStateAtom = createSyncedAtom(() => {
+    const current = state();
+    return {
+      doc: current.doc,
+      noteId: current.noteId,
+      isDaily: current.isDaily,
+    };
+  });
 
-  createEffect(() => {
-    setBootState(BootState.Loading());
-    const r = runtime();
-    const { doc, noteId, isDaily } = state();
-    let disposed = false;
+  const editorBootStateAtom = RtAtom.subscriptionRef(
+    Effect.fn("Editor.bootState")(function* (get: Atom.Context) {
+      const { doc, noteId, isDaily } = get(editorStateAtom);
+      yield* Effect.addFinalizer(() => Effect.sync(() => doc.destroy()));
 
-    const fiber = r.runFork(
-      Effect.catchCause(
-        Effect.gen(function* () {
-          const service = yield* EditorSyncService.Service;
-          const ready = yield* Deferred.make<void>();
-          yield* Effect.all(
-            [
-              Effect.scoped(service.setupDoc(doc, { noteId, isDaily }, ready)),
-              Effect.gen(function* () {
-                yield* Deferred.await(ready);
-                yield* Effect.sync(() => setBootState(BootState.Ready()));
-              }),
-            ],
-            { concurrency: "unbounded" },
-          );
+      const bootStateRef = yield* SubscriptionRef.make<BootStateSnapshot>({
+        doc,
+        state: BootState.Loading(),
+      });
+
+      yield* Effect.gen(function* () {
+        const service = yield* EditorSyncService.Service;
+        const ready = yield* Deferred.make<void>();
+
+        yield* Effect.all(
+          [
+            Effect.scoped(service.setupDoc(doc, { noteId, isDaily }, ready)),
+            Effect.gen(function* () {
+              yield* Deferred.await(ready);
+              yield* SubscriptionRef.set(bootStateRef, { doc, state: BootState.Ready() });
+            }),
+          ],
+          { concurrency: "unbounded" },
+        );
+      }).pipe(
+        Effect.catchCause((cause) => {
+          if (Cause.hasInterruptsOnly(cause)) return Effect.void;
+          return SubscriptionRef.set(bootStateRef, {
+            doc,
+            state: BootState.Error({ message: EDITOR_LOAD_ERROR_MESSAGE }),
+          });
         }),
-        (cause) =>
-          Cause.hasInterruptsOnly(cause)
-            ? Effect.void
-            : Effect.sync(() => {
-                if (disposed) return;
-                setBootState(BootState.Error({ message: "Failed to load note content." }));
-              }),
-      ),
-    );
-
-    onCleanup(() => {
-      disposed = true;
-      setBootState(BootState.Loading());
-      void r.runPromise(
-        Fiber.interrupt(fiber).pipe(Effect.andThen(Effect.sync(() => doc.destroy()))),
+        Effect.forkScoped,
       );
+
+      return bootStateRef;
+    }),
+  );
+
+  const bootStateResult = RtAtom.useValue(editorBootStateAtom);
+  const bootState = createMemo(() => {
+    const currentDoc = state().doc;
+    const result = bootStateResult();
+
+    // Runtime atoms keep the previous successful value while the next async read
+    // is spinning up. Tagging boot state with the Y.Doc lets us ignore that stale
+    // Ready/Error from the previous note and keep the new session in Loading.
+    if (result._tag === "Success") {
+      return result.value.doc === currentDoc ? result.value.state : BootState.Loading();
+    }
+
+    return AsyncResult.matchWithError(result, {
+      onInitial: () => BootState.Loading(),
+      onSuccess: () => BootState.Loading(),
+      onError: () => BootState.Error({ message: EDITOR_LOAD_ERROR_MESSAGE }),
+      onDefect: () => BootState.Error({ message: EDITOR_LOAD_ERROR_MESSAGE }),
     });
   });
 
   createEffect(() => {
-    const editor = state()?.editor;
+    props.onBootStateChange?.(bootState());
+  });
+
+  createEffect(() => {
+    const editor = state().editor;
     if (!props.autoFocus || bootState()._tag !== "Ready" || !editor) return;
 
     const view = editor.view;
