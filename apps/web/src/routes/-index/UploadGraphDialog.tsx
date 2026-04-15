@@ -5,6 +5,7 @@ import { AsyncResult } from "effect/unstable/reactivity";
 import type { FnContext } from "effect/unstable/reactivity/Atom";
 import { createSignal, Show, splitProps, type ValidComponent } from "solid-js";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
+import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import {
   Dialog,
@@ -17,6 +18,8 @@ import {
   DialogTrigger,
   type DialogTriggerProps,
 } from "../../components/ui/dialog";
+import { Form } from "../../components/ui/form";
+import { TextField, TextFieldInput, TextFieldLabel } from "../../components/ui/text-field";
 import { Runtime } from "../../lib";
 import * as GraphAccessErrors from "../../lib/graph-access/errors";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
@@ -123,7 +126,7 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
 
       <DialogPortal>
         <DialogContent showCloseButton={!uploadGraphResult().waiting}>
-          <form class="space-y-4" onSubmit={handleSubmit}>
+          <Form spacing="compact" onSubmit={handleSubmit}>
             <DialogHeader>
               <DialogTitle>Upload graph</DialogTitle>
               <DialogDescription>
@@ -131,24 +134,24 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
               </DialogDescription>
             </DialogHeader>
 
-            <label class="block space-y-2">
-              <span class="text-sm font-medium">Password</span>
-              <input
+            <TextField>
+              <TextFieldLabel for="upload-graph-password">Password</TextFieldLabel>
+              <TextFieldInput
+                id="upload-graph-password"
                 type="password"
                 value={password()}
                 onInput={(event) => setPassword(event.currentTarget.value)}
-                class="w-full rounded-md border border-border bg-transparent px-3 py-2 outline-none"
                 placeholder="Required to upload this graph"
                 autofocus
                 disabled={uploadGraphResult().waiting}
               />
-            </label>
+            </TextField>
 
             <Show when={validationError()}>
               {(error) => (
-                <p class="text-sm text-error-fg" role="alert">
-                  {error()}
-                </p>
+                <Alert variant="destructive">
+                  <AlertDescription>{error()}</AlertDescription>
+                </Alert>
               )}
             </Show>
 
@@ -158,20 +161,22 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
                 <Navigate to="/$graph" params={{ graph: graph.value.localGraphId }} />
               ),
               onError: (error) => (
-                <p class="text-sm text-error-fg" role="alert">
-                  {error._tag === "GraphAccess.LocalGraphNotFoundError"
-                    ? "That graph is no longer available on this device."
-                    : error._tag === "GraphAccess.LocalGraphAlreadySyncedError"
-                      ? "That graph is already synced."
-                      : error._tag === "GraphRegistry.DisplayNameTakenError"
-                        ? "A synced graph with that name already exists."
-                        : "Failed to upload graph."}
-                </p>
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    {error._tag === "GraphAccess.LocalGraphNotFoundError"
+                      ? "That graph is no longer available on this device."
+                      : error._tag === "GraphAccess.LocalGraphAlreadySyncedError"
+                        ? "That graph is already synced."
+                        : error._tag === "GraphRegistry.DisplayNameTakenError"
+                          ? "A synced graph with that name already exists."
+                          : "Failed to upload graph."}
+                  </AlertDescription>
+                </Alert>
               ),
               onDefect: () => (
-                <p class="text-sm text-error-fg" role="alert">
-                  Failed to upload graph.
-                </p>
+                <Alert variant="destructive">
+                  <AlertDescription>Failed to upload graph.</AlertDescription>
+                </Alert>
               ),
             })}
 
@@ -188,7 +193,7 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
                 Upload graph
               </Button>
             </DialogFooter>
-          </form>
+          </Form>
         </DialogContent>
       </DialogPortal>
     </Dialog>

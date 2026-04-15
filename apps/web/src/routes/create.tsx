@@ -2,16 +2,23 @@ import { useAtom } from "@effect/atom-solid";
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
 import { Effect } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
-import { createSignal } from "solid-js";
+import type { FnContext } from "effect/unstable/reactivity/Atom";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
+import { Show, createSignal } from "solid-js";
+import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button, buttonVariants } from "../components/ui/button";
-import { Runtime } from "../lib";
-import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
-import * as Session from "../lib/graph-access/session";
+import { Form } from "../components/ui/form";
+import {
+  TextField,
+  TextFieldDescription,
+  TextFieldInput,
+  TextFieldLabel,
+} from "../components/ui/text-field";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
-import { Show } from "solid-js";
-import type { FnContext } from "effect/unstable/reactivity/Atom";
+import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
+import * as Session from "../lib/graph-access/session";
+import { Runtime } from "../lib";
 
 export const Route = createFileRoute("/create")({
   component: RouteComponent,
@@ -100,40 +107,43 @@ function RouteComponent() {
   }
 
   return (
-    <main class="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-8 px-6 py-12">
+    <main class="mx-auto flex w-full max-w-2xl flex-col gap-12 px-6 py-12">
       <header class="space-y-2">
         <h1 class="text-3xl tracking-tight font-title-serif">Create graph</h1>
         <p class="text-fg-subtle">Name your graph and choose whether it stays local or syncs.</p>
       </header>
 
-      <form class="space-y-4" onSubmit={handleSubmit}>
-        <label class="block space-y-2">
-          <span class="text-sm font-medium">Graph name</span>
-          <input
+      <Form onSubmit={handleSubmit}>
+        <TextField>
+          <TextFieldLabel for="create-graph-name">Graph name</TextFieldLabel>
+          <TextFieldInput
+            id="create-graph-name"
             value={displayName()}
             onInput={(event) => setDisplayName(event.currentTarget.value)}
-            class="w-full rounded-md border border-border bg-transparent px-3 py-2 outline-none"
             placeholder="work"
             autofocus
           />
-        </label>
+        </TextField>
 
-        <label class="block space-y-2">
-          <span class="text-sm font-medium">Password for synced graphs</span>
-          <input
+        <TextField>
+          <TextFieldLabel for="create-graph-password">Password for synced graphs</TextFieldLabel>
+          <TextFieldInput
+            id="create-graph-password"
             type="password"
             value={password()}
             onInput={(event) => setPassword(event.currentTarget.value)}
-            class="w-full rounded-md border border-border bg-transparent px-3 py-2 outline-none"
             placeholder="Required only for synced graphs"
           />
-        </label>
+          <TextFieldDescription>
+            Local graphs ignore this field. Synced graphs require it.
+          </TextFieldDescription>
+        </TextField>
 
         <Show when={validationError()}>
           {(error) => (
-            <p class="text-sm text-error-fg" role="alert">
-              {error()}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{error()}</AlertDescription>
+            </Alert>
           )}
         </Show>
 
@@ -143,22 +153,24 @@ function RouteComponent() {
             <Navigate to="/$graph" params={{ graph: graph.value.localGraphId }} />
           ),
           onError: (error) => (
-            <p class="text-sm text-error-fg" role="alert">
-              {error._tag == "LocalRegistry.DisplayNameTakenError"
-                ? "A graph with that name already exists."
-                : error._tag == "GraphRegistry.DisplayNameTakenError"
-                  ? "A synced graph with that name already exists."
-                  : "Failed to create graph."}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>
+                {error._tag == "LocalRegistry.DisplayNameTakenError"
+                  ? "A graph with that name already exists."
+                  : error._tag == "GraphRegistry.DisplayNameTakenError"
+                    ? "A synced graph with that name already exists."
+                    : "Failed to create graph."}
+              </AlertDescription>
+            </Alert>
           ),
           onDefect: () => (
-            <p class="text-sm text-error-fg" role="alert">
-              Failed to create graph.
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>Failed to create graph.</AlertDescription>
+            </Alert>
           ),
         })}
 
-        <div class="flex gap-3">
+        <div class="flex flex-wrap gap-3">
           <Button type="submit" data-mode="local" disabled={createGraphResult().waiting}>
             Create local graph
           </Button>
@@ -174,7 +186,7 @@ function RouteComponent() {
             Cancel
           </Link>
         </div>
-      </form>
+      </Form>
     </main>
   );
 }

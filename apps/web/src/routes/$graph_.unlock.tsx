@@ -2,6 +2,11 @@ import { useMutation } from "@tanstack/solid-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/solid-router";
 import { Option } from "effect";
 import { createSignal, Show } from "solid-js";
+import { Alert, AlertDescription } from "../components/ui/alert";
+import { Button } from "../components/ui/button";
+import { Card, CardContent } from "../components/ui/card";
+import { Form } from "../components/ui/form";
+import { TextField, TextFieldInput, TextFieldLabel } from "../components/ui/text-field";
 import { Runtime } from "../lib";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
@@ -96,34 +101,34 @@ function RouteComponent() {
         </p>
       </header>
 
-      <form class="space-y-4" onSubmit={handleSubmit}>
-        <label class="block space-y-2">
-          <span class="text-sm font-medium">Password</span>
-          <input
-            type="password"
-            value={password()}
-            onInput={(event) => setPassword(event.currentTarget.value)}
-            class="w-full rounded-md border border-border bg-transparent px-3 py-2 outline-none"
-            autofocus
-          />
-        </label>
+      <Card>
+        <CardContent>
+          <Form onSubmit={handleSubmit}>
+            <TextField>
+              <TextFieldLabel for="unlock-graph-password">Password</TextFieldLabel>
+              <TextFieldInput
+                id="unlock-graph-password"
+                type="password"
+                value={password()}
+                onInput={(event) => setPassword(event.currentTarget.value)}
+                autofocus
+              />
+            </TextField>
 
-        <Show when={error()}>
-          {(error) => (
-            <p class="text-sm text-error-fg" role="alert">
-              {error()}
-            </p>
-          )}
-        </Show>
+            <Show when={error()}>
+              {(error) => (
+                <Alert variant="destructive">
+                  <AlertDescription>{error()}</AlertDescription>
+                </Alert>
+              )}
+            </Show>
 
-        <button
-          type="submit"
-          class="inline-flex h-10 items-center justify-center rounded-md border border-border px-4 text-sm font-medium transition-colors hover:bg-bg-subtle disabled:opacity-50"
-          disabled={unlockMutation.isPending}
-        >
-          Unlock graph
-        </button>
-      </form>
+            <Button type="submit" disabled={unlockMutation.isPending}>
+              Unlock graph
+            </Button>
+          </Form>
+        </CardContent>
+      </Card>
     </main>
   );
 }

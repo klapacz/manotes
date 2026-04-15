@@ -3,7 +3,13 @@ import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
 import { Effect, Match } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { createEffect, createSignal, Show } from "solid-js";
+import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button, buttonVariants } from "../components/ui/button";
+import { Form } from "../components/ui/form";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { List, ListItem } from "../components/ui/list";
+import { TextField, TextFieldInput, TextFieldLabel } from "../components/ui/text-field";
 import * as GraphBackupFile from "../lib/graph-backup/file";
 import * as GraphBackupService from "../lib/graph-backup/service";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
@@ -129,48 +135,55 @@ function RouteComponent() {
   }
 
   return (
-    <main class="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-8 px-6 py-12">
+    <main class="mx-auto flex w-full max-w-2xl flex-col gap-12 px-6 py-12">
       <header class="space-y-2">
         <h1 class="text-3xl tracking-tight font-title-serif">Import backup</h1>
         <p class="text-fg-subtle">Create a new local graph from an exported event backup.</p>
       </header>
 
-      <form class="space-y-4" onSubmit={handleSubmit}>
-        <label class="block space-y-2">
-          <span class="text-sm font-medium">Backup file</span>
-          <input
+      <Form onSubmit={handleSubmit}>
+        <div class="space-y-2">
+          <Label for="import-backup-file">Backup file</Label>
+          <Input
+            id="import-backup-file"
             type="file"
             accept="application/json,.json"
-            class="w-full rounded-md border border-border bg-transparent px-3 py-2 outline-none"
             onChange={handleFileChange}
           />
-        </label>
+        </div>
 
-        <label class="block space-y-2">
-          <span class="text-sm font-medium">Graph name</span>
-          <input
+        <TextField>
+          <TextFieldLabel for="import-graph-name">Graph name</TextFieldLabel>
+          <TextFieldInput
+            id="import-graph-name"
             value={displayName()}
             onInput={(event) => setDisplayName(event.currentTarget.value)}
-            class="w-full rounded-md border border-border bg-transparent px-3 py-2 outline-none"
             placeholder="Imported graph"
           />
-        </label>
+        </TextField>
 
         <Show when={backup()}>
           {(parsedBackup) => (
-            <div class="rounded-xl border border-border px-4 py-3 text-sm">
-              Source graph: {parsedBackup().sourceGraphDisplayName || "Unknown"}
-              <br />
-              Events: {parsedBackup().events.length}
-            </div>
+            <List>
+              <ListItem class="grid gap-3 px-4 py-3 text-sm sm:grid-cols-2">
+                <div>
+                  <span class="text-fg-subtle">Source graph</span>
+                  <p class="font-medium">{parsedBackup().sourceGraphDisplayName || "Unknown"}</p>
+                </div>
+                <div>
+                  <span class="text-fg-subtle">Events</span>
+                  <p class="font-medium">{parsedBackup().events.length}</p>
+                </div>
+              </ListItem>
+            </List>
           )}
         </Show>
 
         <Show when={validationError()}>
           {(error) => (
-            <p class="text-sm text-error-fg" role="alert">
-              {error()}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{error()}</AlertDescription>
+            </Alert>
           )}
         </Show>
 
@@ -179,14 +192,14 @@ function RouteComponent() {
             onInitial: () => null,
             onSuccess: () => null,
             onError: () => (
-              <p class="text-sm text-error-fg" role="alert">
-                Invalid backup file.
-              </p>
+              <Alert variant="destructive">
+                <AlertDescription>Invalid backup file.</AlertDescription>
+              </Alert>
             ),
             onDefect: () => (
-              <p class="text-sm text-error-fg" role="alert">
-                Invalid backup file.
-              </p>
+              <Alert variant="destructive">
+                <AlertDescription>Invalid backup file.</AlertDescription>
+              </Alert>
             ),
           })}
         </Show>
@@ -197,26 +210,28 @@ function RouteComponent() {
             <Navigate to="/$graph" params={{ graph: graph.value.localGraphId }} />
           ),
           onError: (error) => (
-            <p class="text-sm text-error-fg" role="alert">
-              {Match.value(error).pipe(
-                Match.tag("SqlError", (error) =>
-                  LocalRegistry.Errors.isDisplayNameUniquenessSqlError(error.cause)
-                    ? "A graph with that name already exists."
-                    : "Failed to import backup.",
-                ),
-                Match.tag("UnknownError", () => "Failed to import backup."),
-                Match.orElse(() => "Failed to import backup."),
-              )}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>
+                {Match.value(error).pipe(
+                  Match.tag("SqlError", (error) =>
+                    LocalRegistry.Errors.isDisplayNameUniquenessSqlError(error.cause)
+                      ? "A graph with that name already exists."
+                      : "Failed to import backup.",
+                  ),
+                  Match.tag("UnknownError", () => "Failed to import backup."),
+                  Match.orElse(() => "Failed to import backup."),
+                )}
+              </AlertDescription>
+            </Alert>
           ),
           onDefect: () => (
-            <p class="text-sm text-error-fg" role="alert">
-              Failed to import backup.
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>Failed to import backup.</AlertDescription>
+            </Alert>
           ),
         })}
 
-        <div class="flex gap-3">
+        <div class="flex flex-wrap gap-3">
           <Button
             type="submit"
             disabled={decodeBackupFileResult().waiting || importBackupResult().waiting}
@@ -227,7 +242,7 @@ function RouteComponent() {
             Cancel
           </Link>
         </div>
-      </form>
+      </Form>
     </main>
   );
 }
