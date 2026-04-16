@@ -1,7 +1,6 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
 import { For } from "solid-js";
 import { Effect, Array, pipe } from "effect";
-import { AsyncResult } from "effect/unstable/reactivity";
 import { useAtomValue, useAtom } from "@effect/atom-solid";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Badge } from "../components/ui/badge";
@@ -91,11 +90,12 @@ function RouteComponent() {
           </div>
         </div>
 
-        {AsyncResult.match(localGraphs(), {
-          onSuccess: (graphs) => (
+        <MatchAsyncResult
+          when={localGraphs()}
+          onSuccess={(graphs) => (
             <List>
               <For
-                each={graphs.value}
+                each={graphs()}
                 fallback={
                   <ListItem dashed class="px-4 py-3 text-sm text-fg-subtle">
                     No graphs yet.
@@ -105,20 +105,20 @@ function RouteComponent() {
                 {(graph) => <GraphListItem graph={graph} />}
               </For>
             </List>
-          ),
-          onFailure: () => (
+          )}
+          onFailure={() => (
             <Alert variant="warning">
               <AlertDescription>Failed to load graphs.</AlertDescription>
             </Alert>
-          ),
-          onInitial: () => (
+          )}
+          onInitial={() => (
             <List>
               <ListItem dashed class="px-4 py-3 text-sm text-fg-subtle">
                 Loading graphs...
               </ListItem>
             </List>
-          ),
-        })}
+          )}
+        />
 
         <MatchAsyncResult
           when={openCloudGraphResult()}
@@ -153,11 +153,12 @@ function RouteComponent() {
           </CardDescription>
         </CardHeader>
 
-        {AsyncResult.match(cloudGraphsNotOnDevice(), {
-          onSuccess: (graphs) => (
+        <MatchAsyncResult
+          when={cloudGraphsNotOnDevice()}
+          onSuccess={(graphs) => (
             <List>
               <For
-                each={graphs.value}
+                each={graphs()}
                 fallback={
                   <ListItem dashed class="px-4 py-3 text-sm text-fg-subtle">
                     No cloud graphs to open.
@@ -187,20 +188,20 @@ function RouteComponent() {
                 )}
               </For>
             </List>
-          ),
-          onFailure: () => (
+          )}
+          onFailure={() => (
             <Alert variant="warning">
               <AlertDescription>Failed to load cloud graphs.</AlertDescription>
             </Alert>
-          ),
-          onInitial: () => (
+          )}
+          onInitial={() => (
             <List>
               <ListItem dashed class="px-4 py-3 text-sm text-fg-subtle">
                 Loading cloud graphs...
               </ListItem>
             </List>
-          ),
-        })}
+          )}
+        />
       </section>
     </main>
   );

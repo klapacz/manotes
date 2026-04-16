@@ -67,6 +67,7 @@ export interface MatchAsyncResultProps<A, E> {
   readonly onSuccess?:
     | ((value: Accessor<A>, result: Accessor<AsyncResult.Success<A, E>>) => JSX.Element)
     | undefined;
+  readonly onFailure?: ((result: Accessor<AsyncResult.Failure<A, E>>) => JSX.Element) | undefined;
   readonly onError?:
     | ((error: Accessor<E>, result: Accessor<AsyncResult.Failure<A, E>>) => JSX.Element)
     | undefined;
@@ -125,6 +126,7 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
         }
         case "Error": {
           const onError = props.onError;
+          const onFailure = props.onFailure;
           return onError
             ? untrack(() =>
                 onError(
@@ -132,10 +134,13 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
                   () => expectState("Error").result,
                 ),
               )
-            : (props.fallback ?? null);
+            : onFailure
+              ? untrack(() => onFailure(() => expectState("Error").result))
+              : (props.fallback ?? null);
         }
         case "Defect": {
           const onDefect = props.onDefect;
+          const onFailure = props.onFailure;
           return onDefect
             ? untrack(() =>
                 onDefect(
@@ -143,7 +148,9 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
                   () => expectState("Defect").result,
                 ),
               )
-            : (props.fallback ?? null);
+            : onFailure
+              ? untrack(() => onFailure(() => expectState("Defect").result))
+              : (props.fallback ?? null);
         }
       }
     },
