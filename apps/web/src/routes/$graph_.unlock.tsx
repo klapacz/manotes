@@ -1,10 +1,9 @@
 import { useAtom } from "@effect/atom-solid";
 import { createFileRoute, Navigate, redirect } from "@tanstack/solid-router";
 import { Effect, Option, Schema } from "effect";
-import { AsyncResult } from "effect/unstable/reactivity";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { AppForm, useAppForm } from "../components/ui/form";
-import { Runtime } from "../lib";
+import { MatchAsyncResult, Runtime } from "../lib";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
@@ -106,26 +105,24 @@ function RouteComponent() {
       </header>
 
       <AppForm form={form} AppForm={form.AppForm}>
-        {AsyncResult.matchWithError(unlockGraphResult(), {
-          onInitial: () => null,
-          onSuccess: (graph) => (
-            <Navigate to="/$graph" params={{ graph: graph.value.localGraphId }} />
-          ),
-          onError: (error) => (
+        <MatchAsyncResult
+          when={unlockGraphResult()}
+          onSuccess={(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
+          onError={(error) => (
             <Alert variant="destructive">
               <AlertDescription>
-                {error instanceof GraphEncryption.InvalidPasswordError
+                {error() instanceof GraphEncryption.InvalidPasswordError
                   ? "Wrong password."
-                  : error.message || "Failed to unlock graph."}
+                  : error().message || "Failed to unlock graph."}
               </AlertDescription>
             </Alert>
-          ),
-          onDefect: () => (
+          )}
+          onDefect={() => (
             <Alert variant="destructive">
               <AlertDescription>Failed to unlock graph.</AlertDescription>
             </Alert>
-          ),
-        })}
+          )}
+        />
 
         <form.AppField name="password">
           {(field) => <field.TextField type="password" label="Password" autofocus />}

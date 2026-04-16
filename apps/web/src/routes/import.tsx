@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button, buttonVariants } from "../components/ui/button";
 import { AppForm, useAppForm } from "../components/ui/form";
 import { List, ListItem } from "../components/ui/list";
+import { MatchAsyncResult } from "../lib";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as GraphBackupFile from "../lib/graph-backup/file";
 import * as GraphBackupService from "../lib/graph-backup/service";
@@ -79,20 +80,19 @@ function SelectBackupFileForm() {
 
   return (
     <AppForm form={form} AppForm={form.AppForm}>
-      {AsyncResult.matchWithError(decodeBackupResult(), {
-        onInitial: () => null,
-        onSuccess: () => null,
-        onError: () => (
+      <MatchAsyncResult
+        when={decodeBackupResult()}
+        onError={() => (
           <Alert variant="destructive">
             <AlertDescription>Invalid backup file.</AlertDescription>
           </Alert>
-        ),
-        onDefect: () => (
+        )}
+        onDefect={() => (
           <Alert variant="destructive">
             <AlertDescription>Invalid backup file.</AlertDescription>
           </Alert>
-        ),
-      })}
+        )}
+      />
 
       <form.AppField name="file">
         {(field) => (
@@ -148,26 +148,24 @@ function ImportBackupForm(props: { decodedBackup: DecodedBackup }) {
 
   return (
     <AppForm form={form} AppForm={form.AppForm}>
-      {AsyncResult.matchWithError(importBackupResult(), {
-        onInitial: () => null,
-        onSuccess: (graph) => (
-          <Navigate to="/$graph" params={{ graph: graph.value.localGraphId }} />
-        ),
-        onError: (error) => (
+      <MatchAsyncResult
+        when={importBackupResult()}
+        onSuccess={(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
+        onError={(error) => (
           <Alert variant="destructive">
             <AlertDescription>
-              {error._tag === "LocalRegistry.DisplayNameTakenError"
+              {error()._tag === "LocalRegistry.DisplayNameTakenError"
                 ? "A graph with that name already exists."
                 : "Failed to import backup."}
             </AlertDescription>
           </Alert>
-        ),
-        onDefect: () => (
+        )}
+        onDefect={() => (
           <Alert variant="destructive">
             <AlertDescription>Failed to import backup.</AlertDescription>
           </Alert>
-        ),
-      })}
+        )}
+      />
 
       <List>
         <ListItem class="grid gap-3 px-4 py-3 text-sm sm:grid-cols-2">

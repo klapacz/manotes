@@ -3,7 +3,6 @@ import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import * as GraphRegistryContract from "@manotes/shared/graph-registry/contract";
 import { Effect, Schema } from "effect";
-import { AsyncResult } from "effect/unstable/reactivity";
 import type { FnContext } from "effect/unstable/reactivity/Atom";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button, buttonVariants } from "../components/ui/button";
@@ -12,7 +11,7 @@ import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
 import * as Session from "../lib/graph-access/session";
-import { Runtime } from "../lib";
+import { MatchAsyncResult, Runtime } from "../lib";
 
 export const Route = createFileRoute("/create")({
   component: RouteComponent,
@@ -110,28 +109,26 @@ function RouteComponent() {
       </header>
 
       <AppForm form={form} AppForm={form.AppForm}>
-        {AsyncResult.matchWithError(createGraphResult(), {
-          onInitial: () => null,
-          onSuccess: (graph) => (
-            <Navigate to="/$graph" params={{ graph: graph.value.localGraphId }} />
-          ),
-          onError: (error) => (
+        <MatchAsyncResult
+          when={createGraphResult()}
+          onSuccess={(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
+          onError={(error) => (
             <Alert variant="destructive">
               <AlertDescription>
-                {error._tag == "LocalRegistry.DisplayNameTakenError"
+                {error()._tag == "LocalRegistry.DisplayNameTakenError"
                   ? "A graph with that name already exists."
-                  : error._tag == "GraphRegistry.DisplayNameTakenError"
+                  : error()._tag == "GraphRegistry.DisplayNameTakenError"
                     ? "A synced graph with that name already exists."
                     : "Failed to create graph."}
               </AlertDescription>
             </Alert>
-          ),
-          onDefect: () => (
+          )}
+          onDefect={() => (
             <Alert variant="destructive">
               <AlertDescription>Failed to create graph.</AlertDescription>
             </Alert>
-          ),
-        })}
+          )}
+        />
 
         <form.AppField name="displayName">
           {(field) => (

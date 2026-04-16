@@ -1,13 +1,12 @@
 import { useLocation, useNavigate } from "@tanstack/solid-router";
 import { DateTime, Effect } from "effect";
-import { AsyncResult } from "effect/unstable/reactivity";
 import { nanoid } from "nanoid";
 import { createWritableMemo } from "@solid-primitives/memo";
 import { Index, createMemo } from "solid-js";
 import { Temporal } from "temporal-polyfill";
 import { requestScrollToDate } from "../lib/daily-note";
 import * as Y from "yjs";
-import { MaterializedEventService, RtAtom } from "../lib";
+import { MaterializedEventService, MatchAsyncResult, RtAtom } from "../lib";
 import * as GraphBackupFile from "../lib/graph-backup/file";
 import * as GraphBackupService from "../lib/graph-backup/service";
 import { PlusIcon, SearchIcon } from "./icons";
@@ -125,12 +124,11 @@ export const AppSidebar = (props: { graphDisplayName: string }) => {
           </Button>
         </div>
       </div>
-      {AsyncResult.matchWithError(createNoteResult(), {
-        onInitial: () => null,
-        onSuccess: () => null,
-        onError: () => <p class="text-error-fg px-4 py-1 text-xs">Failed to create note</p>,
-        onDefect: () => <p class="text-error-fg px-4 py-1 text-xs">Failed to create note</p>,
-      })}
+      <MatchAsyncResult
+        when={createNoteResult()}
+        onError={() => <p class="text-error-fg px-4 py-1 text-xs">Failed to create note</p>}
+        onDefect={() => <p class="text-error-fg px-4 py-1 text-xs">Failed to create note</p>}
+      />
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
@@ -223,12 +221,11 @@ export const AppSidebar = (props: { graphDisplayName: string }) => {
         </Button>
         <SyncStatusIndicator />
         <WorkerHealthBanner />
-        {AsyncResult.matchWithError(exportBackupResult(), {
-          onInitial: () => null,
-          onSuccess: () => null,
-          onError: () => <p class="text-error-fg text-xs">Failed to export backup</p>,
-          onDefect: () => <p class="text-error-fg text-xs">Failed to export backup</p>,
-        })}
+        <MatchAsyncResult
+          when={exportBackupResult()}
+          onError={() => <p class="text-error-fg text-xs">Failed to export backup</p>}
+          onDefect={() => <p class="text-error-fg text-xs">Failed to export backup</p>}
+        />
       </SidebarGroup>
     </Sidebar>
   );

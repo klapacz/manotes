@@ -1,7 +1,6 @@
 import { useAtom } from "@effect/atom-solid";
 import { Navigate } from "@tanstack/solid-router";
 import { Effect, Option, Schema } from "effect";
-import { AsyncResult } from "effect/unstable/reactivity";
 import type { FnContext } from "effect/unstable/reactivity/Atom";
 import { createSignal, splitProps, type ValidComponent } from "solid-js";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
@@ -19,7 +18,7 @@ import {
   type DialogTriggerProps,
 } from "../../components/ui/dialog";
 import { AppForm, useAppForm } from "../../components/ui/form";
-import { Runtime } from "../../lib";
+import { MatchAsyncResult, Runtime } from "../../lib";
 import * as GraphAccessErrors from "../../lib/graph-access/errors";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
 import * as RemoteRegistryClient from "../../lib/graph-access/remote-registry/client";
@@ -133,30 +132,30 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
               </DialogDescription>
             </DialogHeader>
 
-            {AsyncResult.matchWithError(uploadGraphResult(), {
-              onInitial: () => null,
-              onSuccess: (graph) => (
-                <Navigate to="/$graph" params={{ graph: graph.value.localGraphId }} />
-              ),
-              onError: (error) => (
+            <MatchAsyncResult
+              when={uploadGraphResult()}
+              onSuccess={(graph) => (
+                <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />
+              )}
+              onError={(error) => (
                 <Alert variant="destructive">
                   <AlertDescription>
-                    {error._tag === "GraphAccess.LocalGraphNotFoundError"
+                    {error()._tag === "GraphAccess.LocalGraphNotFoundError"
                       ? "That graph is no longer available on this device."
-                      : error._tag === "GraphAccess.LocalGraphAlreadySyncedError"
+                      : error()._tag === "GraphAccess.LocalGraphAlreadySyncedError"
                         ? "That graph is already synced."
-                        : error._tag === "GraphRegistry.DisplayNameTakenError"
+                        : error()._tag === "GraphRegistry.DisplayNameTakenError"
                           ? "A synced graph with that name already exists."
                           : "Failed to upload graph."}
                   </AlertDescription>
                 </Alert>
-              ),
-              onDefect: () => (
+              )}
+              onDefect={() => (
                 <Alert variant="destructive">
                   <AlertDescription>Failed to upload graph.</AlertDescription>
                 </Alert>
-              ),
-            })}
+              )}
+            />
 
             <form.AppField name="password">
               {(field) => (

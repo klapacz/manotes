@@ -6,14 +6,15 @@ import { useAtomValue, useAtom } from "@effect/atom-solid";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Badge } from "../components/ui/badge";
 import { Button, buttonVariants } from "../components/ui/button";
+import { CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { List, ListItem } from "../components/ui/list";
+import { MatchAsyncResult } from "../lib";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
 import * as Session from "../lib/graph-access/session";
 import type { FnContext } from "effect/unstable/reactivity/Atom";
 import { GraphListItem } from "./-index/GraphListItem";
-import { CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 
 export const Route = createFileRoute("/")({
   component: RouteComponent,
@@ -119,26 +120,24 @@ function RouteComponent() {
           ),
         })}
 
-        {AsyncResult.matchWithError(openCloudGraphResult(), {
-          onInitial: () => null,
-          onSuccess: (graph) => (
-            <Navigate to="/$graph" params={{ graph: graph.value.localGraphId }} />
-          ),
-          onError: (error) => (
+        <MatchAsyncResult
+          when={openCloudGraphResult()}
+          onSuccess={(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
+          onError={(error) => (
             <Alert variant="destructive">
               <AlertDescription>
-                {error._tag === "LocalRegistry.DisplayNameTakenError"
+                {error()._tag === "LocalRegistry.DisplayNameTakenError"
                   ? "A graph with that name already exists on this device."
                   : "Failed to open graph."}
               </AlertDescription>
             </Alert>
-          ),
-          onDefect: () => (
+          )}
+          onDefect={() => (
             <Alert variant="destructive">
               <AlertDescription>Failed to open graph.</AlertDescription>
             </Alert>
-          ),
-        })}
+          )}
+        />
       </section>
 
       <section class="space-y-4">
