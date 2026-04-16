@@ -8,7 +8,7 @@ import { Badge } from "../components/ui/badge";
 import { Button, buttonVariants } from "../components/ui/button";
 import { CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { List, ListItem } from "../components/ui/list";
-import { MatchAsyncResult } from "../lib";
+import { MatchAsyncResult, MatchTag } from "../lib";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
@@ -126,9 +126,14 @@ function RouteComponent() {
           onError={(error) => (
             <Alert variant="destructive">
               <AlertDescription>
-                {error()._tag === "LocalRegistry.DisplayNameTakenError"
-                  ? "A graph with that name already exists on this device."
-                  : "Failed to open graph."}
+                <MatchTag
+                  when={error()}
+                  fallback="Failed to open graph."
+                  cases={{
+                    "LocalRegistry.DisplayNameTakenError": () =>
+                      "A graph with that name already exists on this device.",
+                  }}
+                />
               </AlertDescription>
             </Alert>
           )}

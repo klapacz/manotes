@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button, buttonVariants } from "../components/ui/button";
 import { AppForm, useAppForm } from "../components/ui/form";
 import { List, ListItem } from "../components/ui/list";
-import { MatchAsyncResult } from "../lib";
+import { MatchAsyncResult, MatchTag } from "../lib";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as GraphBackupFile from "../lib/graph-backup/file";
 import * as GraphBackupService from "../lib/graph-backup/service";
@@ -154,9 +154,14 @@ function ImportBackupForm(props: { decodedBackup: DecodedBackup }) {
         onError={(error) => (
           <Alert variant="destructive">
             <AlertDescription>
-              {error()._tag === "LocalRegistry.DisplayNameTakenError"
-                ? "A graph with that name already exists."
-                : "Failed to import backup."}
+              <MatchTag
+                when={error()}
+                fallback="Failed to import backup."
+                cases={{
+                  "LocalRegistry.DisplayNameTakenError": () =>
+                    "A graph with that name already exists.",
+                }}
+              />
             </AlertDescription>
           </Alert>
         )}

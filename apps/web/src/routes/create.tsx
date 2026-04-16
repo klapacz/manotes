@@ -11,7 +11,7 @@ import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
 import * as Session from "../lib/graph-access/session";
-import { MatchAsyncResult, Runtime } from "../lib";
+import { MatchAsyncResult, MatchTag, Runtime } from "../lib";
 
 export const Route = createFileRoute("/create")({
   component: RouteComponent,
@@ -115,11 +115,16 @@ function RouteComponent() {
           onError={(error) => (
             <Alert variant="destructive">
               <AlertDescription>
-                {error()._tag == "LocalRegistry.DisplayNameTakenError"
-                  ? "A graph with that name already exists."
-                  : error()._tag == "GraphRegistry.DisplayNameTakenError"
-                    ? "A synced graph with that name already exists."
-                    : "Failed to create graph."}
+                <MatchTag
+                  when={error()}
+                  fallback="Failed to create graph."
+                  cases={{
+                    "LocalRegistry.DisplayNameTakenError": () =>
+                      "A graph with that name already exists.",
+                    "GraphRegistry.DisplayNameTakenError": () =>
+                      "A synced graph with that name already exists.",
+                  }}
+                />
               </AlertDescription>
             </Alert>
           )}

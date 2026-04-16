@@ -14,6 +14,51 @@ import {
 } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 
+export interface MatchTagProps<E extends { readonly _tag: string }> {
+  readonly when: E;
+  readonly keyed?: boolean | undefined;
+  readonly fallback?: JSX.Element | undefined;
+  readonly cases?:
+    | Partial<{
+        [K in Types.Tags<E>]: (value: Accessor<Types.ExtractTag<E, K>>) => JSX.Element;
+      }>
+    | undefined;
+}
+
+export function MatchTag<E extends { readonly _tag: string }>(
+  props: MatchTagProps<E>,
+): JSX.Element {
+  const stateValue = createMemo(() => props.when, undefined, { name: "tagged value" });
+
+  function expectState<TTag extends Types.Tags<E>>(tag: TTag): Types.ExtractTag<E, TTag> {
+    const current = stateValue();
+    if (current._tag !== tag) throw new Error("MatchTag");
+    return current as Types.ExtractTag<E, TTag>;
+  }
+
+  const state = props.keyed
+    ? stateValue
+    : createMemo(stateValue, undefined, {
+        equals: (a, b) => a._tag === b._tag,
+        name: "tagged branch",
+      });
+
+  return createMemo(
+    () => {
+      const current = state();
+      const render = props.cases?.[current._tag as Types.Tags<E>] as
+        | ((value: Accessor<E>) => JSX.Element)
+        | undefined;
+
+      return render
+        ? untrack(() => render(() => expectState(current._tag as Types.Tags<E>)))
+        : (props.fallback ?? null);
+    },
+    undefined,
+    { name: "value" },
+  ) as unknown as JSX.Element;
+}
+
 export interface MatchAsyncResultProps<A, E> {
   readonly when: AsyncResult.AsyncResult<A, E>;
   readonly keyed?: boolean | undefined;

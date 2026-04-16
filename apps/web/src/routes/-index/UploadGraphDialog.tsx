@@ -18,7 +18,7 @@ import {
   type DialogTriggerProps,
 } from "../../components/ui/dialog";
 import { AppForm, useAppForm } from "../../components/ui/form";
-import { MatchAsyncResult, Runtime } from "../../lib";
+import { MatchAsyncResult, MatchTag, Runtime } from "../../lib";
 import * as GraphAccessErrors from "../../lib/graph-access/errors";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
 import * as RemoteRegistryClient from "../../lib/graph-access/remote-registry/client";
@@ -140,13 +140,18 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
               onError={(error) => (
                 <Alert variant="destructive">
                   <AlertDescription>
-                    {error()._tag === "GraphAccess.LocalGraphNotFoundError"
-                      ? "That graph is no longer available on this device."
-                      : error()._tag === "GraphAccess.LocalGraphAlreadySyncedError"
-                        ? "That graph is already synced."
-                        : error()._tag === "GraphRegistry.DisplayNameTakenError"
-                          ? "A synced graph with that name already exists."
-                          : "Failed to upload graph."}
+                    <MatchTag
+                      when={error()}
+                      fallback="Failed to upload graph."
+                      cases={{
+                        "GraphAccess.LocalGraphNotFoundError": () =>
+                          "That graph is no longer available on this device.",
+                        "GraphAccess.LocalGraphAlreadySyncedError": () =>
+                          "That graph is already synced.",
+                        "GraphRegistry.DisplayNameTakenError": () =>
+                          "A synced graph with that name already exists.",
+                      }}
+                    />
                   </AlertDescription>
                 </Alert>
               )}

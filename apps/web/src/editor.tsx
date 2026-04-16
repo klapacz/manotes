@@ -14,14 +14,13 @@ import {
   type YjsUndoPluginOptions,
 } from "prosekit/extensions/yjs";
 import { defineAppExtension } from "./editor.extension";
-import { EditorSyncService, RtAtom, createSyncedAtom } from "./lib";
+import { EditorSyncService, MatchTag, RtAtom, createSyncedAtom } from "./lib";
 import { defineVirtualDailyHeading } from "./editor.virtual-daily-heading.extension";
 import { formatDailyNoteTitle } from "./lib/daily-note";
 import { getProsemirrorXmlFragment } from "./lib/prosemirror/yjs";
 import { Cause, Data, Deferred, Effect, SubscriptionRef } from "effect";
 import { AsyncResult, type Atom } from "effect/unstable/reactivity";
 import BacklinkMenu from "./lib/editor/backlink/menu";
-import { MatchTagged } from "./lib/compoennts/match-tagged";
 
 export type BootState = Data.TaggedEnum<{
   Loading: {};
@@ -164,9 +163,12 @@ export default function Editor(props: Props): JSX.Element {
     <Show when={state()} keyed>
       {(current) => (
         <ProseKit editor={current.editor}>
-          <MatchTagged value={bootState()} tag="Error">
-            {(value) => <p class="text-error-fg mb-3 text-sm">{value().message}</p>}
-          </MatchTagged>
+          <MatchTag
+            when={bootState()}
+            cases={{
+              Error: (value) => <p class="text-error-fg mb-3 text-sm">{value().message}</p>,
+            }}
+          />
           <div
             ref={current.editor.mount}
             class="outline-none"
