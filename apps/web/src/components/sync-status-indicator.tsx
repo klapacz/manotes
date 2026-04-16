@@ -17,7 +17,7 @@ export function SyncStatusIndicator() {
   const status = RtAtom.useStore(SyncStatus, initialStatus);
 
   return (
-    <Show when={status.mode === "cloud" ? status : null}>
+    <Show when={status.mode === "cloud" && status.syncState !== "Ready" ? status : null}>
       {(cloud) => (
         <div
           class={cx(

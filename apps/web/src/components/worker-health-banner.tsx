@@ -18,25 +18,27 @@ export function WorkerHealthBanner() {
   const health = RtAtom.useStore(WorkerHealth, initialHealth);
 
   return (
-    <div
-      class={cx(
-        "rounded-md border px-3 py-2 text-xs",
-        Match.value(health.status).pipe(
-          Match.when(
-            "healthy",
-            () => "bg-success-bg-subtle border-success-border text-success-fg-subtle",
+    <Show when={health.status !== "healthy"}>
+      <div
+        class={cx(
+          "rounded-md border px-3 py-2 text-xs",
+          Match.value(health.status).pipe(
+            Match.when(
+              "healthy",
+              () => "bg-success-bg-subtle border-success-border text-success-fg-subtle",
+            ),
+            Match.whenOr(
+              "degraded",
+              "down",
+              () => "bg-warning-bg-subtle border-warning-border text-warning-fg-subtle",
+            ),
+            Match.exhaustive,
           ),
-          Match.whenOr(
-            "degraded",
-            "down",
-            () => "bg-warning-bg-subtle border-warning-border text-warning-fg-subtle",
-          ),
-          Match.exhaustive,
-        ),
-      )}
-    >
-      Worker {health.status}
-      <Show when={health.lastFailure}>{`: ${health.lastFailure}`}</Show>
-    </div>
+        )}
+      >
+        Worker {health.status}
+        <Show when={health.lastFailure}>{`: ${health.lastFailure}`}</Show>
+      </div>
+    </Show>
   );
 }
