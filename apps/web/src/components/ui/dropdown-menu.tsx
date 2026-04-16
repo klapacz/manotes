@@ -1,6 +1,7 @@
 import type { ComponentProps, ValidComponent } from "solid-js";
 import { mergeProps, splitProps } from "solid-js";
 import { DropdownMenu as DropdownMenuPrimitive } from "@kobalte/core/dropdown-menu";
+import { createLink } from "@tanstack/solid-router";
 
 import { cx } from "../../lib/cva";
 
@@ -164,6 +165,14 @@ export const DropdownMenuItem = <T extends ValidComponent = "div">(
     />
   );
 };
+
+type DropdownMenuItemLinkRootProps = Omit<DropdownMenuItemProps<"a">, "as">;
+
+const DropdownMenuItemLinkRoot = (props: DropdownMenuItemLinkRootProps) => {
+  return <DropdownMenuItem as="a" {...props} />;
+};
+
+export const DropdownMenuItemLink = createLink(DropdownMenuItemLinkRoot);
 
 export type DropdownMenuCheckboxItemProps<T extends ValidComponent = "div"> = ComponentProps<
   typeof DropdownMenuPrimitive.CheckboxItem<T>

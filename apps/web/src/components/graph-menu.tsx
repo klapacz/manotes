@@ -11,11 +11,12 @@ import {
   DropdownMenuGroup,
   DropdownMenuGroupLabel,
   DropdownMenuItem,
+  DropdownMenuItemLink,
   DropdownMenuPortal,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { ChevronsUpDownIcon, DownloadIcon } from "./icons";
+import { ChevronLeftIcon, ChevronsUpDownIcon, DownloadIcon } from "./icons";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "./ui/sidebar";
 
 // Adapted from shadcn-solid using @kobalte/core 0.13.11 / solid-js 1.9.10.
@@ -89,6 +90,10 @@ export const GraphMenu = (props: { graph: LocalRegistry.Schema.Record }) => {
                   <DownloadIcon class="size-4" />
                   Export backup
                 </DropdownMenuItem>
+                <DropdownMenuItemLink to="/">
+                  <ChevronLeftIcon class="size-4" />
+                  All graphs
+                </DropdownMenuItemLink>
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenuPortal>
