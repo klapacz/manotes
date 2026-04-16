@@ -46,7 +46,7 @@ function RouteComponent() {
   return (
     <RuntimeProvider runtime={() => data().runtime!}>
       <SidebarProvider defaultOpenMobile={true}>
-        <AppSidebar graphDisplayName={data().graph.displayName} />
+        <AppSidebar graph={data().graph} />
         <SidebarInset>
           <div class="flex-1 overflow-auto">
             <Outlet />

@@ -4,12 +4,11 @@ import { nanoid } from "nanoid";
 import { createWritableMemo } from "@solid-primitives/memo";
 import { Index, createMemo } from "solid-js";
 import { Temporal } from "temporal-polyfill";
-import { toast } from "somoto";
 import { requestScrollToDate } from "../lib/daily-note";
 import * as Y from "yjs";
 import { MaterializedEventService, MatchAsyncResult, RtAtom } from "../lib";
-import * as GraphBackupFile from "../lib/graph-backup/file";
-import * as GraphBackupService from "../lib/graph-backup/service";
+import type * as LocalRegistry from "../lib/graph-access/local-registry";
+import { GraphMenu } from "./graph-menu";
 import { PlusIcon, SearchIcon } from "./icons";
 import { NoteSearchCommand } from "./note-search-command";
 import { Button } from "./ui/button";
@@ -22,7 +21,13 @@ import {
   CalendarNav,
   CalendarTable,
 } from "./ui/calendar";
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent } from "./ui/sidebar";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+} from "./ui/sidebar";
 import { SyncStatusIndicator } from "./sync-status-indicator";
 import { WorkerHealthBanner } from "./worker-health-banner";
 
@@ -41,16 +46,6 @@ const CreateNote = RtAtom.fn(
   }),
 );
 
-const ExportBackup = RtAtom.fn(
-  Effect.fn("ComponentsAppSidebar.exportBackup")(function* (sourceGraphDisplayName: string) {
-    const backup = yield* GraphBackupService.exportBackup({
-      sourceGraphDisplayName,
-    });
-
-    yield* GraphBackupFile.downloadBackupFile(backup);
-  }),
-);
-
 const weekdayLongFormatter = new Intl.DateTimeFormat("en", {
   weekday: "long",
 });
@@ -63,13 +58,12 @@ const monthFormatter = new Intl.DateTimeFormat("en", {
   month: "long",
 });
 
-export const AppSidebar = (props: { graphDisplayName: string }) => {
+export const AppSidebar = (props: { graph: LocalRegistry.Schema.Record }) => {
   const searchDate = useLocation({
     select: (location) => location.search.date,
   });
   const navigate = useNavigate();
   const [createNoteResult, createNote] = RtAtom.use(CreateNote, { mode: "promise" });
-  const [exportBackupResult, exportBackup] = RtAtom.use(ExportBackup, { mode: "promise" });
 
   async function handleCreateNote() {
     try {
@@ -90,15 +84,6 @@ export const AppSidebar = (props: { graphDisplayName: string }) => {
   });
 
   const [displayedMonth, setDisplayedMonth] = createWritableMemo(() => selectedDate() ?? undefined);
-
-  async function handleExportBackup() {
-    try {
-      await exportBackup(props.graphDisplayName);
-      toast.success("Backup exported");
-    } catch {
-      toast.error("Failed to export backup");
-    }
-  }
 
   return (
     <Sidebar>
@@ -214,18 +199,11 @@ export const AppSidebar = (props: { graphDisplayName: string }) => {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarGroup class="gap-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => void handleExportBackup()}
-          disabled={exportBackupResult().waiting}
-        >
-          Export backup
-        </Button>
+      <SidebarFooter class="gap-1">
         <SyncStatusIndicator />
         <WorkerHealthBanner />
-      </SidebarGroup>
+        <GraphMenu graph={props.graph} />
+      </SidebarFooter>
     </Sidebar>
   );
 };

@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/solid-router";
 import { Show } from "solid-js";
-import { Match } from "effect";
 import { Button } from "../../components/ui/button";
 import { ListItem } from "../../components/ui/list";
 import { cx } from "../../lib/cva";
@@ -35,13 +34,9 @@ export function GraphListItem(props: Props) {
         </UploadGraphDialog>
       </Show>
 
-      <span class="uppercase tracking-wide text-xs">{graphModeLabel(props.graph.mode)}</span>
+      <span class="uppercase tracking-wide text-xs">
+        {LocalRegistry.Labels.graphMode(props.graph.mode)}
+      </span>
     </ListItem>
   );
 }
-
-const graphModeLabel = Match.type<LocalRegistry.Schema.Record["mode"]>().pipe(
-  Match.when("cloud", () => "synced"),
-  Match.when("local", () => "local"),
-  Match.exhaustive,
-);

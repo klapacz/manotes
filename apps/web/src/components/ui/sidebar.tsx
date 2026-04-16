@@ -1,4 +1,5 @@
-import type { Accessor, ComponentProps, JSX } from "solid-js";
+import { Root as ButtonPrimitive } from "@kobalte/core/button";
+import type { Accessor, ComponentProps, JSX, ValidComponent } from "solid-js";
 import { Show, createContext, createMemo, createSignal, splitProps, useContext } from "solid-js";
 import type { VariantProps } from "cva";
 
@@ -340,18 +341,27 @@ export const sidebarMenuButtonVariants = cva({
   },
 });
 
-export type SidebarMenuButtonProps = ComponentProps<"button"> &
+export type SidebarMenuButtonProps<T extends ValidComponent = "button"> = ComponentProps<
+  typeof ButtonPrimitive<T>
+> &
   VariantProps<typeof sidebarMenuButtonVariants> & {
     isActive?: boolean;
   };
 
-export const SidebarMenuButton = (props: SidebarMenuButtonProps) => {
-  const [local, rest] = splitProps(props, ["class", "isActive", "size", "variant"]);
+export const SidebarMenuButton = <T extends ValidComponent = "button">(
+  props: SidebarMenuButtonProps<T>,
+) => {
+  const [local, rest] = splitProps(props as SidebarMenuButtonProps, [
+    "class",
+    "isActive",
+    "size",
+    "variant",
+  ]);
   const { open } = useSidebar();
   const collapsed = createMemo(() => !open());
 
   return (
-    <button
+    <ButtonPrimitive
       data-slot="sidebar-menu-button"
       data-active={local.isActive ? "true" : undefined}
       data-size={local.size}
