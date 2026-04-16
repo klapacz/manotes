@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import { createWritableMemo } from "@solid-primitives/memo";
 import { Index, createMemo } from "solid-js";
 import { Temporal } from "temporal-polyfill";
+import { toast } from "somoto";
 import { requestScrollToDate } from "../lib/daily-note";
 import * as Y from "yjs";
 import { MaterializedEventService, MatchAsyncResult, RtAtom } from "../lib";
@@ -93,7 +94,10 @@ export const AppSidebar = (props: { graphDisplayName: string }) => {
   async function handleExportBackup() {
     try {
       await exportBackup(props.graphDisplayName);
-    } catch {}
+      toast.success("Backup exported");
+    } catch {
+      toast.error("Failed to export backup");
+    }
   }
 
   return (
@@ -221,11 +225,6 @@ export const AppSidebar = (props: { graphDisplayName: string }) => {
         </Button>
         <SyncStatusIndicator />
         <WorkerHealthBanner />
-        <MatchAsyncResult
-          when={exportBackupResult()}
-          onError={() => <p class="text-error-fg text-xs">Failed to export backup</p>}
-          onDefect={() => <p class="text-error-fg text-xs">Failed to export backup</p>}
-        />
       </SidebarGroup>
     </Sidebar>
   );
