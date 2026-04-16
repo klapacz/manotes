@@ -1,19 +1,13 @@
 import { useAtom } from "@effect/atom-solid";
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
-import { Effect } from "effect";
+import * as GraphEncryption from "@manotes/shared/graph-encryption";
+import * as GraphRegistryContract from "@manotes/shared/graph-registry/contract";
+import { Effect, Schema } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
 import type { FnContext } from "effect/unstable/reactivity/Atom";
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import { Show, createSignal } from "solid-js";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button, buttonVariants } from "../components/ui/button";
-import { Form } from "../components/ui/form";
-import {
-  TextField,
-  TextFieldDescription,
-  TextFieldInput,
-  TextFieldLabel,
-} from "../components/ui/text-field";
+import { AppForm, useAppForm } from "../components/ui/form";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
@@ -69,42 +63,44 @@ const createGraphAtom = GraphAccessRuntime.atom.fn(
   }),
 );
 
+const CreateGraphFormSchema = Schema.Struct({
+  displayName: GraphRegistryContract.DisplayNameSchema,
+  // Password is optional for local graphs. Cloud-only required validation
+  // happens in onSubmit based on the clicked action.
+  password: Schema.String,
+}).pipe(Schema.toStandardSchemaV1);
+
 function RouteComponent() {
-  const [displayName, setDisplayName] = createSignal("");
-  const [password, setPassword] = createSignal("");
-  const [validationError, setValidationError] = createSignal<string | null>(null);
-  const [createGraphResult, createGraph] = useAtom(createGraphAtom);
+  const [createGraphResult, createGraph] = useAtom(createGraphAtom, { mode: "promise" });
+  const form = useAppForm(() => ({
+    defaultValues: {
+      displayName: "",
+      password: "",
+    },
+    validators: {
+      onDynamic: CreateGraphFormSchema,
+    },
+    onSubmitMeta: {
+      mode: "local" as "local" | "cloud",
+    },
+    async onSubmit({ value, meta }) {
+      const password = GraphEncryption.normalizePassword(value.password);
 
-  function handleSubmit(event: SubmitEvent & { currentTarget: HTMLFormElement }) {
-    event.preventDefault();
+      form.setErrorMap({ onSubmit: { fields: {} } });
 
-    const trimmedName = displayName().trim();
-    if (!trimmedName) {
-      setValidationError("Graph name is required.");
-      return;
-    }
+      if (meta.mode === "cloud" && !password) {
+        return form.setErrorMap({
+          onSubmit: { fields: { password: "Password is required for synced graphs." } },
+        });
+      }
 
-    const submitter = event.submitter;
-    let mode: "local" | "cloud" = "local";
-
-    if (submitter instanceof HTMLButtonElement && submitter.dataset.mode === "cloud") {
-      mode = "cloud";
-    }
-
-    const normalizedPassword = GraphEncryption.normalizePassword(password());
-
-    if (mode === "cloud" && !normalizedPassword) {
-      setValidationError("Password is required for synced graphs.");
-      return;
-    }
-
-    setValidationError(null);
-    createGraph({
-      mode,
-      displayName: trimmedName,
-      password: normalizedPassword,
-    });
-  }
+      await createGraph({
+        mode: meta.mode,
+        displayName: value.displayName,
+        password,
+      });
+    },
+  }));
 
   return (
     <main class="mx-auto flex w-full max-w-2xl flex-col gap-12 px-6 py-12">
@@ -113,40 +109,7 @@ function RouteComponent() {
         <p class="text-fg-subtle">Name your graph and choose whether it stays local or syncs.</p>
       </header>
 
-      <Form onSubmit={handleSubmit}>
-        <TextField>
-          <TextFieldLabel for="create-graph-name">Graph name</TextFieldLabel>
-          <TextFieldInput
-            id="create-graph-name"
-            value={displayName()}
-            onInput={(event) => setDisplayName(event.currentTarget.value)}
-            placeholder="work"
-            autofocus
-          />
-        </TextField>
-
-        <TextField>
-          <TextFieldLabel for="create-graph-password">Password for synced graphs</TextFieldLabel>
-          <TextFieldInput
-            id="create-graph-password"
-            type="password"
-            value={password()}
-            onInput={(event) => setPassword(event.currentTarget.value)}
-            placeholder="Required only for synced graphs"
-          />
-          <TextFieldDescription>
-            Local graphs ignore this field. Synced graphs require it.
-          </TextFieldDescription>
-        </TextField>
-
-        <Show when={validationError()}>
-          {(error) => (
-            <Alert variant="destructive">
-              <AlertDescription>{error()}</AlertDescription>
-            </Alert>
-          )}
-        </Show>
-
+      <AppForm form={form} AppForm={form.AppForm}>
         {AsyncResult.matchWithError(createGraphResult(), {
           onInitial: () => null,
           onSuccess: (graph) => (
@@ -170,23 +133,54 @@ function RouteComponent() {
           ),
         })}
 
-        <div class="flex flex-wrap gap-3">
-          <Button type="submit" data-mode="local" disabled={createGraphResult().waiting}>
-            Create local graph
-          </Button>
-          <Button
-            type="submit"
-            variant="outline"
-            data-mode="cloud"
-            disabled={createGraphResult().waiting}
-          >
-            Create synced graph
-          </Button>
-          <Link to="/" class={buttonVariants({ variant: "outline" })}>
-            Cancel
-          </Link>
-        </div>
-      </Form>
+        <form.AppField name="displayName">
+          {(field) => (
+            <field.TextField
+              id="create-graph-name"
+              label="Graph name"
+              placeholder="work"
+              autofocus
+            />
+          )}
+        </form.AppField>
+
+        <form.AppField name="password">
+          {(field) => (
+            <field.TextField
+              id="create-graph-password"
+              type="password"
+              label="Password for synced graphs"
+              placeholder="Required only for synced graphs"
+              description="Local graphs ignore this field. Synced graphs require it."
+            />
+          )}
+        </form.AppField>
+
+        <form.Subscribe selector={(state) => ({ isSubmitting: state.isSubmitting })}>
+          {(state) => (
+            <div class="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                disabled={state().isSubmitting}
+                onClick={() => form.handleSubmit({ mode: "local" })}
+              >
+                Create local graph
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={state().isSubmitting}
+                onClick={() => form.handleSubmit({ mode: "cloud" })}
+              >
+                Create synced graph
+              </Button>
+              <Link to="/" class={buttonVariants({ variant: "outline" })}>
+                Cancel
+              </Link>
+            </div>
+          )}
+        </form.Subscribe>
+      </AppForm>
     </main>
   );
 }
