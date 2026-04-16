@@ -1,6 +1,7 @@
 import type { ComponentProps, ValidComponent } from "solid-js";
 import { Match, Switch, splitProps } from "solid-js";
 import CalendarPrimitive from "@corvu/calendar";
+import { createLink } from "@tanstack/solid-router";
 import { cx } from "../../lib/cva";
 import { ChevronLeftIcon, ChevronRightIcon } from "../icons";
 import { buttonVariants } from "./button";
@@ -131,3 +132,32 @@ export const CalendarCellTrigger = <T extends ValidComponent = "button">(
     />
   );
 };
+
+type CalendarCellLinkRootProps = Omit<ComponentProps<"a">, "href">;
+
+const CalendarCellLinkRoot = (props: CalendarCellLinkRootProps) => {
+  const [, rest] = splitProps(props, ["class"]);
+
+  return (
+    <a
+      data-slot="calendar-cell-link"
+      class={buttonVariants({
+        variant: "plain",
+        class: [
+          // Keep link day-cell styling aligned with CalendarCellTrigger above.
+          "size-8 p-0 font-normal",
+          "hover:bg-control-hover hover:text-fg",
+          "[&[data-today]:not([data-status=active])]:bg-control [&[data-today]:not([data-status=active])]:text-fg",
+          "[&[data-today]:not([data-status=active]):hover]:bg-control-hover",
+          "data-[status=active]:bg-primary-solid data-[status=active]:text-primary-fg-solid",
+          "data-[status=active]:hover:bg-primary-solid-hover data-[status=active]:hover:text-primary-fg-solid",
+          "aria-disabled:pointer-events-none aria-disabled:opacity-50",
+          props.class,
+        ],
+      })}
+      {...rest}
+    />
+  );
+};
+
+export const CalendarCellLink = createLink(CalendarCellLinkRoot);

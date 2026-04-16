@@ -8,6 +8,7 @@ import { requestScrollToDate } from "../lib/daily-note";
 import * as Y from "yjs";
 import { MaterializedEventService, MatchAsyncResult, RtAtom } from "../lib";
 import type * as LocalRegistry from "../lib/graph-access/local-registry";
+import { JSDateToPlainDate } from "../lib/temporal/utils";
 import { GraphMenu } from "./graph-menu";
 import { PlusIcon, SearchIcon } from "./icons";
 import { NoteSearchCommand } from "./note-search-command";
@@ -15,7 +16,7 @@ import { Button } from "./ui/button";
 import {
   Calendar,
   CalendarCell,
-  CalendarCellTrigger,
+  CalendarCellLink,
   CalendarHeadCell,
   CalendarLabel,
   CalendarNav,
@@ -84,6 +85,8 @@ export const AppSidebar = (props: { graph: LocalRegistry.Schema.Record }) => {
   });
 
   const [displayedMonth, setDisplayedMonth] = createWritableMemo(() => selectedDate() ?? undefined);
+  // TODO: Refresh this periodically so "today" does not stay frozen for the sidebar lifetime.
+  const todayDate = Temporal.Now.plainDateISO().toString();
 
   return (
     <Sidebar>
@@ -126,29 +129,6 @@ export const AppSidebar = (props: { graph: LocalRegistry.Schema.Record }) => {
               value={selectedDate()}
               month={displayedMonth()}
               onMonthChange={setDisplayedMonth}
-              onValueChange={(value) => {
-                if (!value) {
-                  // Clicking the already-selected date deselects it.
-                  // Re-scroll + focus via the shared signal.
-                  requestScrollToDate();
-                  return;
-                }
-
-                const date = new Temporal.PlainDate(
-                  value.getFullYear(),
-                  value.getMonth() + 1,
-                  value.getDate(),
-                ).toString();
-
-                void navigate({
-                  from: "/$graph",
-                  to: "/$graph",
-                  search: (current) => ({
-                    ...current,
-                    date,
-                  }),
-                });
-              }}
             >
               {(calendar) => (
                 <div>
@@ -179,13 +159,35 @@ export const AppSidebar = (props: { graph: LocalRegistry.Schema.Record }) => {
                         {(week) => (
                           <tr class="mt-1 flex w-full">
                             <Index each={week()}>
-                              {(day) => (
-                                <CalendarCell class="flex-1">
-                                  <CalendarCellTrigger class="w-full" day={day()}>
-                                    {day().getDate()}
-                                  </CalendarCellTrigger>
-                                </CalendarCell>
-                              )}
+                              {(day) => {
+                                const date = createMemo(() => JSDateToPlainDate(day()).toString());
+                                const isOutsideMonth = createMemo(
+                                  () => day().getMonth() !== calendar.month.getMonth(),
+                                );
+
+                                return (
+                                  <CalendarCell class="flex-1">
+                                    <CalendarCellLink
+                                      class={isOutsideMonth() ? "w-full opacity-50" : "w-full"}
+                                      from="/$graph/"
+                                      to="/$graph"
+                                      params={{ graph: props.graph.localGraphId }}
+                                      search={{ date: date() }}
+                                      viewTransition={false}
+                                      data-today={todayDate === date() ? "" : undefined}
+                                      onClick={(event) => {
+                                        // Clicking the already-selected date
+                                        // Re-scroll + focus via the shared signal.
+                                        if (event.currentTarget.dataset.status === "active") {
+                                          requestScrollToDate();
+                                        }
+                                      }}
+                                    >
+                                      {day().getDate()}
+                                    </CalendarCellLink>
+                                  </CalendarCell>
+                                );
+                              }}
                             </Index>
                           </tr>
                         )}
