@@ -15,7 +15,7 @@ type UnlockGraphInput = {
 };
 
 const UnlockGraphFormSchema = Schema.Struct({
-  password: Schema.Trim.pipe(Schema.check(Schema.isNonEmpty())),
+  password: GraphEncryption.PasswordSchema,
 }).pipe(Schema.toStandardSchemaV1);
 
 const unlockGraphAtom = GraphAccessRuntime.atom.fn(

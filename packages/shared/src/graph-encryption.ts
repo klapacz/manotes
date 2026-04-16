@@ -12,6 +12,8 @@ export const GraphKeyEnvelopeSchema = Schema.Struct({
   wrappedGraphKey: Schema.Uint8ArrayFromBase64,
 });
 
+export const PasswordSchema = Schema.Trim.pipe(Schema.check(Schema.isNonEmpty()));
+
 export type GraphKeyEnvelope = Schema.Schema.Type<typeof GraphKeyEnvelopeSchema>;
 
 // ============================================================================

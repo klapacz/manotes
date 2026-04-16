@@ -32,7 +32,7 @@ type UploadGraphInput = {
 };
 
 const UploadGraphFormSchema = Schema.Struct({
-  password: Schema.Trim.pipe(Schema.check(Schema.isNonEmpty())),
+  password: GraphEncryption.PasswordSchema,
 }).pipe(Schema.toStandardSchemaV1);
 
 const uploadGraphAtom = GraphAccessRuntime.atom.fn(
