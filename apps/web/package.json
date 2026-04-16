@@ -39,6 +39,7 @@
     "prosemirror-flat-list": "^0.5.8",
     "prosemirror-model": "^1.25.4",
     "solid-js": "1.9.10",
+    "somoto": "^0.0.2",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.2",
     "temporal-polyfill": "^0.3.0",

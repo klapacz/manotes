@@ -1,6 +1,7 @@
 import { RouterProvider, createRouter } from "@tanstack/solid-router";
 import { render } from "solid-js/web";
 
+import { Toaster } from "./components/ui/sonner";
 import { routeTree } from "./routeTree.gen";
 import "./styles.css";
 
@@ -19,7 +20,12 @@ declare module "@tanstack/solid-router" {
 }
 
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <Toaster />
+    </>
+  );
 }
 
 const rootElement = document.getElementById("app");
