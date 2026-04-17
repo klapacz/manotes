@@ -204,7 +204,7 @@ export const AppSidebar = (props: { graph: LocalRegistry.Schema.Record }) => {
       <SidebarFooter class="gap-1">
         <SyncStatusIndicator />
         <WorkerHealthBanner />
-        <GraphMenu graph={props.graph} />
+        <GraphMenu localGraphId={props.graph.localGraphId} />
       </SidebarFooter>
     </Sidebar>
   );
