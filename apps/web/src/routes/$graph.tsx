@@ -27,7 +27,7 @@ export const Route = createFileRoute("/$graph")({
     }
 
     // If the graph is in local mode, setup a new runtime
-    const runtime = await Runtime.setup({
+    const runtime = Runtime.setup({
       localGraphId,
       displayName: graph.value.displayName,
       graphSyncConfig: { mode: "local" },

@@ -72,7 +72,7 @@ const uploadGraphAtom = GraphAccessRuntime.atom.fn(
       graphKeyEnvelope: graph.graphKeyEnvelope,
     });
 
-    yield* Effect.tryPromise(() =>
+    yield* Effect.sync(() =>
       Runtime.setup({
         localGraphId: updatedLocalGraph.localGraphId,
         displayName: updatedLocalGraph.displayName,

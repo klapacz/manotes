@@ -33,19 +33,17 @@ const unlockGraphAtom = GraphAccessRuntime.atom.fn(
             : new Error("Failed to unlock graph."),
     });
 
-    yield* Effect.tryPromise({
-      try: () =>
-        Runtime.setup({
-          localGraphId: graph.localGraphId,
-          displayName: graph.displayName,
-          graphSyncConfig: {
-            mode: "cloud",
-            graphId: graph.graphId,
-            graphKey,
-          },
-        }),
-      catch: (cause) => (cause instanceof Error ? cause : new Error("Failed to unlock graph.")),
-    });
+    yield* Effect.sync(() =>
+      Runtime.setup({
+        localGraphId: graph.localGraphId,
+        displayName: graph.displayName,
+        graphSyncConfig: {
+          mode: "cloud",
+          graphId: graph.graphId,
+          graphKey,
+        },
+      }),
+    );
 
     return {
       localGraphId: graph.localGraphId,

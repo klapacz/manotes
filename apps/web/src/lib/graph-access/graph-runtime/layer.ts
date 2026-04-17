@@ -1,21 +1,21 @@
 import { Effect, Layer, ManagedRuntime, References, ServiceMap } from "effect";
 import { Atom } from "effect/unstable/reactivity";
 import { SqlClient } from "effect/unstable/sql";
-import * as DB from "./db.service";
-import * as EventRepo from "./event.repo";
-import * as GraphWorkerClient from "./graph-worker.client";
-import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
-import * as MaterializedEventService from "./materialized-event.service";
-import * as BrowserExtensionTabNoteService from "./browser-extension/tab-note/service";
-import * as BacklinkService from "./materializer/backlink/service";
-import * as Migrator from "./migrator";
-import * as NoteRepo from "./note.repo";
-import * as NoteCache from "./note-cache.service";
-import * as EditorNoteBootCache from "./editor/note-boot-cache.service";
-import * as EditorSyncService from "./editor-sync.service";
 import * as SqliteClient from "@manotes/sql-sqlite-wasm/sqlite-client";
-import { SqlLive } from "./db.service";
-import * as GraphSyncConfig from "./graph-sync/config";
+import * as DB from "../../db.service";
+import { SqlLive } from "../../db.service";
+import * as EditorNoteBootCache from "../../editor/note-boot-cache.service";
+import * as EditorSyncService from "../../editor-sync.service";
+import * as EventRepo from "../../event.repo";
+import * as GraphSyncConfig from "../../graph-sync/config";
+import * as GraphWorkerClient from "../../graph-worker.client";
+import * as MaterializationCheckpointRepo from "../../materialization-checkpoint.repo";
+import * as MaterializedEventService from "../../materialized-event.service";
+import * as BacklinkService from "../../materializer/backlink/service";
+import * as Migrator from "../../migrator";
+import * as NoteCache from "../../note-cache.service";
+import * as NoteRepo from "../../note.repo";
+import * as BrowserExtensionTabNoteService from "../../browser-extension/tab-note/service";
 
 export type SetupOpts = {
   localGraphId: string;
@@ -48,8 +48,8 @@ const makeMigratedDatabaseLayer = Effect.fnUntraced(function* (opts: SetupOpts) 
   );
 }, Layer.unwrap);
 
-const makeLayer = (opts: SetupOpts) => {
-  const GraphSyncConfigLayer = Layer.succeed(
+export const makeLayer = (opts: SetupOpts) => {
+  const graphSyncConfigLayer = Layer.succeed(
     GraphSyncConfig.Config,
     GraphSyncConfig.Config.of(opts.graphSyncConfig),
   );
@@ -66,26 +66,23 @@ const makeLayer = (opts: SetupOpts) => {
     EditorSyncService.Service.layer,
     GraphWorkerClient.Service.layer,
     Layer.succeed(References.MinimumLogLevel, "Debug"),
-  ).pipe(Layer.provide(GraphSyncConfigLayer), Layer.provideMerge(makeMigratedDatabaseLayer(opts)));
+  ).pipe(Layer.provide(graphSyncConfigLayer), Layer.provideMerge(makeMigratedDatabaseLayer(opts)));
 };
 
-type AppLayer = ReturnType<typeof makeLayer>;
+export type AppLayer = ReturnType<typeof makeLayer>;
 
 export interface Type {
   rt: ManagedRuntime.ManagedRuntime<Layer.Success<AppLayer>, Layer.Error<AppLayer>>;
   atom: Atom.AtomRuntime<Layer.Success<AppLayer>, Layer.Error<AppLayer>>;
 }
 
-export async function setup(opts: SetupOpts): Promise<Type> {
-  // Use existing runtime if available
-  // TODO: This cache key assumes a graph's runtime config never changes.
-  // Promoting a local graph to cloud mode reuses the stale local-only runtime.
+export function setup(opts: SetupOpts): Type {
   const existingRuntime = runtimes.get(opts.localGraphId);
   if (existingRuntime) {
     return existingRuntime;
   }
 
-  const runtime = await create(opts);
+  const runtime = create(opts);
   runtimes.set(opts.localGraphId, runtime);
   return runtime;
 }
@@ -95,12 +92,12 @@ export function get(localGraphId: string): Type | null {
   return runtime ?? null;
 }
 
-async function create(opts: SetupOpts) {
-  const AppLayer = makeLayer(opts);
+export function create(opts: SetupOpts): Type {
+  const appLayer = makeLayer(opts);
   const memoMap = Layer.makeMemoMapUnsafe();
 
   return {
-    rt: ManagedRuntime.make(AppLayer, { memoMap }),
-    atom: Atom.context({ memoMap })(AppLayer),
+    rt: ManagedRuntime.make(appLayer, { memoMap }),
+    atom: Atom.context({ memoMap })(appLayer),
   };
 }

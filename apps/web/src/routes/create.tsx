@@ -46,7 +46,7 @@ const createGraphAtom = GraphAccessRuntime.atom.fn(
       accountId: session.accountId,
     });
 
-    yield* Effect.tryPromise(() =>
+    yield* Effect.sync(() =>
       Runtime.setup({
         localGraphId: localGraph.localGraphId,
         displayName: localGraph.displayName,

@@ -1,5 +1,5 @@
 import { createContext, useContext, type JSX } from "solid-js";
-import type * as Runtime from "./runtime";
+import type * as Runtime from "./graph-access/graph-runtime/layer";
 
 export const RuntimeContext = createContext<() => Runtime.Type>(null!);
 
