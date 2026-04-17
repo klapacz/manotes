@@ -1,5 +1,6 @@
-import { Cause, Exit, Layer, ManagedRuntime, References } from "effect";
+import { Effect, Layer, ManagedRuntime, References, ServiceMap } from "effect";
 import { Atom } from "effect/unstable/reactivity";
+import { SqlClient } from "effect/unstable/sql";
 import * as DB from "./db.service";
 import * as EventRepo from "./event.repo";
 import * as GraphWorkerClient from "./graph-worker.client";
@@ -12,6 +13,7 @@ import * as NoteRepo from "./note.repo";
 import * as NoteCache from "./note-cache.service";
 import * as EditorNoteBootCache from "./editor/note-boot-cache.service";
 import * as EditorSyncService from "./editor-sync.service";
+import * as SqliteClient from "@manotes/sql-sqlite-wasm/sqlite-client";
 import { SqlLive } from "./db.service";
 import * as GraphSyncConfig from "./graph-sync/config";
 
@@ -23,8 +25,9 @@ export type SetupOpts = {
 
 const runtimes = new Map<string, Type>();
 
-const makeLayer = (opts: SetupOpts) => {
-  const ConfigLayer = Layer.succeed(
+// TODO: use the same log level for migration and for the app
+const makeMigratedDatabaseLayer = Effect.fnUntraced(function* (opts: SetupOpts) {
+  const configLayer = Layer.succeed(
     DB.Config,
     DB.Config.of({
       localGraphId: opts.localGraphId,
@@ -32,8 +35,20 @@ const makeLayer = (opts: SetupOpts) => {
       databasePath: `${opts.localGraphId}.sqlite3`,
     }),
   );
-  const DBWithConfigLayer = Layer.provideMerge(SqlLive, ConfigLayer);
+  const sqlLayer = Layer.provideMerge(SqlLive, configLayer);
+  const dbLayer = Layer.provideMerge(DB.Service.layer, sqlLayer);
+  const context = yield* Layer.build(dbLayer);
 
+  yield* Migrator.migrate.pipe(Effect.provide(context));
+
+  return Layer.succeedServices(
+    context.pipe(
+      ServiceMap.pick(DB.Config, DB.Service, SqliteClient.SqliteClient, SqlClient.SqlClient),
+    ),
+  );
+}, Layer.unwrap);
+
+const makeLayer = (opts: SetupOpts) => {
   const GraphSyncConfigLayer = Layer.succeed(
     GraphSyncConfig.Config,
     GraphSyncConfig.Config.of(opts.graphSyncConfig),
@@ -50,9 +65,8 @@ const makeLayer = (opts: SetupOpts) => {
     BrowserExtensionTabNoteService.Service.layer,
     EditorSyncService.Service.layer,
     GraphWorkerClient.Service.layer,
-    DB.Service.layer,
     Layer.succeed(References.MinimumLogLevel, "Debug"),
-  ).pipe(Layer.provide(GraphSyncConfigLayer), Layer.provideMerge(DBWithConfigLayer));
+  ).pipe(Layer.provide(GraphSyncConfigLayer), Layer.provideMerge(makeMigratedDatabaseLayer(opts)));
 };
 
 type AppLayer = ReturnType<typeof makeLayer>;
@@ -72,14 +86,8 @@ export async function setup(opts: SetupOpts): Promise<Type> {
   }
 
   const runtime = await create(opts);
-  const exit = await runtime.rt.runPromiseExit(Migrator.migrate);
-
-  if (Exit.isSuccess(exit)) {
-    runtimes.set(opts.localGraphId, runtime);
-    return runtime;
-  }
-
-  throw Cause.pretty(exit.cause);
+  runtimes.set(opts.localGraphId, runtime);
+  return runtime;
 }
 
 export function get(localGraphId: string): Type | null {
