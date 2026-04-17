@@ -7,6 +7,14 @@ import * as GraphEncryption from "@manotes/shared/graph-encryption";
 
 const LOCAL_GRAPH_ID_LENGTH = 6;
 
+const decodeFirstRecordOption = (rows: ReadonlyArray<Schema.RawRecord>) =>
+  Array.head(rows).pipe(
+    Option.match({
+      onNone: () => Effect.succeedNone,
+      onSome: flow(Schema.decodeRecord, Effect.asSome),
+    }),
+  );
+
 export const migrate = Effect.gen(function* () {
   const sql = (yield* SqlClient.SqlClient).withoutTransforms();
 
@@ -46,12 +54,7 @@ export const getGraph = Effect.fn("LocalRegistryRepo.getGraph")(function* (local
     LIMIT 1
   `;
 
-  return yield* Array.head(rows).pipe(
-    Option.match({
-      onNone: () => Effect.succeed(Option.none()),
-      onSome: flow(Schema.decodeRecord, Effect.asSome),
-    }),
-  );
+  return yield* decodeFirstRecordOption(rows);
 });
 
 export const createGraph = Effect.fn("LocalRegistryRepo.createGraph")(function* (
@@ -137,12 +140,7 @@ export const getGraphByGraphId = Effect.fn("LocalRegistryRepo.getGraphByGraphId"
     LIMIT 1
   `;
 
-  return yield* Array.head(rows).pipe(
-    Option.match({
-      onNone: () => Effect.succeedNone,
-      onSome: flow(Schema.decodeRecord, Effect.asSome),
-    }),
-  );
+  return yield* decodeFirstRecordOption(rows);
 });
 
 export const createCloudGraph = Effect.fn("LocalRegistryRepo.createCloudGraph")(function* ({
@@ -204,6 +202,24 @@ export const createCloudGraph = Effect.fn("LocalRegistryRepo.createCloudGraph")(
 
   return head.value;
 });
+
+export const findGraphReactive = Effect.fn("LocalRegistryRepo.findGraphReactive")(function* (
+  localGraphId: string,
+) {
+  const sql = yield* SqlClient.SqlClient;
+
+  return sql
+    .reactive(
+      ["graphs"],
+      sql<Schema.RawRecord>`
+        SELECT localGraphId, displayName, mode, graphId, accountId, graphKeyEnvelope
+        FROM graphs
+        WHERE localGraphId = ${localGraphId}
+        LIMIT 1
+      `,
+    )
+    .pipe(Stream.mapEffect(decodeFirstRecordOption));
+}, Stream.unwrap);
 
 export const reactiveListGraph = Effect.fn("LocalRegistryRepo.reactiveListGraph")(function* () {
   const sql = yield* SqlClient.SqlClient;
