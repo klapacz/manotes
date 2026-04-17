@@ -54,9 +54,11 @@
     "JavaScript": {
       "format_on_save": "on",
       "prettier": { "allowed": false },
-      "language_servers": ["oxfmt", "oxlint", "tsgo", "tailwindcss-language-server"],
-      "formatter": [{ "language_server": { "name": "oxfmt" } }],
-      "code_action": "source.fixAll.oxc"
+      "language_servers": ["oxfmt", "oxlint", "tailwindcss-language-server"],
+      "formatter": [
+        { "language_server": { "name": "oxfmt" } },
+        { "code_action": "source.fixAll.oxc" }
+      ]
     },
     "JSX": {
       "format_on_save": "on",
@@ -100,15 +102,31 @@
     },
     "TypeScript": {
       "format_on_save": "on",
-      "language_servers": ["oxfmt", "oxlint", "tsgo", "tailwindcss-language-server"],
+      "language_servers": [
+        "oxfmt",
+        "oxlint",
+        "typescript-language-server",
+        "tailwindcss-language-server"
+      ],
       "prettier": { "allowed": false },
-      "formatter": [{ "language_server": { "name": "oxfmt" } }]
+      "formatter": [
+        { "language_server": { "name": "oxfmt" } },
+        { "code_action": "source.fixAll.oxc" }
+      ]
     },
     "TSX": {
       "format_on_save": "on",
-      "language_servers": ["oxfmt", "oxlint", "tsgo", "tailwindcss-language-server"],
+      "language_servers": [
+        "oxfmt",
+        "oxlint",
+        "typescript-language-server",
+        "tailwindcss-language-server"
+      ],
       "prettier": { "allowed": false },
-      "formatter": [{ "language_server": { "name": "oxfmt" } }]
+      "formatter": [
+        { "language_server": { "name": "oxfmt" } },
+        { "code_action": "source.fixAll.oxc" }
+      ]
     },
     "Vue.js": {
       "format_on_save": "on",
