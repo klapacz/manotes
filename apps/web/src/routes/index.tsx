@@ -7,7 +7,7 @@ import { Badge } from "../components/ui/badge";
 import { Button, buttonVariants } from "../components/ui/button";
 import { CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { List, ListItem } from "../components/ui/list";
-import { MatchAsyncResult, MatchTag } from "../lib";
+import { MatchAsyncResult, MatchTag, createAtomStore } from "../lib";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
@@ -19,9 +19,7 @@ export const Route = createFileRoute("/")({
   component: RouteComponent,
 });
 
-// TODO: These atoms cache one-shot reads and are not refreshed after upload/open mutations,
-// so the home screen can keep showing stale local/cloud graph lists until reload.
-const localGraphsAtom = GraphAccessRuntime.atom.atom(LocalRegistry.Repo.listGraphs);
+const localGraphsAtom = GraphAccessRuntime.atom.atom(LocalRegistry.Repo.reactiveListGraph());
 const cloudGraphsAtom = GraphAccessRuntime.atom.atom(
   Effect.fnUntraced(function* (get) {
     const client = yield* get.result(RemoteRegistryClient.atom);
@@ -60,7 +58,7 @@ const openCloudGraphAtom = GraphAccessRuntime.atom.fn(
 );
 
 function RouteComponent() {
-  const localGraphs = useAtomValue(localGraphsAtom);
+  const localGraphs = createAtomStore(() => localGraphsAtom, [] as LocalRegistry.Schema.Record[]);
   const cloudGraphsNotOnDevice = useAtomValue(cloudGraphsNotOnDeviceAtom);
   const [openCloudGraphResult, openCloudGraph] = useAtom(openCloudGraphAtom);
 
@@ -90,35 +88,18 @@ function RouteComponent() {
           </div>
         </div>
 
-        <MatchAsyncResult
-          when={localGraphs()}
-          onSuccess={(graphs) => (
-            <List>
-              <For
-                each={graphs()}
-                fallback={
-                  <ListItem dashed class="px-4 py-3 text-sm text-fg-subtle">
-                    No graphs yet.
-                  </ListItem>
-                }
-              >
-                {(graph) => <GraphListItem graph={graph} />}
-              </For>
-            </List>
-          )}
-          onFailure={() => (
-            <Alert variant="warning">
-              <AlertDescription>Failed to load graphs.</AlertDescription>
-            </Alert>
-          )}
-          onInitial={() => (
-            <List>
+        <List>
+          <For
+            each={localGraphs}
+            fallback={
               <ListItem dashed class="px-4 py-3 text-sm text-fg-subtle">
-                Loading graphs...
+                No graphs yet.
               </ListItem>
-            </List>
-          )}
-        />
+            }
+          >
+            {(graph) => <GraphListItem graph={graph} />}
+          </For>
+        </List>
 
         <MatchAsyncResult
           when={openCloudGraphResult()}

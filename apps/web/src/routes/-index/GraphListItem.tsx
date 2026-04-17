@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/button";
 import { ListItem } from "../../components/ui/list";
 import { cx } from "../../lib/cva";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
+import { RenameGraphDialog } from "./RenameGraphDialog";
 import { UploadGraphDialog } from "./UploadGraphDialog";
 
 type Props = {
@@ -29,6 +30,9 @@ export function GraphListItem(props: Props) {
       </Link>
 
       <Show when={props.graph.mode === "local"}>
+        <RenameGraphDialog<typeof Button> graph={props.graph} as={Button} variant="ghost" size="sm">
+          Rename
+        </RenameGraphDialog>
         <UploadGraphDialog<typeof Button> graph={props.graph} as={Button} variant="ghost" size="sm">
           Upload
         </UploadGraphDialog>

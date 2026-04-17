@@ -21,6 +21,7 @@ const BaseLayer = SqliteClient.layer({
     return worker;
   }),
   initMessage: { dbName: REGISTRY_DATABASE_PATH },
+  installReactivityHooks: true,
 });
 
 export const Layer = EffectLayer.unwrap(

@@ -1,6 +1,6 @@
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 import { nanoid } from "nanoid";
-import { Array, Cause, Effect, Exit, flow, Option, Stream } from "effect";
+import { Array, Cause, Effect, Exit, flow, Option, Stream, Schema as S } from "effect";
 import * as Schema from "./schema";
 import * as Errors from "./errors";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
@@ -101,6 +101,31 @@ export const updateGraph = SqlSchema.findOne({
   }),
 });
 
+export const renameGraph = SqlSchema.findOne({
+  Request: S.Struct({
+    localGraphId: S.String,
+    displayName: S.String,
+  }),
+  Result: Schema.Record,
+  execute: Effect.fn("LocalRegistryRepo.renameGraph.execute")(function* ({
+    localGraphId,
+    displayName,
+  }) {
+    const sql = yield* SqlClient.SqlClient;
+
+    return yield* sql`
+      UPDATE graphs
+      SET displayName = ${displayName}
+      WHERE localGraphId = ${localGraphId}
+      RETURNING localGraphId, displayName, mode, graphId, accountId, graphKeyEnvelope
+    `.pipe(
+      Effect.catchTag("SqlError", (error) =>
+        Effect.fail(Errors.remapDisplayNameSqlError(error, displayName)),
+      ),
+    );
+  }),
+});
+
 export const getGraphByGraphId = Effect.fn("LocalRegistryRepo.getGraphByGraphId")(function* (
   graphId: string,
 ) {
@@ -180,21 +205,17 @@ export const createCloudGraph = Effect.fn("LocalRegistryRepo.createCloudGraph")(
   return head.value;
 });
 
-export function reactiveListGraph() {
-  return Stream.unwrap(
-    Effect.gen(function* () {
-      const sql = yield* SqlClient.SqlClient;
+export const reactiveListGraph = Effect.fn("LocalRegistryRepo.reactiveListGraph")(function* () {
+  const sql = yield* SqlClient.SqlClient;
 
-      return sql
-        .reactive(
-          ["graphs"],
-          sql<Schema.RawRecord>`
-            SELECT localGraphId, displayName, mode, graphId, accountId, graphKeyEnvelope
-            FROM graphs
-            ORDER BY displayName ASC
-          `,
-        )
-        .pipe(Stream.mapEffect((rows) => Schema.decodeArray(rows)));
-    }),
-  );
-}
+  return sql
+    .reactive(
+      ["graphs"],
+      sql<Schema.RawRecord>`
+        SELECT localGraphId, displayName, mode, graphId, accountId, graphKeyEnvelope
+        FROM graphs
+        ORDER BY displayName ASC
+      `,
+    )
+    .pipe(Stream.mapEffect((rows) => Schema.decodeArray(rows)));
+}, Stream.unwrap);
