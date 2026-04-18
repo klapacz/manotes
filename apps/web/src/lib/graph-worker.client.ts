@@ -26,11 +26,9 @@ type GraphSharedRpcClient = RpcClient.RpcClient<
  */
 const createDedicatedWorker = Effect.fn("GraphWorkerClient.createDedicatedWorker")(function* ({
   localGraphId,
-  displayName,
   graphSyncConfig,
 }: {
   localGraphId: string;
-  displayName: string;
   graphSyncConfig: GraphSyncConfig.GraphSyncConfig;
 }) {
   // Create MessageChannel - ports will be distributed to both workers.
@@ -82,7 +80,6 @@ const createDedicatedWorker = Effect.fn("GraphWorkerClient.createDedicatedWorker
       new GraphDedicatedInitialMessage({
         port: mc.port1,
         localGraphId,
-        displayName,
         graphSyncConfig,
       }),
     ),
@@ -172,7 +169,6 @@ export class Service extends ServiceMap.Service<Service>()("GraphWorkerClient.Se
       // We're the leader - setup worker in the background (it doesn't have to be available right away)
       yield* becomeLeader(sharedClient, {
         localGraphId,
-        displayName: config.displayName,
         graphSyncConfig,
       }).pipe(Effect.forkScoped);
 
@@ -186,7 +182,6 @@ export class Service extends ServiceMap.Service<Service>()("GraphWorkerClient.Se
 
       yield* becomeLeader(sharedClient, {
         localGraphId,
-        displayName: config.displayName,
         graphSyncConfig,
       });
     }).pipe(Effect.forkScoped);
@@ -204,7 +199,6 @@ const becomeLeader = Effect.fn("GraphWorkerClient.becomeLeader")(function* (
   sharedClient: GraphSharedRpcClient,
   config: {
     localGraphId: string;
-    displayName: string;
     graphSyncConfig: GraphSyncConfig.GraphSyncConfig;
   },
 ) {

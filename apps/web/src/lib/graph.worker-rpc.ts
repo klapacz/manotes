@@ -81,6 +81,5 @@ export class GraphDedicatedInitialMessage extends Schema.Class<GraphDedicatedIni
 )({
   port: Transferable.MessagePort,
   localGraphId: Schema.String,
-  displayName: Schema.String,
   graphSyncConfig: GraphSyncConfig.GraphSyncConfigSchema,
 }) {}

@@ -40,7 +40,6 @@ export class Config extends ServiceMap.Service<
   Config,
   {
     localGraphId: string;
-    displayName: string;
     databasePath: string;
   }
 >()("DB.Config") {}

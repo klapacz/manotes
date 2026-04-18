@@ -31,7 +31,6 @@ const makeMigratedDatabaseLayer = Effect.fnUntraced(function* (opts: SetupOpts) 
     DB.Config,
     DB.Config.of({
       localGraphId: opts.localGraphId,
-      displayName: opts.displayName,
       databasePath: `${opts.localGraphId}.sqlite3`,
     }),
   );

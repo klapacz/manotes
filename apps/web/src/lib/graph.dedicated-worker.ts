@@ -33,7 +33,7 @@ const bootstrapEffect = Effect.gen(function* () {
     yield* Effect.scope,
   );
 
-  const { port, localGraphId, displayName, graphSyncConfig } = yield* RpcWorker.initialMessage(
+  const { port, localGraphId, graphSyncConfig } = yield* RpcWorker.initialMessage(
     GraphDedicatedInitialMessage,
   ).pipe(Effect.provideServices(bootstrapServices));
 
@@ -43,7 +43,6 @@ const bootstrapEffect = Effect.gen(function* () {
   // Build the service layer for the RPC server
   const serviceLayer = buildServiceLayer({
     localGraphId,
-    displayName,
     graphSyncConfig,
   });
 
@@ -150,14 +149,12 @@ function makeRpcHandler(localGraphId: string, graphSyncConfig: GraphSyncConfig.G
 /** Builds the service layer for a specific graph. */
 function buildServiceLayer(opts: {
   localGraphId: string;
-  displayName: string;
   graphSyncConfig: GraphSyncConfig.GraphSyncConfig;
 }) {
   const ConfigLayer = Layer.succeed(
     DB.Config,
     DB.Config.of({
       localGraphId: opts.localGraphId,
-      displayName: opts.displayName,
       databasePath: `${opts.localGraphId}.sqlite3`,
     }),
   );
