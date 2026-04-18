@@ -24,3 +24,20 @@ export const getFileHandleFromOpfsRoot = Effect.fn("getFileHandleFromOpfsRoot")(
     },
   });
 });
+
+export const removeFileFromOpfsRoot = Effect.fn("removeFileFromOpfsRoot")(function* (
+  fileName: string,
+) {
+  return yield* Effect.tryPromise({
+    async try() {
+      const opfsRoot = await navigator.storage.getDirectory();
+      await opfsRoot.removeEntry(fileName);
+    },
+    catch(cause) {
+      if (cause instanceof DOMException && cause.name === "NotFoundError") {
+        return new NotFoundError({ cause });
+      }
+      return new Error({ cause });
+    },
+  });
+});
