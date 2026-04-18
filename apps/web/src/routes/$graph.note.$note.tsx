@@ -4,6 +4,7 @@ import { createSignal, Show } from "solid-js";
 import { WindowVirtualizer } from "virtua/solid";
 import Editor, { type BootState } from "../editor";
 import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
+import * as GraphRuntimeRouter from "../lib/graph-access/graph-runtime/router";
 import * as NoteRepo from "../lib/note.repo";
 import {
   BacklinkSnippet,
@@ -14,8 +15,9 @@ import {
 } from "../components/incoming-backlinks";
 
 export const Route = createFileRoute("/$graph/note/$note")({
-  loader: async ({ context, params }) => {
-    const note = await context.runtime.rt.runPromise(
+  loader: async ({ params }) => {
+    const note = await GraphRuntimeRouter.runPromiseOrRedirect(
+      params.graph,
       NoteRepo.Service.use((repo) => repo.findById(params.note)),
     );
 
@@ -31,7 +33,8 @@ export const Route = createFileRoute("/$graph/note/$note")({
       });
     }
 
-    await context.runtime.rt.runPromise(
+    await GraphRuntimeRouter.runPromiseOrRedirect(
+      params.graph,
       EditorNoteBootCache.Service.use((cache) => cache.preload(params.note)),
     );
 

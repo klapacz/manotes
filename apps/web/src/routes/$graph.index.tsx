@@ -5,6 +5,7 @@ import { Temporal } from "temporal-polyfill";
 import * as TemporalSchema from "../lib/temporal.schema";
 import * as TemporalUtils from "../lib/temporal/utils";
 import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
+import * as GraphRuntimeRouter from "../lib/graph-access/graph-runtime/router";
 import {
   IncomingBacklinksFetcher,
   IncomingBacklinksSection,
@@ -17,20 +18,22 @@ export const Route = createFileRoute("/$graph/")({
   component: RouteComponent,
   loaderDeps: ({ search: { date } }) => ({ date }),
   remountDeps: () => [],
-  loader: async ({ context, deps }) => {
+  loader: async ({ params, deps }) => {
     const selectedDate = Temporal.PlainDate.from(deps.date);
     const previousDate = selectedDate.subtract({ days: 1 }).toString();
     const nextDate = selectedDate.add({ days: 1 }).toString();
     const currentDate = selectedDate.toString();
 
-    await context.runtime.rt.runPromise(
+    await GraphRuntimeRouter.runPromiseOrRedirect(
+      params.graph,
       Effect.gen(function* () {
         const noteBootCache = yield* EditorNoteBootCache.Service;
         yield* noteBootCache.preload(currentDate);
       }),
     );
 
-    void context.runtime.rt.runPromiseExit(
+    void GraphRuntimeRouter.runPromiseExitOrRedirect(
+      params.graph,
       Effect.gen(function* () {
         const noteBootCache = yield* EditorNoteBootCache.Service;
 
