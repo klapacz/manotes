@@ -1,4 +1,4 @@
-import { Data, Effect, Option, Stream, Types } from "effect";
+import { Data, Effect, Option, Result, Stream, Types } from "effect";
 import * as KeyStoreService from "../key-store/service";
 import * as LocalRegistry from "../local-registry";
 import type { SchemaError } from "effect/Schema";
@@ -21,20 +21,17 @@ export const find = Effect.fn("GraphAccessResolution.find")(function* (localGrap
   const keyStore = yield* KeyStoreService.Service;
   const recordOption = yield* LocalRegistry.Repo.getGraph(localGraphId);
 
-  return yield* Option.match(recordOption, {
-    onNone: () => Effect.succeed(Resolution.Missing()),
-    onSome: (record) => {
-      if (record.mode === "local") return Effect.succeed(Resolution.Local({ record }));
-
-      return keyStore.get(record.graphKeyEnvelope).pipe(
+  return yield* Result.match(resolveWithoutKeyLookup(recordOption), {
+    onSuccess: Effect.succeed,
+    onFailure: (record) =>
+      keyStore.get(record.graphKeyEnvelope).pipe(
         Effect.map(
           Option.match({
             onNone: () => Resolution.CloudLocked({ record }),
             onSome: (graphKey) => Resolution.CloudUnlocked({ record, graphKey }),
           }),
         ),
-      );
-    },
+      ),
   });
 });
 
@@ -45,11 +42,9 @@ export const findReactive = Effect.fn("GraphAccessResolution.findReactive")(func
 
   return LocalRegistry.Repo.findGraphReactive(localGraphId).pipe(
     Stream.switchMap((option): Stream.Stream<Resolution, SchemaError, never> => {
-      return Option.match(option, {
-        onNone: () => Stream.succeed(Resolution.Missing()),
-        onSome: (record) => {
-          if (record.mode === "local") return Stream.succeed(Resolution.Local({ record }));
-
+      return Result.match(resolveWithoutKeyLookup(option), {
+        onSuccess: Stream.succeed,
+        onFailure: (record) => {
           return keyStore.changes(record.graphKeyEnvelope).pipe(
             Stream.unwrap,
             Stream.map(
@@ -64,3 +59,21 @@ export const findReactive = Effect.fn("GraphAccessResolution.findReactive")(func
     }),
   );
 }, Stream.unwrap);
+
+type ResolveWithoutKeyLookupResult = Result.Result<
+  Types.ExtractTag<Resolution, "Missing" | "Local">,
+  LocalRegistry.Schema.CloudRecord
+>;
+
+// Resolve states that do not need any key-store lookup first.
+// Missing, deleting, and local graphs are final here. Only active cloud graphs
+// are returned in the failure channel so callers can continue with key lookup.
+const resolveWithoutKeyLookup = (
+  option: Option.Option<LocalRegistry.Schema.Record>,
+): ResolveWithoutKeyLookupResult => {
+  if (Option.isNone(option)) return Result.succeed(Resolution.Missing());
+  const record = option.value;
+  if (record.status === "deleting") return Result.succeed(Resolution.Missing());
+  if (record.mode === "local") return Result.succeed(Resolution.Local({ record }));
+  return Result.fail(record);
+};
