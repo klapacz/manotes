@@ -1,4 +1,4 @@
-import { Effect, HashMap, Layer, Schema, ServiceMap, Stream, SubscriptionRef } from "effect";
+import { Effect, HashMap, Layer, Schema, Context, Stream, SubscriptionRef } from "effect";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 
 type GraphKeyId = string;
@@ -9,7 +9,7 @@ const encodeWrappedGraphKey = Schema.encodeEffect(Schema.Uint8ArrayFromBase64);
 const toGraphKeyId = (envelope: GraphEncryption.GraphKeyEnvelope) =>
   encodeWrappedGraphKey(envelope.wrappedGraphKey);
 
-export class Service extends ServiceMap.Service<Service>()("GraphAccess.KeyStore.Service", {
+export class Service extends Context.Service<Service>()("GraphAccess.KeyStore.Service", {
   make: Effect.gen(function* () {
     const ref = yield* SubscriptionRef.make<HashMap.HashMap<GraphKeyId, UnwrappedGraphKey>>(
       HashMap.empty(),

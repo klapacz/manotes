@@ -1,4 +1,4 @@
-import { Chunk, Data, Deferred, Effect, Layer, pipe, Queue, ServiceMap, Stream } from "effect";
+import { Chunk, Data, Deferred, Effect, Layer, pipe, Queue, Context, Stream } from "effect";
 import * as Y from "yjs";
 import * as EventRepo from "./event.repo";
 import { Array, DateTime, Option } from "effect";
@@ -18,7 +18,7 @@ export type SetupInput = {
   isDaily: boolean;
 };
 
-export class Service extends ServiceMap.Service<Service>()("EditorSyncService.Service", {
+export class Service extends Context.Service<Service>()("EditorSyncService.Service", {
   make: Effect.gen(function* () {
     const eventRepo = yield* EventRepo.Service;
     const noteBootCache = yield* EditorNoteBootCache.Service;

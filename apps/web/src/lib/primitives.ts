@@ -185,14 +185,14 @@ export function createAtomStore<A extends object, E>(
 
 export function createAtomState<A>(initialValue: A) {
   const atom = Atom.make(initialValue);
-  const [value, setValue] = useAtom(atom);
+  const [value, setValue] = useAtom(() => atom);
 
   return [value, setValue, atom] as const;
 }
 
 export function createSyncedAtom<A>(source: Accessor<A>) {
   const atom = Atom.make(source());
-  const setAtom = useAtomSet(atom);
+  const setAtom = useAtomSet(() => atom);
 
   createEffect(
     on(

@@ -1,4 +1,4 @@
-import { Effect, Layer, ServiceMap } from "effect";
+import { Effect, Layer, Context } from "effect";
 import * as LocalRegistry from "../local-registry";
 
 export type RenameGraphInput = {
@@ -6,7 +6,7 @@ export type RenameGraphInput = {
   displayName: string;
 };
 
-export class Service extends ServiceMap.Service<Service>()("GraphAccess.Commands.Rename.Service", {
+export class Service extends Context.Service<Service>()("GraphAccess.Commands.Rename.Service", {
   make: Effect.succeed({
     renameGraph: Effect.fn("GraphAccessCommandsRename.renameGraph")(function* ({
       localGraphId,

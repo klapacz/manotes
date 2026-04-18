@@ -31,7 +31,7 @@ type Props<T extends ValidComponent = typeof Button> = {
 
 export function UploadGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
   const [open, setOpen] = createSignal(false);
-  const [uploadGraphResult, uploadGraph] = useAtom(GraphAccessCommands.Atom.upload, {
+  const [uploadGraphResult, uploadGraph] = useAtom(() => GraphAccessCommands.Atom.upload, {
     mode: "promise",
   });
   const [local, triggerProps] = splitProps(props as Props, ["graph"]);

@@ -47,7 +47,7 @@ const CreateGraphFormSchema = Schema.Struct({
 }).pipe(Schema.toStandardSchemaV1);
 
 function RouteComponent() {
-  const [createGraphResult, createGraph] = useAtom(createGraphAtom, { mode: "promise" });
+  const [createGraphResult, createGraph] = useAtom(() => createGraphAtom, { mode: "promise" });
   const form = useAppForm(() => ({
     defaultValues: {
       displayName: "",

@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
 import * as Worker from "../../http/worker";
 import * as AuthErrors from "../errors";
@@ -17,7 +17,7 @@ type ResolveIdentity = () => Effect.Effect<
   Worker.Env | HttpServerRequest.HttpServerRequest
 >;
 
-export class Service extends ServiceMap.Service<Service, { readonly resolve: ResolveIdentity }>()(
+export class Service extends Context.Service<Service, { readonly resolve: ResolveIdentity }>()(
   "Worker.AuthIdentity",
 ) {
   static readonly layer = Layer.succeed(this, {

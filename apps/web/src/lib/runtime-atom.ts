@@ -109,11 +109,11 @@ export function makeRtAtomFactory<R, ER>(getRt: RuntimeGetter<R, ER>) {
       options?: AtomOptions<A>,
     ): RuntimeAtomRead<A, E | ER | Cause.NoSuchElementError, R, ER>;
     <A, E>(
-      create: (get: Atom.Context) => Effect.Effect<A, E, RuntimeRequirements<R>>,
+      create: (get: Atom.AtomContext) => Effect.Effect<A, E, RuntimeRequirements<R>>,
       options?: AtomOptions<A>,
     ): RuntimeAtomRead<A, E | ER, R, ER>;
     <A, E>(
-      create: (get: Atom.Context) => Stream.Stream<A, E, StreamRequirements<R>>,
+      create: (get: Atom.AtomContext) => Stream.Stream<A, E, StreamRequirements<R>>,
       options?: AtomOptions<A>,
     ): RuntimeAtomRead<A, E | ER | Cause.NoSuchElementError, R, ER>;
   } = <A, E>(
@@ -121,7 +121,7 @@ export function makeRtAtomFactory<R, ER>(getRt: RuntimeGetter<R, ER>) {
       | Effect.Effect<A, E, RuntimeRequirements<R>>
       | Stream.Stream<A, E, StreamRequirements<R>>
       | ((
-          get: Atom.Context,
+          get: Atom.AtomContext,
         ) =>
           | Effect.Effect<A, E, RuntimeRequirements<R>>
           | Stream.Stream<A, E, StreamRequirements<R>>),
@@ -152,14 +152,14 @@ export function makeRtAtomFactory<R, ER>(getRt: RuntimeGetter<R, ER>) {
     ): RuntimeAtomSubscriptionRef<A, E | ER, R, ER>;
     <A, E>(
       create: (
-        get: Atom.Context,
+        get: Atom.AtomContext,
       ) => Effect.Effect<SubscriptionRef.SubscriptionRef<A>, E, RuntimeRequirements<R>>,
     ): RuntimeAtomSubscriptionRef<A, E | ER, R, ER>;
   } = <A, E>(
     create:
       | Effect.Effect<SubscriptionRef.SubscriptionRef<A>, E, RuntimeRequirements<R>>
       | ((
-          get: Atom.Context,
+          get: Atom.AtomContext,
         ) => Effect.Effect<SubscriptionRef.SubscriptionRef<A>, E, RuntimeRequirements<R>>),
   ) => {
     // Subscription refs are used for long-lived mutable session state. Keeping a
@@ -189,13 +189,13 @@ export function makeRtAtomFactory<R, ER>(getRt: RuntimeGetter<R, ER>) {
       options?: PullOptions<A>,
     ): RuntimeAtomPull<A, E | ER, R, ER>;
     <A, E>(
-      create: (get: Atom.Context) => Stream.Stream<A, E, StreamRequirements<R>>,
+      create: (get: Atom.AtomContext) => Stream.Stream<A, E, StreamRequirements<R>>,
       options?: PullOptions<A>,
     ): RuntimeAtomPull<A, E | ER, R, ER>;
   } = <A, E>(
     create:
       | Stream.Stream<A, E, StreamRequirements<R>>
-      | ((get: Atom.Context) => Stream.Stream<A, E, StreamRequirements<R>>),
+      | ((get: Atom.AtomContext) => Stream.Stream<A, E, StreamRequirements<R>>),
     options?: PullOptions<A>,
   ) => {
     // Pull atoms are imperative, but they still need the same per-runtime

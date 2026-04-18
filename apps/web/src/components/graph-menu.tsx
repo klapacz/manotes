@@ -62,7 +62,7 @@ const GraphMenuIdentity = (props: { graph: LocalRegistry.Schema.Record }) => {
 export const GraphMenu = () => {
   const graph = useGraph();
   const [exportBackupResult, exportBackup] = RtAtom.use(ExportBackup, { mode: "promise" });
-  const [lockGraphResult, lockGraph] = useAtom(LockGraph, { mode: "promise" });
+  const [lockGraphResult, lockGraph] = useAtom(() => LockGraph, { mode: "promise" });
 
   const cloudGraph = () => {
     const record = graph().record;

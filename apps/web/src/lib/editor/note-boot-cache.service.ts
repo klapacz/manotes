@@ -1,4 +1,4 @@
-import { Effect, Layer, Option, RcMap, ServiceMap, Stream } from "effect";
+import { Effect, Layer, Option, RcMap, Context, Stream } from "effect";
 import * as NoteRepo from "../note.repo";
 import * as NoteSchema from "../note.schema";
 import * as BacklinkService from "../materializer/backlink/service";
@@ -10,7 +10,7 @@ export type NoteBoot = Pick<
 
 const ENTRY_IDLE_TTL = "5 seconds";
 
-export class Service extends ServiceMap.Service<Service>()("EditorNoteBootCache.Service", {
+export class Service extends Context.Service<Service>()("EditorNoteBootCache.Service", {
   make: Effect.gen(function* () {
     const noteRepo = yield* NoteRepo.Service;
     const backlinkService = yield* BacklinkService.Service;

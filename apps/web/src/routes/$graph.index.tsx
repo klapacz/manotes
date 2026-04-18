@@ -48,7 +48,7 @@ export const Route = createFileRoute("/$graph/")({
   },
   validateSearch: Schema.Struct({
     date: TemporalSchema.PlainDateString.pipe(
-      Schema.withDecodingDefault(() => Temporal.Now.plainDateISO().toString()),
+      Schema.withDecodingDefault(Effect.sync(() => Temporal.Now.plainDateISO().toString())),
     ),
   }).pipe(Schema.toStandardSchemaV1),
 });

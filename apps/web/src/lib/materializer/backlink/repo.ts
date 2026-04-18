@@ -1,10 +1,10 @@
-import { Effect, Layer, ServiceMap, Stream } from "effect";
+import { Effect, Layer, Context, Stream } from "effect";
 import { desc, eq, sql } from "drizzle-orm";
 import * as DB from "../../db.service";
 import * as Tables from "../../db.tables";
 import * as BacklinkSchema from "./schema";
 
-export class Service extends ServiceMap.Service<Service>()("Materializer.BacklinkRepo.Service", {
+export class Service extends Context.Service<Service>()("Materializer.BacklinkRepo.Service", {
   make: Effect.gen(function* () {
     const db = yield* DB.Service;
 

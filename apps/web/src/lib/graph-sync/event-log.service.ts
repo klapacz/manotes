@@ -1,7 +1,7 @@
 /**
  * Wraps local event-log reads and writes used by graph sync.
  */
-import { Array, Effect, Layer, Option, pipe, ServiceMap } from "effect";
+import { Array, Effect, Layer, Option, pipe, Context } from "effect";
 import * as DB from "../db.service";
 import * as EventRepo from "../event.repo";
 import * as Messages from "@manotes/shared/graph-sync/contract/messages";
@@ -13,7 +13,7 @@ import type { NonEmptyReadonlyArray } from "effect/Array";
 
 export const PUSH_BATCH_SIZE = MAX_EVENTS_PER_COMMIT;
 
-export class Service extends ServiceMap.Service<Service>()("GraphSyncEventLogService", {
+export class Service extends Context.Service<Service>()("GraphSyncEventLogService", {
   make: Effect.gen(function* () {
     const db = yield* DB.Service;
     const eventRepo = yield* EventRepo.Service;

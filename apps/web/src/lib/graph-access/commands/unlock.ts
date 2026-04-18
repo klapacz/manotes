@@ -1,4 +1,4 @@
-import { Effect, Layer, ServiceMap } from "effect";
+import { Effect, Layer, Context } from "effect";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import * as KeyStoreService from "../key-store/service";
 import * as LocalRegistry from "../local-registry";
@@ -8,7 +8,7 @@ export type UnlockCloudGraphInput = {
   password: string;
 };
 
-export class Service extends ServiceMap.Service<Service>()("GraphAccess.Commands.Unlock.Service", {
+export class Service extends Context.Service<Service>()("GraphAccess.Commands.Unlock.Service", {
   make: Effect.gen(function* () {
     const keyStore = yield* KeyStoreService.Service;
 

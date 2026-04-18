@@ -1,4 +1,4 @@
-import { Data, Effect, Layer, ServiceMap } from "effect";
+import { Data, Effect, Layer, Context } from "effect";
 import { castArray } from "@manotes/shared/graph-encryption";
 import * as GraphSyncContext from "../context";
 import * as EncryptionSchema from "./schema";
@@ -15,7 +15,7 @@ export class InvalidEncryptedEventError extends Data.TaggedError(
   "GraphSyncEncryption.InvalidEncryptedEventError",
 )<{ cause: unknown }> {}
 
-export class Service extends ServiceMap.Service<Service>()("GraphSyncEncryption.Service", {
+export class Service extends Context.Service<Service>()("GraphSyncEncryption.Service", {
   make: Effect.gen(function* () {
     const context = yield* GraphSyncContext.Context;
     const graphKey = castArray(context.graphKey);

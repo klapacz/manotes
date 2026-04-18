@@ -1,4 +1,4 @@
-import { Effect, Layer, Option, ServiceMap } from "effect";
+import { Effect, Layer, Option, Context } from "effect";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import * as GraphAccessErrors from "../errors";
 import * as KeyStoreService from "../key-store/service";
@@ -15,7 +15,7 @@ export type DetachInput = {
   localGraphId: string;
 };
 
-export class Service extends ServiceMap.Service<Service>()("GraphAccess.Commands.Sync.Service", {
+export class Service extends Context.Service<Service>()("GraphAccess.Commands.Sync.Service", {
   make: Effect.gen(function* () {
     const keyStore = yield* KeyStoreService.Service;
 

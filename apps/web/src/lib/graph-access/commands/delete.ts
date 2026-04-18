@@ -1,4 +1,4 @@
-import { Data, Effect, Layer, ServiceMap } from "effect";
+import { Data, Effect, Layer, Context } from "effect";
 
 import * as OPFS from "../../opfs.service";
 import * as GraphRuntime from "../graph-runtime";
@@ -9,7 +9,7 @@ export class LockTimeout extends Data.TaggedError("GraphAccessCommandsDelete.Loc
   localGraphId: string;
 }> {}
 
-export class Service extends ServiceMap.Service<Service>()("GraphAccess.Commands.Delete.Service", {
+export class Service extends Context.Service<Service>()("GraphAccess.Commands.Delete.Service", {
   make: Effect.gen(function* () {
     const runtimeManager = yield* GraphRuntime.Manager.Service;
 

@@ -1,4 +1,4 @@
-import { Schema, ServiceMap } from "effect";
+import { Schema, Context } from "effect";
 
 export const GraphSyncConfigSchema = Schema.Union([
   Schema.Struct({
@@ -13,4 +13,4 @@ export const GraphSyncConfigSchema = Schema.Union([
 
 export type GraphSyncConfig = Schema.Schema.Type<typeof GraphSyncConfigSchema>;
 
-export class Config extends ServiceMap.Service<Config, GraphSyncConfig>()("GraphSync.Config") {}
+export class Config extends Context.Service<Config, GraphSyncConfig>()("GraphSync.Config") {}

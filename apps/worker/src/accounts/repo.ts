@@ -2,7 +2,7 @@ import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as S from "effect/Schema";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import { nanoid } from "nanoid";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";
@@ -10,7 +10,7 @@ import * as Schema from "./schema";
 
 const ACCOUNT_ID_LENGTH = 12;
 
-export class Service extends ServiceMap.Service<Service>()("AccountsRepo.Service", {
+export class Service extends Context.Service<Service>()("AccountsRepo.Service", {
   make: Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
 

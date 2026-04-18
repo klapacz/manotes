@@ -24,7 +24,7 @@ type Props<T extends ValidComponent = typeof Button> = {
 
 export function DeleteGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
   const [open, setOpen] = createSignal(false);
-  const [deleteResult, deleteLocalGraph] = useAtom(GraphAccessCommands.Atom.deleteLocal, {
+  const [deleteResult, deleteLocalGraph] = useAtom(() => GraphAccessCommands.Atom.deleteLocal, {
     mode: "promise",
   });
   const [local, triggerProps] = splitProps(props as Props, ["graph"]);

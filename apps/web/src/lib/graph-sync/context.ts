@@ -1,6 +1,6 @@
-import { ServiceMap } from "effect";
+import { Context as C } from "effect";
 
-export class Context extends ServiceMap.Service<
+export class Context extends C.Service<
   Context,
   {
     readonly graphId: string;

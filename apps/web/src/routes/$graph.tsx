@@ -22,7 +22,7 @@ function RouteComponent() {
     ),
   );
 
-  const state = useAtomValue(stateAtom);
+  const state = useAtomValue(() => stateAtom);
 
   return (
     <MatchAsyncResult

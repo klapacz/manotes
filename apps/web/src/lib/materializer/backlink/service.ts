@@ -1,4 +1,4 @@
-import { Effect, Layer, ServiceMap, Stream } from "effect";
+import { Effect, Layer, Context, Stream } from "effect";
 import type { UnknownNodeJSON } from "../../node-json";
 import { buildBacklinkPreviewDoc } from "./preview";
 import { collectBacklinkTargetIds } from "./target";
@@ -12,7 +12,7 @@ export type IncomingBacklinkPreview = {
   preview: UnknownNodeJSON;
 };
 
-export class Service extends ServiceMap.Service<Service>()("Materializer.Backlink.Service", {
+export class Service extends Context.Service<Service>()("Materializer.Backlink.Service", {
   make: Effect.gen(function* () {
     const repo = yield* Repo.Service;
 

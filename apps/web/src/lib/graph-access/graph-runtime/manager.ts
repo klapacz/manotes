@@ -7,7 +7,7 @@ import {
   Option,
   SynchronizedRef,
   Stream,
-  ServiceMap,
+  Context,
   Match,
 } from "effect";
 import * as Resolution from "../resolution/service";
@@ -27,7 +27,7 @@ export type State = Data.TaggedEnum<{
 }>;
 export const State = Data.taggedEnum<State>();
 
-export class Service extends ServiceMap.Service<Service>()("GraphAccess.GraphRuntime.Manager", {
+export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntime.Manager", {
   make: Effect.gen(function* () {
     type Entry = { fingerprint: Fingerprint.Fingerprint; runtime: Runtime };
     const ref = yield* SynchronizedRef.make(HashMap.empty<string, Entry>());

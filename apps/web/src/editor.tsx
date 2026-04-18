@@ -88,7 +88,7 @@ export default function Editor(props: Props): JSX.Element {
   });
 
   const editorBootStateAtom = RtAtom.subscriptionRef(
-    Effect.fn("Editor.bootState")(function* (get: Atom.Context) {
+    Effect.fn("Editor.bootState")(function* (get: Atom.AtomContext) {
       const { doc, noteId, isDaily } = get(editorStateAtom);
       yield* Effect.addFinalizer(() => Effect.sync(() => doc.destroy()));
 

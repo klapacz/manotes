@@ -1,3 +1,3 @@
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 
-export class Env extends ServiceMap.Service<Env, globalThis.Env>()("Worker.Env") {}
+export class Env extends Context.Service<Env, globalThis.Env>()("Worker.Env") {}

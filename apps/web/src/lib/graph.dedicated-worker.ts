@@ -36,7 +36,7 @@ const bootstrapEffect = Effect.gen(function* () {
 
   const { port, localGraphId, graphSyncConfig } = yield* RpcWorker.initialMessage(
     GraphDedicatedInitialMessage,
-  ).pipe(Effect.provideServices(bootstrapServices));
+  ).pipe(Effect.provideContext(bootstrapServices));
 
   yield* Effect.annotateLogsScoped({ worker: "dedicated", localGraphId });
   yield* Effect.logInfo("Received port");

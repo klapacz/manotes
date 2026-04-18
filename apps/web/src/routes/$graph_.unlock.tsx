@@ -50,9 +50,12 @@ export const Route = createFileRoute("/$graph_/unlock")({
 function RouteComponent() {
   const data = Route.useLoaderData();
 
-  const [unlockGraphResult, unlockGraph] = useAtom(GraphAccessCommands.Atom.unlockCloudGraph, {
-    mode: "promise",
-  });
+  const [unlockGraphResult, unlockGraph] = useAtom(
+    () => GraphAccessCommands.Atom.unlockCloudGraph,
+    {
+      mode: "promise",
+    },
+  );
   const form = useAppForm(() => ({
     defaultValues: {
       password: "",

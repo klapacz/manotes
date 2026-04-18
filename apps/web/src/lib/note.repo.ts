@@ -1,4 +1,4 @@
-import { Array, Effect, flow, Layer, Option, pipe, Schema, ServiceMap, Stream } from "effect";
+import { Array, Effect, flow, Layer, Option, pipe, Schema, Context, Stream } from "effect";
 import * as DB from "./db.service";
 import * as NoteSchema from "./note.schema";
 import * as Tables from "./db.tables";
@@ -10,7 +10,7 @@ const decodeRecordArray = Schema.decodeEffect(Schema.Array(NoteSchema.Record));
 const decodePreview = Schema.decodeEffect(NoteSchema.Preview);
 const decodePreviewArray = Schema.decodeEffect(Schema.Array(NoteSchema.Preview));
 
-export class Service extends ServiceMap.Service<Service>()("NoteRepo.Service", {
+export class Service extends Context.Service<Service>()("NoteRepo.Service", {
   make: Effect.gen(function* () {
     const db = yield* DB.Service;
 

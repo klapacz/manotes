@@ -1,4 +1,4 @@
-import { Effect, Layer, References, ServiceMap } from "effect";
+import { Effect, Layer, References, Context } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import * as SqliteClient from "@manotes/sql-sqlite-wasm/sqlite-client";
 import * as DB from "../../db.service";
@@ -39,9 +39,9 @@ const makeMigratedDatabaseLayer = Effect.fnUntraced(function* (opts: SetupOpts) 
 
   yield* Migrator.migrate.pipe(Effect.provide(context));
 
-  return Layer.succeedServices(
+  return Layer.succeedContext(
     context.pipe(
-      ServiceMap.pick(DB.Config, DB.Service, SqliteClient.SqliteClient, SqlClient.SqlClient),
+      Context.pick(DB.Config, DB.Service, SqliteClient.SqliteClient, SqlClient.SqlClient),
     ),
   );
 }, Layer.unwrap);

@@ -1,4 +1,4 @@
-import { Data, Effect, Layer, Option, ServiceMap } from "effect";
+import { Data, Effect, Layer, Option, Context } from "effect";
 
 import type { RunnableQuery as DrizzleQuery } from "drizzle-orm/runnable-query";
 
@@ -36,7 +36,7 @@ export class Error extends Data.TaggedError("DB.Error")<{ cause: unknown }> {}
 
 export class NotFoundError extends Data.TaggedError("DB.NotFoundError")<{}> {}
 
-export class Config extends ServiceMap.Service<
+export class Config extends Context.Service<
   Config,
   {
     localGraphId: string;
@@ -44,7 +44,7 @@ export class Config extends ServiceMap.Service<
   }
 >()("DB.Config") {}
 
-export class Service extends ServiceMap.Service<Service>()("DB", {
+export class Service extends Context.Service<Service>()("DB", {
   make: Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
 

@@ -45,9 +45,9 @@ const cloudGraphsNotOnDeviceAtom = GraphAccessRuntime.atom.atom(
 
 function RouteComponent() {
   const localGraphs = createAtomStore(() => localGraphsAtom, [] as LocalRegistry.Schema.Record[]);
-  const cloudGraphsNotOnDevice = useAtomValue(cloudGraphsNotOnDeviceAtom);
+  const cloudGraphsNotOnDevice = useAtomValue(() => cloudGraphsNotOnDeviceAtom);
   const [openCloudGraphResult, openCloudGraph] = useAtom(
-    GraphAccessCommands.Atom.openCloudOnDevice,
+    () => GraphAccessCommands.Atom.openCloudOnDevice,
   );
 
   return (

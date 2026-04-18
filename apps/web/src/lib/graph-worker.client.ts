@@ -1,5 +1,5 @@
 import { BrowserWorker } from "@effect/platform-browser";
-import { Duration, Effect, Exit, Layer, Schedule, Scope, ServiceMap } from "effect";
+import { Duration, Effect, Exit, Layer, Schedule, Scope, Context } from "effect";
 import { RpcClient, RpcClientError, RpcGroup, RpcWorker } from "effect/unstable/rpc";
 import * as DB from "./db.service";
 import * as GraphSyncConfig from "./graph-sync/config";
@@ -148,7 +148,7 @@ const SharedRpcProtocol = Layer.unwrap(
  * Leader election ensures only one Dedicated Worker exists per graph.
  * Followers use the SharedWorker which forwards to the leader's Dedicated Worker.
  */
-export class Service extends ServiceMap.Service<Service>()("GraphWorkerClient.Service", {
+export class Service extends Context.Service<Service>()("GraphWorkerClient.Service", {
   make: Effect.gen(function* () {
     const config = yield* DB.Config;
     const graphSyncConfig = yield* GraphSyncConfig.Config;

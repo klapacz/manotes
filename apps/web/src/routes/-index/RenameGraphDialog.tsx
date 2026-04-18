@@ -30,7 +30,7 @@ type Props<T extends ValidComponent = typeof Button> = {
 
 export function RenameGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
   const [open, setOpen] = createSignal(false);
-  const [renameGraphResult, renameGraph] = useAtom(GraphAccessCommands.Atom.renameGraph, {
+  const [renameGraphResult, renameGraph] = useAtom(() => GraphAccessCommands.Atom.renameGraph, {
     mode: "promise",
   });
   const [local, triggerProps] = splitProps(props as Props, ["graph"]);

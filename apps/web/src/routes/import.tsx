@@ -38,7 +38,7 @@ const decodeBackupAtom = GraphAccessRuntime.atom.fn(
 );
 
 function RouteComponent() {
-  const decodeBackupResult = useAtomValue(decodeBackupAtom);
+  const decodeBackupResult = useAtomValue(() => decodeBackupAtom);
   const decodedBackup = createMemo(() => {
     const result = decodeBackupResult();
     return AsyncResult.isSuccess(result) ? result.value : null;
@@ -63,7 +63,7 @@ const SelectBackupFileFormSchema = Schema.Struct({
 }).pipe(Schema.toStandardSchemaV1);
 
 function SelectBackupFileForm() {
-  const [decodeBackupResult, decodeBackup] = useAtom(decodeBackupAtom, { mode: "promise" });
+  const [decodeBackupResult, decodeBackup] = useAtom(() => decodeBackupAtom, { mode: "promise" });
 
   const form = useAppForm(() => ({
     defaultValues: {
@@ -128,9 +128,9 @@ const ImportBackupFormSchema = Schema.Struct({
 }).pipe(Schema.toStandardSchemaV1);
 
 function ImportBackupForm(props: { decodedBackup: DecodedBackup }) {
-  const [importBackupResult, importBackup] = useAtom(importBackupAtom, { mode: "promise" });
+  const [importBackupResult, importBackup] = useAtom(() => importBackupAtom, { mode: "promise" });
 
-  const setDecodedBackup = useAtomSet(decodeBackupAtom);
+  const setDecodedBackup = useAtomSet(() => decodeBackupAtom);
   const form = useAppForm(() => ({
     defaultValues: {
       displayName: props.decodedBackup.displayName,

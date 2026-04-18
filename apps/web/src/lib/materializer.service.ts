@@ -1,14 +1,4 @@
-import {
-  Array as Arr,
-  Effect,
-  Layer,
-  Option,
-  Order,
-  pipe,
-  Record,
-  ServiceMap,
-  Stream,
-} from "effect";
+import { Array as Arr, Effect, Layer, Option, Order, pipe, Record, Context, Stream } from "effect";
 import * as Y from "yjs";
 import * as DB from "./db.service";
 import * as EventRepo from "./event.repo";
@@ -20,7 +10,7 @@ import { formatDailyNoteTitle, parseDailyNoteId } from "./daily-note";
 
 const MAX_FETCHED_UNDONE_EVENTS = 100;
 
-export class Service extends ServiceMap.Service<Service>()("Materializer.Service", {
+export class Service extends Context.Service<Service>()("Materializer.Service", {
   make: Effect.gen(function* () {
     const db = yield* DB.Service;
     const eventRepo = yield* EventRepo.Service;

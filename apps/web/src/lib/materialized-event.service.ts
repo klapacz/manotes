@@ -1,4 +1,4 @@
-import { Effect, Layer, ServiceMap } from "effect";
+import { Effect, Layer, Context } from "effect";
 import * as EventRepo from "./event.repo";
 import * as EventSchema from "./event.schema";
 import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
@@ -6,7 +6,7 @@ import * as NoteRepo from "./note.repo";
 
 type CreateInput = Omit<typeof EventSchema.Create.Type, "type">;
 
-export class Service extends ServiceMap.Service<Service>()("MaterializedEventService.Service", {
+export class Service extends Context.Service<Service>()("MaterializedEventService.Service", {
   make: Effect.gen(function* () {
     const eventRepo = yield* EventRepo.Service;
     const checkpointRepo = yield* MaterializationCheckpointRepo.Service;

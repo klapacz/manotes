@@ -13,7 +13,7 @@ import * as Fiber from "effect/Fiber";
 import { identity } from "effect/Function";
 import * as Layer from "effect/Layer";
 import * as Semaphore from "effect/Semaphore";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import * as Scope from "effect/Scope";
 import * as ScopedRef from "effect/ScopedRef";
 import * as Stream from "effect/Stream";
@@ -53,9 +53,7 @@ export interface SqliteClient extends Client.SqlClient {
  * @category tags
  * @since 1.0.0
  */
-export const SqliteClient = ServiceMap.Service<SqliteClient>(
-  "@effect/sql-sqlite-wasm/SqliteClient",
-);
+export const SqliteClient = Context.Service<SqliteClient>("@effect/sql-sqlite-wasm/SqliteClient");
 
 /**
  * @category models
@@ -216,7 +214,7 @@ export const make = (
     const transactionAcquirer = Effect.uninterruptibleMask(
       Effect.fnUntraced(function* (restore) {
         const fiber = Fiber.getCurrent()!;
-        const scope = ServiceMap.getUnsafe(fiber.services, Scope.Scope);
+        const scope = Context.getUnsafe(fiber.context, Scope.Scope);
         yield* restore(semaphore.take(1));
         yield* Scope.addFinalizer(scope, semaphore.release(1));
         return yield* ScopedRef.get(connectionRef);
@@ -260,7 +258,7 @@ const extractRows = (rows: [Array<string>, Array<any>]) => rows[1];
  * @category tranferables
  * @since 1.0.0
  */
-export const Transferables = ServiceMap.Reference<ReadonlyArray<Transferable>>(
+export const Transferables = Context.Reference<ReadonlyArray<Transferable>>(
   "@effect/sql-sqlite-wasm/currentTransferables",
   { defaultValue: () => [] },
 );
@@ -281,8 +279,8 @@ export const withTransferables =
 export const layer = (
   config: SqliteClientConfig,
 ): Layer.Layer<SqliteClient | Client.SqlClient, SqlError> =>
-  Layer.effectServices(
+  Layer.effectContext(
     Effect.map(make(config), (client) =>
-      ServiceMap.make(SqliteClient, client).pipe(ServiceMap.add(Client.SqlClient, client)),
+      Context.make(SqliteClient, client).pipe(Context.add(Client.SqlClient, client)),
     ),
   ).pipe(Layer.provide(Reactivity.layer));

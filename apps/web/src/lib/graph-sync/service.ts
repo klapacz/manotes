@@ -1,14 +1,14 @@
 /**
  * Supervises the client graph sync session and retries after disconnects.
  */
-import { Effect, Layer, Schedule, ServiceMap, SubscriptionRef } from "effect";
+import { Effect, Layer, Schedule, Context, SubscriptionRef } from "effect";
 import * as EventRepo from "../event.repo";
 import * as GraphSyncEventLog from "./event-log.service";
 import * as Session from "./machine/session";
 import * as Status from "./status";
 import { SyncStatusCloud } from "../graph.worker-rpc";
 
-export class Service extends ServiceMap.Service<Service>()("GraphSyncService", {
+export class Service extends Context.Service<Service>()("GraphSyncService", {
   make: Effect.gen(function* () {
     const status = yield* Status.Ref;
 

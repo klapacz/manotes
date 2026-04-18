@@ -1,4 +1,4 @@
-import { Array, Effect, Layer, Option, pipe, Schema, ServiceMap, Stream } from "effect";
+import { Array, Effect, Layer, Option, pipe, Schema, Context, Stream } from "effect";
 import * as DB from "./db.service";
 import * as EventSchema from "./event.schema";
 import * as Tables from "./db.tables";
@@ -9,7 +9,7 @@ const decodeRecord = Schema.decodeEffect(EventSchema.Record);
 const decodeAll = Schema.decodeEffect(Schema.Array(EventSchema.Record));
 const IMPORT_BACKUP_BATCH_SIZE = 180;
 
-export class Service extends ServiceMap.Service<Service>()("EventRepo.Service", {
+export class Service extends Context.Service<Service>()("EventRepo.Service", {
   make: Effect.gen(function* () {
     const db = yield* DB.Service;
 

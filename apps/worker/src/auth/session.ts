@@ -1,11 +1,11 @@
-import { Effect, ServiceMap } from "effect";
+import { Effect, Context } from "effect";
 import * as HttpRouter from "effect/unstable/http/HttpRouter";
 import type * as Accounts from "../accounts/durable-object";
 import * as Errors from "./errors";
 import * as Worker from "../http/worker";
 import * as IdentityResolver from "./identity/resolver";
 
-export class Current extends ServiceMap.Service<Current, Accounts.ResolvedAccount>()(
+export class Current extends Context.Service<Current, Accounts.ResolvedAccount>()(
   "Worker.Session",
 ) {}
 

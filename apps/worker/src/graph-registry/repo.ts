@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { Array, Effect, Layer, flow, Option, ServiceMap } from "effect";
+import { Array, Effect, Layer, flow, Option, Context } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import type * as SqlError from "effect/unstable/sql/SqlError";
 import type * as GraphEncryption from "@manotes/shared/graph-encryption";
@@ -8,7 +8,7 @@ import * as Schema from "./schema";
 
 const GRAPH_ID_LENGTH = 12;
 
-export class Service extends ServiceMap.Service<Service>()("GraphRegistryRepo.Service", {
+export class Service extends Context.Service<Service>()("GraphRegistryRepo.Service", {
   make: Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
 
