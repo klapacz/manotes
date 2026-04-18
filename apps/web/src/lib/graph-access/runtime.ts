@@ -8,11 +8,11 @@ import * as CommandsUnlock from "./commands/unlock";
 import * as KeyStoreService from "./key-store/service";
 import * as GraphRuntime from "./graph-runtime";
 import * as LocalRegistryLayer from "./local-registry/layer";
-import * as RemoteRegistryLayer from "./remote-registry/layer";
+import * as RemoteRegistryService from "./remote-registry/service";
 
 const GraphAccessLayer = Layer.mergeAll(
   LocalRegistryLayer.Layer,
-  RemoteRegistryLayer.Layer,
+  RemoteRegistryService.Service.layer,
   KeyStoreService.Service.layer,
   GraphRuntime.Manager.Service.layer,
   CommandsDelete.Service.layer,

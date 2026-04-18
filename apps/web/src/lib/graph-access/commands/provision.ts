@@ -1,10 +1,10 @@
 import { Effect, Layer, ServiceMap } from "effect";
 import { nanoid } from "nanoid";
-import { RpcClient } from "effect/unstable/rpc";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import { GraphRegistryRpc, type Graph } from "@manotes/shared/graph-registry/contract";
+import { type Graph } from "@manotes/shared/graph-registry/contract";
 import * as KeyStoreService from "../key-store/service";
 import * as LocalRegistry from "../local-registry";
+import * as RemoteRegistryService from "../remote-registry/service";
 import * as SessionService from "../session/service";
 
 export type CreateLocalInput = {
@@ -38,7 +38,7 @@ export class Service extends ServiceMap.Service<Service>()(
       }: CreateSyncedInput) {
         const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(password));
         const session = yield* SessionService.get();
-        const client = yield* RpcClient.make(GraphRegistryRpc);
+        const client = yield* RemoteRegistryService.Service;
         const graph = yield* client.createGraph({
           displayName,
           graphKeyEnvelope: wrapped.envelope,

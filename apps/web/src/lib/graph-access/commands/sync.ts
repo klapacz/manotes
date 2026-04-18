@@ -1,10 +1,9 @@
 import { Effect, Layer, Option, ServiceMap } from "effect";
-import { RpcClient } from "effect/unstable/rpc";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import { GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
 import * as GraphAccessErrors from "../errors";
 import * as KeyStoreService from "../key-store/service";
 import * as LocalRegistry from "../local-registry";
+import * as RemoteRegistryService from "../remote-registry/service";
 import * as SessionService from "../session/service";
 
 export type UploadInput = {
@@ -26,7 +25,7 @@ export class Service extends ServiceMap.Service<Service>()("GraphAccess.Commands
     }: UploadInput) {
       const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(password));
       const session = yield* SessionService.get();
-      const client = yield* RpcClient.make(GraphRegistryRpc);
+      const client = yield* RemoteRegistryService.Service;
       const originalLocalGraph = yield* LocalRegistry.Repo.findGraph({ localGraphId });
 
       if (Option.isNone(originalLocalGraph)) {
