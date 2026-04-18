@@ -40,6 +40,7 @@ const uploadGraphAtom = GraphAccessRuntime.atom.fn(
     const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(opts.password));
     const session = yield* get.result(Session.atom);
     const client = yield* get.result(RemoteRegistryClient.atom);
+    const keyStore = yield* KeyStoreService.Service;
 
     const originalLocalGraph = yield* LocalRegistry.Repo.getGraph(opts.localGraphId);
 
@@ -63,7 +64,13 @@ const uploadGraphAtom = GraphAccessRuntime.atom.fn(
       graphKeyEnvelope: wrapped.envelope,
     });
 
-    const updatedLocalGraph = yield* LocalRegistry.Repo.updateGraph({
+    // Store the unwrapped key before flipping the local record to `mode: "cloud"`.
+    // That keeps reactive resolution on the opened graph from going through a transient
+    // `CloudLocked` state during upload, which would otherwise dispose the runtime and
+    // redirect the current tab to `/unlock`.
+    yield* keyStore.set(graph.graphKeyEnvelope, wrapped.graphKey);
+
+    return yield* LocalRegistry.Repo.updateGraph({
       localGraphId: originalLocalGraph.value.localGraphId,
       accountId: session.accountId,
 
@@ -71,12 +78,13 @@ const uploadGraphAtom = GraphAccessRuntime.atom.fn(
       graphId: graph.graphId,
       displayName: graph.displayName,
       graphKeyEnvelope: graph.graphKeyEnvelope,
-    });
-
-    const keyStore = yield* KeyStoreService.Service;
-    yield* keyStore.set(wrapped.envelope, wrapped.graphKey);
-
-    return updatedLocalGraph;
+    }).pipe(
+      Effect.catchCause((cause) => {
+        // remove key from store on error
+        const remove = keyStore.remove(graph.graphKeyEnvelope).pipe(Effect.ignore);
+        return Effect.andThen(remove, Effect.failCause(cause));
+      }),
+    );
   }),
 );
 
