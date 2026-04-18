@@ -1,17 +1,9 @@
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
-import { Array, Effect, flow, Option, Stream, Schema as S } from "effect";
+import { Array, Effect, Stream, Schema as S } from "effect";
 import * as Schema from "./schema";
 import * as Errors from "./errors";
 const GRAPH_COLUMNS =
   "localGraphId, displayName, status, mode, graphId, accountId, graphKeyEnvelope";
-
-const decodeFirstRecordOption = (rows: ReadonlyArray<Schema.RawRecord>) =>
-  Array.head(rows).pipe(
-    Option.match({
-      onNone: () => Effect.succeedNone,
-      onSome: flow(Schema.decodeRecord, Effect.asSome),
-    }),
-  );
 
 export const migrate = Effect.gen(function* () {
   const sql = (yield* SqlClient.SqlClient).withoutTransforms();
@@ -38,27 +30,35 @@ export const migrate = Effect.gen(function* () {
   );
 });
 
-export const listGraphs = Effect.fn("LocalRegistryRepo.listGraphs")(function* () {
-  const sql = yield* SqlClient.SqlClient;
-  const rows = yield* sql<Schema.RawRecord>`
+export const listGraphs = SqlSchema.findAll({
+  Request: S.Void,
+  Result: Schema.Record,
+  execute: Effect.fn("LocalRegistryRepo.listGraphs.execute")(function* () {
+    const sql = yield* SqlClient.SqlClient;
+
+    return yield* sql`
       SELECT ${sql.literal(GRAPH_COLUMNS)}
       FROM graphs
       ORDER BY displayName ASC
     `;
-
-  return yield* Schema.decodeArray(rows);
+  }),
 });
 
-export const getGraph = Effect.fn("LocalRegistryRepo.getGraph")(function* (localGraphId: string) {
-  const sql = yield* SqlClient.SqlClient;
-  const rows = yield* sql<Schema.RawRecord>`
-    SELECT ${sql.literal(GRAPH_COLUMNS)}
-    FROM graphs
-    WHERE localGraphId = ${localGraphId}
-    LIMIT 1
-  `;
+export const getGraph = SqlSchema.findOneOption({
+  Request: S.Struct({
+    localGraphId: S.String,
+  }),
+  Result: Schema.Record,
+  execute: Effect.fn("LocalRegistryRepo.getGraph.execute")(function* ({ localGraphId }) {
+    const sql = yield* SqlClient.SqlClient;
 
-  return yield* decodeFirstRecordOption(rows);
+    return yield* sql`
+      SELECT ${sql.literal(GRAPH_COLUMNS)}
+      FROM graphs
+      WHERE localGraphId = ${localGraphId}
+      LIMIT 1
+    `;
+  }),
 });
 
 export const insertGraph = SqlSchema.findOne({
@@ -185,7 +185,10 @@ export const findGraphReactive = Effect.fn("LocalRegistryRepo.findGraphReactive"
         LIMIT 1
       `,
     )
-    .pipe(Stream.mapEffect(decodeFirstRecordOption));
+    .pipe(
+      Stream.mapEffect((rows) => Schema.decodeArray(rows)),
+      Stream.map(Array.head),
+    );
 }, Stream.unwrap);
 
 export const reactiveListGraph = Effect.fn("LocalRegistryRepo.reactiveListGraph")(function* () {

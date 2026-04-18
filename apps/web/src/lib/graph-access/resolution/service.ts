@@ -19,7 +19,7 @@ export const Resolution = Data.taggedEnum<Resolution>();
 
 export const find = Effect.fn("GraphAccessResolution.find")(function* (localGraphId: string) {
   const keyStore = yield* KeyStoreService.Service;
-  const recordOption = yield* LocalRegistry.Repo.getGraph(localGraphId);
+  const recordOption = yield* LocalRegistry.Repo.getGraph({ localGraphId });
 
   return yield* Result.match(resolveWithoutKeyLookup(recordOption), {
     onSuccess: Effect.succeed,
