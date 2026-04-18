@@ -13,6 +13,7 @@ export * as OPFS from "./opfs.service";
 export * as BrowserExtensionClient from "./browser-extension/client";
 
 export * as Runtime from "./graph-access/graph-runtime/layer";
+export * as GraphRuntime from "./graph-access/graph-runtime";
 export * from "./rt-atom";
 export * from "./runtime-atom";
 
