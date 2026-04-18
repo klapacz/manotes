@@ -35,7 +35,7 @@ export const Route = createFileRoute("/$graph_/unlock")({
   },
   loader: async ({ params }) => {
     const graph = await GraphAccessRuntime.rt.runPromise(
-      LocalRegistry.Repo.getGraph({ localGraphId: params.graph }),
+      LocalRegistry.Repo.findGraph({ localGraphId: params.graph }),
     );
     // Graph not found
     if (Option.isNone(graph)) throw redirect({ to: "/" });

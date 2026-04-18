@@ -44,12 +44,12 @@ export const listGraphs = SqlSchema.findAll({
   }),
 });
 
-export const getGraph = SqlSchema.findOneOption({
+export const findGraph = SqlSchema.findOneOption({
   Request: S.Struct({
     localGraphId: S.String,
   }),
   Result: Schema.Record,
-  execute: Effect.fn("LocalRegistryRepo.getGraph.execute")(function* ({ localGraphId }) {
+  execute: Effect.fn("LocalRegistryRepo.findGraph.execute")(function* ({ localGraphId }) {
     const sql = yield* SqlClient.SqlClient;
 
     return yield* sql`
@@ -153,12 +153,12 @@ export const deleteLocalGraph = SqlSchema.findOne({
   }),
 });
 
-export const getGraphByGraphId = SqlSchema.findOneOption({
+export const findGraphByGraphId = SqlSchema.findOneOption({
   Request: S.Struct({
     graphId: S.String,
   }),
   Result: Schema.Record,
-  execute: Effect.fn("LocalRegistryRepo.getGraphByGraphId.execute")(function* ({ graphId }) {
+  execute: Effect.fn("LocalRegistryRepo.findGraphByGraphId.execute")(function* ({ graphId }) {
     const sql = yield* SqlClient.SqlClient;
 
     return yield* sql`

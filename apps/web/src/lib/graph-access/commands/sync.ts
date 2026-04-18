@@ -27,7 +27,7 @@ export class Service extends ServiceMap.Service<Service>()("GraphAccess.Commands
       const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(password));
       const session = yield* SessionService.get();
       const client = yield* RpcClient.make(GraphRegistryRpc);
-      const originalLocalGraph = yield* LocalRegistry.Repo.getGraph({ localGraphId });
+      const originalLocalGraph = yield* LocalRegistry.Repo.findGraph({ localGraphId });
 
       if (Option.isNone(originalLocalGraph)) {
         return yield* Effect.fail(new GraphAccessErrors.LocalGraphNotFoundError({ localGraphId }));
@@ -73,7 +73,7 @@ export class Service extends ServiceMap.Service<Service>()("GraphAccess.Commands
     const detach = Effect.fn("GraphAccessCommandsSync.detach")(function* ({
       localGraphId,
     }: DetachInput) {
-      const originalGraph = yield* LocalRegistry.Repo.getGraph({ localGraphId });
+      const originalGraph = yield* LocalRegistry.Repo.findGraph({ localGraphId });
 
       if (Option.isNone(originalGraph)) {
         return yield* Effect.fail(new GraphAccessErrors.LocalGraphNotFoundError({ localGraphId }));
