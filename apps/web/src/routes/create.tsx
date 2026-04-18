@@ -9,9 +9,10 @@ import { Button, buttonVariants } from "../components/ui/button";
 import { AppForm, useAppForm } from "../components/ui/form";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
+import * as KeyStoreService from "../lib/graph-access/key-store/service";
 import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
 import * as Session from "../lib/graph-access/session";
-import { MatchAsyncResult, MatchTag, Runtime } from "../lib";
+import { MatchAsyncResult, MatchTag } from "../lib";
 
 export const Route = createFileRoute("/create")({
   component: RouteComponent,
@@ -46,17 +47,8 @@ const createGraphAtom = GraphAccessRuntime.atom.fn(
       accountId: session.accountId,
     });
 
-    yield* Effect.sync(() =>
-      Runtime.setup({
-        localGraphId: localGraph.localGraphId,
-        displayName: localGraph.displayName,
-        graphSyncConfig: {
-          mode: "cloud",
-          graphId: graph.graphId,
-          graphKey: wrapped.graphKey,
-        },
-      }),
-    );
+    const keyStore = yield* KeyStoreService.Service;
+    yield* keyStore.set(wrapped.envelope, wrapped.graphKey);
 
     return localGraph;
   }),

@@ -18,8 +18,9 @@ import {
   type DialogTriggerProps,
 } from "../../components/ui/dialog";
 import { AppForm, useAppForm } from "../../components/ui/form";
-import { MatchAsyncResult, MatchTag, Runtime } from "../../lib";
+import { MatchAsyncResult, MatchTag } from "../../lib";
 import * as GraphAccessErrors from "../../lib/graph-access/errors";
+import * as KeyStoreService from "../../lib/graph-access/key-store/service";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
 import * as RemoteRegistryClient from "../../lib/graph-access/remote-registry/client";
 import * as GraphAccessRuntime from "../../lib/graph-access/runtime";
@@ -55,7 +56,7 @@ const uploadGraphAtom = GraphAccessRuntime.atom.fn(
       );
     }
 
-    // TODO: This creates the remote graph before the local registry/runtime update.
+    // TODO: This creates the remote graph before the local registry/key-store update.
     // If a later step fails, we orphan the remote graph and retries hit display-name taken.
     const graph = yield* client.createGraph({
       displayName: originalLocalGraph.value.displayName,
@@ -72,17 +73,8 @@ const uploadGraphAtom = GraphAccessRuntime.atom.fn(
       graphKeyEnvelope: graph.graphKeyEnvelope,
     });
 
-    yield* Effect.sync(() =>
-      Runtime.setup({
-        localGraphId: updatedLocalGraph.localGraphId,
-        displayName: updatedLocalGraph.displayName,
-        graphSyncConfig: {
-          mode: "cloud",
-          graphId: graph.graphId,
-          graphKey: wrapped.graphKey,
-        },
-      }),
-    );
+    const keyStore = yield* KeyStoreService.Service;
+    yield* keyStore.set(wrapped.envelope, wrapped.graphKey);
 
     return updatedLocalGraph;
   }),
