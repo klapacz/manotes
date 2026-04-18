@@ -1,7 +1,6 @@
 import { useAtom } from "@effect/atom-solid";
 import { Navigate } from "@tanstack/solid-router";
-import { Effect, Option, Schema } from "effect";
-import type { FnContext } from "effect/unstable/reactivity/Atom";
+import { Schema } from "effect";
 import { createSignal, splitProps, type ValidComponent } from "solid-js";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import { Alert, AlertDescription } from "../../components/ui/alert";
@@ -19,75 +18,12 @@ import {
 } from "../../components/ui/dialog";
 import { AppForm, useAppForm } from "../../components/ui/form";
 import { MatchAsyncResult, MatchTag } from "../../lib";
-import * as GraphAccessErrors from "../../lib/graph-access/errors";
-import * as KeyStoreService from "../../lib/graph-access/key-store/service";
+import * as GraphAccessPromotion from "../../lib/graph-access/promotion";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
-import * as RemoteRegistryClient from "../../lib/graph-access/remote-registry/client";
-import * as GraphAccessRuntime from "../../lib/graph-access/runtime";
-import * as Session from "../../lib/graph-access/session";
-
-type UploadGraphInput = {
-  password: string;
-  localGraphId: string;
-};
 
 const UploadGraphFormSchema = Schema.Struct({
   password: GraphEncryption.PasswordSchema,
 }).pipe(Schema.toStandardSchemaV1);
-
-const uploadGraphAtom = GraphAccessRuntime.atom.fn(
-  Effect.fn("GraphAccess.uploadGraph")(function* (opts: UploadGraphInput, get: FnContext) {
-    const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(opts.password));
-    const session = yield* get.result(Session.atom);
-    const client = yield* get.result(RemoteRegistryClient.atom);
-    const keyStore = yield* KeyStoreService.Service;
-
-    const originalLocalGraph = yield* LocalRegistry.Repo.getGraph(opts.localGraphId);
-
-    if (Option.isNone(originalLocalGraph)) {
-      return yield* Effect.fail(
-        new GraphAccessErrors.LocalGraphNotFoundError({ localGraphId: opts.localGraphId }),
-      );
-    }
-    if (originalLocalGraph.value.mode === "cloud") {
-      return yield* Effect.fail(
-        new GraphAccessErrors.LocalGraphAlreadySyncedError({
-          localGraphId: originalLocalGraph.value.localGraphId,
-        }),
-      );
-    }
-
-    // TODO: This creates the remote graph before the local registry/key-store update.
-    // If a later step fails, we orphan the remote graph and retries hit display-name taken.
-    const graph = yield* client.createGraph({
-      displayName: originalLocalGraph.value.displayName,
-      graphKeyEnvelope: wrapped.envelope,
-    });
-
-    // Store the unwrapped key before flipping the local record to `mode: "cloud"`.
-    // That keeps reactive resolution on the opened graph from going through a transient
-    // `CloudLocked` state during upload, which would otherwise dispose the runtime and
-    // redirect the current tab to `/unlock`.
-    yield* keyStore.set(graph.graphKeyEnvelope, wrapped.graphKey);
-
-    return yield* LocalRegistry.Repo.updateGraph({
-      localGraphId: originalLocalGraph.value.localGraphId,
-      accountId: session.accountId,
-
-      mode: "cloud",
-      status: "active",
-      graphId: graph.graphId,
-      displayName: graph.displayName,
-      graphKeyEnvelope: graph.graphKeyEnvelope,
-    }).pipe(
-      Effect.catchCause((cause) => {
-        // remove key from store on error
-        const remove = keyStore.remove(graph.graphKeyEnvelope).pipe(Effect.ignore);
-        return Effect.andThen(remove, Effect.failCause(cause));
-      }),
-    );
-  }),
-);
 
 type Props<T extends ValidComponent = typeof Button> = {
   graph: LocalRegistry.Schema.Record;
@@ -95,7 +31,9 @@ type Props<T extends ValidComponent = typeof Button> = {
 
 export function UploadGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
   const [open, setOpen] = createSignal(false);
-  const [uploadGraphResult, uploadGraph] = useAtom(uploadGraphAtom, { mode: "promise" });
+  const [uploadGraphResult, uploadGraph] = useAtom(GraphAccessPromotion.Atom.upload, {
+    mode: "promise",
+  });
   const [local, triggerProps] = splitProps(props as Props, ["graph"]);
   const form = useAppForm(() => ({
     defaultValues: {

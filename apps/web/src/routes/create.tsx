@@ -11,7 +11,7 @@ import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as KeyStoreService from "../lib/graph-access/key-store/service";
 import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
-import * as Session from "../lib/graph-access/session";
+import * as SessionAtom from "../lib/graph-access/session/atom";
 import { MatchAsyncResult, MatchTag } from "../lib";
 
 export const Route = createFileRoute("/create")({
@@ -34,7 +34,7 @@ const createGraphAtom = GraphAccessRuntime.atom.fn(
     }
 
     const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(password));
-    const session = yield* get.result(Session.atom);
+    const session = yield* get.result(SessionAtom.atom);
     const client = yield* get.result(RemoteRegistryClient.atom);
     const graph = yield* client.createGraph({
       displayName,

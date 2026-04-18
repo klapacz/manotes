@@ -11,7 +11,7 @@ import { MatchAsyncResult, MatchTag, createAtomStore } from "../lib";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
-import * as Session from "../lib/graph-access/session";
+import * as SessionAtom from "../lib/graph-access/session/atom";
 import type { FnContext } from "effect/unstable/reactivity/Atom";
 import { GraphListItem } from "./-index/GraphListItem";
 
@@ -46,7 +46,7 @@ const cloudGraphsNotOnDeviceAtom = GraphAccessRuntime.atom.atom(
 
 const openCloudGraphAtom = GraphAccessRuntime.atom.fn(
   Effect.fnUntraced(function* (graph: RemoteRegistryClient.Graph, get: FnContext) {
-    const session = yield* get.result(Session.atom);
+    const session = yield* get.result(SessionAtom.atom);
 
     return yield* LocalRegistry.Repo.createCloudGraph({
       graphId: graph.graphId,
