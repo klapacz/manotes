@@ -1,4 +1,5 @@
 export * as Context from "./context";
+export * as DBResolution from "./db-resolution";
 export * as Fingerprint from "./fingerprint";
 export * as Layer from "./layer";
 export * as Lock from "./lock";

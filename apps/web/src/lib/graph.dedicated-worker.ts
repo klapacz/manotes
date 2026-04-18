@@ -20,6 +20,7 @@ import {
   SyncStatusLocal,
 } from "./graph.worker-rpc";
 import * as GraphSyncStatus from "./graph-sync/status";
+import * as GraphRuntimeDBResolution from "./graph-access/graph-runtime/db-resolution";
 import { SqlLive } from "./db.service";
 import * as GraphSyncConfig from "./graph-sync/config";
 
@@ -155,7 +156,7 @@ function buildServiceLayer(opts: {
     DB.Config,
     DB.Config.of({
       localGraphId: opts.localGraphId,
-      databasePath: `${opts.localGraphId}.sqlite3`,
+      databasePath: GraphRuntimeDBResolution.getPath(opts.localGraphId),
     }),
   );
   const DBWithConfigLayer = Layer.provideMerge(SqlLive, ConfigLayer);

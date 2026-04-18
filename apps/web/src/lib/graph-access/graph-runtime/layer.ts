@@ -15,6 +15,7 @@ import * as Migrator from "../../migrator";
 import * as NoteCache from "../../note-cache.service";
 import * as NoteRepo from "../../note.repo";
 import * as BrowserExtensionTabNoteService from "../../browser-extension/tab-note/service";
+import * as DBResolution from "./db-resolution";
 import * as Lock from "./lock";
 
 export type SetupOpts = {
@@ -29,7 +30,7 @@ const makeMigratedDatabaseLayer = Effect.fnUntraced(function* (opts: SetupOpts) 
     DB.Config,
     DB.Config.of({
       localGraphId: opts.localGraphId,
-      databasePath: `${opts.localGraphId}.sqlite3`,
+      databasePath: DBResolution.getPath(opts.localGraphId),
     }),
   );
   const sqlLayer = Layer.provideMerge(SqlLive, configLayer);
