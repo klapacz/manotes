@@ -6,6 +6,8 @@ import * as Errors from "./errors";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 
 const LOCAL_GRAPH_ID_LENGTH = 6;
+const GRAPH_COLUMNS =
+  "localGraphId, displayName, status, mode, graphId, accountId, graphKeyEnvelope";
 
 const decodeFirstRecordOption = (rows: ReadonlyArray<Schema.RawRecord>) =>
   Array.head(rows).pipe(
@@ -22,6 +24,7 @@ export const migrate = Effect.gen(function* () {
     CREATE TABLE IF NOT EXISTS graphs (
       localGraphId TEXT PRIMARY KEY,
       displayName TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL DEFAULT 'active',
       mode TEXT NOT NULL,
       graphId TEXT,
       accountId TEXT,
@@ -32,12 +35,17 @@ export const migrate = Effect.gen(function* () {
     ON graphs (graphId)
     WHERE graphId IS NOT NULL
   `;
+
+  // Run this separately from CREATE TABLE so existing installs get the new column too.
+  yield* sql`ALTER TABLE graphs ADD COLUMN status TEXT NOT NULL DEFAULT 'active'`.pipe(
+    Effect.ignore,
+  );
 });
 
 export const listGraphs = Effect.fn("LocalRegistryRepo.listGraphs")(function* () {
   const sql = yield* SqlClient.SqlClient;
   const rows = yield* sql<Schema.RawRecord>`
-      SELECT localGraphId, displayName, mode, graphId, accountId, graphKeyEnvelope
+      SELECT ${sql.literal(GRAPH_COLUMNS)}
       FROM graphs
       ORDER BY displayName ASC
     `;
@@ -48,7 +56,7 @@ export const listGraphs = Effect.fn("LocalRegistryRepo.listGraphs")(function* ()
 export const getGraph = Effect.fn("LocalRegistryRepo.getGraph")(function* (localGraphId: string) {
   const sql = yield* SqlClient.SqlClient;
   const rows = yield* sql<Schema.RawRecord>`
-    SELECT localGraphId, displayName, mode, graphId, accountId, graphKeyEnvelope
+    SELECT ${sql.literal(GRAPH_COLUMNS)}
     FROM graphs
     WHERE localGraphId = ${localGraphId}
     LIMIT 1
@@ -65,6 +73,7 @@ export const createGraph = Effect.fn("LocalRegistryRepo.createGraph")(function* 
   const newGraphs = yield* Schema.encodeRecord({
     localGraphId: nanoid(LOCAL_GRAPH_ID_LENGTH),
     displayName,
+    status: "active",
     mode: "local",
     graphId: null,
     accountId: null,
@@ -73,7 +82,7 @@ export const createGraph = Effect.fn("LocalRegistryRepo.createGraph")(function* 
 
   const rows = yield* sql<Schema.RawRecord>`
       INSERT INTO graphs ${sql.insert(newGraphs)}
-      RETURNING localGraphId, displayName, mode, graphId, accountId, graphKeyEnvelope
+      RETURNING ${sql.literal(GRAPH_COLUMNS)}
     `.pipe(
     Effect.catchTag("SqlError", (error) =>
       Effect.fail(Errors.remapDisplayNameSqlError(error, displayName)),
@@ -99,7 +108,7 @@ export const updateGraph = SqlSchema.findOne({
     return yield* sql`
       UPDATE graphs SET ${sql.update(values, ["localGraphId"])}
       WHERE localGraphId = ${values.localGraphId}
-      RETURNING localGraphId, displayName, mode, graphId, accountId, graphKeyEnvelope
+      RETURNING ${sql.literal(GRAPH_COLUMNS)}
     `;
   }),
 });
@@ -120,7 +129,7 @@ export const renameGraph = SqlSchema.findOne({
       UPDATE graphs
       SET displayName = ${displayName}
       WHERE localGraphId = ${localGraphId}
-      RETURNING localGraphId, displayName, mode, graphId, accountId, graphKeyEnvelope
+      RETURNING ${sql.literal(GRAPH_COLUMNS)}
     `.pipe(
       Effect.catchTag("SqlError", (error) =>
         Effect.fail(Errors.remapDisplayNameSqlError(error, displayName)),
@@ -134,7 +143,7 @@ export const getGraphByGraphId = Effect.fn("LocalRegistryRepo.getGraphByGraphId"
 ) {
   const sql = yield* SqlClient.SqlClient;
   const rows = yield* sql<Schema.RawRecord>`
-    SELECT localGraphId, displayName, mode, graphId, accountId, graphKeyEnvelope
+    SELECT ${sql.literal(GRAPH_COLUMNS)}
     FROM graphs
     WHERE graphId = ${graphId}
     LIMIT 1
@@ -163,6 +172,7 @@ export const createCloudGraph = Effect.fn("LocalRegistryRepo.createCloudGraph")(
   const values = yield* Schema.encodeRecord({
     localGraphId: nanoid(LOCAL_GRAPH_ID_LENGTH),
     displayName,
+    status: "active",
     mode: "cloud",
     graphId,
     accountId,
@@ -170,7 +180,7 @@ export const createCloudGraph = Effect.fn("LocalRegistryRepo.createCloudGraph")(
   });
   const insertExit = yield* sql<Schema.RawRecord>`
       INSERT INTO graphs ${sql.insert(values)}
-      RETURNING localGraphId, displayName, mode, graphId, accountId, graphKeyEnvelope
+      RETURNING ${sql.literal(GRAPH_COLUMNS)}
     `.pipe(Effect.exit);
 
   const rows = yield* Exit.match(insertExit, {
@@ -212,7 +222,7 @@ export const findGraphReactive = Effect.fn("LocalRegistryRepo.findGraphReactive"
     .reactive(
       ["graphs"],
       sql<Schema.RawRecord>`
-        SELECT localGraphId, displayName, mode, graphId, accountId, graphKeyEnvelope
+        SELECT ${sql.literal(GRAPH_COLUMNS)}
         FROM graphs
         WHERE localGraphId = ${localGraphId}
         LIMIT 1
@@ -228,7 +238,7 @@ export const reactiveListGraph = Effect.fn("LocalRegistryRepo.reactiveListGraph"
     .reactive(
       ["graphs"],
       sql<Schema.RawRecord>`
-        SELECT localGraphId, displayName, mode, graphId, accountId, graphKeyEnvelope
+        SELECT ${sql.literal(GRAPH_COLUMNS)}
         FROM graphs
         ORDER BY displayName ASC
       `,

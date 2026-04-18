@@ -75,6 +75,7 @@ const uploadGraphAtom = GraphAccessRuntime.atom.fn(
       accountId: session.accountId,
 
       mode: "cloud",
+      status: "active",
       graphId: graph.graphId,
       displayName: graph.displayName,
       graphKeyEnvelope: graph.graphKeyEnvelope,
