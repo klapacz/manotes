@@ -120,11 +120,13 @@ export class Service extends ServiceMap.Service<Service>()("GraphAccess.GraphRun
       return State.Ready({ record: resolution.record, runtime: next.runtime });
     });
 
-    const findReactive = (localGraphId: string) => {
-      return Resolution.findReactive(localGraphId).pipe(
-        Stream.mapEffect((resolution) => makeState(localGraphId, resolution)),
+    const findReactive = Effect.fn("GraphRuntimeManager.findReactive")((localGraphId: string) => {
+      return Effect.succeed(
+        Resolution.findReactive(localGraphId).pipe(
+          Stream.mapEffect((resolution) => makeState(localGraphId, resolution)),
+        ),
       );
-    };
+    });
 
     const find = Effect.fn("GraphRuntimeManager.find")(function* (localGraphId: string) {
       const resolution = yield* Resolution.find(localGraphId);

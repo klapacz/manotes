@@ -7,7 +7,7 @@ import { Temporal } from "temporal-polyfill";
 import { requestScrollToDate } from "../lib/daily-note";
 import * as Y from "yjs";
 import { MaterializedEventService, MatchAsyncResult, RtAtom } from "../lib";
-import type * as LocalRegistry from "../lib/graph-access/local-registry";
+import { useGraph } from "../lib/graph-access/graph-runtime/context";
 import { JSDateToPlainDate } from "../lib/temporal/utils";
 import { GraphMenu } from "./graph-menu";
 import { PlusIcon, SearchIcon } from "./icons";
@@ -59,7 +59,8 @@ const monthFormatter = new Intl.DateTimeFormat("en", {
   month: "long",
 });
 
-export const AppSidebar = (props: { graph: LocalRegistry.Schema.Record }) => {
+export const AppSidebar = () => {
+  const graph = useGraph();
   const searchDate = useLocation({
     select: (location) => location.search.date,
   });
@@ -171,7 +172,7 @@ export const AppSidebar = (props: { graph: LocalRegistry.Schema.Record }) => {
                                       class={isOutsideMonth() ? "w-full opacity-50" : "w-full"}
                                       from="/$graph/"
                                       to="/$graph"
-                                      params={{ graph: props.graph.localGraphId }}
+                                      params={{ graph: graph().record.localGraphId }}
                                       search={{ date: date() }}
                                       viewTransition={false}
                                       data-today={todayDate === date() ? "" : undefined}
@@ -204,7 +205,7 @@ export const AppSidebar = (props: { graph: LocalRegistry.Schema.Record }) => {
       <SidebarFooter class="gap-1">
         <SyncStatusIndicator />
         <WorkerHealthBanner />
-        <GraphMenu localGraphId={props.graph.localGraphId} />
+        <GraphMenu />
       </SidebarFooter>
     </Sidebar>
   );

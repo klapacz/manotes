@@ -3,7 +3,7 @@ import { Effect, Match, Types } from "effect";
 import * as GraphAccessRuntime from "../runtime";
 import { Service, State, type RuntimeContext } from "./manager";
 
-const createRedirectOptions = Match.type<Types.ExtractTag<State, "Locked" | "Missing">>().pipe(
+export const redirectLinkOptions = Match.type<Types.ExtractTag<State, "Locked" | "Missing">>().pipe(
   Match.tagsExhaustive({
     Missing: () =>
       linkOptions({
@@ -24,7 +24,7 @@ export const getReadyOrRedirect = async (localGraphId: string) => {
 
   if (State.$is("Ready")(state)) return state;
 
-  throw redirect(createRedirectOptions(state));
+  throw redirect(redirectLinkOptions(state));
 };
 
 export const runPromiseOrRedirect = <A, E>(
