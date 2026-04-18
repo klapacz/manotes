@@ -4,7 +4,7 @@ import * as GraphEncryption from "@manotes/shared/graph-encryption";
 export const Status = Schema.Literals(["active", "deleting"]);
 export type Status = Schema.Schema.Type<typeof Status>;
 
-const CloudRecord = Schema.Struct({
+export const CloudRecord = Schema.Struct({
   localGraphId: Schema.String,
   displayName: Schema.String,
   status: Status,
@@ -15,7 +15,7 @@ const CloudRecord = Schema.Struct({
 });
 export type CloudRecord = Schema.Schema.Type<typeof CloudRecord>;
 
-const LocalRecord = Schema.Struct({
+export const LocalRecord = Schema.Struct({
   localGraphId: Schema.String,
   displayName: Schema.String,
   status: Status,

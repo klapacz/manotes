@@ -3,6 +3,8 @@ import * as Runtime from "../runtime";
 import * as Delete from "./delete";
 import * as Provision from "./provision";
 import * as Sync from "./sync";
+import * as Unlock from "./unlock";
+import * as Rename from "./rename";
 
 export const deleteLocal = Runtime.atom.fn(
   Effect.fn("GraphAccessCommandsAtom.deleteLocal")(function* (localGraphId: string) {
@@ -35,5 +37,23 @@ export const detach = Runtime.atom.fn(
   Effect.fn("GraphAccessCommandsAtom.detach")(function* (opts: DetachInput) {
     const service = yield* Sync.Service;
     return yield* service.detach(opts);
+  }),
+);
+
+export type UnlockCloudGraphInput = Unlock.UnlockCloudGraphInput;
+
+export const unlockCloudGraph = Runtime.atom.fn(
+  Effect.fn("GraphAccessCommandsAtom.unlockCloudGraph")(function* (opts: UnlockCloudGraphInput) {
+    const service = yield* Unlock.Service;
+    return yield* service.unlockCloudGraph(opts);
+  }),
+);
+
+export type RenameGraphInput = Rename.RenameGraphInput;
+
+export const renameGraph = Runtime.atom.fn(
+  Effect.fn("GraphAccessCommandsAtom.renameGraph")(function* (opts: RenameGraphInput) {
+    const service = yield* Rename.Service;
+    return yield* service.renameGraph(opts);
   }),
 );

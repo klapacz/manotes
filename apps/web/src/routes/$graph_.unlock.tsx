@@ -1,48 +1,18 @@
 import { useAtom } from "@effect/atom-solid";
 import { createFileRoute, Navigate, redirect } from "@tanstack/solid-router";
-import { Effect, Match, Option, Schema } from "effect";
+import { Match, Option, Schema } from "effect";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { AppForm, useAppForm } from "../components/ui/form";
 import { MatchAsyncResult } from "../lib";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import * as KeyStoreService from "../lib/graph-access/key-store/service";
+import * as GraphAccessCommands from "../lib/graph-access/commands";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as Resolution from "../lib/graph-access/resolution/service";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 
-type UnlockGraphInput = {
-  graph: Extract<LocalRegistry.Schema.Record, { mode: "cloud" }>;
-  password: string;
-};
-
 const UnlockGraphFormSchema = Schema.Struct({
   password: GraphEncryption.PasswordSchema,
 }).pipe(Schema.toStandardSchemaV1);
-
-const unlockGraphAtom = GraphAccessRuntime.atom.fn(
-  Effect.fn("RoutesGraphUnlock.unlockGraph")(function* ({ graph, password }: UnlockGraphInput) {
-    const graphKey = yield* Effect.tryPromise({
-      try: () =>
-        GraphEncryption.unwrapGraphKey({
-          password,
-          envelope: graph.graphKeyEnvelope,
-        }),
-      catch: (cause) =>
-        cause instanceof GraphEncryption.InvalidPasswordError
-          ? cause
-          : cause instanceof Error
-            ? cause
-            : new Error("Failed to unlock graph."),
-    });
-
-    const keyStore = yield* KeyStoreService.Service;
-    yield* keyStore.set(graph.graphKeyEnvelope, graphKey);
-
-    return {
-      localGraphId: graph.localGraphId,
-    };
-  }),
-);
 
 export const Route = createFileRoute("/$graph_/unlock")({
   beforeLoad: async ({ params }) => {
@@ -78,7 +48,9 @@ export const Route = createFileRoute("/$graph_/unlock")({
 function RouteComponent() {
   const data = Route.useLoaderData();
 
-  const [unlockGraphResult, unlockGraph] = useAtom(unlockGraphAtom, { mode: "promise" });
+  const [unlockGraphResult, unlockGraph] = useAtom(GraphAccessCommands.Atom.unlockCloudGraph, {
+    mode: "promise",
+  });
   const form = useAppForm(() => ({
     defaultValues: {
       password: "",

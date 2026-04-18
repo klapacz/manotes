@@ -2,7 +2,9 @@ import { Layer, ManagedRuntime } from "effect";
 import { Atom } from "effect/unstable/reactivity";
 import * as CommandsDelete from "./commands/delete";
 import * as CommandsProvision from "./commands/provision";
+import * as CommandsRename from "./commands/rename";
 import * as CommandsSync from "./commands/sync";
+import * as CommandsUnlock from "./commands/unlock";
 import * as KeyStoreService from "./key-store/service";
 import * as GraphRuntime from "./graph-runtime";
 import * as LocalRegistryLayer from "./local-registry/layer";
@@ -15,7 +17,9 @@ const GraphAccessLayer = Layer.mergeAll(
   GraphRuntime.Manager.Service.layer,
   CommandsDelete.Service.layer,
   CommandsProvision.Service.layer,
+  CommandsRename.Service.layer,
   CommandsSync.Service.layer,
+  CommandsUnlock.Service.layer,
 );
 const memoMap = Layer.makeMemoMapUnsafe();
 

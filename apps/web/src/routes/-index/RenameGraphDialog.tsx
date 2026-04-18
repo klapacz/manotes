@@ -1,6 +1,6 @@
 import { useAtom } from "@effect/atom-solid";
 import * as GraphRegistryContract from "@manotes/shared/graph-registry/contract";
-import { Effect, Schema } from "effect";
+import { Schema } from "effect";
 import { createSignal, splitProps, type ValidComponent } from "solid-js";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
@@ -17,22 +17,8 @@ import {
 } from "../../components/ui/dialog";
 import { AppForm, useAppForm } from "../../components/ui/form";
 import { MatchAsyncResult, MatchTag } from "../../lib";
+import * as GraphAccessCommands from "../../lib/graph-access/commands";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
-import * as GraphAccessRuntime from "../../lib/graph-access/runtime";
-
-type RenameGraphInput = {
-  localGraphId: string;
-  displayName: string;
-};
-
-const renameGraphAtom = GraphAccessRuntime.atom.fn(
-  Effect.fn("GraphAccess.renameGraph")(function* ({ localGraphId, displayName }: RenameGraphInput) {
-    return yield* LocalRegistry.Repo.renameGraph({
-      localGraphId,
-      displayName,
-    });
-  }),
-);
 
 const RenameGraphFormSchema = Schema.Struct({
   displayName: GraphRegistryContract.DisplayNameSchema,
@@ -44,7 +30,9 @@ type Props<T extends ValidComponent = typeof Button> = {
 
 export function RenameGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
   const [open, setOpen] = createSignal(false);
-  const [renameGraphResult, renameGraph] = useAtom(renameGraphAtom, { mode: "promise" });
+  const [renameGraphResult, renameGraph] = useAtom(GraphAccessCommands.Atom.renameGraph, {
+    mode: "promise",
+  });
   const [local, triggerProps] = splitProps(props as Props, ["graph"]);
 
   const form = useAppForm(() => ({
