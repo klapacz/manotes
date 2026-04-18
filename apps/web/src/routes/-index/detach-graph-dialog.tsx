@@ -16,7 +16,7 @@ import {
 } from "../../components/ui/dialog";
 import { MatchAsyncResult, MatchTag } from "../../lib";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
-import * as GraphAccessPromotion from "../../lib/graph-access/promotion";
+import * as GraphAccessCommands from "../../lib/graph-access/commands";
 
 type Props<T extends ValidComponent = typeof Button> = {
   graph: LocalRegistry.Schema.Record;
@@ -24,7 +24,7 @@ type Props<T extends ValidComponent = typeof Button> = {
 
 export function DetachGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
   const [open, setOpen] = createSignal(false);
-  const [detachResult, detach] = useAtom(GraphAccessPromotion.Atom.detach, {
+  const [detachResult, detach] = useAtom(GraphAccessCommands.Atom.detach, {
     mode: "promise",
   });
   const [local, triggerProps] = splitProps(props as Props, ["graph"]);

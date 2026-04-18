@@ -18,7 +18,7 @@ import {
 } from "../../components/ui/dialog";
 import { AppForm, useAppForm } from "../../components/ui/form";
 import { MatchAsyncResult, MatchTag } from "../../lib";
-import * as GraphAccessPromotion from "../../lib/graph-access/promotion";
+import * as GraphAccessCommands from "../../lib/graph-access/commands";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
 
 const UploadGraphFormSchema = Schema.Struct({
@@ -31,7 +31,7 @@ type Props<T extends ValidComponent = typeof Button> = {
 
 export function UploadGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
   const [open, setOpen] = createSignal(false);
-  const [uploadGraphResult, uploadGraph] = useAtom(GraphAccessPromotion.Atom.upload, {
+  const [uploadGraphResult, uploadGraph] = useAtom(GraphAccessCommands.Atom.upload, {
     mode: "promise",
   });
   const [local, triggerProps] = splitProps(props as Props, ["graph"]);

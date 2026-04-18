@@ -16,11 +16,11 @@ export type DetachInput = {
   localGraphId: string;
 };
 
-export class Service extends ServiceMap.Service<Service>()("GraphAccess.GraphPromotion.Service", {
+export class Service extends ServiceMap.Service<Service>()("GraphAccess.Commands.Sync.Service", {
   make: Effect.gen(function* () {
     const keyStore = yield* KeyStoreService.Service;
 
-    const upload = Effect.fn("GraphAccessPromotion.upload")(function* ({
+    const upload = Effect.fn("GraphAccessCommandsSync.upload")(function* ({
       localGraphId,
       password,
     }: UploadInput) {
@@ -70,7 +70,7 @@ export class Service extends ServiceMap.Service<Service>()("GraphAccess.GraphPro
       );
     });
 
-    const detach = Effect.fn("GraphAccessPromotion.detach")(function* ({
+    const detach = Effect.fn("GraphAccessCommandsSync.detach")(function* ({
       localGraphId,
     }: DetachInput) {
       const originalGraph = yield* LocalRegistry.Repo.getGraph(localGraphId);
