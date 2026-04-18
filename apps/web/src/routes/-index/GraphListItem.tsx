@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/button";
 import { ListItem } from "../../components/ui/list";
 import { cx } from "../../lib/cva";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
+import { DeleteGraphDialog } from "./delete-graph-dialog";
 import { RenameGraphDialog } from "./RenameGraphDialog";
 import { UploadGraphDialog } from "./UploadGraphDialog";
 
@@ -36,6 +37,9 @@ export function GraphListItem(props: Props) {
         <UploadGraphDialog<typeof Button> graph={props.graph} as={Button} variant="ghost" size="sm">
           Upload
         </UploadGraphDialog>
+        <DeleteGraphDialog<typeof Button> graph={props.graph} as={Button} variant="ghost" size="sm">
+          Delete
+        </DeleteGraphDialog>
       </Show>
 
       <span class="uppercase tracking-wide text-xs">
