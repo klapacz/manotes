@@ -1,5 +1,4 @@
-import { Effect, Layer, ManagedRuntime, References, ServiceMap } from "effect";
-import { Atom } from "effect/unstable/reactivity";
+import { Effect, Layer, References, ServiceMap } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import * as SqliteClient from "@manotes/sql-sqlite-wasm/sqlite-client";
 import * as DB from "../../db.service";
@@ -22,8 +21,6 @@ export type SetupOpts = {
   displayName: string;
   graphSyncConfig: GraphSyncConfig.GraphSyncConfig;
 };
-
-const runtimes = new Map<string, Type>();
 
 // TODO: use the same log level for migration and for the app
 const makeMigratedDatabaseLayer = Effect.fnUntraced(function* (opts: SetupOpts) {
@@ -69,34 +66,3 @@ export const makeLayer = (opts: SetupOpts) => {
 };
 
 export type AppLayer = ReturnType<typeof makeLayer>;
-
-export interface Type {
-  rt: ManagedRuntime.ManagedRuntime<Layer.Success<AppLayer>, Layer.Error<AppLayer>>;
-  atom: Atom.AtomRuntime<Layer.Success<AppLayer>, Layer.Error<AppLayer>>;
-}
-
-export function setup(opts: SetupOpts): Type {
-  const existingRuntime = runtimes.get(opts.localGraphId);
-  if (existingRuntime) {
-    return existingRuntime;
-  }
-
-  const runtime = create(opts);
-  runtimes.set(opts.localGraphId, runtime);
-  return runtime;
-}
-
-export function get(localGraphId: string): Type | null {
-  const runtime = runtimes.get(localGraphId);
-  return runtime ?? null;
-}
-
-export function create(opts: SetupOpts): Type {
-  const appLayer = makeLayer(opts);
-  const memoMap = Layer.makeMemoMapUnsafe();
-
-  return {
-    rt: ManagedRuntime.make(appLayer, { memoMap }),
-    atom: Atom.context({ memoMap })(appLayer),
-  };
-}

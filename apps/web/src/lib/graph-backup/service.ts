@@ -2,7 +2,8 @@ import { Array as Arr, DateTime, Effect, Struct } from "effect";
 import * as EventRepo from "../event.repo";
 import * as EventSchema from "../event.schema";
 import * as LocalRegistry from "../graph-access/local-registry";
-import * as Runtime from "../graph-access/graph-runtime/layer";
+import * as GraphRuntimeLayer from "../graph-access/graph-runtime/layer";
+import * as ManagedRuntime from "../graph-access/graph-runtime/managed-runtime";
 import * as BackupSchema from "./schema";
 
 export function createBackup({
@@ -56,21 +57,22 @@ export const exportBackup = Effect.fn("GraphBackupService.exportBackup")(functio
 export const importBackupToNewGraph = Effect.fn("GraphBackupService.importBackupToNewGraph")(
   function* ({ backup, displayName }: { backup: BackupSchema.Bundle; displayName: string }) {
     const graph = yield* LocalRegistry.Repo.createGraph(displayName);
-    const runtime = yield* Effect.sync(() =>
-      Runtime.setup({
-        localGraphId: graph.localGraphId,
-        displayName: graph.displayName,
-        graphSyncConfig: { mode: "local" },
-      }),
-    );
 
-    yield* Effect.tryPromise(() =>
-      runtime.rt.runPromise(
-        Effect.gen(function* () {
-          const eventRepo = yield* EventRepo.Service;
-          yield* eventRepo.importBackupEvents(backup.events);
+    yield* Effect.acquireUseRelease(
+      ManagedRuntime.createScoped(
+        GraphRuntimeLayer.makeLayer({
+          localGraphId: graph.localGraphId,
+          displayName: graph.displayName,
+          graphSyncConfig: { mode: "local" },
         }),
       ),
+      (runtime) =>
+        Effect.tryPromise(() =>
+          runtime.runPromise(
+            EventRepo.Service.use((eventRepo) => eventRepo.importBackupEvents(backup.events)),
+          ),
+        ),
+      (runtime) => runtime.dispose,
     );
 
     return graph;

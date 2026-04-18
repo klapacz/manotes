@@ -32,7 +32,7 @@ export const createScoped = Effect.fn("GraphAccessGraphRuntimeManagedRuntime.cre
     const provide = <A, E>(effect: Effect.Effect<A, E, R>) =>
       Effect.provideServices(effect, services);
 
-    return {
+    const runtime: ManagedRuntime<R, ER> = {
       scope,
       memoMap,
       atom,
@@ -42,6 +42,8 @@ export const createScoped = Effect.fn("GraphAccessGraphRuntimeManagedRuntime.cre
       runPromiseExit: (effect, options) => Effect.runPromiseExit(provide(effect), options),
       runPromise: (effect, options) => Effect.runPromise(provide(effect), options),
       dispose: Scope.close(scope, Exit.void),
-    } satisfies ManagedRuntime<R, ER>;
+    };
+
+    return runtime;
   },
 );
