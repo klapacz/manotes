@@ -12,6 +12,10 @@ export type UploadInput = {
   localGraphId: string;
 };
 
+export type DetachInput = {
+  localGraphId: string;
+};
+
 export class Service extends ServiceMap.Service<Service>()("GraphAccess.GraphPromotion.Service", {
   make: Effect.gen(function* () {
     const keyStore = yield* KeyStoreService.Service;
@@ -66,7 +70,40 @@ export class Service extends ServiceMap.Service<Service>()("GraphAccess.GraphPro
       );
     });
 
-    return { upload };
+    const detach = Effect.fn("GraphAccessPromotion.detach")(function* ({
+      localGraphId,
+    }: DetachInput) {
+      const originalGraph = yield* LocalRegistry.Repo.getGraph(localGraphId);
+
+      if (Option.isNone(originalGraph)) {
+        return yield* Effect.fail(new GraphAccessErrors.LocalGraphNotFoundError({ localGraphId }));
+      }
+      if (originalGraph.value.mode === "local") {
+        return originalGraph.value;
+      }
+
+      // Flip the record back to local before removing the key from the store.
+      // That keeps reactive resolution from observing a transient `CloudLocked`
+      // state during detach, which would otherwise dispose the runtime and
+      // redirect the current tab to `/unlock`.
+      const detached = yield* LocalRegistry.Repo.updateGraph({
+        localGraphId: originalGraph.value.localGraphId,
+        displayName: originalGraph.value.displayName,
+        status: "active",
+        mode: "local",
+        graphId: null,
+        accountId: null,
+        graphKeyEnvelope: null,
+      });
+
+      // Best-effort cleanup. Once the row is local, resolution no longer depends
+      // on the cloud key, so failure here should not roll back the detach.
+      yield* keyStore.remove(originalGraph.value.graphKeyEnvelope).pipe(Effect.ignore);
+
+      return detached;
+    });
+
+    return { upload, detach };
   }),
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(
