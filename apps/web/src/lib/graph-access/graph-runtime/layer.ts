@@ -15,6 +15,7 @@ import * as Migrator from "../../migrator";
 import * as NoteCache from "../../note-cache.service";
 import * as NoteRepo from "../../note.repo";
 import * as BrowserExtensionTabNoteService from "../../browser-extension/tab-note/service";
+import * as Lock from "./lock";
 
 export type SetupOpts = {
   localGraphId: string;
@@ -44,25 +45,33 @@ const makeMigratedDatabaseLayer = Effect.fnUntraced(function* (opts: SetupOpts) 
   );
 }, Layer.unwrap);
 
-export const makeLayer = (opts: SetupOpts) => {
-  const graphSyncConfigLayer = Layer.succeed(
-    GraphSyncConfig.Config,
-    GraphSyncConfig.Config.of(opts.graphSyncConfig),
-  );
+export const makeLayer = (opts: SetupOpts) =>
+  Layer.unwrap(
+    Effect.gen(function* () {
+      yield* Lock.acquireShared(opts.localGraphId);
 
-  return Layer.mergeAll(
-    EventRepo.Service.layer,
-    NoteRepo.Service.layer,
-    BacklinkService.Service.layer,
-    NoteCache.Service.layer,
-    EditorNoteBootCache.Service.layer,
-    MaterializationCheckpointRepo.Service.layer,
-    MaterializedEventService.Service.layer,
-    BrowserExtensionTabNoteService.Service.layer,
-    EditorSyncService.Service.layer,
-    GraphWorkerClient.Service.layer,
-    Layer.succeed(References.MinimumLogLevel, "Debug"),
-  ).pipe(Layer.provide(graphSyncConfigLayer), Layer.provideMerge(makeMigratedDatabaseLayer(opts)));
-};
+      const graphSyncConfigLayer = Layer.succeed(
+        GraphSyncConfig.Config,
+        GraphSyncConfig.Config.of(opts.graphSyncConfig),
+      );
+
+      return Layer.mergeAll(
+        EventRepo.Service.layer,
+        NoteRepo.Service.layer,
+        BacklinkService.Service.layer,
+        NoteCache.Service.layer,
+        EditorNoteBootCache.Service.layer,
+        MaterializationCheckpointRepo.Service.layer,
+        MaterializedEventService.Service.layer,
+        BrowserExtensionTabNoteService.Service.layer,
+        EditorSyncService.Service.layer,
+        GraphWorkerClient.Service.layer,
+        Layer.succeed(References.MinimumLogLevel, "Debug"),
+      ).pipe(
+        Layer.provide(graphSyncConfigLayer),
+        Layer.provideMerge(makeMigratedDatabaseLayer(opts)),
+      );
+    }),
+  );
 
 export type AppLayer = ReturnType<typeof makeLayer>;
