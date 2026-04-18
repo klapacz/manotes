@@ -5,6 +5,7 @@ import { ListItem } from "../../components/ui/list";
 import { cx } from "../../lib/cva";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
 import { DeleteGraphDialog } from "./delete-graph-dialog";
+import { DetachGraphDialog } from "./detach-graph-dialog";
 import { RenameGraphDialog } from "./RenameGraphDialog";
 import { UploadGraphDialog } from "./UploadGraphDialog";
 
@@ -30,7 +31,19 @@ export function GraphListItem(props: Props) {
         <span class="block truncate">{props.graph.displayName}</span>
       </Link>
 
-      <Show when={props.graph.mode === "local"}>
+      <Show
+        when={props.graph.mode === "local"}
+        fallback={
+          <DetachGraphDialog<typeof Button>
+            graph={props.graph}
+            as={Button}
+            variant="ghost"
+            size="sm"
+          >
+            Detach
+          </DetachGraphDialog>
+        }
+      >
         <RenameGraphDialog<typeof Button> graph={props.graph} as={Button} variant="ghost" size="sm">
           Rename
         </RenameGraphDialog>
