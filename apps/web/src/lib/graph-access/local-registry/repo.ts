@@ -1,11 +1,7 @@
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
-import { nanoid } from "nanoid";
-import { Array, Cause, Effect, Exit, flow, Option, Stream, Schema as S } from "effect";
+import { Array, Effect, flow, Option, Stream, Schema as S } from "effect";
 import * as Schema from "./schema";
 import * as Errors from "./errors";
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
-
-const LOCAL_GRAPH_ID_LENGTH = 6;
 const GRAPH_COLUMNS =
   "localGraphId, displayName, status, mode, graphId, accountId, graphKeyEnvelope";
 
@@ -65,38 +61,21 @@ export const getGraph = Effect.fn("LocalRegistryRepo.getGraph")(function* (local
   return yield* decodeFirstRecordOption(rows);
 });
 
-export const createGraph = Effect.fn("LocalRegistryRepo.createGraph")(function* (
-  displayName: string,
-) {
-  const sql = yield* SqlClient.SqlClient;
+export const insertGraph = SqlSchema.findOne({
+  Request: Schema.Record,
+  Result: Schema.Record,
+  execute: Effect.fn("LocalRegistryRepo.insertGraph.execute")(function* (record) {
+    const sql = yield* SqlClient.SqlClient;
 
-  const newGraphs = yield* Schema.encodeRecord({
-    localGraphId: nanoid(LOCAL_GRAPH_ID_LENGTH),
-    displayName,
-    status: "active",
-    mode: "local",
-    graphId: null,
-    accountId: null,
-    graphKeyEnvelope: null,
-  }).pipe(Effect.map((record) => [record]));
-
-  const rows = yield* sql<Schema.RawRecord>`
-      INSERT INTO graphs ${sql.insert(newGraphs)}
+    return yield* sql`
+      INSERT INTO graphs ${sql.insert(record)}
       RETURNING ${sql.literal(GRAPH_COLUMNS)}
     `.pipe(
-    Effect.catchTag("SqlError", (error) =>
-      Effect.fail(Errors.remapDisplayNameSqlError(error, displayName)),
-    ),
-  );
-
-  const created = yield* Schema.decodeArray(rows);
-  const head = Array.head(created);
-
-  if (Option.isNone(head)) {
-    return yield* Effect.die(new Error("Graph insert returned no rows"));
-  }
-
-  return head.value;
+      Effect.catchTag("SqlError", (error) =>
+        Effect.fail(Errors.remapDisplayNameSqlError(error, record.displayName)),
+      ),
+    );
+  }),
 });
 
 export const updateGraph = SqlSchema.findOne({
@@ -174,79 +153,21 @@ export const deleteLocalGraph = SqlSchema.findOne({
   }),
 });
 
-export const getGraphByGraphId = Effect.fn("LocalRegistryRepo.getGraphByGraphId")(function* (
-  graphId: string,
-) {
-  const sql = yield* SqlClient.SqlClient;
-  const rows = yield* sql<Schema.RawRecord>`
-    SELECT ${sql.literal(GRAPH_COLUMNS)}
-    FROM graphs
-    WHERE graphId = ${graphId}
-    LIMIT 1
-  `;
+export const getGraphByGraphId = SqlSchema.findOneOption({
+  Request: S.Struct({
+    graphId: S.String,
+  }),
+  Result: Schema.Record,
+  execute: Effect.fn("LocalRegistryRepo.getGraphByGraphId.execute")(function* ({ graphId }) {
+    const sql = yield* SqlClient.SqlClient;
 
-  return yield* decodeFirstRecordOption(rows);
-});
-
-export const createCloudGraph = Effect.fn("LocalRegistryRepo.createCloudGraph")(function* ({
-  graphId,
-  displayName,
-  graphKeyEnvelope,
-  accountId,
-}: {
-  graphId: string;
-  displayName: string;
-  graphKeyEnvelope: GraphEncryption.GraphKeyEnvelope;
-  accountId: string;
-}) {
-  // Return early if the graph already exists
-  const existing = yield* getGraphByGraphId(graphId);
-  if (Option.isSome(existing)) return existing.value;
-
-  const sql = yield* SqlClient.SqlClient;
-
-  const values = yield* Schema.encodeRecord({
-    localGraphId: nanoid(LOCAL_GRAPH_ID_LENGTH),
-    displayName,
-    status: "active",
-    mode: "cloud",
-    graphId,
-    accountId,
-    graphKeyEnvelope,
-  });
-  const insertExit = yield* sql<Schema.RawRecord>`
-      INSERT INTO graphs ${sql.insert(values)}
-      RETURNING ${sql.literal(GRAPH_COLUMNS)}
-    `.pipe(Effect.exit);
-
-  const rows = yield* Exit.match(insertExit, {
-    onSuccess: Effect.succeed,
-    onFailure: (cause) =>
-      Effect.gen(function* () {
-        const failure = Cause.findErrorOption(cause);
-        if (Option.isNone(failure)) return yield* Effect.failCause(cause);
-
-        // On unique constraint violation, check if the graph already exists
-        if (Errors.isGraphIdUniquenessSqlError(failure.value.cause)) {
-          const existing = yield* getGraphByGraphId(graphId);
-
-          if (Option.isSome(existing)) {
-            return [yield* Schema.encodeRecord(existing.value)];
-          }
-        }
-
-        return yield* Effect.fail(Errors.remapDisplayNameSqlError(failure.value, displayName));
-      }),
-  });
-
-  const created = yield* Schema.decodeArray(rows);
-  const head = Array.head(created);
-
-  if (Option.isNone(head)) {
-    return yield* Effect.die(new Error("Graph insert returned no rows"));
-  }
-
-  return head.value;
+    return yield* sql`
+      SELECT ${sql.literal(GRAPH_COLUMNS)}
+      FROM graphs
+      WHERE graphId = ${graphId}
+      LIMIT 1
+    `;
+  }),
 });
 
 export const findGraphReactive = Effect.fn("LocalRegistryRepo.findGraphReactive")(function* (

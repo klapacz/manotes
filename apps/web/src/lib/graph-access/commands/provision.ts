@@ -1,4 +1,5 @@
 import { Effect, Layer, ServiceMap } from "effect";
+import { nanoid } from "nanoid";
 import { RpcClient } from "effect/unstable/rpc";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import { GraphRegistryRpc, type Graph } from "@manotes/shared/graph-registry/contract";
@@ -28,7 +29,7 @@ export class Service extends ServiceMap.Service<Service>()(
       const createLocal = Effect.fn("GraphAccessCommandsProvision.createLocal")(function* ({
         displayName,
       }: CreateLocalInput) {
-        return yield* LocalRegistry.Repo.createGraph(displayName);
+        return yield* LocalRegistry.Repo.insertGraph(makeLocalRecord({ displayName }));
       });
 
       const createSynced = Effect.fn("GraphAccessCommandsProvision.createSynced")(function* ({
@@ -42,7 +43,7 @@ export class Service extends ServiceMap.Service<Service>()(
           displayName,
           graphKeyEnvelope: wrapped.envelope,
         });
-        const localGraph = yield* LocalRegistry.Repo.createCloudGraph({
+        const localGraph = yield* createCloudGraph({
           graphId: graph.graphId,
           displayName: graph.displayName,
           graphKeyEnvelope: graph.graphKeyEnvelope,
@@ -58,7 +59,7 @@ export class Service extends ServiceMap.Service<Service>()(
         function* ({ graph }: OpenCloudOnDeviceInput) {
           const session = yield* SessionService.get();
 
-          return yield* LocalRegistry.Repo.createCloudGraph({
+          return yield* createCloudGraph({
             graphId: graph.graphId,
             displayName: graph.displayName,
             graphKeyEnvelope: graph.graphKeyEnvelope,
@@ -75,3 +76,37 @@ export class Service extends ServiceMap.Service<Service>()(
     Layer.provide(KeyStoreService.Service.layer),
   );
 }
+
+const createCloudGraph = Effect.fn("GraphAccessCommandsProvision.createCloudGraph")(function* ({
+  graphId,
+  displayName,
+  graphKeyEnvelope,
+  accountId,
+}: {
+  graphId: string;
+  displayName: string;
+  graphKeyEnvelope: GraphEncryption.GraphKeyEnvelope;
+  accountId: string;
+}) {
+  return yield* LocalRegistry.Repo.insertGraph({
+    localGraphId: nanoid(LOCAL_GRAPH_ID_LENGTH),
+    displayName,
+    status: "active",
+    mode: "cloud",
+    graphId,
+    accountId,
+    graphKeyEnvelope,
+  });
+});
+
+const makeLocalRecord = ({ displayName }: CreateLocalInput): LocalRegistry.Schema.LocalRecord => ({
+  localGraphId: nanoid(LOCAL_GRAPH_ID_LENGTH),
+  displayName,
+  status: "active",
+  mode: "local",
+  graphId: null,
+  accountId: null,
+  graphKeyEnvelope: null,
+});
+
+const LOCAL_GRAPH_ID_LENGTH = 6;

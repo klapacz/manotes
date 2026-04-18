@@ -1,9 +1,9 @@
 import { Array as Arr, DateTime, Effect, Struct } from "effect";
 import * as EventRepo from "../event.repo";
 import * as EventSchema from "../event.schema";
-import * as LocalRegistry from "../graph-access/local-registry";
 import * as GraphRuntimeLayer from "../graph-access/graph-runtime/layer";
 import * as ManagedRuntime from "../graph-access/graph-runtime/managed-runtime";
+import * as GraphAccessCommandsProvision from "../graph-access/commands/provision";
 import * as BackupSchema from "./schema";
 
 export function createBackup({
@@ -56,7 +56,8 @@ export const exportBackup = Effect.fn("GraphBackupService.exportBackup")(functio
 
 export const importBackupToNewGraph = Effect.fn("GraphBackupService.importBackupToNewGraph")(
   function* ({ backup, displayName }: { backup: BackupSchema.Bundle; displayName: string }) {
-    const graph = yield* LocalRegistry.Repo.createGraph(displayName);
+    const provision = yield* GraphAccessCommandsProvision.Service;
+    const graph = yield* provision.createLocal({ displayName });
 
     yield* Effect.acquireUseRelease(
       ManagedRuntime.createScoped(
