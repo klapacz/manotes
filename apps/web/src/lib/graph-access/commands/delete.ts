@@ -5,15 +5,15 @@ import * as GraphRuntime from "../graph-runtime";
 import * as DBResolution from "../graph-runtime/db-resolution";
 import * as LocalRegistry from "../local-registry";
 
-export class LockTimeout extends Data.TaggedError("GraphAccessDeletion.LockTimeout")<{
+export class LockTimeout extends Data.TaggedError("GraphAccessCommandsDelete.LockTimeout")<{
   localGraphId: string;
 }> {}
 
-export class Service extends ServiceMap.Service<Service>()("GraphAccess.Deletion.Service", {
+export class Service extends ServiceMap.Service<Service>()("GraphAccess.Commands.Delete.Service", {
   make: Effect.gen(function* () {
     const runtimeManager = yield* GraphRuntime.Manager.Service;
 
-    const deleteLocal = Effect.fn("GraphAccessDeletion.deleteLocal")(function* (
+    const deleteLocal = Effect.fn("GraphAccessCommandsDelete.deleteLocal")(function* (
       localGraphId: string,
     ) {
       yield* LocalRegistry.Repo.markGraphDeleting({ localGraphId });

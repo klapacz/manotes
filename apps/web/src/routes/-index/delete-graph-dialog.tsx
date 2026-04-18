@@ -1,5 +1,4 @@
 import { useAtom } from "@effect/atom-solid";
-import { Effect } from "effect";
 import { createSignal, splitProps, type ValidComponent } from "solid-js";
 import { toast } from "somoto";
 import { Alert, AlertDescription } from "../../components/ui/alert";
@@ -16,16 +15,8 @@ import {
   type DialogTriggerProps,
 } from "../../components/ui/dialog";
 import { MatchAsyncResult, MatchTag } from "../../lib";
-import * as GraphAccessDeletion from "../../lib/graph-access/deletion/service";
+import * as GraphAccessCommands from "../../lib/graph-access/commands";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
-import * as GraphAccessRuntime from "../../lib/graph-access/runtime";
-
-const deleteLocalGraphAtom = GraphAccessRuntime.atom.fn(
-  Effect.fn("DeleteGraphDialog.deleteLocalGraph")(function* (localGraphId: string) {
-    const deletion = yield* GraphAccessDeletion.Service;
-    yield* deletion.deleteLocal(localGraphId);
-  }),
-);
 
 type Props<T extends ValidComponent = typeof Button> = {
   graph: LocalRegistry.Schema.Record;
@@ -33,7 +24,9 @@ type Props<T extends ValidComponent = typeof Button> = {
 
 export function DeleteGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
   const [open, setOpen] = createSignal(false);
-  const [deleteResult, deleteLocalGraph] = useAtom(deleteLocalGraphAtom, { mode: "promise" });
+  const [deleteResult, deleteLocalGraph] = useAtom(GraphAccessCommands.Atom.deleteLocal, {
+    mode: "promise",
+  });
   const [local, triggerProps] = splitProps(props as Props, ["graph"]);
 
   async function handleDelete() {
@@ -74,7 +67,7 @@ export function DeleteGraphDialog<T extends ValidComponent = typeof Button>(prop
                     when={error()}
                     fallback="Failed to delete graph."
                     cases={{
-                      "GraphAccessDeletion.LockTimeout": () =>
+                      "GraphAccessCommandsDelete.LockTimeout": () =>
                         "Timed out waiting for another tab to close this graph.",
                     }}
                   />
