@@ -1,12 +1,22 @@
 import { Effect } from "effect";
 import * as Runtime from "../runtime";
 import * as Delete from "./delete";
+import * as Provision from "./provision";
 import * as Sync from "./sync";
 
 export const deleteLocal = Runtime.atom.fn(
   Effect.fn("GraphAccessCommandsAtom.deleteLocal")(function* (localGraphId: string) {
     const service = yield* Delete.Service;
     yield* service.deleteLocal(localGraphId);
+  }),
+);
+
+export type OpenCloudOnDeviceInput = Provision.OpenCloudOnDeviceInput;
+
+export const openCloudOnDevice = Runtime.atom.fn(
+  Effect.fn("GraphAccessCommandsAtom.openCloudOnDevice")(function* (opts: OpenCloudOnDeviceInput) {
+    const service = yield* Provision.Service;
+    return yield* service.openCloudOnDevice(opts);
   }),
 );
 

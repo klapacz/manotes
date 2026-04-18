@@ -3,15 +3,11 @@ import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import * as GraphRegistryContract from "@manotes/shared/graph-registry/contract";
 import { Effect, Schema } from "effect";
-import type { FnContext } from "effect/unstable/reactivity/Atom";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button, buttonVariants } from "../components/ui/button";
 import { AppForm, useAppForm } from "../components/ui/form";
-import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
-import * as KeyStoreService from "../lib/graph-access/key-store/service";
-import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
-import * as SessionAtom from "../lib/graph-access/session/atom";
+import * as GraphAccessCommandsProvision from "../lib/graph-access/commands/provision";
 import { MatchAsyncResult, MatchTag } from "../lib";
 
 export const Route = createFileRoute("/create")({
@@ -25,32 +21,21 @@ type CreateGraphInput = {
 };
 
 const createGraphAtom = GraphAccessRuntime.atom.fn(
-  Effect.fn("GraphAccess.createGraph")(function* (
-    { mode, displayName, password }: CreateGraphInput,
-    get: FnContext,
-  ) {
+  Effect.fn("RoutesCreate.createGraph")(function* ({
+    mode,
+    displayName,
+    password,
+  }: CreateGraphInput) {
+    const provision = yield* GraphAccessCommandsProvision.Service;
+
     if (mode === "local") {
-      return yield* LocalRegistry.Repo.createGraph(displayName);
+      return yield* provision.createLocal({ displayName });
     }
 
-    const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(password));
-    const session = yield* get.result(SessionAtom.atom);
-    const client = yield* get.result(RemoteRegistryClient.atom);
-    const graph = yield* client.createGraph({
+    return yield* provision.createSynced({
       displayName,
-      graphKeyEnvelope: wrapped.envelope,
+      password,
     });
-    const localGraph = yield* LocalRegistry.Repo.createCloudGraph({
-      graphId: graph.graphId,
-      displayName: graph.displayName,
-      graphKeyEnvelope: graph.graphKeyEnvelope,
-      accountId: session.accountId,
-    });
-
-    const keyStore = yield* KeyStoreService.Service;
-    yield* keyStore.set(wrapped.envelope, wrapped.graphKey);
-
-    return localGraph;
   }),
 );
 

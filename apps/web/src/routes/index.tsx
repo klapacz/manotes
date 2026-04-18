@@ -8,11 +8,10 @@ import { Button, buttonVariants } from "../components/ui/button";
 import { CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { List, ListItem } from "../components/ui/list";
 import { MatchAsyncResult, MatchTag, createAtomStore } from "../lib";
+import * as GraphAccessCommands from "../lib/graph-access/commands";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
-import * as SessionAtom from "../lib/graph-access/session/atom";
-import type { FnContext } from "effect/unstable/reactivity/Atom";
 import { GraphListItem } from "./-index/GraphListItem";
 
 export const Route = createFileRoute("/")({
@@ -44,23 +43,12 @@ const cloudGraphsNotOnDeviceAtom = GraphAccessRuntime.atom.atom(
   }),
 );
 
-const openCloudGraphAtom = GraphAccessRuntime.atom.fn(
-  Effect.fnUntraced(function* (graph: RemoteRegistryClient.Graph, get: FnContext) {
-    const session = yield* get.result(SessionAtom.atom);
-
-    return yield* LocalRegistry.Repo.createCloudGraph({
-      graphId: graph.graphId,
-      displayName: graph.displayName,
-      graphKeyEnvelope: graph.graphKeyEnvelope,
-      accountId: session.accountId,
-    });
-  }),
-);
-
 function RouteComponent() {
   const localGraphs = createAtomStore(() => localGraphsAtom, [] as LocalRegistry.Schema.Record[]);
   const cloudGraphsNotOnDevice = useAtomValue(cloudGraphsNotOnDeviceAtom);
-  const [openCloudGraphResult, openCloudGraph] = useAtom(openCloudGraphAtom);
+  const [openCloudGraphResult, openCloudGraph] = useAtom(
+    GraphAccessCommands.Atom.openCloudOnDevice,
+  );
 
   return (
     <main class="mx-auto flex w-full max-w-3xl flex-col gap-12 px-6 py-12">
@@ -152,7 +140,7 @@ function RouteComponent() {
                       type="button"
                       variant="plain"
                       class="h-auto w-full justify-between rounded-xl px-4 py-3 text-left"
-                      onClick={() => openCloudGraph(graph)}
+                      onClick={() => openCloudGraph({ graph })}
                       disabled={openCloudGraphResult().waiting}
                     >
                       <span class="min-w-0">
