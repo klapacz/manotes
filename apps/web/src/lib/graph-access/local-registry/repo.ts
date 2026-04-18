@@ -138,6 +138,42 @@ export const renameGraph = SqlSchema.findOne({
   }),
 });
 
+const LocalGraphIdRequest = S.Struct({
+  localGraphId: S.String,
+});
+
+export const markGraphDeleting = SqlSchema.findOne({
+  Request: LocalGraphIdRequest,
+  Result: Schema.Record,
+  execute: Effect.fn("LocalRegistryRepo.markGraphDeleting.execute")(function* ({ localGraphId }) {
+    const sql = yield* SqlClient.SqlClient;
+
+    return yield* sql`
+      UPDATE graphs
+      SET status = 'deleting'
+      WHERE localGraphId = ${localGraphId}
+        AND mode = 'local'
+      RETURNING ${sql.literal(GRAPH_COLUMNS)}
+    `;
+  }),
+});
+
+export const deleteLocalGraph = SqlSchema.findOne({
+  Request: LocalGraphIdRequest,
+  Result: Schema.Record,
+  execute: Effect.fn("LocalRegistryRepo.deleteLocalGraph.execute")(function* ({ localGraphId }) {
+    const sql = yield* SqlClient.SqlClient;
+
+    return yield* sql`
+      DELETE FROM graphs
+      WHERE localGraphId = ${localGraphId}
+        AND mode = 'local'
+        AND status = 'deleting'
+      RETURNING ${sql.literal(GRAPH_COLUMNS)}
+    `;
+  }),
+});
+
 export const getGraphByGraphId = Effect.fn("LocalRegistryRepo.getGraphByGraphId")(function* (
   graphId: string,
 ) {
