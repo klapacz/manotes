@@ -1,6 +1,7 @@
 import { Match, Stream } from "effect";
 import { Show } from "solid-js";
 import { bindRt, createAtomStore } from "../lib";
+import { sampleLatest } from "../lib/primitives/stream/sample-latest";
 import * as GraphWorkerClient from "../lib/graph-worker.client";
 import { DedicatedWorkerHealth } from "../lib/graph.worker-rpc";
 import { cx } from "../lib/cva";
@@ -12,7 +13,10 @@ const initialHealth = new DedicatedWorkerHealth({
 });
 const WorkerHealth = bindRt((rt) =>
   rt.atom(
-    GraphWorkerClient.Service.useSync((svc) => svc.client.healthStream({})).pipe(Stream.unwrap),
+    GraphWorkerClient.Service.useSync((svc) => svc.client.healthStream({})).pipe(
+      Stream.unwrap,
+      sampleLatest("1 second"),
+    ),
   ),
 );
 
