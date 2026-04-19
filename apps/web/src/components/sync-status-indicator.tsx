@@ -1,6 +1,6 @@
 import { Array, Option, Match, Stream } from "effect";
 import { Show } from "solid-js";
-import { RtAtom } from "../lib";
+import { bindRt, createAtomStore } from "../lib";
 import * as GraphWorkerClient from "../lib/graph-worker.client";
 import { SyncStatusLocal } from "../lib/graph.worker-rpc";
 import { cx } from "../lib/cva";
@@ -13,18 +13,20 @@ const displayWindowChunkSize = 10_000;
 // for the stream to go quiet. This avoids flicker from very short-lived states
 // like brief disconnects, while still showing progress during long bursts of
 // rapid updates where `Stream.debounce()` could suppress output indefinitely.
-const SyncStatus = RtAtom.atom(
-  GraphWorkerClient.Service.useSync((svc) => svc.client.syncStatusStream({})).pipe(
-    Stream.unwrap,
-    Stream.groupedWithin(displayWindowChunkSize, displayWindow),
-    Stream.map(Array.last),
-    Stream.filter(Option.isSome),
-    Stream.map((option) => option.value),
+const SyncStatus = bindRt((rt) =>
+  rt.atom(
+    GraphWorkerClient.Service.useSync((svc) => svc.client.syncStatusStream({})).pipe(
+      Stream.unwrap,
+      Stream.groupedWithin(displayWindowChunkSize, displayWindow),
+      Stream.map(Array.last),
+      Stream.filter(Option.isSome),
+      Stream.map((option) => option.value),
+    ),
   ),
 );
 
 export function SyncStatusIndicator() {
-  const status = RtAtom.useStore(SyncStatus, initialStatus);
+  const status = createAtomStore(SyncStatus, initialStatus);
 
   return (
     <Show when={status.mode === "cloud" && status.syncState !== "Ready" ? status : null}>

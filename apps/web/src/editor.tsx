@@ -14,13 +14,14 @@ import {
   type YjsUndoPluginOptions,
 } from "prosekit/extensions/yjs";
 import { defineAppExtension } from "./editor.extension";
-import { EditorSyncService, MatchTag, RtAtom, createSyncedAtom } from "./lib";
+import { EditorSyncService, MatchTag, bindRt, createSyncedAtom } from "./lib";
 import { defineVirtualDailyHeading } from "./editor.virtual-daily-heading.extension";
 import { formatDailyNoteTitle } from "./lib/daily-note";
 import { getProsemirrorXmlFragment } from "./lib/prosemirror/yjs";
 import { Cause, Data, Deferred, Effect, SubscriptionRef } from "effect";
 import { AsyncResult, type Atom } from "effect/unstable/reactivity";
 import BacklinkMenu from "./lib/editor/backlink/menu";
+import { useAtomValue } from "@effect/atom-solid";
 
 export type BootState = Data.TaggedEnum<{
   Loading: {};
@@ -87,46 +88,48 @@ export default function Editor(props: Props): JSX.Element {
     };
   });
 
-  const editorBootStateAtom = RtAtom.subscriptionRef(
-    Effect.fn("Editor.bootState")(function* (get: Atom.AtomContext) {
-      const { doc, noteId, isDaily } = get(editorStateAtom);
-      yield* Effect.addFinalizer(() => Effect.sync(() => doc.destroy()));
+  const editorBootStateAtom = bindRt((rt) =>
+    rt.subscriptionRef(
+      Effect.fn("Editor.bootState")(function* (get: Atom.AtomContext) {
+        const { doc, noteId, isDaily } = get(editorStateAtom);
+        yield* Effect.addFinalizer(() => Effect.sync(() => doc.destroy()));
 
-      const bootStateRef = yield* SubscriptionRef.make<BootStateSnapshot>({
-        doc,
-        state: BootState.Loading(),
-      });
+        const bootStateRef = yield* SubscriptionRef.make<BootStateSnapshot>({
+          doc,
+          state: BootState.Loading(),
+        });
 
-      yield* Effect.gen(function* () {
-        const service = yield* EditorSyncService.Service;
-        const ready = yield* Deferred.make<void>();
+        yield* Effect.gen(function* () {
+          const service = yield* EditorSyncService.Service;
+          const ready = yield* Deferred.make<void>();
 
-        yield* Effect.all(
-          [
-            Effect.scoped(service.setupDoc(doc, { noteId, isDaily }, ready)),
-            Effect.gen(function* () {
-              yield* Deferred.await(ready);
-              yield* SubscriptionRef.set(bootStateRef, { doc, state: BootState.Ready() });
-            }),
-          ],
-          { concurrency: "unbounded" },
+          yield* Effect.all(
+            [
+              Effect.scoped(service.setupDoc(doc, { noteId, isDaily }, ready)),
+              Effect.gen(function* () {
+                yield* Deferred.await(ready);
+                yield* SubscriptionRef.set(bootStateRef, { doc, state: BootState.Ready() });
+              }),
+            ],
+            { concurrency: "unbounded" },
+          );
+        }).pipe(
+          Effect.catchCause((cause) => {
+            if (Cause.hasInterruptsOnly(cause)) return Effect.void;
+            return SubscriptionRef.set(bootStateRef, {
+              doc,
+              state: BootState.Error({ message: EDITOR_LOAD_ERROR_MESSAGE }),
+            });
+          }),
+          Effect.forkScoped,
         );
-      }).pipe(
-        Effect.catchCause((cause) => {
-          if (Cause.hasInterruptsOnly(cause)) return Effect.void;
-          return SubscriptionRef.set(bootStateRef, {
-            doc,
-            state: BootState.Error({ message: EDITOR_LOAD_ERROR_MESSAGE }),
-          });
-        }),
-        Effect.forkScoped,
-      );
 
-      return bootStateRef;
-    }),
+        return bootStateRef;
+      }),
+    ),
   );
 
-  const bootStateResult = RtAtom.useValue(editorBootStateAtom);
+  const bootStateResult = useAtomValue(editorBootStateAtom);
   const bootState = createMemo(() => {
     const currentDoc = state().doc;
     const result = bootStateResult();

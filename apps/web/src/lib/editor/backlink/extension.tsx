@@ -9,7 +9,7 @@ import {
 } from "prosekit/solid";
 import { createEffect, type JSX } from "solid-js";
 import * as NoteCache from "../../note-cache.service";
-import { RtAtom, createSyncedAtom } from "../..";
+import { bindRt, createAtomStore, createSyncedAtom } from "../..";
 import { Link } from "@tanstack/solid-router";
 import { type BacklinkAttrs } from "./spec";
 import { formatDailyNoteTitle } from "../../daily-note";
@@ -35,28 +35,30 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
     const isDaily = () => Boolean((props.node.attrs as BacklinkAttrs).isDaily);
     const noteIdAtom = createSyncedAtom(noteId);
     const isDailyAtom = createSyncedAtom(isDaily);
-    const state: BacklinkLabelEntry = RtAtom.useStore(
-      RtAtom.atom((get) => {
-        const noteId = get(noteIdAtom);
+    const state: BacklinkLabelEntry = createAtomStore(
+      bindRt((rt) =>
+        rt.atom((get) => {
+          const noteId = get(noteIdAtom);
 
-        if (get(isDailyAtom)) {
-          return Stream.succeed(
-            BacklinkLabelEntry.Resolved({
-              title: formatDailyNoteTitle(noteId),
-            }),
+          if (get(isDailyAtom)) {
+            return Stream.succeed(
+              BacklinkLabelEntry.Resolved({
+                title: formatDailyNoteTitle(noteId),
+              }),
+            );
+          }
+
+          return NoteCache.Service.use((cache) => cache.changes(noteId)).pipe(
+            Stream.unwrap,
+            Stream.map(
+              Option.match({
+                onSome: ({ title }): BacklinkLabelEntry => BacklinkLabelEntry.Resolved({ title }),
+                onNone: BacklinkLabelEntry.Missing,
+              }),
+            ),
           );
-        }
-
-        return NoteCache.Service.use((cache) => cache.changes(noteId)).pipe(
-          Stream.unwrap,
-          Stream.map(
-            Option.match({
-              onSome: ({ title }): BacklinkLabelEntry => BacklinkLabelEntry.Resolved({ title }),
-              onNone: BacklinkLabelEntry.Missing,
-            }),
-          ),
-        );
-      }),
+        }),
+      ),
       BacklinkLabelEntry.Loading(),
     );
 

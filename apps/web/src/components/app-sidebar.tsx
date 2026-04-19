@@ -6,7 +6,7 @@ import { Index, createMemo } from "solid-js";
 import { Temporal } from "temporal-polyfill";
 import { requestScrollToDate } from "../lib/daily-note";
 import * as Y from "yjs";
-import { MaterializedEventService, MatchAsyncResult, RtAtom } from "../lib";
+import { MaterializedEventService, MatchAsyncResult, bindRt } from "../lib";
 import { useGraph } from "../lib/graph-access/graph-runtime/context";
 import { JSDateToPlainDate } from "../lib/temporal/utils";
 import { GraphMenu } from "./graph-menu";
@@ -31,20 +31,23 @@ import {
 } from "./ui/sidebar";
 import { SyncStatusIndicator } from "./sync-status-indicator";
 import { WorkerHealthBanner } from "./worker-health-banner";
+import { useAtom } from "@effect/atom-solid";
 
 const EMPTY_YJS_UPDATE = Y.encodeStateAsUpdate(new Y.Doc());
 
-const CreateNote = RtAtom.fn(
-  Effect.fn("ComponentsAppSidebar.createNote")(function* (_: void) {
-    const service = yield* MaterializedEventService.Service;
-    const noteId = nanoid();
+const CreateNote = bindRt((rt) =>
+  rt.fn(
+    Effect.fn("ComponentsAppSidebar.createNote")(function* (_: void) {
+      const service = yield* MaterializedEventService.Service;
+      const noteId = nanoid();
 
-    return yield* service.create({
-      noteId,
-      payload: EMPTY_YJS_UPDATE,
-      createdAt: yield* DateTime.now,
-    });
-  }),
+      return yield* service.create({
+        noteId,
+        payload: EMPTY_YJS_UPDATE,
+        createdAt: yield* DateTime.now,
+      });
+    }),
+  ),
 );
 
 const weekdayLongFormatter = new Intl.DateTimeFormat("en", {
@@ -65,7 +68,7 @@ export const AppSidebar = () => {
     select: (location) => location.search.date,
   });
   const navigate = useNavigate();
-  const [createNoteResult, createNote] = RtAtom.use(CreateNote, { mode: "promise" });
+  const [createNoteResult, createNote] = useAtom(CreateNote, { mode: "promise" });
 
   async function handleCreateNote() {
     try {

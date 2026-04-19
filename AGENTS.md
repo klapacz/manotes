@@ -10,6 +10,7 @@ The Effect repository is cloned to `.reference/effect` for local API lookups and
 
 Always be concise.
 Keep schema definitions next to their encode/decode helpers.
+Place small file-local helpers below the main exported implementation.
 `index.ts` files are reserved for directory re-exports only; do not use them for implementation modules.
 
 When copying code from a dependency or reference repository, document the source file path, dependency version, why it was copied, and what modifications were made.

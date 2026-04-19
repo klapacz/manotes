@@ -8,16 +8,18 @@ import { defineAppExtension } from "../editor.extension";
 import * as BacklinkService from "../lib/materializer/backlink/service";
 import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
 import * as NoteLink from "../lib/note/link";
-import { RtAtom } from "../lib";
+import { bindRt, createAtomStore } from "../lib";
 
 function IncomingBacklinksStore(props: {
   noteId: string;
   children: (backlinks: BacklinkService.IncomingBacklinkPreview[]) => JSX.Element;
 }) {
-  const backlinks = RtAtom.useStore(
-    RtAtom.atom(
-      EditorNoteBootCache.Service.use((cache) => cache.incomingBacklinkChanges(props.noteId)).pipe(
-        Stream.unwrap,
+  const backlinks = createAtomStore(
+    bindRt((rt) =>
+      rt.atom(
+        EditorNoteBootCache.Service.use((cache) =>
+          cache.incomingBacklinkChanges(props.noteId),
+        ).pipe(Stream.unwrap),
       ),
     ),
     [] as BacklinkService.IncomingBacklinkPreview[],

@@ -1,6 +1,6 @@
 import { Match, Stream } from "effect";
 import { Show } from "solid-js";
-import { RtAtom } from "../lib";
+import { bindRt, createAtomStore } from "../lib";
 import * as GraphWorkerClient from "../lib/graph-worker.client";
 import { DedicatedWorkerHealth } from "../lib/graph.worker-rpc";
 import { cx } from "../lib/cva";
@@ -10,12 +10,14 @@ const initialHealth = new DedicatedWorkerHealth({
   consecutiveFailures: 0,
   lastFailure: "",
 });
-const WorkerHealth = RtAtom.atom(
-  GraphWorkerClient.Service.useSync((svc) => svc.client.healthStream({})).pipe(Stream.unwrap),
+const WorkerHealth = bindRt((rt) =>
+  rt.atom(
+    GraphWorkerClient.Service.useSync((svc) => svc.client.healthStream({})).pipe(Stream.unwrap),
+  ),
 );
 
 export function WorkerHealthBanner() {
-  const health = RtAtom.useStore(WorkerHealth, initialHealth);
+  const health = createAtomStore(WorkerHealth, initialHealth);
 
   return (
     <Show when={health.status !== "healthy"}>

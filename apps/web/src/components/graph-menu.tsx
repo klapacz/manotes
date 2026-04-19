@@ -3,7 +3,7 @@ import { Effect } from "effect";
 import { Show } from "solid-js";
 import { toast } from "somoto";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import { RtAtom } from "../lib";
+import { bindRt } from "../lib";
 import { useGraph } from "../lib/graph-access/graph-runtime/context";
 import * as KeyStoreService from "../lib/graph-access/key-store/service";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
@@ -29,14 +29,16 @@ import { useAtom } from "@effect/atom-solid";
 // Source: .reference/shadcn-solid/apps/docs/src/registry/blocks/sidebar-01/components/nav-user.tsx
 // Why: the current-graph control should match the sidebar account-menu pattern and own its graph actions.
 // Modifications: removed avatar visuals, replaced user identity with graph identity, changed placement to top-start, and wired the export backup action with Manotes backup services and toast feedback.
-const ExportBackup = RtAtom.fn(
-  Effect.fn("ComponentsGraphMenu.exportBackup")(function* (sourceGraphDisplayName: string) {
-    const backup = yield* GraphBackupService.exportBackup({
-      sourceGraphDisplayName,
-    });
+const ExportBackup = bindRt((rt) =>
+  rt.fn(
+    Effect.fn("ComponentsGraphMenu.exportBackup")(function* (sourceGraphDisplayName: string) {
+      const backup = yield* GraphBackupService.exportBackup({
+        sourceGraphDisplayName,
+      });
 
-    yield* GraphBackupFile.downloadBackupFile(backup);
-  }),
+      yield* GraphBackupFile.downloadBackupFile(backup);
+    }),
+  ),
 );
 
 const LockGraph = GraphAccessRuntime.atom.fn(
@@ -61,7 +63,7 @@ const GraphMenuIdentity = (props: { graph: LocalRegistry.Schema.Record }) => {
 
 export const GraphMenu = () => {
   const graph = useGraph();
-  const [exportBackupResult, exportBackup] = RtAtom.use(ExportBackup, { mode: "promise" });
+  const [exportBackupResult, exportBackup] = useAtom(ExportBackup, { mode: "promise" });
   const [lockGraphResult, lockGraph] = useAtom(() => LockGraph, { mode: "promise" });
 
   const cloudGraph = () => {
