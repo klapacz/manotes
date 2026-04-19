@@ -1,4 +1,4 @@
-import * as Schema from "effect/Schema";
+import { Schema } from "effect";
 
 export const Account = Schema.Struct({
   accountId: Schema.NonEmptyString,

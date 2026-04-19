@@ -1,7 +1,5 @@
-import * as Effect from "effect/Effect";
-import * as Layer from "effect/Layer";
-import * as Context from "effect/Context";
-import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
+import { Effect, Layer, Context } from "effect";
+import { HttpServerRequest } from "effect/unstable/http";
 import * as Worker from "../../http/worker";
 import * as AuthErrors from "../errors";
 import * as CloudflareAccess from "./cloudflare-access";

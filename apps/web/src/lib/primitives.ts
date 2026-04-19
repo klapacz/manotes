@@ -1,7 +1,6 @@
 import { useAtom, useAtomSet, RegistryContext } from "@effect/atom-solid";
 import { Types } from "effect";
-import { AsyncResult } from "effect/unstable/reactivity";
-import * as Atom from "effect/unstable/reactivity/Atom";
+import { AsyncResult, Atom } from "effect/unstable/reactivity";
 import {
   createEffect,
   createMemo,

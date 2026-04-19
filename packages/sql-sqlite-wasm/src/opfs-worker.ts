@@ -6,7 +6,7 @@ import * as WaSqlite from "wa-sqlite";
 import SQLiteESMFactory from "wa-sqlite/dist/wa-sqlite.mjs";
 import wasmUrl from "wa-sqlite/dist/wa-sqlite.wasm?url";
 import { OPFSCoopSyncVFS } from "wa-sqlite/src/examples/OPFSCoopSyncVFS";
-import * as Effect from "effect/Effect";
+import { Effect } from "effect";
 import { classifySqliteError, SqlError } from "effect/unstable/sql/SqlError";
 import type { OpfsWorkerMessage } from "./internal/opfs-worker.js";
 

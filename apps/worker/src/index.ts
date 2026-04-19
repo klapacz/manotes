@@ -1,6 +1,5 @@
-import * as Layer from "effect/Layer";
-import * as HttpRouter from "effect/unstable/http/HttpRouter";
-import * as HttpServer from "effect/unstable/http/HttpServer";
+import { Layer } from "effect";
+import { HttpRouter, HttpServer } from "effect/unstable/http";
 import { AccountsDurableObject } from "./accounts/durable-object";
 import * as IdentityResolver from "./auth/identity/resolver";
 import { GraphRegistryDurableObject } from "./graph-registry/durable-object";

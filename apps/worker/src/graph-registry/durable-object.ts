@@ -2,10 +2,8 @@ import { DurableObject } from "cloudflare:workers";
 import { SqliteClient } from "@effect/sql-sqlite-do";
 import { DisplayNameTakenError, GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
 import { Effect, Layer, ManagedRuntime, Option, Predicate, Scope, Context } from "effect";
-import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
-import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
-import * as RpcSerialization from "effect/unstable/rpc/RpcSerialization";
-import * as RpcServer from "effect/unstable/rpc/RpcServer";
+import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
+import { RpcSerialization, RpcServer } from "effect/unstable/rpc";
 import * as Repo from "./repo";
 
 // ---------------------------------------------------------------------------

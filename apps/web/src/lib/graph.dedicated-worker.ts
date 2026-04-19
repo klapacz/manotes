@@ -1,5 +1,5 @@
 import { BrowserRuntime, BrowserWorkerRunner } from "@effect/platform-browser";
-import * as Socket from "effect/unstable/socket/Socket";
+import { Socket } from "effect/unstable/socket";
 import { Effect, Layer, References, Stream, SubscriptionRef } from "effect";
 import { RpcGroup, RpcServer, RpcWorker } from "effect/unstable/rpc";
 import * as DB from "./db.service";

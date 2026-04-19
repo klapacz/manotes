@@ -1,5 +1,4 @@
-import { Effect } from "effect";
-import * as Data from "effect/Data";
+import { Effect, Data } from "effect";
 import { HttpServerRespondable, HttpServerResponse } from "effect/unstable/http";
 
 export class UnauthorizedError extends Data.TaggedError("Auth.UnauthorizedError")<{

@@ -1,5 +1,5 @@
 import { Effect, Context } from "effect";
-import * as HttpRouter from "effect/unstable/http/HttpRouter";
+import { HttpRouter } from "effect/unstable/http";
 import type * as Accounts from "../accounts/durable-object";
 import * as Errors from "./errors";
 import * as Worker from "../http/worker";

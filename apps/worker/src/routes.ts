@@ -1,6 +1,5 @@
 import { Effect, Layer, pipe, Schema } from "effect";
-import * as HttpRouter from "effect/unstable/http/HttpRouter";
-import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
+import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
 import * as AuthSession from "./auth/session";
 import * as Worker from "./http/worker";
 import * as WebRequest from "./http/web-request";

@@ -3,7 +3,7 @@
  */
 import { Effect, Schema, Context } from "effect";
 import * as Messages from "@manotes/shared/graph-sync/contract/messages";
-import * as Socket from "effect/unstable/socket/Socket";
+import { Socket } from "effect/unstable/socket";
 
 export class GraphSyncMachineContext extends Context.Service<
   GraphSyncMachineContext,

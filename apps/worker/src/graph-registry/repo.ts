@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { Array, Effect, Layer, flow, Option, Context } from "effect";
-import * as SqlClient from "effect/unstable/sql/SqlClient";
+import { SqlClient } from "effect/unstable/sql";
 import type * as SqlError from "effect/unstable/sql/SqlError";
 import type * as GraphEncryption from "@manotes/shared/graph-encryption";
 import { DisplayNameTakenError } from "@manotes/shared/graph-registry/contract";

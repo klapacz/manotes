@@ -1,5 +1,5 @@
 import { Effect, Array, Order } from "effect";
-import * as SqlClient from "effect/unstable/sql/SqlClient";
+import { SqlClient } from "effect/unstable/sql";
 import * as Messages from "@manotes/shared/graph-sync/contract/messages";
 import * as EventSchema from "./schema";
 import type { NonEmptyReadonlyArray } from "effect/Array";

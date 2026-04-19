@@ -1,5 +1,5 @@
-import * as Effect from "effect/Effect";
-import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
+import { Effect } from "effect";
+import { HttpServerRequest } from "effect/unstable/http";
 import * as Jose from "jose";
 import * as AuthErrors from "./errors";
 import { Schema } from "effect";

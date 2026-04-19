@@ -1,3 +1,3 @@
-import * as Context from "effect/Context";
+import { Context } from "effect";
 
 export class Env extends Context.Service<Env, globalThis.Env>()("Worker.Env") {}

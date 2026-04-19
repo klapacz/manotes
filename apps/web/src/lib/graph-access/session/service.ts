@@ -1,6 +1,6 @@
-import * as Effect from "effect/Effect";
-import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
-import * as HttpApiClient from "effect/unstable/httpapi/HttpApiClient";
+import { Effect } from "effect";
+import { FetchHttpClient } from "effect/unstable/http";
+import { HttpApiClient } from "effect/unstable/httpapi";
 import * as SessionApi from "@manotes/shared/session/api";
 
 export const get = Effect.fn("GraphAccessSession.get")(function* () {

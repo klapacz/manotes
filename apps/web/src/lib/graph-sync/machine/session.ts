@@ -1,7 +1,7 @@
 /**
  * Orchestrates socket lifecycle and feeds inputs into the machine runner.
  */
-import * as Socket from "effect/unstable/socket/Socket";
+import { Socket } from "effect/unstable/socket";
 import { Effect, Queue, Stream, SubscriptionRef } from "effect";
 import { decodeServerMessage } from "@manotes/shared/graph-sync/contract/codec";
 import * as EventRepo from "../../event.repo";

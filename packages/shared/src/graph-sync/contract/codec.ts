@@ -1,7 +1,7 @@
 /**
  * Encodes and decodes graph sync wire messages with MsgPack.
  */
-import * as Msgpack from "effect/unstable/encoding/Msgpack";
+import { Msgpack } from "effect/unstable/encoding";
 import { Schema } from "effect";
 import { ClientMessage, ServerMessage } from "./messages";
 
