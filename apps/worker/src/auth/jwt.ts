@@ -5,18 +5,23 @@ import * as AuthErrors from "./errors";
 import { Schema } from "effect";
 import * as Worker from "../http/worker";
 
+// Read from the domain-wide cookie set by Cloudflare Access after login,
+// rather than the per-request header injection which only works on "Allow" routes.
+// The CF_Authorization cookie is a signed JWT with the same payload as
+// the cf-access-jwt-assertion header (email, iss, aud, exp).
+
 export const readAccessToken = Effect.fn("AuthJwt.readAccessToken")(function* () {
-  const headers = yield* HttpServerRequest.schemaHeaders(
+  const cookies = yield* HttpServerRequest.schemaCookies(
     Schema.Struct({
-      "cf-access-jwt-assertion": Schema.NonEmptyString,
+      CF_Authorization: Schema.NonEmptyString,
     }),
   ).pipe(
     Effect.mapError(
-      (cause) => new AuthErrors.UnauthorizedError({ reason: "Missing Access token", cause }),
+      (cause) => new AuthErrors.UnauthorizedError({ reason: "Missing Access token cookie", cause }),
     ),
   );
 
-  return headers["cf-access-jwt-assertion"];
+  return cookies["CF_Authorization"];
 });
 
 export const JwtPayload = Schema.Struct({
