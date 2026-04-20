@@ -15,6 +15,7 @@ import * as Migrator from "../../migrator";
 import * as NoteCache from "../../note-cache.service";
 import * as NoteRepo from "../../note.repo";
 import * as BrowserExtensionTabNoteService from "../../browser-extension/tab-note/service";
+import * as SessionService from "../session/service";
 import * as DBResolution from "./db-resolution";
 import * as Lock from "./lock";
 
@@ -22,6 +23,7 @@ export type SetupOpts = {
   localGraphId: string;
   displayName: string;
   graphSyncConfig: GraphSyncConfig.GraphSyncConfig;
+  sessionService: Context.Service.Shape<typeof SessionService.Service>;
 };
 
 // TODO: use the same log level for migration and for the app
@@ -55,6 +57,7 @@ export const makeLayer = (opts: SetupOpts) =>
         GraphSyncConfig.Config,
         GraphSyncConfig.Config.of(opts.graphSyncConfig),
       );
+      const sessionServiceLayer = Layer.succeed(SessionService.Service, opts.sessionService);
 
       return Layer.mergeAll(
         EventRepo.Service.layer,
@@ -71,6 +74,7 @@ export const makeLayer = (opts: SetupOpts) =>
       ).pipe(
         Layer.provide(graphSyncConfigLayer),
         Layer.provideMerge(makeMigratedDatabaseLayer(opts)),
+        Layer.provideMerge(sessionServiceLayer),
       );
     }),
   );

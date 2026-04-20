@@ -1,14 +1,22 @@
-import { Effect } from "effect";
-import { FetchHttpClient } from "effect/unstable/http";
-import { HttpApiClient } from "effect/unstable/httpapi";
-import * as SessionApi from "@manotes/shared/session/api";
+import { Effect, Layer, Context } from "effect";
+import { AtomRegistry, Atom as A } from "effect/unstable/reactivity";
+import * as Atom from "./atom";
 
-export const get = Effect.fn("GraphAccessSession.get")(function* () {
-  const client = yield* HttpApiClient.make(SessionApi.SessionApi).pipe(
-    Effect.provide(FetchHttpClient.layer),
-  );
+export class Service extends Context.Service<Service>()("GraphAccess.Session.Service", {
+  make: Effect.gen(function* () {
+    const registry = yield* AtomRegistry.AtomRegistry;
 
-  return yield* client.session.getSession();
-});
+    const get = AtomRegistry.getResult(registry, Atom.get);
+    const find = AtomRegistry.getResult(registry, Atom.find);
+    const refresh = Effect.sync(() => registry.refresh(Atom.get));
 
-export type Session = SessionApi.Session;
+    const stream = {
+      get: A.toStreamResult(Atom.get),
+      find: A.toStreamResult(Atom.find),
+    };
+
+    return { get, find, refresh, stream };
+  }),
+}) {
+  static readonly layer = Layer.effect(this, this.make);
+}

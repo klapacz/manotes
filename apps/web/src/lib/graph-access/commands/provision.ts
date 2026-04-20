@@ -35,7 +35,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Pr
       password,
     }: CreateSyncedInput) {
       const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(password));
-      const session = yield* SessionService.get();
+      const session = yield* SessionService.Service.use((svc) => svc.get);
       const client = yield* RemoteRegistryService.Service;
       const graph = yield* client.createGraph({
         displayName,
@@ -55,7 +55,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Pr
 
     const openCloudOnDevice = Effect.fn("GraphAccessCommandsProvision.openCloudOnDevice")(
       function* ({ graph }: OpenCloudOnDeviceInput) {
-        const session = yield* SessionService.get();
+        const session = yield* SessionService.Service.use((svc) => svc.get);
 
         return yield* createCloudGraph({
           graphId: graph.graphId,
@@ -71,6 +71,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Pr
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(
     Layer.provide(KeyStoreService.Service.layer),
+    Layer.provide(SessionService.Service.layer),
   );
 }
 

@@ -24,7 +24,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Sy
       password,
     }: UploadInput) {
       const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(password));
-      const session = yield* SessionService.get();
+      const session = yield* SessionService.Service.use((svc) => svc.get);
       const client = yield* RemoteRegistryService.Service;
       const originalLocalGraph = yield* LocalRegistry.Repo.findGraph({ localGraphId });
 
@@ -107,5 +107,6 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Sy
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(
     Layer.provide(KeyStoreService.Service.layer),
+    Layer.provide(SessionService.Service.layer),
   );
 }

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
-import { For } from "solid-js";
+import { createEffect, For } from "solid-js";
 import { Effect, Array, pipe } from "effect";
 import { useAtomValue, useAtom } from "@effect/atom-solid";
 import { Alert, AlertDescription } from "../components/ui/alert";
@@ -12,6 +12,7 @@ import * as GraphAccessCommands from "../lib/graph-access/commands";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
+import * as SessionAtom from "../lib/graph-access/session/atom";
 import { GraphListItem } from "./-index/GraphListItem";
 
 export const Route = createFileRoute("/")({
@@ -45,6 +46,7 @@ const cloudGraphsNotOnDeviceAtom = GraphAccessRuntime.atom.atom(
 
 function RouteComponent() {
   const localGraphs = createAtomStore(() => localGraphsAtom, [] as LocalRegistry.Schema.Record[]);
+  const session = useAtomValue(() => SessionAtom.find);
   const cloudGraphsNotOnDevice = useAtomValue(() => cloudGraphsNotOnDeviceAtom);
   const [openCloudGraphResult, openCloudGraph] = useAtom(
     () => GraphAccessCommands.Atom.openCloudOnDevice,
@@ -55,6 +57,35 @@ function RouteComponent() {
       <header class="space-y-2">
         <h1 class="text-3xl tracking-tight font-title-serif">Manotes</h1>
         <p class="text-fg-subtle">Choose a graph, open one from the cloud, or create a new one.</p>
+
+        <MatchAsyncResult
+          when={session()}
+          onSuccess={(session) => (
+            <MatchTag
+              when={session()}
+              cases={{
+                Some: (session) => (
+                  <p class="text-sm text-fg-subtle">
+                    Signed in as <span class="font-medium">{session().value.email}</span>
+                  </p>
+                ),
+                None: () => (
+                  <p class="text-sm text-fg-subtle">
+                    Not signed in.{" "}
+                    <a href="/login" class="underline">
+                      Sign in
+                    </a>
+                  </p>
+                ),
+              }}
+            />
+          )}
+          onInitial={() => <p class="text-sm text-fg-subtle">Checking sign-in status...</p>}
+          onFailure={(error) => {
+            createEffect(() => console.log(error()));
+            return <p class="text-sm text-fg-subtle">Failed to load sign-in status.</p>;
+          }}
+        />
       </header>
 
       <section class="space-y-4">

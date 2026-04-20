@@ -15,6 +15,7 @@ import * as GraphRuntimeLayer from "./layer";
 import * as ManagedRuntime from "./managed-runtime";
 import * as Fingerprint from "./fingerprint";
 import * as LocalRegistry from "../local-registry";
+import * as SessionService from "../session/service";
 
 export type RuntimeContext = Layer.Success<GraphRuntimeLayer.AppLayer>;
 export type RuntimeError = Layer.Error<GraphRuntimeLayer.AppLayer>;
@@ -30,6 +31,7 @@ export const State = Data.taggedEnum<State>();
 export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntime.Manager", {
   make: Effect.gen(function* () {
     type Entry = { fingerprint: Fingerprint.Fingerprint; runtime: Runtime };
+    const sessionService = yield* SessionService.Service;
     const ref = yield* SynchronizedRef.make(HashMap.empty<string, Entry>());
 
     const getCached = Effect.fn("GraphRuntimeManager.getCached")(function* (localGraphId: string) {
@@ -105,6 +107,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntim
                 }),
               }),
             ),
+            sessionService,
           });
           const runtime = yield* ManagedRuntime.createScoped(runtimeLayer);
 
@@ -143,5 +146,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntim
     };
   }),
 }) {
-  static readonly layer = Layer.effect(this, this.make);
+  static readonly layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(SessionService.Service.layer),
+  );
 }

@@ -3,6 +3,7 @@ import * as EventRepo from "../event.repo";
 import * as EventSchema from "../event.schema";
 import * as GraphRuntimeLayer from "../graph-access/graph-runtime/layer";
 import * as ManagedRuntime from "../graph-access/graph-runtime/managed-runtime";
+import * as SessionService from "../graph-access/session/service";
 import * as GraphAccessCommandsProvision from "../graph-access/commands/provision";
 import * as BackupSchema from "./schema";
 
@@ -57,6 +58,7 @@ export const exportBackup = Effect.fn("GraphBackupService.exportBackup")(functio
 export const importBackupToNewGraph = Effect.fn("GraphBackupService.importBackupToNewGraph")(
   function* ({ backup, displayName }: { backup: BackupSchema.Bundle; displayName: string }) {
     const provision = yield* GraphAccessCommandsProvision.Service;
+    const sessionService = yield* SessionService.Service;
     const graph = yield* provision.createLocal({ displayName });
 
     yield* Effect.acquireUseRelease(
@@ -65,6 +67,7 @@ export const importBackupToNewGraph = Effect.fn("GraphBackupService.importBackup
           localGraphId: graph.localGraphId,
           displayName: graph.displayName,
           graphSyncConfig: { mode: "local" },
+          sessionService,
         }),
       ),
       (runtime) =>

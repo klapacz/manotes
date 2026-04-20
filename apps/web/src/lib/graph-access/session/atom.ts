@@ -1,4 +1,30 @@
-import * as GraphAccessRuntime from "../runtime";
-import * as Service from "./service";
+import { Option, Cause, Result, identity } from "effect";
+import { Atom, AtomHttpApi } from "effect/unstable/reactivity";
+import * as SessionApi from "@manotes/shared/session/api";
+import { AsyncResult } from "effect/unstable/reactivity";
+import { FetchHttpClient } from "effect/unstable/http";
 
-export const atom = GraphAccessRuntime.atom.atom(Service.get);
+const SessionHttp = AtomHttpApi.Service()("GraphAccess.Session.HttpApi", {
+  api: SessionApi.SessionApi,
+  httpClient: FetchHttpClient.layer,
+  baseUrl: "",
+});
+
+export const get = SessionHttp.query("session", "getSession", {
+  timeToLive: "1 hour",
+});
+
+export const find = Atom.map(get, (result) => {
+  return result.pipe(
+    AsyncResult.map(Option.some),
+    AsyncResult.match({
+      onSuccess: identity,
+      onInitial: identity,
+      onFailure: (failure) => {
+        const result = Cause.findError(failure.cause);
+        if (Result.isFailure(result) || result.success._tag !== "Unauthorized") return failure;
+        return AsyncResult.success(Option.none());
+      },
+    }),
+  );
+});
