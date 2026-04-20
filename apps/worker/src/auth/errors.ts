@@ -1,13 +1,6 @@
-import { Effect, Data } from "effect";
-import { HttpServerRespondable, HttpServerResponse } from "effect/unstable/http";
+import { Data } from "effect";
 
 export class UnauthorizedError extends Data.TaggedError("Auth.UnauthorizedError")<{
   reason: string;
   cause: unknown;
-}> {
-  [HttpServerRespondable.symbol]() {
-    return Effect.succeed(
-      HttpServerResponse.jsonUnsafe({ error: "Unauthorized" }, { status: 401 }),
-    );
-  }
-}
+}> {}

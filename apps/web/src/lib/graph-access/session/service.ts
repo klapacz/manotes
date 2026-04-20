@@ -8,7 +8,7 @@ export const get = Effect.fn("GraphAccessSession.get")(function* () {
     Effect.provide(FetchHttpClient.layer),
   );
 
-  return yield* client.getSession();
+  return yield* client.session.getSession();
 });
 
 export type Session = SessionApi.Session;
