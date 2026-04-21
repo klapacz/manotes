@@ -35,6 +35,7 @@ export function SyncStatusIndicator() {
               Match.whenOr(
                 "Bootstrapping",
                 "Disconnected",
+                "Failed",
                 () => "bg-warning-bg-subtle border-warning-border text-warning-fg-subtle",
               ),
               Match.exhaustive,
