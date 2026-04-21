@@ -6,6 +6,7 @@ import { encodeClientMessage } from "@manotes/shared/graph-sync/contract/codec";
 import * as Status from "../status";
 import * as MachineContext from "./context";
 import * as Model from "./model";
+import * as Errors from "./errors";
 import * as StateHandlers from "./state-handlers";
 import { SyncStatusCloud } from "../../graph.worker-rpc";
 
@@ -13,7 +14,7 @@ export const run = Effect.fn("GraphSyncMachineRunner.run")(function* ({
   inputQueue,
   write,
 }: {
-  inputQueue: Queue.Dequeue<Model.Input>;
+  inputQueue: Queue.Dequeue<Model.Input, Errors.RunnerQueueErrors>;
   write: Model.Write;
 }) {
   const status = yield* Status.Ref;

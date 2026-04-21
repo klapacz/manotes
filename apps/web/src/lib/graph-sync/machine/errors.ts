@@ -1,9 +1,10 @@
 /**
  * Defines domain errors raised while running the graph sync machine.
  */
-import { Data } from "effect";
+import { Data, Schema } from "effect";
 import * as Messages from "@manotes/shared/graph-sync/contract/messages";
 import * as Model from "./model";
+import type { Socket } from "effect/unstable/socket";
 
 export class LastCommitSeqMismatchError extends Data.TaggedError(
   "GraphSyncMachineLastCommitSeqMismatchError",
@@ -65,3 +66,5 @@ export class SocketClosedError extends Data.TaggedError("GraphSyncMachineSocketC
     return "Graph sync socket closed";
   }
 }
+
+export type RunnerQueueErrors = Socket.SocketError | Schema.SchemaError | SocketClosedError;

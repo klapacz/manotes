@@ -50,7 +50,6 @@ export function bootstrapping(
               ),
           }),
         ),
-      SocketClosed: () => Effect.fail(new Errors.SocketClosedError()),
     }),
   );
 }
@@ -84,7 +83,6 @@ export function ready(state: Types.ExtractTag<Model.State, "Ready">, input: Mode
           ),
           Match.exhaustive,
         ),
-      SocketClosed: () => Effect.fail(new Errors.SocketClosedError()),
       SocketOpened: () =>
         // A session should observe exactly one socket open transition.
         Effect.fail(
@@ -140,7 +138,6 @@ export function committing(state: Types.ExtractTag<Model.State, "Committing">, i
             Committed: (committed) => Transition.bufferCommitted(state, committed),
           }),
         ),
-      SocketClosed: () => Effect.fail(new Errors.SocketClosedError()),
       SocketOpened: () =>
         Effect.fail(
           new Errors.DuplicateConnectError({

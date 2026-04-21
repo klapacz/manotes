@@ -9,6 +9,7 @@ import * as GraphSyncContext from "../context";
 import * as Status from "../status";
 import * as Model from "./model";
 import * as Runner from "./runner";
+import * as Errors from "./errors";
 import { SyncStatusCloud } from "../../graph.worker-rpc";
 
 /**
@@ -20,7 +21,7 @@ import { SyncStatusCloud } from "../../graph.worker-rpc";
 export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
   const eventRepo = yield* EventRepo.Service;
   const statusRef = yield* Status.Ref;
-  const inputQueue = yield* Queue.unbounded<Model.Input>();
+  const inputQueue = yield* Queue.unbounded<Model.Input, Errors.RunnerQueueErrors>();
 
   const hasPendingStream = yield* eventRepo.streamHasPending();
 
@@ -56,7 +57,17 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
         onOpen: Queue.offer(inputQueue, Model.Input.SocketOpened()),
       },
     )
-    .pipe(Effect.ensuring(Queue.offer(inputQueue, Model.Input.SocketClosed())), Effect.forkScoped);
+    .pipe(
+      Effect.matchCauseEffect({
+        // The queue's error channel carries socket lifecycle events so the
+        // supervisor can distinguish normal closes from open failures. A clean
+        // close produces no failure of its own, so we synthesize
+        // SocketClosedError here to represent that case.
+        onSuccess: () => Queue.fail(inputQueue, new Errors.SocketClosedError()),
+        onFailure: (cause) => Queue.failCause(inputQueue, cause),
+      }),
+      Effect.forkScoped,
+    );
 
   return yield* Runner.run({ inputQueue: inputQueue, write });
 });

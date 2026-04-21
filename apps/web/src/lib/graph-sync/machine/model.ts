@@ -9,7 +9,6 @@ export type Input = Data.TaggedEnum<{
   SocketOpened: {};
   PendingEvents: {};
   ServerMessage: { message: Messages.ServerMessage };
-  SocketClosed: {};
 }>;
 
 export const Input = Data.taggedEnum<Input>();
