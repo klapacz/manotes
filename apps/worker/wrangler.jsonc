@@ -20,7 +20,7 @@
   },
   "vars": {
     "ACCESS_TEAM_DOMAIN": "klapacz.cloudflareaccess.com",
-    "ACCESS_AUD": "b2965dda7282615f5deb119c72292be21cc1097184d84a5189bf0de701c3d78c",
+    "ACCESS_AUD": "6ec7d19db4b5feb35d622a382ec2414ed08da90d36e35390a8b372949c3f1782",
   },
   "durable_objects": {
     "bindings": [
