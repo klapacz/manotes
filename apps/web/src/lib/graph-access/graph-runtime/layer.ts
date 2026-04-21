@@ -16,6 +16,7 @@ import * as NoteCache from "../../note-cache.service";
 import * as NoteRepo from "../../note.repo";
 import * as BrowserExtensionTabNoteService from "../../browser-extension/tab-note/service";
 import * as SessionService from "../session/service";
+import * as SyncSessionWatcher from "./sync-session-watcher";
 import * as DBResolution from "./db-resolution";
 import * as Lock from "./lock";
 
@@ -70,6 +71,7 @@ export const makeLayer = (opts: SetupOpts) =>
         BrowserExtensionTabNoteService.Service.layer,
         EditorSyncService.Service.layer,
         GraphWorkerClient.Service.layer,
+        SyncSessionWatcher.Service.layer,
         Layer.succeed(References.MinimumLogLevel, "Debug"),
       ).pipe(
         Layer.provide(graphSyncConfigLayer),
