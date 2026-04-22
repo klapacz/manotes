@@ -10,11 +10,11 @@ export const listGraphsReactivityKeys = ["listGraphs"] as const;
 
 export class Service extends AtomRpc.Service()("GraphAccess.RemoteRegistry.Service", {
   group: GraphRegistryRpc,
-  protocol: RemoteRegistryLayer.Layer,
+  protocol: RemoteRegistryLayer.makeAtomLayer,
   makeEffect: makeClient,
 }) {
   static readonly layer = Layer.effect(this, makeClient).pipe(
-    Layer.provide(RemoteRegistryLayer.Layer),
+    Layer.provide(RemoteRegistryLayer.layer),
   );
 
   static readonly listGraphs = this.query("listGraphs", undefined, {
