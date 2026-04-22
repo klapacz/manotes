@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
 import { createEffect, For } from "solid-js";
-import { Effect, Array, pipe } from "effect";
+import { Effect, Array, pipe, Option, Stream } from "effect";
 import { useAtomValue, useAtom } from "@effect/atom-solid";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Badge } from "../components/ui/badge";
@@ -19,7 +19,14 @@ export const Route = createFileRoute("/")({
   component: RouteComponent,
 });
 
-const localGraphsAtom = GraphAccessRuntime.atom.atom(LocalRegistry.Repo.reactiveListGraph());
+const localGraphsAtom = GraphAccessRuntime.atom.atom(
+  Effect.fnUntraced(function* (ctx) {
+    const session = yield* ctx.result(SessionAtom.find);
+    return LocalRegistry.Repo.reactiveListGraph({
+      accountId: session.pipe(Option.map((s) => s.accountId)),
+    });
+  }, Stream.unwrap),
+);
 const cloudGraphsAtom = RemoteRegistryService.Service.listGraphs;
 
 const cloudGraphsNotOnDeviceAtom = GraphAccessRuntime.atom.atom(

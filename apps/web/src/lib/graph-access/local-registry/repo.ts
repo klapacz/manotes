@@ -1,5 +1,5 @@
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
-import { Array, Effect, Stream, Schema as S } from "effect";
+import { Array, Effect, Option, Stream, Schema as S } from "effect";
 import * as Schema from "./schema";
 import * as Errors from "./errors";
 const GRAPH_COLUMNS =
@@ -31,16 +31,27 @@ export const migrate = Effect.gen(function* () {
 });
 
 export const listGraphs = SqlSchema.findAll({
-  Request: S.Void,
+  Request: S.Struct({
+    accountId: S.Option(S.String),
+  }),
   Result: Schema.Record,
-  execute: Effect.fn("LocalRegistryRepo.listGraphs.execute")(function* () {
+  execute: Effect.fn("LocalRegistryRepo.listGraphs.execute")(function* ({ accountId }) {
     const sql = yield* SqlClient.SqlClient;
 
-    return yield* sql`
-      SELECT ${sql.literal(GRAPH_COLUMNS)}
-      FROM graphs
-      ORDER BY displayName ASC
-    `;
+    return yield* Option.match(accountId, {
+      onNone: () => sql`
+        SELECT ${sql.literal(GRAPH_COLUMNS)}
+        FROM graphs
+        WHERE mode = 'local'
+        ORDER BY displayName ASC
+      `,
+      onSome: (id) => sql`
+        SELECT ${sql.literal(GRAPH_COLUMNS)}
+        FROM graphs
+        WHERE mode = 'local' OR accountId = ${id}
+        ORDER BY displayName ASC
+      `,
+    });
   }),
 });
 
@@ -191,17 +202,27 @@ export const findGraphReactive = Effect.fn("LocalRegistryRepo.findGraphReactive"
     );
 }, Stream.unwrap);
 
-export const reactiveListGraph = Effect.fn("LocalRegistryRepo.reactiveListGraph")(function* () {
+export const reactiveListGraph = Effect.fn("LocalRegistryRepo.reactiveListGraph")(function* ({
+  accountId,
+}: {
+  accountId: Option.Option<string>;
+}) {
   const sql = yield* SqlClient.SqlClient;
 
-  return sql
-    .reactive(
-      ["graphs"],
-      sql<Schema.RawRecord>`
-        SELECT ${sql.literal(GRAPH_COLUMNS)}
-        FROM graphs
-        ORDER BY displayName ASC
-      `,
-    )
-    .pipe(Stream.mapEffect((rows) => Schema.decodeArray(rows)));
+  const query = Option.match(accountId, {
+    onNone: () => sql<Schema.RawRecord>`
+      SELECT ${sql.literal(GRAPH_COLUMNS)}
+      FROM graphs
+      WHERE mode = 'local'
+      ORDER BY displayName ASC
+    `,
+    onSome: (id) => sql<Schema.RawRecord>`
+      SELECT ${sql.literal(GRAPH_COLUMNS)}
+      FROM graphs
+      WHERE mode = 'local' OR accountId = ${id}
+      ORDER BY displayName ASC
+    `,
+  });
+
+  return sql.reactive(["graphs"], query).pipe(Stream.mapEffect((rows) => Schema.decodeArray(rows)));
 }, Stream.unwrap);
