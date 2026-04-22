@@ -49,16 +49,26 @@ const cloudGraphsNotOnDeviceAtom = GraphAccessRuntime.atom.atom(
 function RouteComponent() {
   const localGraphs = createAtomStore(() => localGraphsAtom, [] as LocalRegistry.Schema.Record[]);
   const session = useAtomValue(() => SessionAtom.find);
-  const cloudGraphsNotOnDevice = useAtomValue(() => cloudGraphsNotOnDeviceAtom);
-  const [openCloudGraphResult, openCloudGraph] = useAtom(
-    () => GraphAccessCommands.Atom.openCloudOnDevice,
-  );
 
   return (
     <main class="mx-auto flex w-full max-w-3xl flex-col gap-12 px-6 py-12">
       <header class="space-y-2">
         <h1 class="text-3xl tracking-tight font-title-serif">Manotes</h1>
-        <p class="text-fg-subtle">Choose a graph, open one from the cloud, or create a new one.</p>
+        <p class="text-fg-subtle">
+          <MatchAsyncResult
+            when={session()}
+            onSuccess={(sessionOption) => (
+              <MatchTag
+                when={sessionOption()}
+                cases={{
+                  Some: () => "Choose a graph, open one from the cloud, or create a new one.",
+                  None: () => "Open a graph or create a new one.",
+                }}
+              />
+            )}
+            fallback="Open a graph or create a new one."
+          />
+        </p>
 
         <MatchAsyncResult
           when={session()}
@@ -94,9 +104,7 @@ function RouteComponent() {
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <CardHeader class="p-0">
             <CardTitle>On This Device</CardTitle>
-            <CardDescription>
-              Open local graphs or synced graphs already available here.
-            </CardDescription>
+            <CardDescription>Graphs on this device.</CardDescription>
           </CardHeader>
 
           <div class="flex flex-wrap gap-3">
@@ -121,90 +129,112 @@ function RouteComponent() {
             {(graph) => <GraphListItem graph={graph} />}
           </For>
         </List>
-
-        <MatchAsyncResult
-          when={openCloudGraphResult()}
-          onSuccess={(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
-          onError={(error) => (
-            <Alert variant="destructive">
-              <AlertDescription>
-                <MatchTag
-                  when={error()}
-                  fallback="Failed to open graph."
-                  cases={{
-                    "LocalRegistry.DisplayNameTakenError": () =>
-                      "A graph with that name already exists on this device.",
-                  }}
-                />
-              </AlertDescription>
-            </Alert>
-          )}
-          onDefect={() => (
-            <Alert variant="destructive">
-              <AlertDescription>Failed to open graph.</AlertDescription>
-            </Alert>
-          )}
-        />
       </section>
 
-      <section class="space-y-4">
-        <CardHeader class="p-0">
-          <CardTitle>Cloud Graphs</CardTitle>
-          <CardDescription>
-            Open synced graphs that exist in your account but not on this device yet.
-          </CardDescription>
-        </CardHeader>
-
-        <MatchAsyncResult
-          when={cloudGraphsNotOnDevice()}
-          onSuccess={(graphs) => (
-            <List>
-              <For
-                each={graphs()}
-                fallback={
-                  <ListItem dashed class="px-4 py-3 text-sm text-fg-subtle">
-                    No cloud graphs to open.
-                  </ListItem>
-                }
-              >
-                {(graph) => (
-                  <ListItem interactive>
-                    <Button
-                      type="button"
-                      variant="plain"
-                      class="h-auto w-full justify-between rounded-xl px-4 py-3 text-left"
-                      onClick={() => openCloudGraph({ graph })}
-                      disabled={openCloudGraphResult().waiting}
-                    >
-                      <span class="min-w-0">
-                        <span class="block truncate font-medium">{graph.displayName}</span>
-                      </span>
-                      <span class="flex items-center gap-3">
-                        <Badge variant="secondary" class="uppercase tracking-wide">
-                          synced
-                        </Badge>
-                        <span class="text-xs uppercase tracking-wide text-fg-subtle">Open</span>
-                      </span>
-                    </Button>
-                  </ListItem>
-                )}
-              </For>
-            </List>
-          )}
-          onFailure={() => (
-            <Alert variant="warning">
-              <AlertDescription>Failed to load cloud graphs.</AlertDescription>
-            </Alert>
-          )}
-          onInitial={() => (
-            <List>
-              <ListItem dashed class="px-4 py-3 text-sm text-fg-subtle">
-                Loading cloud graphs...
-              </ListItem>
-            </List>
-          )}
-        />
-      </section>
+      <MatchAsyncResult
+        when={session()}
+        onSuccess={(sessionOption) => (
+          <MatchTag
+            when={sessionOption()}
+            cases={{
+              Some: () => <CloudGraphsSection />,
+              None: () => null,
+            }}
+          />
+        )}
+      />
     </main>
+  );
+}
+
+function CloudGraphsSection() {
+  const cloudGraphsNotOnDevice = useAtomValue(() => cloudGraphsNotOnDeviceAtom);
+  const [openCloudGraphResult, openCloudGraph] = useAtom(
+    () => GraphAccessCommands.Atom.openCloudOnDevice,
+  );
+
+  return (
+    <section class="space-y-4">
+      <CardHeader class="p-0">
+        <CardTitle>Cloud Graphs</CardTitle>
+        <CardDescription>
+          Open synced graphs that exist in your account but not on this device yet.
+        </CardDescription>
+      </CardHeader>
+
+      <MatchAsyncResult
+        when={openCloudGraphResult()}
+        onSuccess={(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
+        onError={(error) => (
+          <Alert variant="destructive">
+            <AlertDescription>
+              <MatchTag
+                when={error()}
+                fallback="Failed to open graph."
+                cases={{
+                  "LocalRegistry.DisplayNameTakenError": () =>
+                    "A graph with that name already exists on this device.",
+                }}
+              />
+            </AlertDescription>
+          </Alert>
+        )}
+        onDefect={() => (
+          <Alert variant="destructive">
+            <AlertDescription>Failed to open graph.</AlertDescription>
+          </Alert>
+        )}
+      />
+
+      <MatchAsyncResult
+        when={cloudGraphsNotOnDevice()}
+        onSuccess={(graphs) => (
+          <List>
+            <For
+              each={graphs()}
+              fallback={
+                <ListItem dashed class="px-4 py-3 text-sm text-fg-subtle">
+                  No cloud graphs to open.
+                </ListItem>
+              }
+            >
+              {(graph) => (
+                <ListItem interactive>
+                  <Button
+                    type="button"
+                    variant="plain"
+                    class="h-auto w-full justify-between rounded-xl px-4 py-3 text-left"
+                    onClick={() => openCloudGraph({ graph })}
+                    disabled={openCloudGraphResult().waiting}
+                  >
+                    <span class="min-w-0">
+                      <span class="block truncate font-medium">{graph.displayName}</span>
+                    </span>
+                    <span class="flex items-center gap-3">
+                      <Badge variant="secondary" class="uppercase tracking-wide">
+                        synced
+                      </Badge>
+                      <span class="text-xs uppercase tracking-wide text-fg-subtle">Open</span>
+                    </span>
+                  </Button>
+                </ListItem>
+              )}
+            </For>
+          </List>
+        )}
+        onFailure={() => (
+          <Alert variant="warning">
+            <AlertDescription>Failed to load cloud graphs.</AlertDescription>
+          </Alert>
+        )}
+        onInitial={() => (
+          <List>
+            <ListItem dashed class="px-4 py-3 text-sm text-fg-subtle">
+              Loading cloud graphs...
+            </ListItem>
+          </List>
+        )}
+      />
+    </section>
   );
 }

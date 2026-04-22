@@ -1,9 +1,12 @@
 import { Link } from "@tanstack/solid-router";
 import { Show } from "solid-js";
+import { useAtomValue } from "@effect/atom-solid";
 import { Button } from "../../components/ui/button";
 import { ListItem } from "../../components/ui/list";
 import { cx } from "../../lib/cva";
+import { MatchAsyncResult, MatchTag } from "../../lib";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
+import * as SessionAtom from "../../lib/graph-access/session/atom";
 import { DeleteGraphDialog } from "./delete-graph-dialog";
 import { DetachGraphDialog } from "./detach-graph-dialog";
 import { RenameGraphDialog } from "./RenameGraphDialog";
@@ -14,6 +17,8 @@ type Props = {
 };
 
 export function GraphListItem(props: Props) {
+  const session = useAtomValue(() => SessionAtom.find);
+
   return (
     <ListItem
       interactive
@@ -47,9 +52,27 @@ export function GraphListItem(props: Props) {
         <RenameGraphDialog<typeof Button> graph={props.graph} as={Button} variant="ghost" size="sm">
           Rename
         </RenameGraphDialog>
-        <UploadGraphDialog<typeof Button> graph={props.graph} as={Button} variant="ghost" size="sm">
-          Upload
-        </UploadGraphDialog>
+        <MatchAsyncResult
+          when={session()}
+          onSuccess={(sessionOption) => (
+            <MatchTag
+              when={sessionOption()}
+              cases={{
+                Some: () => (
+                  <UploadGraphDialog<typeof Button>
+                    graph={props.graph}
+                    as={Button}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    Upload
+                  </UploadGraphDialog>
+                ),
+                None: () => null,
+              }}
+            />
+          )}
+        />
         <DeleteGraphDialog<typeof Button> graph={props.graph} as={Button} variant="ghost" size="sm">
           Delete
         </DeleteGraphDialog>
