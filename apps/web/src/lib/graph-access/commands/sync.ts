@@ -41,7 +41,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Sy
 
       // TODO: This creates the remote graph before the local registry/key-store update.
       // If a later step fails, we orphan the remote graph and retries hit display-name taken.
-      const graph = yield* client.createGraph({
+      const graph = yield* client("createGraph", {
         displayName: originalLocalGraph.value.displayName,
         graphKeyEnvelope: wrapped.envelope,
       });

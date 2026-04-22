@@ -11,7 +11,7 @@ import { MatchAsyncResult, MatchTag, createAtomStore } from "../lib";
 import * as GraphAccessCommands from "../lib/graph-access/commands";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
-import * as RemoteRegistryClient from "../lib/graph-access/remote-registry/client";
+import * as RemoteRegistryService from "../lib/graph-access/remote-registry/service";
 import * as SessionAtom from "../lib/graph-access/session/atom";
 import { GraphListItem } from "./-index/GraphListItem";
 
@@ -20,12 +20,7 @@ export const Route = createFileRoute("/")({
 });
 
 const localGraphsAtom = GraphAccessRuntime.atom.atom(LocalRegistry.Repo.reactiveListGraph());
-const cloudGraphsAtom = GraphAccessRuntime.atom.atom(
-  Effect.fnUntraced(function* (get) {
-    const client = yield* get.result(RemoteRegistryClient.atom);
-    return yield* client.listGraphs();
-  }),
-);
+const cloudGraphsAtom = RemoteRegistryService.Service.listGraphs;
 
 const cloudGraphsNotOnDeviceAtom = GraphAccessRuntime.atom.atom(
   Effect.fnUntraced(function* (ctx) {
