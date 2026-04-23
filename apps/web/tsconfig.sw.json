@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // WebWorker instead of DOM — ServiceWorkerGlobalScope, CacheStorage, etc.
+    "lib": ["ES2024", "WebWorker"],
+    "types": ["vite/client", "vite-plugin-pwa/client"],
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.sw.tsbuildinfo"
+  },
+  "include": ["src/sw.ts"]
+}

@@ -4,9 +4,13 @@
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
-    "types": ["vite/client"],
+    // vite/client: Vite's import.meta.env and asset imports
+    // vite-plugin-pwa/client: virtual:pwa-register module type
+    "types": ["vite/client", "vite-plugin-pwa/client"],
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo"
   },
+  // sw.ts uses the WebWorker lib which conflicts with DOM — compiled via tsconfig.sw.json
+  "exclude": ["src/sw.ts"],
   "include": ["src/**/*.ts", "src/**/*.tsx", "drizzle/**/*.ts"]
 }
