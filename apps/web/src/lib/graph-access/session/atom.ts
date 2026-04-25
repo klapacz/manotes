@@ -14,6 +14,8 @@ export const get = SessionHttp.query("session", "getSession", {
   timeToLive: "1 hour",
 });
 
+export const checkWaitlist = SessionHttp.mutation("session", "checkWaitlist");
+
 export const find = Atom.map(get, (result) => {
   return result.pipe(
     AsyncResult.map(Option.some),

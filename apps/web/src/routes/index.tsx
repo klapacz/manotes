@@ -14,6 +14,7 @@ import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as RemoteRegistryService from "../lib/graph-access/remote-registry/service";
 import * as SessionAtom from "../lib/graph-access/session/atom";
 import { GraphListItem } from "./-index/GraphListItem";
+import { WaitlistDialog } from "./-index/waitlist-dialog";
 
 export const Route = createFileRoute("/")({
   component: RouteComponent,
@@ -83,10 +84,9 @@ function RouteComponent() {
                 ),
                 None: () => (
                   <p class="text-sm text-fg-subtle">
-                    Not signed in.{" "}
-                    <a href="/login" class="underline">
-                      Sign in
-                    </a>
+                    <WaitlistDialog class="underline cursor-pointer">
+                      Sign in or join the waitlist
+                    </WaitlistDialog>
                   </p>
                 ),
               }}
