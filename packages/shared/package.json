@@ -9,6 +9,7 @@
     "./graph-sync/contract/codec": "./dist/graph-sync/contract/codec.mjs",
     "./graph-sync/contract/limits": "./dist/graph-sync/contract/limits.mjs",
     "./graph-sync/contract/messages": "./dist/graph-sync/contract/messages.mjs",
+    "./schema/email": "./dist/schema/email.mjs",
     "./session/api": "./dist/session/api.mjs",
     "./session/auth": "./dist/session/auth.mjs",
     "./package.json": "./package.json"

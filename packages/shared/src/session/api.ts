@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { HttpApi, HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
+import * as EmailSchema from "../schema/email";
 import * as SessionAuth from "./auth";
 
 export const Session = Schema.Struct({
@@ -10,8 +11,7 @@ export const Session = Schema.Struct({
 export type Session = typeof Session.Type;
 
 export const WaitlistRequest = Schema.Struct({
-  // TODO: validate this is actually an email
-  email: Schema.String,
+  email: EmailSchema.Email,
 });
 
 export const WaitlistStatus = Schema.Struct({

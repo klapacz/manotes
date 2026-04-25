@@ -1,4 +1,5 @@
 import { useAtom } from "@effect/atom-solid";
+import * as EmailSchema from "@manotes/shared/schema/email";
 import { Schema } from "effect";
 import { createSignal, Show, type ValidComponent } from "solid-js";
 import { Alert, AlertDescription } from "../../components/ui/alert";
@@ -20,8 +21,7 @@ import * as SessionAtom from "../../lib/graph-access/session/atom";
 import { Atom } from "effect/unstable/reactivity";
 
 const WaitlistFormSchema = Schema.Struct({
-  // TODO: validate email
-  email: Schema.String,
+  email: EmailSchema.Email,
 }).pipe(Schema.toStandardSchemaV1);
 
 export function WaitlistDialog<T extends ValidComponent = typeof Button>(
