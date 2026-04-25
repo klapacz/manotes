@@ -9,6 +9,10 @@ export type ResolvedAccount = {
   readonly email: string;
 };
 
+export type WaitlistResult = {
+  readonly status: "WAITLIST" | "ACTIVE";
+};
+
 export class AccountsDurableObject extends DurableObject<Env> {
   private readonly runtime = ManagedRuntime.make(
     Repo.Service.layer.pipe(
@@ -40,6 +44,12 @@ export class AccountsDurableObject extends DurableObject<Env> {
       ),
     );
   }
+
+  checkOrWaitlist(email: string): Promise<WaitlistResult> {
+    return this.ctx.blockConcurrencyWhile(() =>
+      this.runtime.runPromise(checkOrWaitlist(email).pipe(Effect.map(Struct.pick(["status"])))),
+    );
+  }
 }
 
 const ensureAccount = Effect.fn("AccountsDurableObject.ensureAccount")(function* (email: string) {
@@ -51,6 +61,14 @@ const ensureAccount = Effect.fn("AccountsDurableObject.ensureAccount")(function*
   }
 
   return account;
+});
+
+const checkOrWaitlist = Effect.fn("AccountsDurableObject.checkOrWaitlist")(function* (
+  email: string,
+) {
+  const repo = yield* Repo.Service;
+
+  return yield* repo.findOrCreate({ email, status: "WAITLIST" });
 });
 
 class AccountNotActiveError extends Data.TaggedError("Accounts.AccountNotActiveError")<{
