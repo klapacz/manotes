@@ -1,5 +1,6 @@
 import { Schema } from "effect";
-import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup } from "effect/unstable/httpapi";
+import { HttpApi, HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
+import * as SessionAuth from "./auth";
 
 export const Session = Schema.Struct({
   accountId: Schema.NonEmptyString,
@@ -15,10 +16,10 @@ export const SessionApi = HttpApi.make("SessionApi").add(
   HttpApiGroup.make("session").add(
     HttpApiEndpoint.get("getSession", "/api/session", {
       success: Session,
-      // The worker returns an empty 401 response for signed-out requests, so this
-      // must be the no-content variant. Using Unauthorized would expect a typed
-      // error body, causing AtomHttpApi to see a raw HttpClientError and die.
-      error: HttpApiError.UnauthorizedNoContent,
-    }),
+      // Intentional duplicate of SessionAuth.Middleware's error:
+      // runtime merges middleware errors, but AtomHttpApi.query currently types
+      // AsyncResult errors from endpoint-local _Error["Type"] only.
+      error: SessionAuth.UnauthorizedError,
+    }).middleware(SessionAuth.Middleware),
   ),
 );

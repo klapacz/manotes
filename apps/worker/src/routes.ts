@@ -1,3 +1,4 @@
+import * as SessionAuth from "@manotes/shared/session/auth";
 import { Effect, Layer, pipe, Schema } from "effect";
 import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
 import * as AuthSession from "./auth/session";
@@ -8,7 +9,6 @@ import * as SessionRoutes from "./session/routes";
 const GraphIdParams = Schema.Struct({ graphId: Schema.NonEmptyString });
 
 const protectedRoutesLayer = Layer.mergeAll(
-  SessionRoutes.layer,
   // /login triggers Cloudflare Access auth (validates CF_Authorization cookie).
   // If not authenticated → Access shows login page. If authenticated → redirect to /.
   HttpRouter.add("GET", "/login", HttpServerResponse.redirect("/")),
@@ -30,17 +30,18 @@ const protectedRoutesLayer = Layer.mergeAll(
     "/api/*",
     HttpServerResponse.jsonUnsafe({ error: "Not found" }, { status: 404 }),
   ),
-).pipe(Layer.provide(AuthSession.Middleware.layer));
+).pipe(Layer.provide(AuthSession.RouterMiddleware.layer));
 
 export const layer = Layer.mergeAll(
   HttpRouter.add("GET", "/api/health", HttpServerResponse.jsonUnsafe({ ok: true })),
   HttpRouter.add("*", "/*", HttpServerResponse.empty({ status: 404 })),
+  SessionRoutes.layer.pipe(Layer.provide(AuthSession.HttpApiMiddlewareLayer)),
   protectedRoutesLayer,
 );
 
 const proxyToGraphRegistry = Effect.fn("Routes.proxyToGraphRegistry")(function* () {
   const env = yield* Worker.Env;
-  const session = yield* AuthSession.Current;
+  const session = yield* SessionAuth.Current;
   const request = yield* WebRequest.get();
 
   const response = yield* Effect.tryPromise({
@@ -61,7 +62,7 @@ const proxyToGraphSync = Effect.fn("Routes.proxyToGraphSync")(function* ({
   params: typeof GraphIdParams.Type;
 }) {
   const env = yield* Worker.Env;
-  const session = yield* AuthSession.Current;
+  const session = yield* SessionAuth.Current;
   const exists = yield* Effect.tryPromise({
     try: () => {
       const registry = env.GRAPH_REGISTRY_DO.getByName(session.accountId);
