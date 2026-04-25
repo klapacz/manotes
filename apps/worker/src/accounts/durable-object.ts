@@ -4,6 +4,8 @@ import { DurableObject } from "cloudflare:workers";
 import { SqliteClient } from "@effect/sql-sqlite-do";
 import * as Repo from "./repo";
 
+export const NAMESPACE_KEY = "accounts-v1";
+
 export type ResolvedAccount = {
   readonly accountId: string;
   readonly email: string;

@@ -2,6 +2,7 @@ import * as SessionAuth from "@manotes/shared/session/auth";
 import { Effect, Layer, Types } from "effect";
 import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
 import { HttpApiError } from "effect/unstable/httpapi";
+import * as Accounts from "../accounts/durable-object";
 import * as Worker from "../http/worker";
 import * as Errors from "./errors";
 import * as IdentityResolver from "./identity/resolver";
@@ -51,13 +52,11 @@ export const RouterMiddleware = HttpRouter.middleware<{
 
 export const HttpApiMiddlewareLayer = Layer.effect(SessionAuth.Middleware, CurrentSessionProvider);
 
-const ACCOUNTS_NAMESPACE_KEY = "accounts-v1";
-
 const resolve = Effect.fn("AuthSession.resolve")(function* () {
   const env = yield* Worker.Env;
   const { email } = yield* IdentityResolver.Service.use((service) => service.resolve());
 
-  const accounts = env.ACCOUNTS_DO.getByName(ACCOUNTS_NAMESPACE_KEY);
+  const accounts = env.ACCOUNTS_DO.getByName(Accounts.NAMESPACE_KEY);
 
   return yield* Effect.tryPromise({
     try: () => accounts.ensureAccount(email),
