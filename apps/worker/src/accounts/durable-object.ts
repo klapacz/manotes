@@ -1,4 +1,4 @@
-import { Effect, Layer, ManagedRuntime, Option } from "effect";
+import { Data, Effect, Layer, ManagedRuntime } from "effect";
 import { Struct } from "effect";
 import { DurableObject } from "cloudflare:workers";
 import { SqliteClient } from "@effect/sql-sqlite-do";
@@ -44,9 +44,15 @@ export class AccountsDurableObject extends DurableObject<Env> {
 
 const ensureAccount = Effect.fn("AccountsDurableObject.ensureAccount")(function* (email: string) {
   const repo = yield* Repo.Service;
-  const existing = yield* repo.getAccountByEmail({ email });
+  const account = yield* repo.findOrCreate({ email, status: "ACTIVE" });
 
-  if (Option.isSome(existing)) return existing.value;
+  if (account.status !== "ACTIVE") {
+    return yield* Effect.fail(new AccountNotActiveError({ email }));
+  }
 
-  return yield* repo.createAccount({ email });
+  return account;
 });
+
+class AccountNotActiveError extends Data.TaggedError("Accounts.AccountNotActiveError")<{
+  readonly email: string;
+}> {}

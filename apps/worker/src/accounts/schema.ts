@@ -1,8 +1,12 @@
 import { Schema } from "effect";
 
+export const Status = Schema.Literals(["WAITLIST", "ACTIVE"]);
+export type Status = typeof Status.Type;
+
 export const Account = Schema.Struct({
   accountId: Schema.NonEmptyString,
   email: Schema.NonEmptyString,
+  status: Status,
   createdAt: Schema.DateTimeUtcFromString,
   updatedAt: Schema.DateTimeUtcFromString,
 });
