@@ -18,10 +18,24 @@
       "invocation_logs": true,
     },
   },
+  "send_email": [
+    {
+      "name": "EMAIL",
+    },
+  ],
   "vars": {
-    "ACCESS_TEAM_DOMAIN": "klapacz.cloudflareaccess.com",
-    "ACCESS_AUD": "6ec7d19db4b5feb35d622a382ec2414ed08da90d36e35390a8b372949c3f1782",
+    "EMAIL_ADDRESS": "no-reply@sand.manotes.dev",
   },
+  "kv_namespaces": [
+    {
+      "binding": "SESSION_KV",
+      "id": "9d17d685e0684964a7e20aa9d4798a81",
+    },
+    {
+      "binding": "OTP_KV",
+      "id": "01541a2adb4c43699715fb27b579251c",
+    },
+  ],
   "durable_objects": {
     "bindings": [
       {

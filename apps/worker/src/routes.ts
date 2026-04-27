@@ -9,9 +9,6 @@ import * as SessionRoutes from "./session/routes";
 const GraphIdParams = Schema.Struct({ graphId: Schema.NonEmptyString });
 
 const protectedRoutesLayer = Layer.mergeAll(
-  // /login triggers Cloudflare Access auth (validates CF_Authorization cookie).
-  // If not authenticated → Access shows login page. If authenticated → redirect to /.
-  HttpRouter.add("GET", "/login", HttpServerResponse.redirect("/")),
   HttpRouter.add("POST", "/api/rpc/graph-registry", () => proxyToGraphRegistry()),
   HttpRouter.add("*", "/api/sync/:graphId", () =>
     pipe(

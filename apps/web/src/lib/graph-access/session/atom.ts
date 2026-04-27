@@ -15,6 +15,9 @@ export const get = SessionHttp.query("session", "getSession", {
 });
 
 export const checkWaitlist = SessionHttp.mutation("session", "checkWaitlist");
+export const requestOtp = SessionHttp.mutation("session", "requestOtp");
+export const verifyOtp = SessionHttp.mutation("session", "verifyOtp");
+export const logout = SessionHttp.mutation("session", "logout");
 
 export const find = Atom.map(get, (result) => {
   return result.pipe(

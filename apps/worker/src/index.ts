@@ -1,7 +1,10 @@
 import { Layer } from "effect";
 import { HttpRouter, HttpServer } from "effect/unstable/http";
 import { AccountsDurableObject } from "./accounts/durable-object";
-import * as IdentityResolver from "./auth/identity/resolver";
+import { AuthService } from "./auth/auth";
+import { EmailService } from "./auth/email";
+import { OtpService } from "./auth/otp";
+import { SessionKvService } from "./auth/session-kv";
 import { GraphRegistryDurableObject } from "./graph-registry/durable-object";
 import { GraphSyncDurableObject } from "./graph-sync/durable-object";
 import * as Worker from "./http/worker";
@@ -13,7 +16,10 @@ export { AccountsDurableObject, GraphSyncDurableObject, GraphRegistryDurableObje
 const { handler } = HttpRouter.toWebHandler(
   Routes.layer.pipe(
     Layer.provide(HttpServer.layerServices),
-    Layer.provideMerge(IdentityResolver.Service.layer),
+    Layer.provideMerge(AuthService.layer),
+    Layer.provideMerge(EmailService.layer),
+    Layer.provideMerge(OtpService.layer),
+    Layer.provideMerge(SessionKvService.layer),
     Layer.provideMerge(Layer.succeed(Worker.Env, env)),
   ),
 );

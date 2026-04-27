@@ -1,8 +1,9 @@
 import { Effect, Layer } from "effect";
-import { HttpApiBuilder } from "effect/unstable/httpapi";
+import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi";
 import * as SessionApi from "@manotes/shared/session/api";
 import * as SessionAuth from "@manotes/shared/session/auth";
 import * as Accounts from "../accounts/durable-object";
+import { AuthService } from "../auth/auth";
 import * as Worker from "../http/worker";
 
 export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
@@ -10,9 +11,47 @@ export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
     HttpApiBuilder.group(SessionApi.SessionApi, "session", (handlers) =>
       Effect.gen(function* () {
         const env = yield* Worker.Env;
+        const auth = yield* AuthService;
         return handlers
           .handleRaw("getSession", () => getSessionValue())
-          .handle("checkWaitlist", ({ payload }) => checkWaitlistValue(env, payload.email));
+          .handle("checkWaitlist", ({ payload }) => checkWaitlistValue(env, payload.email))
+          .handle("requestOtp", ({ payload }) =>
+            auth.requestOtp(payload.email).pipe(
+              Effect.map(() => undefined),
+              Effect.catchTag("Auth.OtpStoreError", () =>
+                Effect.fail(new HttpApiError.InternalServerError({})),
+              ),
+              Effect.catchTag("Auth.EmailSendError", () =>
+                Effect.fail(new HttpApiError.InternalServerError({})),
+              ),
+              Effect.catch(() => Effect.fail(new HttpApiError.InternalServerError({}))),
+            ),
+          )
+          .handle("verifyOtp", ({ payload }) =>
+            auth.login(payload.email, payload.otp).pipe(
+              Effect.catchTag("Auth.OtpVerificationError", () =>
+                Effect.fail(new HttpApiError.Unauthorized({})),
+              ),
+              Effect.catchTag("Auth.OtpStoreError", () =>
+                Effect.fail(new HttpApiError.InternalServerError({})),
+              ),
+              Effect.catchTag("Auth.AccountResolutionError", () =>
+                Effect.fail(new HttpApiError.InternalServerError({})),
+              ),
+              Effect.catchTag("Auth.SessionStoreError", () =>
+                Effect.fail(new HttpApiError.InternalServerError({})),
+              ),
+              Effect.catch(() => Effect.fail(new HttpApiError.InternalServerError({}))),
+            ),
+          )
+          .handle("logout", () =>
+            auth.logout().pipe(
+              Effect.catchTag("Auth.SessionStoreError", () =>
+                Effect.fail(new HttpApiError.InternalServerError({})),
+              ),
+              Effect.catch(() => Effect.fail(new HttpApiError.InternalServerError({}))),
+            ),
+          );
       }),
     ),
   ),
