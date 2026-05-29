@@ -1,0 +1,63 @@
+# Project-local Helix language server setup.
+# Keep TypeScript language features from Helix's default server, but let OXC own
+# formatting and lint diagnostics for JS/TS files.
+
+[language-server.oxfmt]
+command = "pnpm"
+args = ["exec", "oxfmt", "--lsp"]
+
+[language-server.oxlint]
+command = "pnpm"
+args = ["exec", "oxlint", "--lsp"]
+
+[[language]]
+name = "javascript"
+auto-format = true
+language-servers = [
+  { name = "typescript-language-server", except-features = [
+    "format",
+  ] },
+  { name = "oxfmt", only-features = [
+    "format",
+  ] },
+  "oxlint",
+]
+
+[[language]]
+name = "jsx"
+auto-format = true
+language-servers = [
+  { name = "typescript-language-server", except-features = [
+    "format",
+  ] },
+  { name = "oxfmt", only-features = [
+    "format",
+  ] },
+  "oxlint",
+]
+
+[[language]]
+name = "typescript"
+auto-format = true
+language-servers = [
+  { name = "typescript-language-server", except-features = [
+    "format",
+  ] },
+  { name = "oxfmt", only-features = [
+    "format",
+  ] },
+  "oxlint",
+]
+
+[[language]]
+name = "tsx"
+auto-format = true
+language-servers = [
+  { name = "typescript-language-server", except-features = [
+    "format",
+  ] },
+  { name = "oxfmt", only-features = [
+    "format",
+  ] },
+  "oxlint",
+]
