@@ -7,7 +7,7 @@
   "main": "./src/index.ts",
   "routes": [
     {
-      "pattern": "sand.manotes.dev",
+      "pattern": "manotes.dev",
       "custom_domain": true,
     },
   ],
@@ -24,7 +24,7 @@
     },
   ],
   "vars": {
-    "EMAIL_ADDRESS": "no-reply@sand.manotes.dev",
+    "EMAIL_ADDRESS": "no-reply@manotes.dev",
   },
   "kv_namespaces": [
     {
