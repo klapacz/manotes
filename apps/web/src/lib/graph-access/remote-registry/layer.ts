@@ -22,7 +22,7 @@ function makeLayer(refresh: Effect.Effect<void, never, never>) {
   const httpClientRefreshOnUnauthorized = Layer.effect(
     HttpClient.HttpClient,
     Effect.gen(function* () {
-      const client = yield* HttpClient.HttpClient.asEffect();
+      const client = yield* HttpClient.HttpClient;
 
       return client.pipe(
         HttpClient.tap(

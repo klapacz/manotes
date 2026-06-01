@@ -19,7 +19,6 @@ overrides:
 
 patchedDependencies:
   drizzle-orm: patches/drizzle-orm.patch
-  effect: patches/effect.patch
 peerDependencyRules:
   allowAny:
     - vite
