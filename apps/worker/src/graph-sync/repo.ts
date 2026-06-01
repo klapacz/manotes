@@ -1,7 +1,7 @@
 import { Effect, Array, Order } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import * as Messages from "@manotes/shared/graph-sync/contract/messages";
-import * as EventSchema from "./schema";
+import * as EventSchema from "./schema.ts";
 import type { NonEmptyReadonlyArray } from "effect/Array";
 
 export const migrate = Effect.gen(function* () {

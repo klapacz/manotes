@@ -5,8 +5,8 @@ import {
   MAX_EVENTS_PER_REPLAY,
 } from "@manotes/shared/graph-sync/contract/limits";
 import * as Messages from "@manotes/shared/graph-sync/contract/messages";
-import * as Errors from "./errors";
-import * as Repo from "./repo";
+import * as Errors from "./errors.ts";
+import * as Repo from "./repo.ts";
 
 export class ResponsePlan extends Data.TaggedClass("ResponsePlan")<{
   reply: ReadonlyArray<Messages.ServerMessage>;

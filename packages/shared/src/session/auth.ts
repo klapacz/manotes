@@ -1,3 +1,4 @@
+import type * as Alchemy from "alchemy";
 import { Context, Schema } from "effect";
 import { HttpApiError, HttpApiMiddleware } from "effect/unstable/httpapi";
 
@@ -17,7 +18,7 @@ export const UnauthorizedError = HttpApiError.UnauthorizedNoContent;
 export const InternalServerError = HttpApiError.InternalServerErrorNoContent;
 export const AuthMiddlewareError = Schema.Union([UnauthorizedError, InternalServerError]);
 
-export class Middleware extends HttpApiMiddleware.Service<Middleware, { provides: Current }>()(
-  "Shared.Session.Middleware",
-  { error: AuthMiddlewareError },
-) {}
+export class Middleware extends HttpApiMiddleware.Service<
+  Middleware,
+  { requires: Alchemy.RuntimeContext; provides: Current }
+>()("Shared.Session.Middleware", { error: AuthMiddlewareError }) {}

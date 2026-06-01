@@ -2,19 +2,20 @@
   "name": "@manotes/worker",
   "private": true,
   "type": "module",
-  "scripts": {
-    "cf:typegen": "wrangler types --config wrangler.jsonc"
-  },
+  "scripts": {},
   "dependencies": {
+    "@effect/platform-bun": "4.0.0-beta.74",
+    "@effect/platform-node": "4.0.0-beta.74",
     "@effect/sql-sqlite-do": "4.0.0-beta.74",
     "@manotes/shared": "workspace:*",
+    "alchemy": "2.0.0-beta.50",
     "effect": "4.0.0-beta.74",
     "jose": "6.2.2",
     "nanoid": "^5.1.6",
     "vite": "catalog:"
   },
   "devDependencies": {
-    "@typescript/native-preview": "7.0.0-dev.20260327.2",
-    "wrangler": "^4.71.0"
+    "@types/node": "^25.9.1",
+    "@typescript/native-preview": "7.0.0-dev.20260327.2"
   }
 }

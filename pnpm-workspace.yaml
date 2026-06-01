@@ -18,6 +18,7 @@ overrides:
   vitest: "catalog:"
 
 patchedDependencies:
+  alchemy: patches/alchemy.patch
   drizzle-orm: patches/drizzle-orm.patch
 peerDependencyRules:
   allowAny:

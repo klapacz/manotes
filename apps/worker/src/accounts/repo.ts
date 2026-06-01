@@ -1,7 +1,7 @@
 import { DateTime, Effect, Layer, Schema as S, Context, Option } from "effect";
 import { nanoid } from "nanoid";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
-import * as Schema from "./schema";
+import * as Schema from "./schema.ts";
 
 const ACCOUNT_ID_LENGTH = 12;
 const ACCOUNT_COLUMNS = "accountId, email, status, createdAt, updatedAt";

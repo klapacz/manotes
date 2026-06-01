@@ -1,11 +1,11 @@
 import { Context, Effect, Layer, Schema } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
-import * as Accounts from "../accounts/durable-object";
-import * as Worker from "../http/worker";
-import { EmailService } from "./email";
-import * as Errors from "./errors";
-import { OtpService } from "./otp";
-import { SessionKvService } from "./session-kv";
+import * as Accounts from "../accounts/durable-object.ts";
+import { EmailService } from "./email.ts";
+import * as Errors from "./errors.ts";
+import { OtpService } from "./otp.ts";
+import { SessionKvService } from "./session-kv.ts";
+import AccountsDurableObject from "../accounts/durable-object.ts";
 
 const SessionCookie = Schema.Struct({ session: Schema.NonEmptyString });
 
@@ -18,7 +18,7 @@ export class AuthService extends Context.Service<AuthService>()("Auth.AuthServic
     const session = yield* SessionKvService;
     const otp = yield* OtpService;
     const emailService = yield* EmailService;
-    const env = yield* Worker.Env;
+    const accountsNS = yield* AccountsDurableObject;
 
     const requestOtp = Effect.fn("Auth.requestOtp")(function* (email: string) {
       const code = yield* otp.create(email);
@@ -40,11 +40,14 @@ export class AuthService extends Context.Service<AuthService>()("Auth.AuthServic
     const login = Effect.fn("Auth.login")(function* (email: string, code: string) {
       yield* otp.verify(email, code);
 
-      const accounts = env.ACCOUNTS_DO.getByName(Accounts.NAMESPACE_KEY);
-      const { accountId } = yield* Effect.tryPromise({
-        try: () => accounts.ensureAccount(email),
-        catch: (cause) => new Errors.AccountResolutionError({ operation: "ensure", cause }),
-      });
+      const accounts = accountsNS.getByName(Accounts.NAMESPACE_KEY);
+      const { accountId } = yield* accounts
+        .ensureAccount(email)
+        .pipe(
+          Effect.mapError(
+            (cause) => new Errors.AccountResolutionError({ operation: "ensure", cause }),
+          ),
+        );
 
       const token = yield* session.create(email, accountId);
       return yield* HttpServerResponse.setCookie(

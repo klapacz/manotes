@@ -1,5 +1,5 @@
+import * as Cloudflare from "alchemy/Cloudflare";
 import { Context, Data, Duration, Effect, Layer, Schema } from "effect";
-import * as Worker from "../http/worker";
 
 const StoredSession = Schema.Struct({
   email: Schema.NonEmptyString,
@@ -13,35 +13,32 @@ const SESSION_TTL = Duration.days(30);
 
 export class SessionKvService extends Context.Service<SessionKvService>()("Auth.SessionKvService", {
   make: Effect.gen(function* () {
-    const env = yield* Worker.Env;
+    const SESSION_KV = yield* Cloudflare.KVNamespace("SESSION_KV");
+    const kv = yield* Cloudflare.KVNamespace.bind(SESSION_KV);
 
     const create = Effect.fn("AuthSessionKv.create")(function* (email: string, accountId: string) {
       const token = crypto.randomUUID();
       const encoded = yield* encodeSession({ email, accountId });
-      yield* Effect.tryPromise({
-        try: () =>
-          env.SESSION_KV.put(token, encoded, {
-            expirationTtl: Duration.toSeconds(SESSION_TTL),
-          }),
-        catch: (cause) => new SessionStoreError({ operation: "write", cause }),
-      });
+      yield* kv
+        .put(token, encoded, {
+          expirationTtl: Duration.toSeconds(SESSION_TTL),
+        })
+        .pipe(Effect.mapError((cause) => new SessionStoreError({ operation: "write", cause })));
       return token;
     });
 
     const resolve = Effect.fn("AuthSessionKv.resolve")(function* (token: string) {
-      const raw = yield* Effect.tryPromise({
-        try: () => env.SESSION_KV.get(token),
-        catch: (cause) => new SessionStoreError({ operation: "read", cause }),
-      });
+      const raw = yield* kv
+        .get(token)
+        .pipe(Effect.mapError((cause) => new SessionStoreError({ operation: "read", cause })));
       if (raw === null) return yield* Effect.fail(new SessionNotFoundError());
       return yield* decodeSession(raw);
     });
 
     const destroy = Effect.fn("AuthSessionKv.destroy")(function* (token: string) {
-      yield* Effect.tryPromise({
-        try: () => env.SESSION_KV.delete(token),
-        catch: (cause) => new SessionStoreError({ operation: "delete", cause }),
-      });
+      yield* kv
+        .delete(token)
+        .pipe(Effect.mapError((cause) => new SessionStoreError({ operation: "delete", cause })));
     });
 
     return { create, resolve, destroy, SESSION_TTL };

@@ -1,10 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2024", "WebWorker", "DOM"],
-    "types": [],
+    "lib": ["ES2024", "DOM"],
+    "types": ["node"],
     "composite": true,
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.wrangler.tsbuildinfo"
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.alchemy.tsbuildinfo"
   },
-  "include": ["worker-configuration.d.ts", "src/**/*.ts", "src/**/*.d.ts"]
+  "include": ["alchemy.run.ts", "src/**/*.ts", "src/**/*.d.ts"]
 }

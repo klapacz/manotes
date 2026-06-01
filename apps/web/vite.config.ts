@@ -1,13 +1,22 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite-plus";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import solidPlugin from "vite-plugin-solid";
 import tailwindcss from "@tailwindcss/vite";
-import { cloudflare } from "@cloudflare/vite-plugin";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+        ws: true,
+      },
+    },
+  },
   optimizeDeps: {
     exclude: ["wa-sqlite"],
   },
@@ -16,7 +25,6 @@ export default defineConfig({
     devtools(),
 
     tanstackRouter({ target: "solid", autoCodeSplitting: false }),
-    cloudflare({ configPath: "../worker/wrangler.jsonc" }),
     solidPlugin(),
     tailwindcss(),
     VitePWA({
@@ -31,10 +39,10 @@ export default defineConfig({
       // Running the SW on top of that would layer two interceptors and break /api/* proxying.
       devOptions: { enabled: false },
       injectManifest: {
-        // The cloudflare plugin outputs client assets to dist/client/, not dist/.
-        // workbox-build's injectManifest scans globDirectory to build __WB_MANIFEST,
-        // so this must point at the actual client output directory.
-        globDirectory: "dist/client",
+        // Alchemy builds this Vite project from apps/worker with rootDir: "../web".
+        // workbox-build resolves globDirectory from process.cwd(), not Vite's root,
+        // so keep this absolute to scan the web client's actual output directory.
+        globDirectory: fileURLToPath(new URL("./dist/client", import.meta.url)),
         globPatterns: ["**/*.{js,css,html,wasm,woff,woff2}"],
       },
     }),

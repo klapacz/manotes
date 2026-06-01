@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "process-compose up",
-    "deploy": "vp check && vp run -t web#build && vp run web#deploy"
+    "deploy": "vp check && vp run worker#deploy"
   },
   "devDependencies": {
     "@typescript/native-preview": "7.0.0-dev.20260327.2",

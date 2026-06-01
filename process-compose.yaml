@@ -16,8 +16,8 @@ processes:
       shared:
         condition: process_log_ready
 
-  web:
-    command: vp run web#dev
+  stack:
+    command: vp run worker#dev
     depends_on:
       shared:
         condition: process_log_ready

@@ -4,7 +4,7 @@ import { SqlClient } from "effect/unstable/sql";
 import type * as SqlError from "effect/unstable/sql/SqlError";
 import type * as GraphEncryption from "@manotes/shared/graph-encryption";
 import { DisplayNameTakenError } from "@manotes/shared/graph-registry/contract";
-import * as Schema from "./schema";
+import * as Schema from "./schema.ts";
 
 const GRAPH_ID_LENGTH = 12;
 

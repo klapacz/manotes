@@ -1,31 +1,67 @@
-import { Layer } from "effect";
-import { HttpRouter, HttpServer } from "effect/unstable/http";
-import { AccountsDurableObject } from "./accounts/durable-object";
-import { AuthService } from "./auth/auth";
-import { EmailService } from "./auth/email";
-import { OtpService } from "./auth/otp";
-import { SessionKvService } from "./auth/session-kv";
-import { GraphRegistryDurableObject } from "./graph-registry/durable-object";
-import { GraphSyncDurableObject } from "./graph-sync/durable-object";
-import * as Worker from "./http/worker";
-import * as Routes from "./routes";
-import { env } from "cloudflare:workers";
+import * as Cloudflare from "alchemy/Cloudflare";
+import * as Output from "alchemy/Output";
+import { Effect, Layer } from "effect";
+import { HttpMiddleware, HttpRouter, HttpServer, HttpServerRequest } from "effect/unstable/http";
+import { AuthService } from "./auth/auth.ts";
+import { EmailService } from "./auth/email.ts";
+import { OtpService } from "./auth/otp.ts";
+import { SessionKvService } from "./auth/session-kv.ts";
+import * as Routes from "./routes.ts";
+import * as SessionRoutes from "./session/routes.ts";
+import * as Alchemy from "alchemy";
 
-export { AccountsDurableObject, GraphSyncDurableObject, GraphRegistryDurableObject };
+const layerRouteServices = Layer.mergeAll(Routes.Service.layer, SessionRoutes.Service.layer);
 
-const { handler } = HttpRouter.toWebHandler(
-  Routes.layer.pipe(
-    Layer.provide(HttpServer.layerServices),
-    Layer.provideMerge(AuthService.layer),
-    Layer.provideMerge(EmailService.layer),
-    Layer.provideMerge(OtpService.layer),
-    Layer.provideMerge(SessionKvService.layer),
-    Layer.provideMerge(Layer.succeed(Worker.Env, env)),
-  ),
+const layerAppServices = AuthService.layer.pipe(
+  Layer.provide(Layer.mergeAll(EmailService.layer, OtpService.layer, SessionKvService.layer)),
+  Layer.provide(Layer.mergeAll(Cloudflare.KVNamespaceBindingLive, Cloudflare.SendEmailBindingLive)),
 );
 
-export default {
-  fetch(request: Request) {
-    return handler(request);
+const corsMiddleware = HttpMiddleware.cors({
+  allowedOrigins: () => true,
+  allowedMethods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  credentials: true,
+  maxAge: 86400,
+});
+
+const corsLayer = HttpRouter.middleware(
+  (httpApp) =>
+    Effect.gen(function* () {
+      const request = yield* HttpServerRequest.HttpServerRequest;
+
+      if (request.headers.upgrade?.toLowerCase() === "websocket") {
+        return yield* httpApp;
+      }
+
+      return yield* corsMiddleware(httpApp);
+    }),
+  { global: true },
+);
+
+export default Cloudflare.Worker(
+  "Api",
+  {
+    main: import.meta.filename,
+    dev: { port: 3000 },
+    // Nested raw Effects in props are not resolved by Alchemy's input walker,
+    // so wrap the stage-dependent routes as an Output for deploy-time resolution.
+    // asOutput's type only accepts no-requirement Effects; Alchemy provides Stage while planning.
+    routes: Output.asOutput(
+      Alchemy.Stage.useSync((stage) =>
+        stage === "prod"
+          ? [{ pattern: "sand.manotes.dev/api*", zoneName: "manotes.dev" }]
+          : undefined,
+      ) as Effect.Effect<Cloudflare.WorkerRouteProps[] | undefined>,
+    ),
+    url: false,
   },
-};
+  Effect.gen(function* () {
+    return {
+      fetch: yield* Routes.layer.pipe(
+        Layer.provide(corsLayer),
+        Layer.provide(HttpServer.layerServices),
+        HttpRouter.toHttpEffect,
+      ),
+    };
+  }).pipe(Effect.provide(Layer.mergeAll(layerRouteServices, layerAppServices))),
+);

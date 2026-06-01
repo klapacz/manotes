@@ -1,10 +1,10 @@
-import { DurableObject } from "cloudflare:workers";
+import * as Cloudflare from "alchemy/Cloudflare";
 import { SqliteClient } from "@effect/sql-sqlite-do";
 import { DisplayNameTakenError, GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
-import { Effect, Layer, ManagedRuntime, Option, Predicate, Scope, Context } from "effect";
+import { Effect, Layer, Option, Predicate, Scope, Context } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 import { RpcSerialization, RpcServer } from "effect/unstable/rpc";
-import * as Repo from "./repo";
+import * as Repo from "./repo.ts";
 
 // ---------------------------------------------------------------------------
 // RPC HttpApp tag
@@ -60,53 +60,44 @@ const RpcHttpAppLayer = Layer.effect(RpcHttpApp, RpcServer.toHttpEffect(GraphReg
 // Durable Object
 // ---------------------------------------------------------------------------
 
-export class GraphRegistryDurableObject extends DurableObject<Env> {
-  private readonly runtime = ManagedRuntime.make(
-    RpcHttpAppLayer.pipe(
-      Layer.provide(HandlersLayer),
-      Layer.provide(RpcSerialization.layerJson),
-      Layer.provideMerge(Repo.Service.layer),
-      Layer.provideMerge(
-        SqliteClient.layer({
-          db: this.ctx.storage.sql,
-          spanAttributes: { durableObject: "GraphRegistryDurableObject" },
-        }),
-      ),
-    ),
-  );
+export default class GraphRegistryDurableObject extends Cloudflare.DurableObjectNamespace<GraphRegistryDurableObject>()(
+  "GraphRegistryDurableObject",
+  // oxlint-disable-next-line require-yield
+  Effect.gen(function* () {
+    return Effect.gen(function* () {
+      const state = yield* Cloudflare.DurableObjectState;
 
-  constructor(ctx: DurableObjectState, env: Env) {
-    super(ctx, env);
-    void ctx.blockConcurrencyWhile(() => this.runtime.runPromise(Repo.migrate));
-  }
+      const layer = RpcHttpAppLayer.pipe(
+        Layer.provide(HandlersLayer),
+        Layer.provide(RpcSerialization.layerJson),
+        Layer.provideMerge(Repo.Service.layer),
+        Layer.provideMerge(
+          SqliteClient.layer({
+            db: state.storage.sql.raw,
+            spanAttributes: { durableObject: "GraphRegistryDurableObject" },
+          }),
+        ),
+      );
 
-  async fetch(request: Request): Promise<Response> {
-    return this.runtime.runPromise(
-      Effect.scoped(
-        Effect.gen(function* () {
+      yield* state.blockConcurrencyWhile(() =>
+        Repo.migrate.pipe(Effect.provide(layer), Effect.orDie),
+      );
+
+      return {
+        fetch: Effect.gen(function* () {
           const httpApp = yield* RpcHttpApp;
-          const response = yield* httpApp.pipe(
-            Effect.provideService(
-              HttpServerRequest.HttpServerRequest,
-              HttpServerRequest.fromWeb(request),
-            ),
-          );
-          return HttpServerResponse.toWeb(response);
-        }),
-      ),
-    );
-  }
+          return yield* httpApp;
+        }).pipe(Effect.scoped, Effect.provide(layer)),
 
-  async graphExists(graphId: string): Promise<boolean> {
-    return this.runtime.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* Repo.Service;
-        const graph = yield* repo.getGraph({ graphId });
-        return Option.isSome(graph);
-      }),
-    );
-  }
-}
+        graphExists: Effect.fn(function* (graphId: string) {
+          const repo = yield* Repo.Service;
+          const graph = yield* repo.getGraph({ graphId });
+          return Option.isSome(graph);
+        }, Effect.provide(layer)),
+      };
+    });
+  }),
+) {}
 
 // ---------------------------------------------------------------------------
 // Helpers

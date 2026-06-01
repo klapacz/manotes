@@ -1,32 +1,53 @@
 import * as SessionAuth from "@manotes/shared/session/auth";
-import { Effect, Layer, pipe, Schema } from "effect";
-import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
-import * as AuthSession from "./auth/session";
-import * as Worker from "./http/worker";
-import * as WebRequest from "./http/web-request";
-import * as SessionRoutes from "./session/routes";
+import { Context, Effect, Layer, pipe, Result, Schema } from "effect";
+import {
+  HttpRouter,
+  HttpServerError,
+  HttpServerRequest,
+  HttpServerResponse,
+} from "effect/unstable/http";
+import * as AuthSession from "./auth/session.ts";
+import * as SessionRoutes from "./session/routes.ts";
+import GraphRegistryDurableObject from "./graph-registry/durable-object.ts";
+import GraphSyncDurableObject from "./graph-sync/durable-object.ts";
 
 const GraphIdParams = Schema.Struct({ graphId: Schema.NonEmptyString });
 
-const protectedRoutesLayer = Layer.mergeAll(
-  HttpRouter.add("POST", "/api/rpc/graph-registry", () => proxyToGraphRegistry()),
-  HttpRouter.add("*", "/api/sync/:graphId", () =>
-    pipe(
-      HttpRouter.schemaPathParams(GraphIdParams),
-      Effect.flatMap((params) => proxyToGraphSync({ pathname: "/", params })),
-    ),
-  ),
-  HttpRouter.add("*", "/api/sync/:graphId/health", () =>
-    pipe(
-      HttpRouter.schemaPathParams(GraphIdParams),
-      Effect.flatMap((params) => proxyToGraphSync({ pathname: "/health", params })),
-    ),
-  ),
-  HttpRouter.add(
-    "*",
-    "/api/*",
-    HttpServerResponse.jsonUnsafe({ error: "Not found" }, { status: 404 }),
-  ),
+export const protectedRoutesLayer = HttpRouter.addAll(
+  Effect.gen(function* () {
+    const svc = yield* Service;
+
+    const pathParam = HttpRouter.schemaPathParams(GraphIdParams).pipe(
+      Effect.result,
+      Effect.flatMap(
+        Effect.fnUntraced(function* (result) {
+          if (Result.isSuccess(result)) return result.success;
+
+          return yield* Effect.fail(
+            new HttpServerError.HttpServerError({
+              reason: new HttpServerError.RequestParseError({
+                request: yield* HttpServerRequest.HttpServerRequest,
+                cause: result.failure,
+              }),
+            }),
+          );
+        }),
+      ),
+    );
+
+    return [
+      HttpRouter.route("POST", "/api/rpc/graph-registry", () => svc.proxyToGraphRegistry()),
+      HttpRouter.route("*", "/api/sync/:graphId", () =>
+        pipe(
+          pathParam,
+          Effect.flatMap((params) => svc.proxyToGraphSync({ params })),
+        ),
+      ),
+      HttpRouter.route("*", "/api/*", () =>
+        HttpServerResponse.json({ error: "Not found" }, { status: 404 }),
+      ),
+    ] as const;
+  }),
 ).pipe(Layer.provide(AuthSession.RouterMiddleware.layer));
 
 export const layer = Layer.mergeAll(
@@ -36,55 +57,44 @@ export const layer = Layer.mergeAll(
   protectedRoutesLayer,
 );
 
-const proxyToGraphRegistry = Effect.fn("Routes.proxyToGraphRegistry")(function* () {
-  const env = yield* Worker.Env;
-  const session = yield* SessionAuth.Current;
-  const request = yield* WebRequest.get();
+export class Service extends Context.Service<Service>()("Routes.Service", {
+  make: Effect.gen(function* () {
+    const graphRegistryNS = yield* GraphRegistryDurableObject;
+    const graphSyncNS = yield* GraphSyncDurableObject;
 
-  const response = yield* Effect.tryPromise({
-    try: () => {
-      const registry = env.GRAPH_REGISTRY_DO.getByName(session.accountId);
-      return registry.fetch(request);
-    },
-    catch: (cause) => new Error("Failed to reach graph registry", { cause }),
-  });
-  return HttpServerResponse.raw(response);
-});
+    const proxyToGraphRegistry = Effect.fn("Routes.proxyToGraphRegistry")(function* () {
+      const session = yield* SessionAuth.Current;
+      const registry = graphRegistryNS.getByName(session.accountId);
+      const request = yield* HttpServerRequest.HttpServerRequest;
 
-const proxyToGraphSync = Effect.fn("Routes.proxyToGraphSync")(function* ({
-  pathname,
-  params,
-}: {
-  pathname: string;
-  params: typeof GraphIdParams.Type;
+      return yield* registry.fetch(request);
+    });
+
+    const proxyToGraphSync = Effect.fn("Routes.proxyToGraphSync")(function* ({
+      params,
+    }: {
+      params: typeof GraphIdParams.Type;
+    }) {
+      const session = yield* SessionAuth.Current;
+      const registry = graphRegistryNS.getByName(session.accountId);
+      const exists = yield* registry.graphExists(params.graphId).pipe(Effect.orDie);
+      const request = yield* HttpServerRequest.HttpServerRequest;
+
+      if (exists === false) {
+        return HttpServerResponse.jsonUnsafe({ error: "Not found" }, { status: 404 });
+      }
+
+      if (request.headers.upgrade !== "websocket") {
+        return HttpServerResponse.text("Expected Upgrade: websocket", { status: 426 });
+      }
+
+      const DO = graphSyncNS.getByName(JSON.stringify([session.accountId, params.graphId]));
+
+      return yield* DO.fetch(request);
+    });
+
+    return { proxyToGraphRegistry, proxyToGraphSync };
+  }),
 }) {
-  const env = yield* Worker.Env;
-  const session = yield* SessionAuth.Current;
-  const exists = yield* Effect.tryPromise({
-    try: () => {
-      const registry = env.GRAPH_REGISTRY_DO.getByName(session.accountId);
-      return registry.graphExists(params.graphId);
-    },
-    catch: (cause) => new Error("Failed to check graph existence", { cause }),
-  });
-
-  if (exists === false) {
-    return HttpServerResponse.jsonUnsafe({ error: "Not found" }, { status: 404 });
-  }
-
-  const request = yield* WebRequest.get();
-  const response = yield* Effect.tryPromise({
-    try: () => {
-      const durableObject = env.GRAPH_SYNC_DO.getByName(
-        JSON.stringify([session.accountId, params.graphId]),
-      );
-      const durableObjectUrl = new URL(request.url);
-      durableObjectUrl.pathname = pathname;
-
-      return durableObject.fetch(new Request(durableObjectUrl, request));
-    },
-    catch: (cause) => new Error("Failed to reach graph sync", { cause }),
-  });
-
-  return HttpServerResponse.raw(response);
-});
+  static readonly layer = Layer.effect(this, this.make);
+}

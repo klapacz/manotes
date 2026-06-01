@@ -1,8 +1,8 @@
-import { Data, Effect, Layer, ManagedRuntime } from "effect";
+import { Data, Effect, Layer } from "effect";
 import { Struct } from "effect";
-import { DurableObject } from "cloudflare:workers";
 import { SqliteClient } from "@effect/sql-sqlite-do";
-import * as Repo from "./repo";
+import * as Repo from "./repo.ts";
+import * as Cloudflare from "alchemy/Cloudflare";
 
 export const NAMESPACE_KEY = "accounts-v1";
 
@@ -15,44 +15,48 @@ export type WaitlistResult = {
   readonly status: "WAITLIST" | "ACTIVE";
 };
 
-export class AccountsDurableObject extends DurableObject<Env> {
-  private readonly runtime = ManagedRuntime.make(
-    Repo.Service.layer.pipe(
-      Layer.provideMerge(
-        SqliteClient.layer({
-          db: this.ctx.storage.sql,
-          spanAttributes: { durableObject: "AccountsDurableObject" },
-        }),
-      ),
-    ),
-  );
-
-  constructor(ctx: DurableObjectState, env: Env) {
-    super(ctx, env);
-    void ctx.blockConcurrencyWhile(() => this.runtime.runPromise(Repo.migrate));
-  }
-
-  ensureAccount(email: string): Promise<ResolvedAccount> {
-    return this.ctx.blockConcurrencyWhile(() =>
-      this.runtime.runPromise(
-        ensureAccount(email).pipe(
-          Effect.map(
-            // Durable Objects should return plain structured-clone-safe values. The repo entity
-            // includes decoded DateTime fields, so for now we narrow the transport shape here.
-            // We'll replace this with a proper RPC boundary later.
-            Struct.pick(["email", "accountId"]),
-          ),
+export default class AccountsDurableObject extends Cloudflare.DurableObjectNamespace<AccountsDurableObject>()(
+  "AccountsDurableObject",
+  // oxlint-disable-next-line require-yield
+  Effect.gen(function* () {
+    return Effect.gen(function* () {
+      const state = yield* Cloudflare.DurableObjectState;
+      const layer = Repo.Service.layer.pipe(
+        Layer.provideMerge(
+          SqliteClient.layer({
+            db: state.storage.sql.raw,
+            spanAttributes: { durableObject: "AccountsDurableObject" },
+          }),
         ),
-      ),
-    );
-  }
+      );
 
-  checkOrWaitlist(email: string): Promise<WaitlistResult> {
-    return this.ctx.blockConcurrencyWhile(() =>
-      this.runtime.runPromise(checkOrWaitlist(email).pipe(Effect.map(Struct.pick(["status"])))),
-    );
-  }
-}
+      yield* state.blockConcurrencyWhile(() =>
+        Repo.migrate.pipe(Effect.provide(layer), Effect.orDie),
+      );
+
+      return {
+        ensureAccount: Effect.fn(function* (email: string) {
+          const result: ResolvedAccount = yield* ensureAccount(email).pipe(
+            Effect.map(
+              // Durable Objects should return plain structured-clone-safe values. The repo entity
+              // includes decoded DateTime fields, so for now we narrow the transport shape here.
+              // We'll replace this with a proper RPC boundary later.
+              Struct.pick(["email", "accountId"]),
+            ),
+          );
+          return result;
+        }, Effect.provide(layer)),
+
+        checkOrWaitlist: Effect.fn(function* (email: string) {
+          const result: WaitlistResult = yield* checkOrWaitlist(email).pipe(
+            Effect.map(Struct.pick(["status"])),
+          );
+          return result;
+        }, Effect.provide(layer)),
+      };
+    });
+  }),
+) {}
 
 const ensureAccount = Effect.fn("AccountsDurableObject.ensureAccount")(function* (email: string) {
   const repo = yield* Repo.Service;
