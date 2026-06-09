@@ -25,6 +25,8 @@ function RouteComponent() {
         {(noteId, index) => (
           <CanvasNoteColumn
             noteId={noteId}
+            index={index}
+            canvasPath={() => search().path}
             currentPath={() => Arr.splitAtNonEmpty(search().path, index() + 1)[0]}
           />
         )}
@@ -35,9 +37,15 @@ function RouteComponent() {
 
 function CanvasNoteColumn(props: {
   noteId: string;
+  index: () => number;
+  canvasPath: () => Arr.NonEmptyReadonlyArray<string>;
   currentPath: () => Arr.NonEmptyReadonlyArray<string>;
 }) {
   const isDaily = () => parseDailyNoteId(props.noteId) !== null;
+  const rebasePath = () =>
+    // Prepend the current note so the rebased path stays typed as non-empty.
+    Arr.prepend(Arr.drop(props.canvasPath(), props.index() + 1), props.noteId);
+  const closePath = () => Arr.splitAtNonEmpty(props.canvasPath(), props.index())[0];
 
   const renderNoteLink: NoteLinkRenderer = (linkProps) => {
     const [target, anchorProps] = splitProps(linkProps, ["id", "isDaily", "children"]);
@@ -57,16 +65,40 @@ function CanvasNoteColumn(props: {
   return (
     <NoteLinkScope render={renderNoteLink}>
       <div class="h-full w-[45%] shrink-0 overflow-y-auto border-r border-border-subtle">
-        <div class="space-y-8 px-6 py-10">
-          <Editor noteId={props.noteId} isDaily={isDaily()} style={{ "min-height": "30svh" }} />
+        <div class="px-6 pb-10">
+          <div class="flex h-10 items-center gap-3 text-xs leading-none">
+            <Show when={props.index() > 0}>
+              <Link
+                from="/$graph/canvas"
+                to="/$graph/canvas"
+                search={{ path: rebasePath() }}
+                class="text-fg-subtle underline-offset-4 hover:text-fg hover:underline"
+              >
+                rebase
+              </Link>
 
-          <IncomingBacklinksFetcher noteId={props.noteId}>
-            {(backlinks) => (
-              <Show when={backlinks.length > 0}>
-                <IncomingBacklinksSection backlinks={backlinks} />
-              </Show>
-            )}
-          </IncomingBacklinksFetcher>
+              <Link
+                from="/$graph/canvas"
+                to="/$graph/canvas"
+                search={{ path: closePath() }}
+                class="text-fg-subtle underline-offset-4 hover:text-fg hover:underline"
+              >
+                close
+              </Link>
+            </Show>
+          </div>
+
+          <div class="space-y-8">
+            <Editor noteId={props.noteId} isDaily={isDaily()} style={{ "min-height": "30svh" }} />
+
+            <IncomingBacklinksFetcher noteId={props.noteId}>
+              {(backlinks) => (
+                <Show when={backlinks.length > 0}>
+                  <IncomingBacklinksSection backlinks={backlinks} />
+                </Show>
+              )}
+            </IncomingBacklinksFetcher>
+          </div>
         </div>
       </div>
     </NoteLinkScope>
