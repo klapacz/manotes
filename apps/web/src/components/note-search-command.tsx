@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/solid-router";
+import { useCommandState } from "cmdk-solid";
 import { pipe, Stream, Array, flow } from "effect";
 import type { JSX } from "solid-js";
 import { Index, createEffect, createSignal, onCleanup } from "solid-js";
@@ -41,6 +42,18 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
     [] as { id: string; title: string }[],
   );
 
+  const openCanvas = (noteId: string) => {
+    setIsCommandOpen(false);
+    // HACK: clear filter after close animation to prevent flickering
+    setTimeout(() => setNoteFilter(""), 200);
+
+    void navigate({
+      from: "/$graph",
+      to: "/$graph/canvas",
+      search: { path: [noteId] as readonly [string, ...string[]] },
+    });
+  };
+
   createEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== "k") return;
@@ -61,39 +74,78 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
     <>
       {props.children?.(() => setIsCommandOpen(true))}
       <CommandDialog open={isCommandOpen()} onOpenChange={setIsCommandOpen} shouldFilter={false}>
-        <CommandInput
-          value={noteFilter()}
-          onValueChange={(next) => {
-            setNoteFilter(next);
-          }}
-          placeholder="Search notes..."
-        />
-        <CommandList>
-          <CommandEmpty>No matching notes.</CommandEmpty>
-          <CommandGroup heading="Notes">
-            <Index each={notes}>
-              {(note) => (
-                <CommandItem
-                  value={note().id}
-                  onSelect={() => {
-                    setIsCommandOpen(false);
-                    // HACK: clear filter after close animation to prevent flickering
-                    setTimeout(() => setNoteFilter(""), 200);
+        <NoteSearchShortcuts openCanvas={openCanvas}>
+          <CommandInput
+            value={noteFilter()}
+            onValueChange={(next) => {
+              setNoteFilter(next);
+            }}
+            placeholder="Search notes..."
+          />
+          <CommandList>
+            <CommandEmpty>No matching notes.</CommandEmpty>
+            <CommandGroup heading="Notes">
+              <Index each={notes}>
+                {(note) => (
+                  <CommandItem
+                    value={note().id}
+                    onSelect={() => {
+                      setIsCommandOpen(false);
+                      // HACK: clear filter after close animation to prevent flickering
+                      setTimeout(() => setNoteFilter(""), 200);
 
-                    void navigate({
-                      from: "/$graph",
-                      to: "/$graph/note/$note",
-                      params: { note: note().id },
-                    });
-                  }}
-                >
-                  {note().title}
-                </CommandItem>
-              )}
-            </Index>
-          </CommandGroup>
-        </CommandList>
+                      void navigate({
+                        from: "/$graph",
+                        to: "/$graph/note/$note",
+                        params: { note: note().id },
+                      });
+                    }}
+                  >
+                    {note().title}
+                  </CommandItem>
+                )}
+              </Index>
+            </CommandGroup>
+          </CommandList>
+        </NoteSearchShortcuts>
       </CommandDialog>
     </>
   );
 };
+
+function NoteSearchShortcuts(props: {
+  openCanvas: (noteId: string) => void;
+  children: JSX.Element;
+}) {
+  const selectedNoteId = useCommandState((state) => state.value);
+  const [element, setElement] = createSignal<HTMLDivElement>();
+
+  createEffect(() => {
+    const node = element();
+    if (!node) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Enter") return;
+      if (!event.metaKey && !event.ctrlKey) return;
+
+      const noteId = selectedNoteId();
+      if (!noteId) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      props.openCanvas(noteId);
+    };
+
+    node.addEventListener("keydown", onKeyDown, { capture: true });
+
+    onCleanup(() => {
+      node.removeEventListener("keydown", onKeyDown, { capture: true });
+    });
+  });
+
+  return (
+    <div ref={setElement} class="contents">
+      {props.children}
+    </div>
+  );
+}
