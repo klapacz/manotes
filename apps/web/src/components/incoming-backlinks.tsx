@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/solid-router";
 import { Stream } from "effect";
 import { createEffect, For, onCleanup, Show, type JSX } from "solid-js";
 import { ProseKit } from "prosekit/solid";
@@ -7,7 +6,7 @@ import { defineReadonly } from "prosekit/extensions/readonly";
 import { defineAppExtension } from "../editor.extension";
 import * as BacklinkService from "../lib/materializer/backlink/service";
 import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
-import * as NoteLink from "../lib/note/link";
+import { NoteLink } from "../lib/note/link-component";
 import { bindRt, createAtomStore } from "../lib";
 
 function IncomingBacklinksStore(props: {
@@ -82,12 +81,13 @@ export function BacklinkSnippet(props: {
 
   return (
     <div class="px-4">
-      <Link
-        {...NoteLink.getOptions(props.backlink)}
+      <NoteLink
+        id={props.backlink.id}
+        isDaily={props.backlink.isDaily}
         class="text-sm text-fg hover:text-primary-fg transition-colors"
       >
         {props.backlink.title}
-      </Link>
+      </NoteLink>
 
       <ProseKit editor={editor}>
         <div ref={editor.mount} class="text-fg-subtle text-sm" />

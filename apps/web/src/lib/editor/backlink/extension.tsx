@@ -10,10 +10,9 @@ import {
 import { createEffect, type JSX } from "solid-js";
 import * as NoteCache from "../../note-cache.service";
 import { bindRt, createAtomStore, createSyncedAtom } from "../..";
-import { Link } from "@tanstack/solid-router";
 import { type BacklinkAttrs } from "./spec";
 import { formatDailyNoteTitle } from "../../daily-note";
-import * as NoteLink from "../../note/link";
+import { NoteLink } from "../../note/link-component";
 
 export type { BacklinkAttrs };
 
@@ -77,15 +76,16 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
     });
 
     return (
-      <Link
-        {...NoteLink.getOptions({ id: noteId(), isDaily: isDaily() })}
+      <NoteLink
+        id={noteId()}
+        isDaily={isDaily()}
         data-backlink=""
         data-backlink-state={state._tag}
         data-backlink-id={noteId()}
         contentEditable={false}
       >
         {label(state)}
-      </Link>
+      </NoteLink>
     );
   } satisfies SolidNodeViewComponent;
 }
