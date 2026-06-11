@@ -1,8 +1,7 @@
-import { Effect, Layer, Context, Stream } from "effect";
-import { desc, eq, sql } from "drizzle-orm";
+import { Effect, Layer, Context } from "effect";
+import { eq } from "drizzle-orm";
 import * as DB from "../../db.service";
 import * as Tables from "../../db.tables";
-import * as BacklinkSchema from "./schema";
 
 export class Service extends Context.Service<Service>()("Materializer.BacklinkRepo.Service", {
   make: Effect.gen(function* () {
@@ -34,57 +33,7 @@ export class Service extends Context.Service<Service>()("Materializer.BacklinkRe
       );
     });
 
-    const listIncomingNotes = Effect.fn("Materializer.BacklinkRepo.listIncomingNotes")(function* (
-      targetId: string,
-    ) {
-      const rows = yield* db.query((db) =>
-        db
-          .select({
-            id: Tables.notes.id,
-            title: Tables.notes.title,
-            content: Tables.notes.content,
-            isDaily: Tables.notes.isDaily,
-            updatedAt: Tables.notes.updatedAt,
-          })
-          .from(Tables.backlinks)
-          .innerJoin(Tables.notes, eq(Tables.notes.id, Tables.backlinks.sourceId))
-          .where(eq(Tables.backlinks.targetId, targetId))
-          .orderBy(
-            desc(Tables.notes.isDaily),
-            sql`CASE WHEN ${Tables.notes.isDaily} THEN ${Tables.notes.id} ELSE ${Tables.notes.updatedAt} END DESC`,
-          ),
-      );
-
-      return yield* BacklinkSchema.decodeIncomingBacklinks(rows);
-    });
-
-    const reactiveListIncomingNotes = Effect.fn(
-      "Materializer.BacklinkRepo.reactiveListIncomingNotes",
-    )(function* (targetId: string) {
-      const stream = yield* db.reactiveQuery((db) =>
-        db
-          .select({
-            id: Tables.notes.id,
-            title: Tables.notes.title,
-            content: Tables.notes.content,
-            isDaily: Tables.notes.isDaily,
-            updatedAt: Tables.notes.updatedAt,
-          })
-          .from(Tables.backlinks)
-          .innerJoin(Tables.notes, eq(Tables.notes.id, Tables.backlinks.sourceId))
-          .where(eq(Tables.backlinks.targetId, targetId))
-          .orderBy(
-            desc(Tables.notes.isDaily),
-            sql`CASE WHEN ${Tables.notes.isDaily} THEN ${Tables.notes.id} ELSE ${Tables.notes.updatedAt} END DESC`,
-          ),
-      );
-
-      return stream.pipe(Stream.mapEffect((rows) => BacklinkSchema.decodeIncomingBacklinks(rows)));
-    });
-
     return {
-      listIncomingNotes,
-      reactiveListIncomingNotes,
       replaceForSource,
     };
   }),

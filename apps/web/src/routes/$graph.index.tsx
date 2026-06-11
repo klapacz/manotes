@@ -6,11 +6,7 @@ import * as TemporalSchema from "../lib/temporal.schema";
 import * as TemporalUtils from "../lib/temporal/utils";
 import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
 import * as GraphRuntimeRouter from "../lib/graph-access/graph-runtime/router";
-import {
-  IncomingBacklinksFetcher,
-  IncomingBacklinksSection,
-} from "../components/incoming-backlinks";
-import { batch, createEffect, createSignal, on, Show, untrack } from "solid-js";
+import { batch, createEffect, createSignal, on, untrack } from "solid-js";
 import { VList, type VListHandle } from "virtua/solid";
 import { scrollToDateRequest } from "../lib/daily-note";
 
@@ -230,13 +226,6 @@ function DailyNotes() {
                   });
                 }}
               />
-              <IncomingBacklinksFetcher noteId={date.toString()}>
-                {(backlinks) => (
-                  <Show when={backlinks.length > 0}>
-                    <IncomingBacklinksSection backlinks={backlinks} />
-                  </Show>
-                )}
-              </IncomingBacklinksFetcher>
             </div>
           </div>
         )}

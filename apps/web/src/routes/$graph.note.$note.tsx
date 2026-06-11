@@ -1,18 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/solid-router";
 import { Option } from "effect";
 import { createSignal, Show } from "solid-js";
-import { WindowVirtualizer } from "virtua/solid";
 import Editor, { type BootState } from "../editor";
 import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
 import * as GraphRuntimeRouter from "../lib/graph-access/graph-runtime/router";
 import * as NoteRepo from "../lib/note.repo";
-import {
-  BacklinkSnippet,
-  IncomingBacklinks,
-  IncomingBacklinksFetcher,
-  IncomingBacklinksHeader,
-  IncomingBacklinksList,
-} from "../components/incoming-backlinks";
 
 export const Route = createFileRoute("/$graph/note/$note")({
   loader: async ({ params }) => {
@@ -63,21 +55,6 @@ function RouteComponent() {
             >
               <Editor noteId={n().id} isDaily={false} onBootStateChange={handleBootStateChange} />
             </div>
-
-            <IncomingBacklinksFetcher noteId={n().id}>
-              {(backlinks) => (
-                <Show when={backlinks.length > 0}>
-                  <IncomingBacklinks>
-                    <IncomingBacklinksHeader />
-                    <IncomingBacklinksList>
-                      <WindowVirtualizer data={backlinks}>
-                        {(backlink) => <BacklinkSnippet backlink={backlink} />}
-                      </WindowVirtualizer>
-                    </IncomingBacklinksList>
-                  </IncomingBacklinks>
-                </Show>
-              )}
-            </IncomingBacklinksFetcher>
           </div>
         );
       }}

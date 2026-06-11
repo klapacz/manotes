@@ -13,7 +13,6 @@ const ENTRY_IDLE_TTL = "5 seconds";
 export class Service extends Context.Service<Service>()("EditorNoteBootCache.Service", {
   make: Effect.gen(function* () {
     const noteRepo = yield* NoteRepo.Service;
-    const backlinkService = yield* BacklinkService.Service;
     const noteEntries = yield* RcMap.make({
       idleTimeToLive: ENTRY_IDLE_TTL,
       lookup: (id: string) =>
@@ -29,21 +28,6 @@ export class Service extends Context.Service<Service>()("EditorNoteBootCache.Ser
                 }),
               ),
             ),
-            Stream.share({
-              capacity: 1,
-              replay: 1,
-              idleTimeToLive: ENTRY_IDLE_TTL,
-            }),
-          );
-        }),
-    });
-    const backlinkEntries = yield* RcMap.make({
-      idleTimeToLive: ENTRY_IDLE_TTL,
-      lookup: (id: string) =>
-        Effect.gen(function* () {
-          const source = yield* backlinkService.reactiveListIncomingPreviews(id);
-
-          return yield* source.pipe(
             Stream.share({
               capacity: 1,
               replay: 1,
@@ -68,22 +52,11 @@ export class Service extends Context.Service<Service>()("EditorNoteBootCache.Ser
       );
     });
 
-    const incomingBacklinkChanges = Effect.fn("EditorNoteBootCache.incomingBacklinkChanges")(
-      function* (id: string) {
-        return yield* RcMap.get(backlinkEntries, id);
-      },
-    );
-
     const preload = Effect.fn("EditorNoteBootCache.preload")(function* (id: string) {
       yield* Effect.scoped(
         Effect.gen(function* () {
           const noteChanges = yield* RcMap.get(noteEntries, id);
-          const backlinkChanges = yield* RcMap.get(backlinkEntries, id);
-
-          yield* Effect.all(
-            [noteChanges.pipe(Stream.runHead), backlinkChanges.pipe(Stream.runHead)],
-            { concurrency: "unbounded", discard: true },
-          );
+          yield* noteChanges.pipe(Stream.runHead);
         }),
       );
     });
@@ -91,7 +64,6 @@ export class Service extends Context.Service<Service>()("EditorNoteBootCache.Ser
     return {
       changes,
       findById,
-      incomingBacklinkChanges,
       preload,
     };
   }),
