@@ -13,10 +13,7 @@ class OutcomingUpdateCtx extends Data.Class<{
   origin: unknown;
 }> {}
 
-export type SetupInput = {
-  noteId: string;
-  isDaily: boolean;
-};
+export type SetupInput = { noteId: string };
 
 export class Service extends Context.Service<Service>()("EditorSyncService.Service", {
   make: Effect.gen(function* () {

@@ -15,8 +15,6 @@ import {
 } from "prosekit/extensions/yjs";
 import { defineAppExtension } from "./editor.extension";
 import { EditorSyncService, MatchTag, bindRt, createSyncedAtom } from "./lib";
-import { defineVirtualDailyHeading } from "./editor.virtual-daily-heading.extension";
-import { formatDailyNoteTitle } from "./lib/daily-note";
 import { getProsemirrorXmlFragment } from "./lib/prosemirror/yjs";
 import { Cause, Data, Deferred, Effect, SubscriptionRef } from "effect";
 import { AsyncResult, type Atom } from "effect/unstable/reactivity";
@@ -52,25 +50,13 @@ export default function Editor(props: Props): JSX.Element {
       () => props.noteId,
       (noteId) => {
         const doc = new Y.Doc();
-        const extension = union([
-          defineYjs({ doc }),
-          defineAppExtension({ isDaily: props.isDaily }),
-          // Daily title is virtual (render-only), not part of persisted doc content.
-          ...(props.isDaily
-            ? [
-                defineVirtualDailyHeading({
-                  title: formatDailyNoteTitle(noteId),
-                }),
-              ]
-            : []),
-        ]);
+        const extension = union([defineYjs({ doc }), defineAppExtension()]);
         const editor = createEditor({ extension });
 
         return {
           doc,
           editor,
           noteId,
-          isDaily: props.isDaily,
         };
       },
       // Build the first editor state immediately so render/effect can consume it
@@ -84,14 +70,13 @@ export default function Editor(props: Props): JSX.Element {
     return {
       doc: current.doc,
       noteId: current.noteId,
-      isDaily: current.isDaily,
     };
   });
 
   const editorBootStateAtom = bindRt((rt) =>
     rt.subscriptionRef(
       Effect.fn("Editor.bootState")(function* (get: Atom.AtomContext) {
-        const { doc, noteId, isDaily } = get(editorStateAtom);
+        const { doc, noteId } = get(editorStateAtom);
         yield* Effect.addFinalizer(() => Effect.sync(() => doc.destroy()));
 
         const bootStateRef = yield* SubscriptionRef.make<BootStateSnapshot>({
@@ -105,7 +90,7 @@ export default function Editor(props: Props): JSX.Element {
 
           yield* Effect.all(
             [
-              Effect.scoped(service.setupDoc(doc, { noteId, isDaily }, ready)),
+              Effect.scoped(service.setupDoc(doc, { noteId }, ready)),
               Effect.gen(function* () {
                 yield* Deferred.await(ready);
                 yield* SubscriptionRef.set(bootStateRef, { doc, state: BootState.Ready() });

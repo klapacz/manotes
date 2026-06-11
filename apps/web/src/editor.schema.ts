@@ -17,14 +17,10 @@ import { defineLink } from "prosekit/extensions/link";
 import { defineBacklinkSpec } from "./lib/editor/backlink/spec";
 import { defineAppListSpec } from "./lib/editor/list/extension";
 
-export type DefineAppSchemaOptions = {
-  isDaily: boolean;
-};
-
-function defineDoc(options: DefineAppSchemaOptions) {
+function defineDoc() {
   return defineNodeSpec({
     name: "doc",
-    content: options.isDaily ? "block+" : "heading block+",
+    content: "block+",
     topNode: true,
   });
 }
@@ -33,10 +29,10 @@ function defineDoc(options: DefineAppSchemaOptions) {
  * Pure ProseMirror schema (node and mark specs only).
  * Safe to import in workers and non-browser contexts (e.g. the materializer).
  */
-export function defineAppSchema(options: DefineAppSchemaOptions) {
+export function defineAppSchema() {
   return union(
     // Nodes
-    defineDoc(options),
+    defineDoc(),
     defineText(),
     defineParagraph(),
     defineHeading(),

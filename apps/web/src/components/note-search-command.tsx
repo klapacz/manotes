@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/solid-router";
-import { pipe, Stream, Array, flow } from "effect";
+import { Stream, Array, flow } from "effect";
 import type { JSX } from "solid-js";
 import { Index, createEffect, createSignal, onCleanup } from "solid-js";
 import { NoteRepo, bindRt, createAtomState, createAtomStore } from "../lib";
@@ -11,7 +11,6 @@ import {
   CommandItem,
   CommandList,
 } from "./ui/command";
-import { suggestDailyNoteIds } from "../lib/daily-note";
 
 export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.Element }) => {
   const navigate = useNavigate();
@@ -22,19 +21,10 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
     bindRt((rt) =>
       rt.atom((get) => {
         const filter = get(noteFilterAtom);
-        const dailyNotes = pipe(
-          suggestDailyNoteIds(filter),
-          Array.map((note) => ({ ...note, isDaily: true })),
-        );
 
         return NoteRepo.Service.use((repo) => repo.reactiveSearchPreview(filter)).pipe(
           Stream.unwrap,
-          Stream.map(
-            flow(
-              Array.prependAll(dailyNotes),
-              Array.map((note) => ({ id: note.id, title: note.title })),
-            ),
-          ),
+          Stream.map(flow(Array.map((note) => ({ id: note.id, title: note.title })))),
         );
       }),
     ),

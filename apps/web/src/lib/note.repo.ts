@@ -26,7 +26,6 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
             id,
             title: encoded.title,
             content: encoded.content,
-            isDaily: encoded.isDaily ?? 0,
             materializedYUpdate: encoded.materializedYUpdate ?? null,
             createdAt: encoded.createdAt,
             updatedAt: encoded.updatedAt,
@@ -113,7 +112,6 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
           .select({
             id: Tables.notes.id,
             title: Tables.notes.title,
-            isDaily: Tables.notes.isDaily,
             updatedAt: Tables.notes.updatedAt,
           })
           .from(Tables.notes)
@@ -135,16 +133,12 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
 
     const reactiveSearchPreview = Effect.fn("NoteRepo.reactiveSearch")(function* (filter: string) {
       const stream = yield* db.reactiveQuery((db) => {
-        const where = and(
-          eq(Tables.notes.isDaily, 0),
-          like(Tables.notes.title, `%${filter.trim()}%`),
-        );
+        const where = and(like(Tables.notes.title, `%${filter.trim()}%`));
 
         return db
           .select({
             id: Tables.notes.id,
             title: Tables.notes.title,
-            isDaily: Tables.notes.isDaily,
             updatedAt: Tables.notes.updatedAt,
           })
           .from(Tables.notes)

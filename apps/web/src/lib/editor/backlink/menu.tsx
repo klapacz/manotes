@@ -1,4 +1,4 @@
-import { Effect, flow, Stream, Array, pipe, Struct } from "effect";
+import { Effect, flow, Stream, Array, Struct } from "effect";
 import { useEditor } from "prosekit/solid";
 import {
   AutocompleteEmpty,
@@ -17,7 +17,6 @@ import {
 import { NoteRepo, bindRt, createAtomState, createAtomStore, createSyncedAtom } from "../..";
 import { cx } from "../../cva";
 import type { AppExtension } from "../../../editor.extension";
-import { suggestDailyNoteIds } from "../../daily-note";
 import * as BrowserExtensionClient from "../../browser-extension/client";
 import * as BrowserExtensionTabNoteService from "../../browser-extension/tab-note/service";
 import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
@@ -28,7 +27,6 @@ const BACKLINK_REGEX = /\[\[([^\]\n]*)$/u;
 type BacklinkNote = {
   id: string;
   title: string;
-  isDaily: boolean;
 };
 
 const CreateTabNote = bindRt((rt) =>
@@ -56,18 +54,12 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
         const currentNoteId = get(currentNoteIdAtom);
         if (!get(openAtom)) return Stream.succeed([] as BacklinkNote[]);
 
-        const dailyNotes = pipe(
-          suggestDailyNoteIds(query),
-          Array.map((note) => ({ ...note, isDaily: true })),
-        );
-
         return NoteRepo.Service.use((repo) => repo.reactiveSearchPreview(query)).pipe(
           Stream.unwrap,
           Stream.map(
             flow(
-              Array.prependAll(dailyNotes),
               Array.filter((note) => note.id !== currentNoteId),
-              Array.map(Struct.pick(["id", "title", "isDaily"])),
+              Array.map(Struct.pick(["id", "title"])),
             ),
           ),
         );
@@ -109,7 +101,6 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
 
     const inserted = editor().commands.insertBacklink({
       id: note.id,
-      ...(note.isDaily ? { isDaily: true } : {}),
     });
 
     if (!inserted) {

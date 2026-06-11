@@ -1,13 +1,13 @@
 import { nodeFromJSON } from "prosekit/core";
 import { Fragment, type Node, type ResolvedPos } from "prosekit/pm/model";
 import type { UnknownNodeJSON } from "../node-json";
-import { getAppSchema } from "./app-schema";
+import { NOTE_SCHEMA } from "./app-schema";
 
 /**
  * Creates an application-schema ProseMirror node from serialized JSON content.
  */
-export function appNodeFromJSON(options: { content: UnknownNodeJSON; isDaily: boolean }): Node {
-  return nodeFromJSON(options.content, { schema: getAppSchema(options.isDaily) });
+export function appNodeFromJSON(options: { content: UnknownNodeJSON }): Node {
+  return nodeFromJSON(options.content, { schema: NOTE_SCHEMA });
 }
 
 /**

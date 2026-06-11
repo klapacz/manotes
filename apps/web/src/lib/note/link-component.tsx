@@ -4,7 +4,6 @@ import * as NoteLinkOptions from "./link";
 
 export type NoteLinkTarget = {
   id: string;
-  isDaily: boolean;
 };
 
 export type NoteLinkProps = NoteLinkTarget &
@@ -26,7 +25,7 @@ export function NoteLinkScope(props: ParentProps<{ render: NoteLinkRenderer }>):
 }
 
 function DefaultNoteLink(props: NoteLinkProps): JSX.Element {
-  const [target, anchorProps] = splitProps(props, ["id", "isDaily", "children"]);
+  const [target, anchorProps] = splitProps(props, ["id", "children"]);
 
   return (
     <Link {...NoteLinkOptions.getOptions(target)} {...anchorProps}>

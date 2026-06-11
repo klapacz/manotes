@@ -8,7 +8,6 @@ import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
 import * as GraphRuntimeRouter from "../lib/graph-access/graph-runtime/router";
 import { batch, createEffect, createSignal, on, untrack } from "solid-js";
 import { VList, type VListHandle } from "virtua/solid";
-import { scrollToDateRequest } from "../lib/daily-note";
 
 export const Route = createFileRoute("/$graph/")({
   component: RouteComponent,
@@ -180,17 +179,6 @@ function DailyNotes() {
     }),
   );
 
-  // Scroll back to the already-selected date and focus its editor.
-  // Bypasses the router's deepEqual so re-clicking the same date works.
-  createEffect(
-    on(scrollToDateRequest, (request) => {
-      if (!request) return;
-
-      const date = Temporal.PlainDate.from(search().date);
-      scrollToDate(date);
-    }),
-  );
-
   return (
     <div
       class="h-full transition-opacity duration-150 ease-out"
@@ -211,7 +199,6 @@ function DailyNotes() {
             <div class="mx-auto max-w-4xl space-y-8 px-6 py-10">
               <Editor
                 noteId={date.toString()}
-                isDaily={true}
                 autoFocus={focusNoteId() === date.toString()}
                 style={{ "min-height": "600px" }}
                 onFocusIn={() => {

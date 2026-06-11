@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/solid-router";
+import { createFileRoute } from "@tanstack/solid-router";
 import { Option } from "effect";
 import { createSignal, Show } from "solid-js";
 import Editor, { type BootState } from "../editor";
@@ -15,14 +15,6 @@ export const Route = createFileRoute("/$graph/note/$note")({
 
     if (Option.isNone(note)) {
       return { note };
-    }
-
-    if (note.value.isDaily) {
-      throw redirect({
-        to: "/$graph",
-        params: { graph: params.graph },
-        search: { date: params.note },
-      });
     }
 
     await GraphRuntimeRouter.runPromiseOrRedirect(
@@ -53,7 +45,7 @@ function RouteComponent() {
               class="transition-opacity duration-150 ease-out"
               classList={{ "opacity-0": !docVisible() }}
             >
-              <Editor noteId={n().id} isDaily={false} onBootStateChange={handleBootStateChange} />
+              <Editor noteId={n().id} onBootStateChange={handleBootStateChange} />
             </div>
           </div>
         );

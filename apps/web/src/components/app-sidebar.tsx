@@ -4,7 +4,6 @@ import { nanoid } from "nanoid";
 import { createWritableMemo } from "@solid-primitives/memo";
 import { Index, createMemo } from "solid-js";
 import { Temporal } from "temporal-polyfill";
-import { requestScrollToDate } from "../lib/daily-note";
 import * as Y from "yjs";
 import { MaterializedEventService, MatchAsyncResult, bindRt } from "../lib";
 import { useGraph } from "../lib/graph-access/graph-runtime/context";
@@ -179,13 +178,6 @@ export const AppSidebar = () => {
                                       search={{ date: date() }}
                                       viewTransition={false}
                                       data-today={todayDate === date() ? "" : undefined}
-                                      onClick={(event) => {
-                                        // Clicking the already-selected date
-                                        // Re-scroll + focus via the shared signal.
-                                        if (event.currentTarget.dataset.status === "active") {
-                                          requestScrollToDate();
-                                        }
-                                      }}
                                     >
                                       {day().getDate()}
                                     </CalendarCellLink>

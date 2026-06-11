@@ -1,6 +1,5 @@
 import { Schema, SchemaGetter } from "effect";
 import type { UnknownNodeJSON } from "./node-json";
-import * as SchemaPrimitives from "./schema/primitives";
 
 const ContentValue = Schema.declare<UnknownNodeJSON>((_x): _x is UnknownNodeJSON => true);
 
@@ -17,7 +16,6 @@ export const Record = Schema.Struct({
   id: Schema.String,
   title: Schema.String,
   content: Content,
-  isDaily: SchemaPrimitives.BooleanFromInt,
   materializedYUpdate: MaterializedYUpdate,
   createdAt: Schema.DateTimeUtcFromString,
   updatedAt: Schema.DateTimeUtcFromString,
@@ -27,7 +25,6 @@ export const Record = Schema.Struct({
 export const Preview = Schema.Struct({
   id: Schema.String,
   title: Schema.String,
-  isDaily: SchemaPrimitives.BooleanFromInt,
   updatedAt: Schema.DateTimeUtcFromString,
 });
 
@@ -35,7 +32,6 @@ export const Create = Schema.Struct({
   id: Schema.optional(Schema.String),
   title: Schema.String,
   content: Content,
-  isDaily: Schema.optional(SchemaPrimitives.BooleanFromInt),
   materializedYUpdate: Schema.optional(MaterializedYUpdate),
   createdAt: Schema.DateTimeUtcFromString,
   updatedAt: Schema.DateTimeUtcFromString,
@@ -45,7 +41,6 @@ export const Create = Schema.Struct({
 export const Update = Schema.Struct({
   title: Schema.optional(Schema.String),
   content: Schema.optional(Content),
-  isDaily: Schema.optional(SchemaPrimitives.BooleanFromInt),
   materializedYUpdate: Schema.optional(MaterializedYUpdate),
   createdAt: Schema.optional(Schema.DateTimeUtcFromString),
   updatedAt: Schema.optional(Schema.DateTimeUtcFromString),

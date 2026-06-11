@@ -11,7 +11,6 @@ import { createEffect, type JSX } from "solid-js";
 import * as NoteCache from "../../note-cache.service";
 import { bindRt, createAtomStore, createSyncedAtom } from "../..";
 import { type BacklinkAttrs } from "./spec";
-import { formatDailyNoteTitle } from "../../daily-note";
 import { NoteLink } from "../../note/link-component";
 
 export type { BacklinkAttrs };
@@ -31,21 +30,11 @@ const BacklinkLabelEntry = Data.taggedEnum<BacklinkLabelEntry>();
 function createBacklinkView(labelSnapshot: Map<string, string>) {
   return function BacklinkView(props: SolidNodeViewProps): JSX.Element {
     const noteId = () => (props.node.attrs as BacklinkAttrs).id;
-    const isDaily = () => Boolean((props.node.attrs as BacklinkAttrs).isDaily);
     const noteIdAtom = createSyncedAtom(noteId);
-    const isDailyAtom = createSyncedAtom(isDaily);
     const state: BacklinkLabelEntry = createAtomStore(
       bindRt((rt) =>
         rt.atom((get) => {
           const noteId = get(noteIdAtom);
-
-          if (get(isDailyAtom)) {
-            return Stream.succeed(
-              BacklinkLabelEntry.Resolved({
-                title: formatDailyNoteTitle(noteId),
-              }),
-            );
-          }
 
           return NoteCache.Service.use((cache) => cache.changes(noteId)).pipe(
             Stream.unwrap,
@@ -78,7 +67,6 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
     return (
       <NoteLink
         id={noteId()}
-        isDaily={isDaily()}
         data-backlink=""
         data-backlink-state={state._tag}
         data-backlink-id={noteId()}
@@ -125,14 +113,13 @@ export function defineBacklinkRuntime() {
         return {
           ...nodes,
           backlink: (node) => {
-            const { id, isDaily } = node.attrs as BacklinkAttrs;
+            const { id } = node.attrs as BacklinkAttrs;
 
             return [
               "span",
               {
                 "data-backlink": "",
                 "data-backlink-id": id,
-                ...(isDaily ? { "data-backlink-is-daily": "true" } : {}),
               },
               labelSnapshot.get(id) ?? id,
             ];

@@ -4,7 +4,7 @@ import { nanoid } from "nanoid";
 import { prosemirrorJSONToYDoc } from "y-prosemirror";
 import * as Y from "yjs";
 import * as MaterializedEventService from "../../materialized-event.service";
-import { NON_DAILY_NOTE_SCHEMA } from "../../prosemirror/app-schema";
+import { NOTE_SCHEMA } from "../../prosemirror/app-schema";
 import { PROSEMIRROR_XML_FRAGMENT_KEY } from "../../prosemirror/yjs";
 
 export class Service extends Context.Service<Service>()("BrowserExtensionTabNoteService.Service", {
@@ -16,7 +16,7 @@ export class Service extends Context.Service<Service>()("BrowserExtensionTabNote
     ) {
       const noteId = nanoid();
       const yDoc = prosemirrorJSONToYDoc(
-        NON_DAILY_NOTE_SCHEMA,
+        NOTE_SCHEMA,
         {
           type: "doc",
           content: [
