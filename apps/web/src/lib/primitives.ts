@@ -186,6 +186,44 @@ export function createAtomStore<A, E>(
   return store;
 }
 
+export type AtomResultStore<A> =
+  | { readonly _tag: "Loading" }
+  | { readonly _tag: "Success"; readonly value: A }
+  | { readonly _tag: "Error" };
+
+export function createAtomResultStore<A, E>(atom: () => Atom.Atom<AsyncResult.AsyncResult<A, E>>) {
+  const registry = useContext(RegistryContext);
+  const [store, setStore] = createStore<AtomResultStore<A>>({ _tag: "Loading" });
+
+  createEffect(() => {
+    const currentAtom = atom();
+    const unsubscribe = registry.subscribe(
+      currentAtom,
+      (result) => {
+        switch (result._tag) {
+          case "Initial": {
+            setStore(reconcile({ _tag: "Loading" }));
+            break;
+          }
+          case "Success": {
+            setStore(reconcile({ _tag: "Success", value: result.value }));
+            break;
+          }
+          case "Failure": {
+            setStore(reconcile({ _tag: "Error" }));
+            break;
+          }
+        }
+      },
+      { immediate: true },
+    );
+
+    onCleanup(unsubscribe);
+  });
+
+  return store;
+}
+
 export function createAtomState<A>(initialValue: A) {
   const atom = Atom.make(initialValue);
   const [value, setValue] = useAtom(() => atom);
