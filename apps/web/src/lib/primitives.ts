@@ -158,12 +158,16 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
   ) as unknown as JSX.Element;
 }
 
-export function createAtomStore<A extends object, E>(
+export function createAtomStore<A, E>(
   atom: () => Atom.Atom<AsyncResult.AsyncResult<A, E>>,
   staticInitialValue: NoInfer<A>,
 ) {
   const registry = useContext(RegistryContext);
-  const [store, setStore] = createStore<A>(staticInitialValue);
+  // Keep a plain-object root so Solid Store can safely wrap it even when the
+  // atom value uses a custom prototype (Effect Option/Data/etc.). Updating the
+  // `value` property replaces the whole variant and avoids stale fields while
+  // still allowing `reconcile` to preserve nested plain-object/array structure.
+  const [store, setStore] = createStore<{ value: A }>({ value: staticInitialValue });
 
   createEffect(() => {
     const currentAtom = atom();
@@ -171,7 +175,7 @@ export function createAtomStore<A extends object, E>(
       currentAtom,
       (result) => {
         if (result._tag !== "Success") return;
-        setStore(reconcile(result.value));
+        setStore("value", reconcile(result.value));
       },
       { immediate: true },
     );

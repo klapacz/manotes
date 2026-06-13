@@ -31,7 +31,7 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
   return function BacklinkView(props: SolidNodeViewProps): JSX.Element {
     const noteId = () => (props.node.attrs as BacklinkAttrs).id;
     const noteIdAtom = createSyncedAtom(noteId);
-    const state: BacklinkLabelEntry = createAtomStore(
+    const state = createAtomStore(
       bindRt((rt) =>
         rt.atom((get) => {
           const noteId = get(noteIdAtom);
@@ -55,7 +55,7 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
         Loading: () => labelSnapshot.delete(noteId()),
         Resolved: ({ title }) => labelSnapshot.set(noteId(), title),
         Missing: () => labelSnapshot.delete(noteId()),
-      })(state);
+      })(state.value);
     });
 
     const label = BacklinkLabelEntry.$match({
@@ -68,11 +68,11 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
       <NoteLink
         id={noteId()}
         data-backlink=""
-        data-backlink-state={state._tag}
+        data-backlink-state={state.value._tag}
         data-backlink-id={noteId()}
         contentEditable={false}
       >
-        {label(state)}
+        {label(state.value)}
       </NoteLink>
     );
   } satisfies SolidNodeViewComponent;

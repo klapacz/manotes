@@ -61,7 +61,7 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
         <CommandList>
           <CommandEmpty>No matching notes.</CommandEmpty>
           <CommandGroup heading="Notes">
-            <Index each={notes}>
+            <Index each={notes.value}>
               {(note) => (
                 <CommandItem
                   value={note().id}

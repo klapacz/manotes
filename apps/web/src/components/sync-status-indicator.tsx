@@ -21,7 +21,11 @@ export function SyncStatusIndicator() {
   const status = createAtomStore(SyncStatus, initialStatus);
 
   return (
-    <Show when={status.mode === "cloud" && status.syncState !== "Ready" ? status : null}>
+    <Show
+      when={
+        status.value.mode === "cloud" && status.value.syncState !== "Ready" ? status.value : null
+      }
+    >
       {(cloud) => (
         <div
           class={cx(

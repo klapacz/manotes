@@ -119,7 +119,7 @@ function RouteComponent() {
 
         <List>
           <For
-            each={localGraphs}
+            each={localGraphs.value}
             fallback={
               <ListItem dashed class="px-4 py-3 text-sm text-fg-subtle">
                 No graphs yet.

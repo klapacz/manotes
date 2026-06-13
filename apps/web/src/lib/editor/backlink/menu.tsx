@@ -138,10 +138,10 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
       <AutocompleteList filter={() => true}>
         <AutocompleteEmpty class={commandEmptyClass}>No matching notes or tabs</AutocompleteEmpty>
 
-        <Show when={notes.length > 0}>
+        <Show when={notes.value.length > 0}>
           <CommandLabel>Notes</CommandLabel>
 
-          <For each={notes}>
+          <For each={notes.value}>
             {(note) => (
               <AutocompleteItem
                 class={cx(
@@ -157,9 +157,9 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
           </For>
         </Show>
 
-        <Show when={tabs.length > 0}>
+        <Show when={tabs.value.length > 0}>
           <CommandLabel>Tabs</CommandLabel>
-          <For each={tabs}>
+          <For each={tabs.value}>
             {(tab) => (
               <AutocompleteItem
                 class={cx(

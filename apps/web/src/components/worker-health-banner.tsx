@@ -24,11 +24,11 @@ export function WorkerHealthBanner() {
   const health = createAtomStore(WorkerHealth, initialHealth);
 
   return (
-    <Show when={health.status !== "healthy"}>
+    <Show when={health.value.status !== "healthy"}>
       <div
         class={cx(
           "rounded-md border px-3 py-2 text-xs",
-          Match.value(health.status).pipe(
+          Match.value(health.value.status).pipe(
             Match.when(
               "healthy",
               () => "bg-success-bg-subtle border-success-border text-success-fg-subtle",
@@ -42,8 +42,8 @@ export function WorkerHealthBanner() {
           ),
         )}
       >
-        Worker {health.status}
-        <Show when={health.lastFailure}>{`: ${health.lastFailure}`}</Show>
+        Worker {health.value.status}
+        <Show when={health.value.lastFailure}>{`: ${health.value.lastFailure}`}</Show>
       </div>
     </Show>
   );
