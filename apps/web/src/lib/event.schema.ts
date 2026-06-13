@@ -1,9 +1,19 @@
 import { Schema } from "effect";
+import { Msgpack } from "effect/unstable/encoding";
+import * as TemporalSchema from "./temporal.schema";
 
-export const Type = Schema.Literals(["update"]);
+export const Type = Schema.Literals(["update", "date"]);
 
 const EventId = Schema.NonEmptyString;
 const CommitSeq = Schema.Union([Schema.Null, Schema.Number]);
+
+export const DatePayload = Schema.Struct({
+  date: TemporalSchema.PlainDateString,
+});
+
+const DatePayloadBytes = Msgpack.schema(DatePayload);
+export const encodeDatePayload = Schema.encodeEffect(DatePayloadBytes);
+export const decodeDatePayload = Schema.decodeEffect(DatePayloadBytes);
 
 export const Record = Schema.Struct({
   localSeq: Schema.Number,

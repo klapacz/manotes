@@ -3,15 +3,16 @@ import * as EventSchema from "./event.schema";
 
 export const notes = sqliteTable("notes", {
   id: text("id").primaryKey(),
-  title: text("title").notNull(),
+  title: text("title"),
   content: text("content").notNull(),
-  isDaily: integer("isDaily").notNull().default(0),
+  text: text("text").notNull(),
+  date: text("date").notNull(),
   materializedYUpdate: blob("materializedYUpdate", {
     mode: "buffer",
   }).$type<Uint8Array<ArrayBufferLike> | null>(),
   createdAt: text("createdAt").notNull(),
   updatedAt: text("updatedAt").notNull(),
-  lastEventLocalSeq: integer("lastEventLocalSeq").notNull().default(0),
+  lastEventLocalSeq: integer("lastEventLocalSeq").notNull(),
 });
 
 export const events = sqliteTable("events", {

@@ -50,6 +50,13 @@
       "when": 1774289551988,
       "tag": "0006_rainy_otto_octavius",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1781458557111,
+      "tag": "0007_yellow_roland_deschain",
+      "breakpoints": true
     }
   ]
 }

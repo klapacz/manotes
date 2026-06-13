@@ -26,7 +26,8 @@ const BACKLINK_REGEX = /\[\[([^\]\n]*)$/u;
 
 type BacklinkNote = {
   id: string;
-  title: string;
+  title: string | null;
+  text: string;
 };
 
 const CreateTabNote = bindRt((rt) =>
@@ -59,7 +60,7 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
           Stream.map(
             flow(
               Array.filter((note) => note.id !== currentNoteId),
-              Array.map(Struct.pick(["id", "title"])),
+              Array.map(Struct.pick(["id", "title", "text"])),
             ),
           ),
         );
@@ -151,7 +152,7 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
                 onSelect={() => onSelect(note)}
                 value={note.id}
               >
-                {note.title}
+                {note.title ?? note.text}
               </AutocompleteItem>
             )}
           </For>

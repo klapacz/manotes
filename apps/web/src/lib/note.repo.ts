@@ -26,6 +26,8 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
             id,
             title: encoded.title,
             content: encoded.content,
+            text: encoded.text,
+            date: encoded.date,
             materializedYUpdate: encoded.materializedYUpdate ?? null,
             createdAt: encoded.createdAt,
             updatedAt: encoded.updatedAt,
@@ -112,6 +114,9 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
           .select({
             id: Tables.notes.id,
             title: Tables.notes.title,
+            text: Tables.notes.text,
+            date: Tables.notes.date,
+            createdAt: Tables.notes.createdAt,
             updatedAt: Tables.notes.updatedAt,
           })
           .from(Tables.notes)
@@ -139,6 +144,9 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
           .select({
             id: Tables.notes.id,
             title: Tables.notes.title,
+            text: Tables.notes.text,
+            date: Tables.notes.date,
+            createdAt: Tables.notes.createdAt,
             updatedAt: Tables.notes.updatedAt,
           })
           .from(Tables.notes)

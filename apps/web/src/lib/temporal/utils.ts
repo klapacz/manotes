@@ -1,4 +1,10 @@
+import { DateTime } from "effect";
 import { Temporal } from "temporal-polyfill";
+
+/** Formats a `DateTime` as a `YYYY-MM-DD` string in the local time zone. */
+export function toLocalDateString(dateTime: DateTime.DateTime): string {
+  return DateTime.formatIsoDate(DateTime.setZone(dateTime, DateTime.zoneMakeLocal()));
+}
 
 export function createDateRange(
   startDate: Temporal.PlainDate,

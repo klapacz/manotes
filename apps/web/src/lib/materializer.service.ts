@@ -1,11 +1,13 @@
 import { Array as Arr, Effect, Layer, Option, Order, pipe, Record, Context, Stream } from "effect";
 import * as Y from "yjs";
 import * as DB from "./db.service";
+import * as EventSchema from "./event.schema";
 import * as EventRepo from "./event.repo";
 import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
 import * as BacklinkService from "./materializer/backlink/service";
 import * as NoteRepo from "./note.repo";
-import { findFirstH1Text, yDocToNodeJSON } from "./prosemirror-materializer.utils";
+import { extractText, findFirstH1Text, yDocToNodeJSON } from "./prosemirror-materializer.utils";
+import { toLocalDateString } from "./temporal/utils";
 
 const MAX_FETCHED_UNDONE_EVENTS = 100;
 
@@ -29,7 +31,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
       if (Option.isSome(noteOption)) {
         const note = noteOption.value;
 
-        const events = yield* eventRepo.findUpdatesForNoteBetweenIds({
+        const events = yield* eventRepo.findForNoteBetweenIds({
           noteId,
           afterLocalSeq: note.lastEventLocalSeq,
           upToLocalSeq,
@@ -37,18 +39,22 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
 
         if (!Arr.isReadonlyArrayNonEmpty(events)) return;
 
-        const yDoc = yield* applyMaterializationUpdates(note.materializedYUpdate, events);
+        const summary = yield* summarizeEvents(events);
 
-        const materialized = buildMaterializedNoteFields({
-          yDoc,
-        });
-        const lastEvent = Arr.lastNonEmpty(events);
+        const yDoc = yield* applyMaterializationUpdates(
+          note.materializedYUpdate,
+          summary.byType.update,
+        );
+
+        const materialized = buildMaterializedNoteFields({ yDoc });
 
         yield* noteRepo.updateById(noteId, {
           title: materialized.title,
           content: materialized.content,
+          text: materialized.text,
+          date: summary.latestDate ?? note.date,
           materializedYUpdate: materialized.materializedYUpdate,
-          updatedAt: lastEvent.createdAt,
+          updatedAt: summary.last.createdAt,
           lastEventLocalSeq: upToLocalSeq,
         });
 
@@ -61,7 +67,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
         return;
       }
 
-      const events = yield* eventRepo.findUpdatesForNoteBetweenIds({
+      const events = yield* eventRepo.findForNoteBetweenIds({
         noteId,
         afterLocalSeq: 0,
         upToLocalSeq,
@@ -69,10 +75,10 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
 
       if (!Arr.isReadonlyArrayNonEmpty(events)) return;
 
-      const yDoc = yield* applyMaterializationUpdates(null, events);
+      const summary = yield* summarizeEvents(events);
 
-      const firstEvent = Arr.headNonEmpty(events);
-      const lastEvent = Arr.lastNonEmpty(events);
+      const yDoc = yield* applyMaterializationUpdates(null, summary.byType.update);
+
       const materialized = buildMaterializedNoteFields({
         yDoc,
       });
@@ -81,9 +87,11 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
         id: noteId,
         title: materialized.title,
         content: materialized.content,
+        text: materialized.text,
+        date: summary.latestDate ?? toLocalDateString(summary.first.createdAt),
         materializedYUpdate: materialized.materializedYUpdate,
-        createdAt: firstEvent.createdAt,
-        updatedAt: lastEvent.createdAt,
+        createdAt: summary.first.createdAt,
+        updatedAt: summary.last.createdAt,
         lastEventLocalSeq: upToLocalSeq,
       });
 
@@ -104,7 +112,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
       let lastAppliedLocalSeq = initialCursor;
 
       while (true) {
-        const stream = yield* eventRepo.streamUpdatesAfterGlobalId(
+        const stream = yield* eventRepo.streamAfterGlobalId(
           lastAppliedLocalSeq,
           MAX_FETCHED_UNDONE_EVENTS,
         );
@@ -177,22 +185,49 @@ const applyMaterializationUpdates = Effect.fn("MaterializerService.applyMaterial
   },
 );
 
-export const FALLBACK_TITLE = "Untitled";
-
 function buildMaterializedNoteFields({ yDoc }: { yDoc: Y.Doc }) {
   const materializedYUpdate = Y.encodeStateAsUpdate(yDoc);
   const content = yDocToNodeJSON({ yDoc });
   const extractedTitle = findFirstH1Text(content);
-  // Daily note titles are deterministic from note id (date), so user edits in
-  // the document body do not mutate the canonical daily title.
-  const title = extractedTitle.length > 0 ? extractedTitle : FALLBACK_TITLE;
+  const title = extractedTitle.length > 0 ? extractedTitle : null;
 
   return {
     title,
     content,
+    text: extractText(content),
     materializedYUpdate,
   };
 }
+
+const summarizeEvents = Effect.fn("MaterializerService.summarizeEvents")(function* (
+  events: Arr.NonEmptyReadonlyArray<EventSchema.Record>,
+) {
+  const byType = {
+    update: events.filter((event) => event.type === "update"),
+    date: events.filter((event) => event.type === "date"),
+  };
+
+  return {
+    first: Arr.headNonEmpty(events),
+    last: Arr.lastNonEmpty(events),
+    byType,
+    latestDate: yield* getLatestDate(byType.date),
+  };
+});
+
+const getLatestDate = Effect.fn("MaterializerService.getLatestDate")(function* (
+  dateEvents: ReadonlyArray<EventSchema.Record>,
+) {
+  const latestDateEventOption = Arr.last(dateEvents);
+
+  if (Option.isNone(latestDateEventOption)) return null;
+
+  const payload = yield* EventSchema.decodeDatePayload(
+    new Uint8Array(latestDateEventOption.value.payload),
+  );
+
+  return payload.date;
+});
 
 type MaterializationTarget = {
   noteId: string;

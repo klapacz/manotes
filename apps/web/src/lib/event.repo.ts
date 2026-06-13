@@ -146,34 +146,31 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       return yield* pipe(events, decodeAll);
     });
 
-    const findUpdatesForNoteBetweenIds = Effect.fn("EventRepo.findUpdatesForNoteBetweenIds")(
-      function* ({
-        noteId,
-        afterLocalSeq,
-        upToLocalSeq,
-      }: {
-        noteId: string;
-        afterLocalSeq: number;
-        upToLocalSeq: number;
-      }) {
-        const events = yield* db.query((db) =>
-          db
-            .select()
-            .from(Tables.events)
-            .where(
-              and(
-                eq(Tables.events.noteId, noteId),
-                eq(Tables.events.type, "update"),
-                gt(Tables.events.localSeq, afterLocalSeq),
-                lte(Tables.events.localSeq, upToLocalSeq),
-              ),
-            )
-            .orderBy(asc(Tables.events.localSeq)),
-        );
+    const findForNoteBetweenIds = Effect.fn("EventRepo.findForNoteBetweenIds")(function* ({
+      noteId,
+      afterLocalSeq,
+      upToLocalSeq,
+    }: {
+      noteId: string;
+      afterLocalSeq: number;
+      upToLocalSeq: number;
+    }) {
+      const events = yield* db.query((db) =>
+        db
+          .select()
+          .from(Tables.events)
+          .where(
+            and(
+              eq(Tables.events.noteId, noteId),
+              gt(Tables.events.localSeq, afterLocalSeq),
+              lte(Tables.events.localSeq, upToLocalSeq),
+            ),
+          )
+          .orderBy(asc(Tables.events.localSeq)),
+      );
 
-        return yield* pipe(events, decodeAll);
-      },
-    );
+      return yield* pipe(events, decodeAll);
+    });
 
     const streamHasPending = Effect.fn("EventRepo.streamHasPending")(function* () {
       const stream = yield* db.reactiveQuery((db) =>
@@ -212,7 +209,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       return stream.pipe(Stream.mapEffect((events) => decodeAll(events)));
     });
 
-    const streamUpdatesAfterGlobalId = Effect.fn("EventRepo.streamUpdatesAfterGlobalId")(function* (
+    const streamAfterGlobalId = Effect.fn("EventRepo.streamAfterGlobalId")(function* (
       afterLocalSeq: number,
       limit: number,
     ) {
@@ -220,7 +217,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
         db
           .select()
           .from(Tables.events)
-          .where(and(eq(Tables.events.type, "update"), gt(Tables.events.localSeq, afterLocalSeq)))
+          .where(gt(Tables.events.localSeq, afterLocalSeq))
           .orderBy(asc(Tables.events.localSeq))
           .limit(limit),
       );
@@ -262,12 +259,12 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       importBackupEvents,
       findPending,
       findUpdatesForNote,
-      findUpdatesForNoteBetweenIds,
+      findForNoteBetweenIds,
       listAllForBackup,
       markCommitted,
       streamHasPending,
       streamUpdatesForNote,
-      streamUpdatesAfterGlobalId,
+      streamAfterGlobalId,
     };
   }),
 }) {

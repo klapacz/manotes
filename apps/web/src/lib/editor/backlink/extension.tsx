@@ -40,7 +40,8 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
             Stream.unwrap,
             Stream.map(
               Option.match({
-                onSome: ({ title }): BacklinkLabelEntry => BacklinkLabelEntry.Resolved({ title }),
+                onSome: (note): BacklinkLabelEntry =>
+                  BacklinkLabelEntry.Resolved({ title: note.title ?? note.text }),
                 onNone: BacklinkLabelEntry.Missing,
               }),
             ),

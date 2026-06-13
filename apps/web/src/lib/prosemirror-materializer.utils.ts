@@ -20,7 +20,11 @@ export function findFirstH1Text(node: UnknownNodeJSON): string {
   });
 
   if (!firstHeading) return "";
-  return extractText(firstHeading).trim();
+  return normalizeText(collectText(firstHeading));
+}
+
+export function extractText(node: UnknownNodeJSON): string {
+  return normalizeText(collectText(node));
 }
 
 const HeadingAttrsSchema = Schema.Struct({
@@ -56,13 +60,17 @@ function findFirstMatchingNode(
   return null;
 }
 
-function extractText(node: UnknownNodeJSON): string {
+function normalizeText(text: string): string {
+  return text.replace(/\s+/gu, " ").trim();
+}
+
+function collectText(node: UnknownNodeJSON): string {
   const ownText = node.text ?? "";
   const children = node.content ?? [];
 
   let nestedText = "";
   for (const child of children) {
-    nestedText += extractText(child);
+    nestedText += collectText(child);
   }
 
   return `${ownText}${nestedText}`;

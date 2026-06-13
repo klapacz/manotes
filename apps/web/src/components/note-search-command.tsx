@@ -24,7 +24,7 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
 
         return NoteRepo.Service.use((repo) => repo.reactiveSearchPreview(filter)).pipe(
           Stream.unwrap,
-          Stream.map(flow(Array.map((note) => ({ id: note.id, title: note.title })))),
+          Stream.map(flow(Array.map((note) => ({ id: note.id, title: note.title ?? note.text })))),
         );
       }),
     ),
