@@ -4,11 +4,13 @@ import * as NoteSchema from "./note.schema";
 import * as Tables from "./db.tables";
 import { and, eq, like } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { LibOption } from "./effect/option";
 
 const decodeRecord = Schema.decodeEffect(NoteSchema.Record);
 const decodeRecordArray = Schema.decodeEffect(Schema.Array(NoteSchema.Record));
 const decodePreview = Schema.decodeEffect(NoteSchema.Preview);
 const decodePreviewArray = Schema.decodeEffect(Schema.Array(NoteSchema.Preview));
+const decodeBootRecord = Schema.decodeEffect(NoteSchema.BootRecord);
 
 export class Service extends Context.Service<Service>()("NoteRepo.Service", {
   make: Effect.gen(function* () {
@@ -74,6 +76,51 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       if (Option.isNone(note)) return yield* new DB.NotFoundError();
 
       return note.value;
+    });
+
+    const findBootById = Effect.fn("NoteRepo.findBootById")(function* (id: string) {
+      const [record, backlinks] = yield* Effect.all(
+        [
+          db
+            .find((db) =>
+              db
+                .select({
+                  materializedYUpdate: Tables.notes.materializedYUpdate,
+                  lastEventLocalSeq: Tables.notes.lastEventLocalSeq,
+                })
+                .from(Tables.notes)
+                .where(eq(Tables.notes.id, id)),
+            )
+            .pipe(Effect.flatMap(LibOption.mapEffect(decodeBootRecord))),
+          // Previews of the note's outgoing [[link]] targets, for priming
+          // the note cache; a paint nicety — failures fall back to empty
+          // instead of failing the boot.
+          db
+            .query((db) =>
+              db
+                .select({
+                  id: Tables.notes.id,
+                  title: Tables.notes.title,
+                  text: Tables.notes.text,
+                  date: Tables.notes.date,
+                  createdAt: Tables.notes.createdAt,
+                  updatedAt: Tables.notes.updatedAt,
+                })
+                .from(Tables.backlinks)
+                .innerJoin(Tables.notes, eq(Tables.notes.id, Tables.backlinks.targetId))
+                .where(eq(Tables.backlinks.sourceId, id)),
+            )
+            .pipe(
+              Effect.flatMap(decodePreviewArray),
+              Effect.orElseSucceed(() => []),
+            ),
+        ],
+        { concurrency: "unbounded" },
+      );
+
+      if (Option.isNone(record)) return Option.none();
+
+      return Option.some<BootResult>({ record: record.value, backlinks });
     });
 
     const reactiveFindById = Effect.fn("NoteRepo.reactiveFindById")(function* (id: string) {
@@ -162,6 +209,7 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       updateById,
       findById,
       getById,
+      findBootById,
       reactiveFindById,
       list,
       reactiveList,
@@ -172,3 +220,17 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
+
+export type BootResult = {
+  readonly record: NoteSchema.BootRecord;
+  /** Previews of the note's outgoing [[link]] targets, for priming the note cache. */
+  readonly backlinks: ReadonlyArray<typeof NoteSchema.Preview.Type>;
+};
+
+export const bootResultEmpty = (): BootResult => ({
+  record: {
+    lastEventLocalSeq: 0,
+    materializedYUpdate: null,
+  },
+  backlinks: [],
+});

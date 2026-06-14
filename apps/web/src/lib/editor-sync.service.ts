@@ -3,7 +3,8 @@ import * as Y from "yjs";
 import * as EventRepo from "./event.repo";
 import { Array, DateTime, Option } from "effect";
 import * as NoteSchema from "./note.schema";
-import * as EditorNoteBootCache from "./editor/note-boot-cache.service";
+import * as NoteRepo from "./note.repo";
+import * as NoteCache from "./note-cache.service";
 import { streamDebounceNoDrop } from "./stream-debounce-no-drop";
 
 const REMOTE_ORIGIN = Symbol("remote");
@@ -18,7 +19,8 @@ export type SetupInput = { noteId: string };
 export class Service extends Context.Service<Service>()("EditorSyncService.Service", {
   make: Effect.gen(function* () {
     const eventRepo = yield* EventRepo.Service;
-    const noteBootCache = yield* EditorNoteBootCache.Service;
+    const noteRepo = yield* NoteRepo.Service;
+    const noteCache = yield* NoteCache.Service;
 
     const applyMaterializedYUpdate = Effect.fn("applyMaterializedYUpdate")(function* (
       doc: Y.Doc,
@@ -118,24 +120,25 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
 
     const setupDoc = Effect.fn("EditorSyncService.setupDoc")(
       function* (doc: Y.Doc, input: SetupInput, ready: Deferred.Deferred<void>) {
-        const noteChanges = yield* noteBootCache.changes(input.noteId);
+        // The boot payload is read atomically once; events drive the doc afterwards.
         const initial = pipe(
-          yield* noteChanges.pipe(Stream.runHead),
-          Option.getOrElse(() => Option.none<EditorNoteBootCache.NoteBoot>()),
-          Option.getOrElse(() => ({
-            lastEventLocalSeq: 0,
-            materializedYUpdate: null,
-          })),
+          yield* noteRepo.findBootById(input.noteId),
+          Option.getOrElse(NoteRepo.bootResultEmpty),
         );
+
+        // Prime the cache before the content applies (which mounts the
+        // backlink node views): they resolve their labels instantly from the
+        // seed and keep updating reactively. Boot never waits on label
+        // queries.
+        yield* noteCache.prime(initial.backlinks);
 
         yield* Effect.all(
           [
-            noteChanges.pipe(Stream.runDrain), // Keep stream warm for lifetime of editor
             Effect.gen(function* () {
-              yield* applyMaterializedYUpdate(doc, initial.materializedYUpdate);
+              yield* applyMaterializedYUpdate(doc, initial.record.materializedYUpdate);
               yield* Deferred.succeed(ready, void 0);
 
-              yield* applyIncomingUpdates(doc, input.noteId, initial.lastEventLocalSeq);
+              yield* applyIncomingUpdates(doc, input.noteId, initial.record.lastEventLocalSeq);
             }),
             saveOutcomingUpdates(doc, input.noteId),
           ],
@@ -152,6 +155,7 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(
     Layer.provide(EventRepo.Service.layer),
-    Layer.provide(EditorNoteBootCache.Service.layer),
+    Layer.provide(NoteRepo.Service.layer),
+    Layer.provide(NoteCache.Service.layer),
   );
 }

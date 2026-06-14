@@ -35,6 +35,14 @@ export const Preview = Schema.Struct({
   updatedAt: Schema.DateTimeUtcFromString,
 });
 
+/** One-shot editor boot payload — read atomically once; events drive the doc afterwards. */
+export const BootRecord = Schema.Struct({
+  materializedYUpdate: MaterializedYUpdate,
+  lastEventLocalSeq: Schema.Number,
+});
+
+export type BootRecord = typeof BootRecord.Type;
+
 export const Create = Schema.Struct({
   id: Schema.optional(Schema.String),
   title: Schema.Union([Schema.String, Schema.Null]),
