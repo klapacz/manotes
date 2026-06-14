@@ -1,7 +1,6 @@
 import { useAtomValue } from "@effect/atom-solid";
 import { createFileRoute, Navigate, Outlet } from "@tanstack/solid-router";
-import { AppSidebar } from "../components/app-sidebar";
-import { SidebarInset, SidebarProvider } from "../components/ui/sidebar";
+import { GraphNavbar } from "../components/graph-navbar";
 import { MatchAsyncResult, MatchTag, createSyncedAtom } from "../lib";
 import { GraphProvider } from "../lib/graph-access/graph-runtime/context";
 import * as GraphRuntime from "../lib/graph-access/graph-runtime";
@@ -43,14 +42,12 @@ function RouteComponent() {
             Locked: (state) => <Navigate {...GraphRuntime.Router.redirectLinkOptions(state())} />,
             Ready: (graph) => (
               <GraphProvider graph={graph}>
-                <SidebarProvider defaultOpenMobile={true}>
-                  <AppSidebar />
-                  <SidebarInset>
-                    <div class="flex-1 overflow-auto">
-                      <Outlet />
-                    </div>
-                  </SidebarInset>
-                </SidebarProvider>
+                <div class="flex h-svh flex-col overflow-hidden">
+                  <GraphNavbar />
+                  <div class="min-h-0 flex-1">
+                    <Outlet />
+                  </div>
+                </div>
               </GraphProvider>
             ),
           }}

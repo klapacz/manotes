@@ -21,14 +21,14 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { ChevronLeftIcon, ChevronsUpDownIcon, DownloadIcon, LockIcon } from "./icons";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "./ui/sidebar";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import { useAtom } from "@effect/atom-solid";
+import { Button } from "./ui/button";
 
 // Adapted from shadcn-solid using @kobalte/core 0.13.11 / solid-js 1.9.10.
 // Source: .reference/shadcn-solid/apps/docs/src/registry/blocks/sidebar-01/components/nav-user.tsx
-// Why: the current-graph control should match the sidebar account-menu pattern and own its graph actions.
-// Modifications: removed avatar visuals, replaced user identity with graph identity, changed placement to top-start, and wired the export backup action with Manotes backup services and toast feedback.
+// Why: the current-graph control should own graph identity and graph actions.
+// Modifications: removed avatar visuals, replaced user identity with graph identity, and wired the export backup action with Manotes backup services and toast feedback.
 const ExportBackup = bindRt((rt) =>
   rt.fn(
     Effect.fn("ComponentsGraphMenu.exportBackup")(function* (sourceGraphDisplayName: string) {
@@ -89,59 +89,55 @@ export const GraphMenu = () => {
   }
 
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu placement="top-start">
-          <DropdownMenuTrigger
-            as={(triggerProps: DropdownMenuTriggerProps<HTMLButtonElement>) => (
-              <SidebarMenuButton
-                {...triggerProps}
-                size="lg"
-                class="data-expanded:bg-control-hover data-expanded:text-fg"
-              >
+    <DropdownMenu placement="bottom-start">
+      <DropdownMenuTrigger
+        as={(triggerProps: DropdownMenuTriggerProps<HTMLButtonElement>) => (
+          <Button
+            {...triggerProps}
+            variant="ghost"
+            class="data-expanded:bg-control-hover data-expanded:text-fg"
+          >
+            <span class="truncate font-medium">{graph().record.displayName}</span>
+            <ChevronsUpDownIcon class="size-3.5 text-fg-subtle" />
+          </Button>
+        )}
+      />
+      <DropdownMenuPortal>
+        <DropdownMenuContent class="w-(--kb-popper-anchor-width) min-w-56 rounded-lg">
+          <DropdownMenuGroup>
+            <DropdownMenuGroupLabel class="p-0 font-normal">
+              <div class="px-1 py-1.5 text-left text-sm">
                 <GraphMenuIdentity graph={graph().record} />
-                <ChevronsUpDownIcon class="ml-auto size-4" />
-              </SidebarMenuButton>
-            )}
-          />
-          <DropdownMenuPortal>
-            <DropdownMenuContent class="w-(--kb-popper-anchor-width) min-w-56 rounded-lg">
-              <DropdownMenuGroup>
-                <DropdownMenuGroupLabel class="p-0 font-normal">
-                  <div class="px-1 py-1.5 text-left text-sm">
-                    <GraphMenuIdentity graph={graph().record} />
-                  </div>
-                </DropdownMenuGroupLabel>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
+              </div>
+            </DropdownMenuGroupLabel>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              onSelect={() => void handleExportBackup(graph().record.displayName)}
+              disabled={exportBackupResult().waiting}
+            >
+              <DownloadIcon class="size-4" />
+              Export backup
+            </DropdownMenuItem>
+            <Show when={cloudGraph()}>
+              {(cloudGraph) => (
                 <DropdownMenuItem
-                  onSelect={() => void handleExportBackup(graph().record.displayName)}
-                  disabled={exportBackupResult().waiting}
+                  onSelect={() => void handleLockGraph(cloudGraph().graphKeyEnvelope)}
+                  disabled={lockGraphResult().waiting}
                 >
-                  <DownloadIcon class="size-4" />
-                  Export backup
+                  <LockIcon class="size-4" />
+                  Lock graph
                 </DropdownMenuItem>
-                <Show when={cloudGraph()}>
-                  {(cloudGraph) => (
-                    <DropdownMenuItem
-                      onSelect={() => void handleLockGraph(cloudGraph().graphKeyEnvelope)}
-                      disabled={lockGraphResult().waiting}
-                    >
-                      <LockIcon class="size-4" />
-                      Lock graph
-                    </DropdownMenuItem>
-                  )}
-                </Show>
-                <DropdownMenuItemLink to="/">
-                  <ChevronLeftIcon class="size-4" />
-                  All graphs
-                </DropdownMenuItemLink>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenuPortal>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
+              )}
+            </Show>
+            <DropdownMenuItemLink to="/">
+              <ChevronLeftIcon class="size-4" />
+              All graphs
+            </DropdownMenuItemLink>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenuPortal>
+    </DropdownMenu>
   );
 };
