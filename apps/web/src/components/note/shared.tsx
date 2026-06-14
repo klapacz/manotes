@@ -8,6 +8,7 @@ import { PaneMake } from "../../lib/note/pane.make";
 import { PaneSchema } from "../../lib/note/pane.schema";
 import { RebaseIcon, XIcon } from "../icons";
 import { Button } from "../ui/button";
+import { DatePicker } from "./date-picker";
 import type { ParentProps } from "solid-js";
 import type { NoteSchema } from "../../lib";
 
@@ -56,6 +57,7 @@ export function NoteActions(props: {
           {NoteFormat.formatShortDate(props.note.date)}
         </LinkButton>
       </Show>
+      <DatePicker noteId={props.note.id} date={props.note.date} />
       <Show when={props.sort === "date"}>
         <span>{NoteFormat.formatUpdatedAt(props.note.updatedAt)}</span>
       </Show>

@@ -6,6 +6,12 @@ import * as NoteRepo from "./note.repo";
 
 type CreateInput = Omit<typeof EventSchema.Create.Type, "type">;
 
+type SetDateInput = {
+  noteId: string;
+  date: (typeof EventSchema.DatePayload.Type)["date"];
+  createdAt: CreateInput["createdAt"];
+};
+
 export class Service extends Context.Service<Service>()("MaterializedEventService.Service", {
   make: Effect.gen(function* () {
     const eventRepo = yield* EventRepo.Service;
@@ -25,8 +31,23 @@ export class Service extends Context.Service<Service>()("MaterializedEventServic
       return yield* noteRepo.getById(event.noteId);
     });
 
+    const setDate = Effect.fn("MaterializedEventService.setDate")(function* (input: SetDateInput) {
+      const payload = yield* EventSchema.encodeDatePayload({ date: input.date });
+      const event = yield* eventRepo.create({
+        noteId: input.noteId,
+        payload,
+        createdAt: input.createdAt,
+        type: "date",
+      });
+
+      yield* checkpointRepo.waitUntilAtLeast(event.localSeq);
+
+      return yield* noteRepo.getById(event.noteId);
+    });
+
     return {
       create,
+      setDate,
     };
   }),
 }) {
