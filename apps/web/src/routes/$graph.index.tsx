@@ -5,6 +5,7 @@ import { PaneCtx } from "../lib/note/pane.ctx";
 import { PaneMake } from "../lib/note/pane.make";
 import { PaneSchema } from "../lib/note/pane.schema";
 import { PaneScroll } from "../lib/note/pane.scroll";
+import { Focus } from "../components/note/focus";
 
 export const Search = Schema.Struct({
   panes: Schema.NonEmptyArray(PaneSchema.Pane).pipe(
@@ -25,14 +26,16 @@ function NotesCanvas() {
   const panes = Route.useSearch({ select: (search) => search.panes });
 
   return (
-    <PaneGrid>
-      <PaneScroll.Root panes={panes}>
-        {(pane, index) => (
-          <PaneCtx.Provider pane={pane} index={index} stack={panes}>
-            <Pane />
-          </PaneCtx.Provider>
-        )}
-      </PaneScroll.Root>
-    </PaneGrid>
+    <Focus.Provider>
+      <PaneGrid>
+        <PaneScroll.Root panes={panes}>
+          {(pane, index, ref) => (
+            <PaneCtx.Provider pane={pane} index={index} stack={panes}>
+              <Pane ref={ref} />
+            </PaneCtx.Provider>
+          )}
+        </PaneScroll.Root>
+      </PaneGrid>
+    </Focus.Provider>
   );
 }

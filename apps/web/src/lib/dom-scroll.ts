@@ -21,11 +21,7 @@ export function getScrollParent(el: HTMLElement): HTMLElement | null {
   return null;
 }
 
-export function scrollIntoViewAndWait(
-  el: HTMLElement,
-  options?: ScrollIntoViewOptions,
-  timeout = 600,
-): Promise<void> {
+export function waitForScroll(el: HTMLElement, timeout = 600): Promise<void> {
   const container = getScrollParent(el);
   return new Promise((resolve) => {
     let timer: number;
@@ -36,7 +32,6 @@ export function scrollIntoViewAndWait(
     };
     container?.addEventListener("scrollend", done, { once: true });
     timer = window.setTimeout(done, timeout);
-    el.scrollIntoView(options);
   });
 }
 

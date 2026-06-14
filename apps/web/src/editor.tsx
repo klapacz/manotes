@@ -1,6 +1,6 @@
 import "./editor.css";
 
-import { createEditor, Priority, union, withPriority } from "prosekit/core";
+import { createEditor, defineKeymap, Priority, union, withPriority } from "prosekit/core";
 import { Selection } from "prosekit/pm/state";
 import { ProseKit } from "prosekit/solid";
 import { createEffect, createMemo, on, Show, type JSX } from "solid-js";
@@ -20,6 +20,7 @@ import { Cause, Data, Deferred, Effect, SubscriptionRef } from "effect";
 import { AsyncResult, type Atom } from "effect/unstable/reactivity";
 import BacklinkMenu from "./lib/editor/backlink/menu";
 import { useAtomValue } from "@effect/atom-solid";
+import { Focus } from "./components/note/focus";
 
 export type BootState = Data.TaggedEnum<{
   Loading: {};
@@ -36,9 +37,7 @@ export const BootState = Data.taggedEnum<BootState>();
 const EDITOR_LOAD_ERROR_MESSAGE = "Failed to load note content.";
 
 type Props = EditorSyncService.SetupInput & {
-  onFocusIn?: () => void;
   onBootStateChange?: (state: BootState) => void;
-  autoFocus?: boolean;
   style?: JSX.CSSProperties;
 };
 
@@ -50,7 +49,16 @@ export default function Editor(props: Props): JSX.Element {
       () => props.noteId,
       (noteId) => {
         const doc = new Y.Doc();
-        const extension = union([defineYjs({ doc }), defineAppExtension()]);
+        const extension = union([
+          defineYjs({ doc }),
+          defineAppExtension(),
+          defineKeymap({
+            Escape: () => {
+              fnode.focusParent();
+              return true;
+            },
+          }),
+        ]);
         const editor = createEditor({ extension });
 
         return {
@@ -73,6 +81,8 @@ export default function Editor(props: Props): JSX.Element {
     };
   });
 
+  const ready = Deferred.makeUnsafe<void>();
+
   const editorBootStateAtom = bindRt((rt) =>
     rt.subscriptionRef(
       Effect.fn("Editor.bootState")(function* (get: Atom.AtomContext) {
@@ -86,7 +96,6 @@ export default function Editor(props: Props): JSX.Element {
 
         yield* Effect.gen(function* () {
           const service = yield* EditorSyncService.Service;
-          const ready = yield* Deferred.make<void>();
 
           yield* Effect.all(
             [
@@ -138,14 +147,29 @@ export default function Editor(props: Props): JSX.Element {
     props.onBootStateChange?.(bootState());
   });
 
-  createEffect(() => {
+  const focusEnd = Effect.fn("Editor.focusEnd")(function* () {
+    yield* Deferred.await(ready);
+
     const editor = state().editor;
-    if (!props.autoFocus || bootState()._tag !== "Ready" || !editor) return;
+    if (bootState()._tag !== "Ready") return;
 
     const view = editor.view;
     view.dispatch(view.state.tr.setSelection(Selection.atEnd(view.state.doc)));
     view.focus();
   });
+
+  const fnode = Focus.createNode(() => ({
+    id: Focus.useId().editor(props.noteId),
+    focus: () => Effect.runPromise(focusEnd()),
+    onKeyDown: (event) => {
+      if (event.key !== "Escape") return;
+      fnode.focusParent();
+      return true;
+    },
+  }));
+
+  let suppressNextFocus = false;
+  fnode.createChangeListener(() => (suppressNextFocus = false));
 
   return (
     <Show when={state()} keyed>
@@ -161,7 +185,18 @@ export default function Editor(props: Props): JSX.Element {
             ref={current.editor.mount}
             class="outline-none"
             style={props.style}
-            onFocusIn={() => props.onFocusIn?.()}
+            onMouseDown={(event) => {
+              const target = event.target;
+              if (!(target instanceof HTMLElement)) return;
+              if (target.closest("[data-backlink]")) {
+                suppressNextFocus = true;
+                event.stopPropagation();
+              }
+            }}
+            onFocusIn={() => {
+              if (suppressNextFocus) return;
+              fnode.focusSelf?.();
+            }}
           />
           <BacklinkMenu currentNoteId={props.noteId} />
         </ProseKit>

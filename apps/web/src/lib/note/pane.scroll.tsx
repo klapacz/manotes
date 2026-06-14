@@ -1,16 +1,28 @@
 import { keyArray } from "@solid-primitives/keyed";
-import { Ref } from "@solid-primitives/refs";
 import { createListTransition, type OnListChange } from "@solid-primitives/transition-group";
-import { For, createContext, onCleanup, useContext, type Accessor, type JSX } from "solid-js";
+import {
+  For,
+  createContext,
+  onMount,
+  useContext,
+  type Accessor,
+  type JSX,
+  type Ref,
+} from "solid-js";
 import { PaneCursor } from "./pane.cursor";
 import type { PaneSchema } from "./pane.schema";
 import { Array as Arr, pipe, Option } from "effect";
 import { DOMScroll } from "../dom-scroll";
 import { animate } from "motion";
+import { Focus } from "../../components/note/focus";
 
 type Props = {
   panes: Accessor<PaneCursor.Stack>;
-  children: (pane: Accessor<PaneSchema.Pane>, index: Accessor<number>) => JSX.Element;
+  children: (
+    pane: Accessor<PaneSchema.Pane>,
+    index: Accessor<number>,
+    ref: Ref<HTMLElement | undefined>,
+  ) => JSX.Element;
 };
 
 type Ctx = {
@@ -19,9 +31,14 @@ type Ctx = {
 
 const Context = createContext<Ctx>();
 
-type Item = { value: Accessor<PaneSchema.Pane>; index: Accessor<number>; ref: undefined | Element };
+type Item = {
+  value: Accessor<PaneSchema.Pane>;
+  index: Accessor<number>;
+  ref: HTMLElement | undefined;
+};
 
 export function Root(props: Props): JSX.Element {
+  const focus = Focus.use();
   const current = keyArray(
     props.panes,
     (pane) => pane.paneId,
@@ -67,100 +84,96 @@ export function Root(props: Props): JSX.Element {
     return { found: true, done: scrollTo(inUI) };
   };
 
+  function prepareScrollTransition(opts: Parameters<OnListChange<Item>>[0]) {
+    const finish = () => opts.finishRemoved(opts.removed);
+
+    // Previously rendered stack, excluding panes added by this transition.
+    const prev = opts.list.filter((item) => !opts.added.includes(item));
+    // Next stack, excluding panes waiting for exit completion.
+    const next = opts.list.filter((item) => !opts.removed.includes(item));
+
+    // Shared leading panes: A B C -> A B D has prefix A B.
+    const prefix = Arr.takeWhile(next, (item, i) => item === prev[i]);
+    // Same stack; no navigation change to animate.
+    const unchanged = prev.length === next.length && prefix.length === next.length;
+
+    if (!Arr.isArrayNonEmpty(next) || unchanged) {
+      finish();
+      return Option.none();
+    }
+
+    // Shared trailing panes: A B C -> B C has postfix B C.
+    const prevReversed = Arr.reverse(prev);
+    const postfix = pipe(
+      Arr.reverse(next),
+      Arr.takeWhile((item, i) => item === prevReversed[i]),
+    );
+
+    async function fadeRemovedAndScrollTo(target: Item) {
+      await resolveMicrotask();
+
+      const animations = opts.removed.map((target) => {
+        if (!(target.ref instanceof HTMLElement)) return;
+        return animate(
+          target.ref,
+          { opacity: 0, filter: "blur(2px)" },
+          { duration: 0.16, ease: "easeOut" },
+        );
+      });
+
+      await Promise.all([scrollTo(target), ...animations]);
+      finish();
+    }
+
+    async function removeImmediatelyAndScrollTo(target: Item) {
+      finish();
+      await resolveMicrotask();
+      await scrollTo(target);
+    }
+
+    return Option.some({
+      next,
+      prev,
+      prefix,
+      postfix,
+      fadeRemovedAndScrollTo,
+      removeImmediatelyAndScrollTo,
+    });
+  }
+
+  async function scrollTo(item: Item) {
+    focus.focusNode(Focus.id(item.value().paneId).pane());
+    if (!item.ref) return;
+    if (DOMScroll.isCenteredInScrollParent(item.ref)) return;
+
+    await DOMScroll.waitForScroll(item.ref);
+  }
+
+  onMount(() => {
+    const last = rendered()?.at(-1);
+    if (!last) return;
+
+    last.ref?.scrollIntoView({
+      block: "nearest",
+      inline: "center",
+    });
+
+    focus.focusWhenAvailable(Focus.id(last.value().paneId).pane());
+  });
+
   return (
     <Context.Provider value={{ scrollToPane }}>
       <For each={rendered()}>
-        {(item) => (
-          <Ref
-            ref={(el) => {
-              item.ref = el;
-              if (!el) return;
-
-              const onFocusIn = () => void scrollTo(item);
-              el.addEventListener("focusin", onFocusIn);
-              onCleanup(() => el.removeEventListener("focusin", onFocusIn));
-            }}
-          >
-            {props.children(item.value, item.index)}
-          </Ref>
-        )}
+        {(item) => props.children(item.value, item.index, (el) => (item.ref = el))}
       </For>
     </Context.Provider>
   );
-}
-
-function prepareScrollTransition(opts: Parameters<OnListChange<Item>>[0]) {
-  const finish = () => opts.finishRemoved(opts.removed);
-
-  // Previously rendered stack, excluding panes added by this transition.
-  const prev = opts.list.filter((item) => !opts.added.includes(item));
-  // Next stack, excluding panes waiting for exit completion.
-  const next = opts.list.filter((item) => !opts.removed.includes(item));
-
-  // Shared leading panes: A B C -> A B D has prefix A B.
-  const prefix = Arr.takeWhile(next, (item, i) => item === prev[i]);
-  // Same stack; no navigation change to animate.
-  const unchanged = prev.length === next.length && prefix.length === next.length;
-
-  if (!Arr.isArrayNonEmpty(next) || unchanged) {
-    finish();
-    return Option.none();
-  }
-
-  // Shared trailing panes: A B C -> B C has postfix B C.
-  const prevReversed = Arr.reverse(prev);
-  const postfix = pipe(
-    Arr.reverse(next),
-    Arr.takeWhile((item, i) => item === prevReversed[i]),
-  );
-
-  async function fadeRemovedAndScrollTo(target: Item) {
-    await resolveMicrotask();
-
-    const animations = opts.removed.map((target) => {
-      if (!(target.ref instanceof HTMLElement)) return;
-      return animate(
-        target.ref,
-        { opacity: 0, filter: "blur(2px)" },
-        { duration: 0.16, ease: "easeOut" },
-      );
-    });
-
-    await Promise.all([scrollTo(target), ...animations]);
-    finish();
-  }
-
-  async function removeImmediatelyAndScrollTo(target: Item) {
-    finish();
-    await resolveMicrotask();
-    await scrollTo(target);
-  }
-
-  return Option.some({
-    next,
-    prev,
-    prefix,
-    postfix,
-    fadeRemovedAndScrollTo,
-    removeImmediatelyAndScrollTo,
-  });
 }
 
 export function use(): Ctx {
   const ctx = useContext(Context);
   if (!ctx) throw new Error("PaneScroll.use must be used inside PaneScroll.Root");
   return ctx;
-}
-
-async function scrollTo(item: Item) {
-  if (!(item.ref instanceof HTMLElement)) return;
-  if (DOMScroll.isCenteredInScrollParent(item.ref)) return;
-
-  await DOMScroll.scrollIntoViewAndWait(item.ref, {
-    block: "nearest",
-    inline: "center",
-    behavior: "smooth",
-  });
 }
 
 function resolveMicrotask() {

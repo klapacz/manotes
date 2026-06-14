@@ -1,5 +1,5 @@
-import { Effect, Stream } from "effect";
-import { Show, createSignal, getOwner, onMount } from "solid-js";
+import { Option, Effect, Stream, Array as Arr, Number } from "effect";
+import { Show, createEffect, createMemo, createSignal, getOwner, onMount } from "solid-js";
 import { VList } from "virtua/solid";
 import {
   MatchTag,
@@ -13,12 +13,14 @@ import { PaneSchema } from "../../lib/note/pane.schema";
 import { NoteStream } from "../../lib/note/stream";
 import { EditorPool } from "./editor-pool";
 import { PaneStreamFilter } from "./pane-stream-filter";
+import { Focus } from "./focus";
 import { PaneStreamRow } from "./pane-stream-row";
 import { PaneActions, PaneEmptyState, PaneShell } from "./shared";
+import { DOMScroll } from "../../lib/dom-scroll";
 
 const PRELOAD_EDITOR_COUNT = 12;
 
-export function PaneStream() {
+export function PaneStream(props: { paneRef: HTMLElement | undefined }) {
   const pane = PaneCtx.useStream();
   const [refreshToken, setRefreshToken] = createSignal(0);
   const queryAtom = createSyncedAtom(() => PaneSchema.paneToQuery(pane()));
@@ -64,60 +66,115 @@ export function PaneStream() {
 
   const refresh = () => setRefreshToken((token) => token + 1);
 
+  const fid = Focus.useId();
+  const listOrder = createMemo(() => {
+    if (state._tag !== "Success") return [];
+    return noteIdsFromRows(state.value.rows).map(fid.note);
+  });
+
+  createEffect(() => {
+    const ids = listOrder();
+    if (fnode.focused() && Arr.isArrayNonEmpty(ids)) {
+      fnode.focusWhenAvailable(Arr.headNonEmpty(ids));
+    }
+  });
+
+  const move = (delta: number) => {
+    const ids = listOrder();
+    if (!Arr.isArrayNonEmpty(ids)) return false;
+
+    const at = Arr.findFirstIndex(ids, (id) => id === fnode.focusedId());
+    const nextIndex = at.pipe(
+      Option.map((idx) => idx + delta),
+      Option.map(Number.clamp({ minimum: 0, maximum: ids.length - 1 })),
+      Option.getOrElse(() => 0),
+    );
+    fnode.focusNode(ids[nextIndex]!);
+    return true;
+  };
+
+  const fnode = Focus.createNode(() => ({
+    id: fid.pane(),
+    focusWithin: () => {
+      if (!props.paneRef) return;
+      if (DOMScroll.isCenteredInScrollParent(props.paneRef)) return;
+
+      props.paneRef.scrollIntoView({
+        block: "nearest",
+        inline: "center",
+        behavior: "smooth",
+      });
+    },
+    onKeyDown: (event) => {
+      if (event.key === "j" || event.key === "ArrowDown") {
+        if (move(1)) return true;
+      } else if (event.key === "k" || event.key === "ArrowUp") {
+        if (move(-1)) return true;
+      }
+    },
+  }));
+
   return (
-    <PaneShell>
-      <div class="flex gap-3 justify-between">
-        <PaneStreamFilter
-          dirty={state._tag === "Success" ? state.value.dirty : false}
-          onRefresh={refresh}
+    <Focus.NodeProvider node={fnode}>
+      <PaneShell>
+        <div class="flex gap-3 justify-between">
+          <PaneStreamFilter
+            dirty={state._tag === "Success" ? state.value.dirty : false}
+            onRefresh={refresh}
+          />
+          <PaneActions />
+        </div>
+        <MatchTag
+          when={state}
+          cases={{
+            Loading: () => null,
+            Success: (state) => (
+              <EditorPool.Provider pool={state().value.pool}>
+                <Show
+                  when={state().value.rows.length > 0}
+                  fallback={<PaneEmptyState>No notes in this pane.</PaneEmptyState>}
+                >
+                  {(_) => {
+                    const [revealed, setRevealed] = createSignal(false);
+
+                    onMount(() => {
+                      // Double rAF: the first frame commits opacity:0 (and the booted editors'
+                      // layout) to pixels, the second flips to opacity:1 so the CSS fade-in
+                      // actually animates.
+                      requestAnimationFrame(() => requestAnimationFrame(() => setRevealed(true)));
+                    });
+
+                    return (
+                      <div
+                        class="min-h-0 flex-1 transition-opacity duration-150 ease-out"
+                        classList={{
+                          "opacity-0": !revealed(),
+                        }}
+                      >
+                        <VList
+                          data={state().value.rows}
+                          bufferSize={1200}
+                          style={{ height: "100%" }}
+                        >
+                          {(item) => <PaneStreamRow item={item} sort={pane().sort} />}
+                        </VList>
+                      </div>
+                    );
+                  }}
+                </Show>
+              </EditorPool.Provider>
+            ),
+          }}
         />
-        <PaneActions />
-      </div>
-      <MatchTag
-        when={state}
-        cases={{
-          Loading: () => null,
-          Success: (state) => (
-            <EditorPool.Provider pool={state().value.pool}>
-              <Show
-                when={state().value.rows.length > 0}
-                fallback={<PaneEmptyState>No notes in this pane.</PaneEmptyState>}
-              >
-                {(_) => {
-                  const [revealed, setRevealed] = createSignal(false);
-
-                  onMount(() => {
-                    // Double rAF: the first frame commits opacity:0 (and the booted editors'
-                    // layout) to pixels, the second flips to opacity:1 so the CSS fade-in
-                    // actually animates.
-                    requestAnimationFrame(() => requestAnimationFrame(() => setRevealed(true)));
-                  });
-
-                  return (
-                    <div
-                      class="min-h-0 flex-1 transition-opacity duration-150 ease-out"
-                      classList={{
-                        "opacity-0": !revealed(),
-                      }}
-                    >
-                      <VList data={state().value.rows} bufferSize={1200} style={{ height: "100%" }}>
-                        {(item) => <PaneStreamRow item={item} sort={pane().sort} />}
-                      </VList>
-                    </div>
-                  );
-                }}
-              </Show>
-            </EditorPool.Provider>
-          ),
-        }}
-      />
-    </PaneShell>
+      </PaneShell>
+    </Focus.NodeProvider>
   );
 }
 
 function preloadNoteIds(rows: ReadonlyArray<NoteStream.ListItem>): ReadonlyArray<string> {
-  return rows
-    .filter((row) => row._tag === "note")
-    .slice(0, PRELOAD_EDITOR_COUNT)
-    .map((row) => row.note.id);
+  return noteIdsFromRows(rows).slice(0, PRELOAD_EDITOR_COUNT);
+}
+
+function noteIdsFromRows(rows: ReadonlyArray<NoteStream.ListItem>): ReadonlyArray<string> {
+  return rows.filter((row) => row._tag === "note").map((row) => row.note.id);
 }

@@ -1,11 +1,26 @@
 import { Option, Stream } from "effect";
-import { Show } from "solid-js";
+import { createEffect, Show } from "solid-js";
 import Editor from "../../editor";
-import { MatchTag, NoteCache, bindRt, createAtomResultStore, createSyncedAtom } from "../../lib";
+import {
+  MatchTag,
+  NoteCache,
+  NoteSchema,
+  bindRt,
+  createAtomResultStore,
+  createSyncedAtom,
+} from "../../lib";
 import { PaneCtx } from "../../lib/note/pane.ctx";
-import { NoteActions, NoteSeparator, PaneActions, PaneEmptyState, PaneShell } from "./shared";
+import {
+  NoteActions,
+  NoteSeparator,
+  NoteShell,
+  PaneActions,
+  PaneEmptyState,
+  PaneShell,
+} from "./shared";
+import { Focus } from "./focus";
 
-export function PaneNote() {
+export function PaneNote(props: { paneRef: HTMLElement | undefined }) {
   const pane = PaneCtx.useNote();
   const noteIdAtom = createSyncedAtom(() => pane().id);
   const notesAtom = bindRt((rt) =>
@@ -18,38 +33,68 @@ export function PaneNote() {
   );
   const note = createAtomResultStore(notesAtom);
 
-  return (
-    <PaneShell>
-      <div class="flex justify-end">
-        <PaneActions />
-      </div>
-      <MatchTag
-        when={note}
-        cases={{
-          Loading: () => null,
-          Error: () => <PaneEmptyState>Failed to load note.</PaneEmptyState>,
-          Success: (state) => (
-            <Show
-              when={state().value}
-              // Only claim the note is missing once the query has answered;
-              // rendering the fallback while loading flashes it on every pane open.
-              fallback={<PaneEmptyState>Note not found.</PaneEmptyState>}
-            >
-              {(note) => (
-                <article class="overflow-y-auto">
-                  <NoteSeparator dateString={note().date} />
-                  <Editor
-                    noteId={note().id}
-                    style={{ "min-height": "30svh", "padding-top": "calc(var(--spacing)*6)" }}
-                  />
+  const fid = Focus.useId();
+  const fnode = Focus.createNode((ctx) => ({
+    id: fid.pane(),
+    focusWithin: () => {
+      props.paneRef?.scrollIntoView({
+        block: "nearest",
+        inline: "center",
+        behavior: "smooth",
+      });
+    },
+    onKeyDown: (event) => {
+      if (event.key !== "Enter") return;
+      ctx.focusNode(fid.editor(pane().id));
+      return true;
+    },
+  }));
 
-                  <NoteActions note={note()} sort="date" />
-                </article>
-              )}
-            </Show>
-          ),
-        }}
+  return (
+    <Focus.NodeProvider node={fnode}>
+      <PaneShell>
+        <div class="flex justify-end">
+          <PaneActions />
+        </div>
+        <MatchTag
+          when={note}
+          cases={{
+            Loading: () => null,
+            Error: () => <PaneEmptyState>Failed to load note.</PaneEmptyState>,
+            Success: (state) => (
+              <Show
+                when={state().value}
+                // Only claim the note is missing once the query has answered;
+                // rendering the fallback while loading flashes it on every pane open.
+                fallback={<PaneEmptyState>Note not found.</PaneEmptyState>}
+              >
+                {(note) => <PaneNoteInner note={note()} />}
+              </Show>
+            ),
+          }}
+        />
+      </PaneShell>
+    </Focus.NodeProvider>
+  );
+}
+
+function PaneNoteInner(props: { note: NoteSchema.Meta }) {
+  let el: HTMLElement | undefined;
+  const fnode = Focus.useNode();
+
+  createEffect(() => {
+    if (fnode().focused() && el && document.activeElement !== el) el.focus();
+  });
+
+  return (
+    <NoteShell ref={(ref) => (el = ref)} class="overflow-y-auto" noteId={props.note.id}>
+      <NoteSeparator dateString={props.note.date} />
+      <Editor
+        noteId={props.note.id}
+        style={{ "min-height": "30svh", "padding-top": "calc(var(--spacing)*6)" }}
       />
-    </PaneShell>
+
+      <NoteActions note={props.note} sort="date" />
+    </NoteShell>
   );
 }

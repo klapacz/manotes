@@ -11,6 +11,7 @@ import {
   type ParentProps,
 } from "solid-js";
 import Editor, { BootState } from "../../editor";
+import { Focus } from "./focus";
 
 // Pool of persistent editors (corvu createPersistent-style: render once into a
 // detached root that outlives row unmounts, reattach the resolved DOM on
@@ -33,6 +34,7 @@ export type Slot = {
   readonly container: HTMLDivElement;
   readonly bootState: Accessor<BootState>;
   readonly ready: Effect.Effect<void, EditorBootError>;
+  readonly setFocusParent: (node: Focus.Node | undefined) => void;
 };
 
 export type Pool = {
@@ -108,17 +110,28 @@ function createSlot(noteId: string): PooledSlot {
       }
     };
 
+    const fnode = Focus.useNode();
+    const [focusParent, setFocusParent] = createSignal<Focus.Node>();
+
     const container = (
       <div>
-        <Editor
-          noteId={noteId}
-          onBootStateChange={setBootStateReady}
-          style={{ "padding-top": "calc(var(--spacing)*6)" }}
-        />
+        <Focus.NodeProvider node={focusParent() ?? fnode()}>
+          <Editor
+            noteId={noteId}
+            onBootStateChange={setBootStateReady}
+            style={{ "padding-top": "calc(var(--spacing)*6)" }}
+          />
+        </Focus.NodeProvider>
       </div>
     ) as HTMLDivElement;
 
-    return { container, bootState, ready: Deferred.await(ready), dispose };
+    return {
+      container,
+      bootState,
+      ready: Deferred.await(ready),
+      setFocusParent,
+      dispose,
+    } satisfies PooledSlot;
   });
 }
 

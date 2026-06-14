@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-solid";
 import { Option, Stream, Types } from "effect";
-import { createMemo } from "solid-js";
+import { createEffect, createMemo, onCleanup } from "solid-js";
 import {
   MatchAsyncResult,
   MatchTag,
@@ -11,10 +11,11 @@ import {
   createSyncedAtom,
 } from "../../lib";
 import { EditorPool } from "./editor-pool";
+import { Focus } from "./focus";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneSchema } from "../../lib/note/pane.schema";
 import { NoteStream } from "../../lib/note/stream";
-import { NoteActions, NoteSeparator } from "./shared";
+import { NoteActions, NoteSeparator, NoteShell } from "./shared";
 
 export function PaneStreamRow(props: { item: NoteStream.ListItem; sort: PaneSchema.StreamSort }) {
   return (
@@ -54,21 +55,50 @@ function NoteRow(props: { row: Types.ExtractTag<NoteStream.ListItem, "note"> }) 
   const slotAtom = bindRt((rt) => rt.atom((get) => pool.get(get(noteIdAtom))));
   const slotResult = useAtomValue(slotAtom);
 
+  let el: HTMLElement | undefined;
+  const fid = Focus.useId();
+  const fnode = Focus.createNode((ctx) => ({
+    id: fid.note(props.row.note.id),
+    focus: () => {
+      el?.focus();
+      el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    },
+    onKeyDown: (event) => {
+      if (event.key !== "Enter") return;
+      ctx.focusNode(fid.editor(props.row.note.id));
+      return true;
+    },
+  }));
+
+  createEffect(() => {
+    if (fnode.focused() && el && document.activeElement !== el) el.focus();
+  });
+
   return (
-    <article
-      id={`note-${props.row.note.id}`}
-      class="pb-6 space-y-2"
-      classList={{
-        "border-t": !props.row.firstInGroup,
-      }}
-    >
-      <MatchAsyncResult when={slotResult()} onSuccess={(slot) => slot().container} />
-      <NoteActions
-        note={meta()}
-        groupKey={props.row.groupKey}
-        dirty={props.row.dirty}
-        sort={pane().sort}
-      />
-    </article>
+    <Focus.NodeProvider node={fnode}>
+      <NoteShell
+        ref={(ref) => (el = ref)}
+        class="pb-6 space-y-2"
+        classList={{ "border-t": !props.row.firstInGroup }}
+        noteId={props.row.note.id}
+      >
+        <MatchAsyncResult
+          when={slotResult()}
+          onSuccess={(slot) => {
+            createEffect(() => {
+              slot().setFocusParent(fnode);
+              onCleanup(() => slot().setFocusParent(undefined));
+            });
+            return slot().container;
+          }}
+        />
+        <NoteActions
+          note={meta()}
+          groupKey={props.row.groupKey}
+          dirty={props.row.dirty}
+          sort={pane().sort}
+        />
+      </NoteShell>
+    </Focus.NodeProvider>
   );
 }

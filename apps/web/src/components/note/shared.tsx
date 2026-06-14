@@ -10,13 +10,18 @@ import { PaneScroll } from "../../lib/note/pane.scroll";
 import { RebaseIcon, XIcon } from "../icons";
 import { Button } from "../ui/button";
 import { DatePicker } from "./date-picker";
-import type { ParentProps } from "solid-js";
+import { splitProps, type ComponentProps, type ParentProps } from "solid-js";
 import type { NoteSchema } from "../../lib";
+import { Focus } from "./focus";
 
 const route = getRouteApi("/$graph/");
 
-export function PaneShell(props: ParentProps) {
-  return <div class="flex flex-col gap-4 h-full min-h-0 px-6 py-4">{props.children}</div>;
+export function PaneShell(props: ComponentProps<"div">) {
+  return (
+    <div class="flex flex-col gap-4 h-full min-h-0 px-6 py-4" {...props}>
+      {props.children}
+    </div>
+  );
 }
 
 export function PaneActions() {
@@ -69,6 +74,26 @@ export function NoteActions(props: {
       </Show>
       <Show when={props.dirty}>Dirty</Show>
     </div>
+  );
+}
+
+export function NoteShell(props: ComponentProps<"article"> & { noteId: string }) {
+  const fnode = Focus.useNode();
+  const [local, rest] = splitProps(props, ["classList", "children", "noteId"]);
+
+  return (
+    <article
+      {...rest}
+      tabIndex={-1}
+      onMouseDown={() => fnode().focusNode(fnode().id())}
+      classList={{
+        ...local.classList,
+        "bg-control-hover": fnode().focused(),
+        "bg-control": fnode().focusWithin(),
+      }}
+    >
+      {local.children}
+    </article>
   );
 }
 

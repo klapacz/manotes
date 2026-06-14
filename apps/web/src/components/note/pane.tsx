@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/solid-router";
-import { splitProps, type ParentProps } from "solid-js";
+import { splitProps, type ParentProps, type Ref } from "solid-js";
 import { MatchTag } from "../../lib";
 import { callHandler } from "../../lib/call-handler";
 import { PaneCursor } from "../../lib/note/pane.cursor";
@@ -9,6 +9,8 @@ import { PaneScroll } from "../../lib/note/pane.scroll";
 import { NoteLinkScope, type NoteLinkRenderer } from "../../lib/note/link-component";
 import { PaneNote } from "./pane-note";
 import { PaneStream } from "./pane-stream";
+import { mergeRefs } from "@solid-primitives/refs";
+import { createSignal } from "solid-js";
 
 export function PaneGrid(props: ParentProps) {
   return (
@@ -18,7 +20,7 @@ export function PaneGrid(props: ParentProps) {
   );
 }
 
-export function Pane() {
+export function Pane(props: { ref: Ref<HTMLElement | undefined> }) {
   const ctx = PaneCtx.use();
   const pane = PaneCtx.usePane();
   const scroll = PaneScroll.use();
@@ -44,14 +46,19 @@ export function Pane() {
     );
   };
 
+  const [paneRef, setPaneRef] = createSignal<HTMLElement | undefined>();
+
   return (
     <NoteLinkScope render={renderNoteLink}>
-      <section class="h-full w-[min(44rem,100vw)] shrink-0 snap-center">
+      <section
+        class="h-full w-[min(44rem,100vw)] shrink-0 snap-center"
+        ref={mergeRefs(props.ref, setPaneRef)}
+      >
         <MatchTag
           when={pane()}
           cases={{
-            stream: () => <PaneStream />,
-            note: () => <PaneNote />,
+            stream: () => <PaneStream paneRef={paneRef()} />,
+            note: () => <PaneNote paneRef={paneRef()} />,
           }}
         />
       </section>
