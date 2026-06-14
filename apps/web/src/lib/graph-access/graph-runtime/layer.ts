@@ -13,6 +13,7 @@ import * as MaterializedEventService from "../../materialized-event.service";
 import * as BacklinkService from "../../materializer/backlink/service";
 import * as Migrator from "../../migrator";
 import * as NoteCache from "../../note-cache.service";
+import * as NoteStreamCache from "../../note-stream-cache.service";
 import * as NoteRepo from "../../note.repo";
 import * as BrowserExtensionTabNoteService from "../../browser-extension/tab-note/service";
 import * as SessionService from "../session/service";
@@ -66,6 +67,7 @@ export const makeLayer = (opts: SetupOpts) =>
         BacklinkService.Service.layer,
         NoteCache.Service.layer,
         EditorNoteBootCache.Service.layer,
+        NoteStreamCache.Service.layer,
         MaterializationCheckpointRepo.Service.layer,
         MaterializedEventService.Service.layer,
         BrowserExtensionTabNoteService.Service.layer,

@@ -43,6 +43,14 @@ export const BootRecord = Schema.Struct({
 
 export type BootRecord = typeof BootRecord.Type;
 
+/** Ordering/grouping metadata for stream lists; content stays out of list queries. */
+export const Meta = Schema.Struct({
+  id: Schema.String,
+  date: Schema.String,
+  updatedAt: Schema.DateTimeUtcFromString,
+});
+export type Meta = typeof Meta.Type;
+
 export const Create = Schema.Struct({
   id: Schema.optional(Schema.String),
   title: Schema.Union([Schema.String, Schema.Null]),

@@ -7,6 +7,7 @@ export * as NoteSchema from "./note.schema";
 export * as NoteRepo from "./note.repo";
 export * as NoteCache from "./note-cache.service";
 export * as EditorNoteBootCache from "./editor/note-boot-cache.service";
+export * as NoteStreamCache from "./note-stream-cache.service";
 export * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
 export * as MaterializedEventService from "./materialized-event.service";
 export * as OPFS from "./opfs.service";
