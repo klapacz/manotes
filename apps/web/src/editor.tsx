@@ -32,7 +32,7 @@ type BootStateSnapshot = {
   state: BootState;
 };
 
-const BootState = Data.taggedEnum<BootState>();
+export const BootState = Data.taggedEnum<BootState>();
 const EDITOR_LOAD_ERROR_MESSAGE = "Failed to load note content.";
 
 type Props = EditorSyncService.SetupInput & {
