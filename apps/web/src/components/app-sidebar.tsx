@@ -31,6 +31,7 @@ import {
 import { SyncStatusIndicator } from "./sync-status-indicator";
 import { WorkerHealthBanner } from "./worker-health-banner";
 import { useAtom } from "@effect/atom-solid";
+import * as NoteLink from "../lib/note/link";
 
 const EMPTY_YJS_UPDATE = Y.encodeStateAsUpdate(new Y.Doc());
 
@@ -72,11 +73,7 @@ export const AppSidebar = () => {
   async function handleCreateNote() {
     try {
       const note = await createNote();
-      void navigate({
-        from: "/$graph",
-        to: "/$graph/note/$note",
-        params: { note: note.id },
-      });
+      void navigate(NoteLink.getOptions({ id: note.id }));
     } catch {}
   }
 

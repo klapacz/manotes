@@ -12,6 +12,7 @@ import {
   CommandItem,
   CommandList,
 } from "./ui/command";
+import * as NoteLink from "../lib/note/link";
 
 export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.Element }) => {
   const navigate = useNavigate();
@@ -78,11 +79,7 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
                     // HACK: clear filter after close animation to prevent flickering
                     setTimeout(() => setNoteFilter(""), 200);
 
-                    void navigate({
-                      from: "/$graph",
-                      to: "/$graph/note/$note",
-                      params: { note: note().id },
-                    });
+                    void navigate(NoteLink.getOptions({ id: note().id }));
                   }}
                 >
                   {note().title}

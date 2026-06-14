@@ -16,7 +16,6 @@ import { Route as GraphRouteImport } from './routes/$graph'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GraphIndexRouteImport } from './routes/$graph.index'
 import { Route as GraphUnlockRouteImport } from './routes/$graph_.unlock'
-import { Route as GraphNoteNoteRouteImport } from './routes/$graph.note.$note'
 
 const ImportRoute = ImportRouteImport.update({
   id: '/import',
@@ -53,11 +52,6 @@ const GraphUnlockRoute = GraphUnlockRouteImport.update({
   path: '/$graph/unlock',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GraphNoteNoteRoute = GraphNoteNoteRouteImport.update({
-  id: '/note/$note',
-  path: '/note/$note',
-  getParentRoute: () => GraphRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -67,7 +61,6 @@ export interface FileRoutesByFullPath {
   '/import': typeof ImportRoute
   '/$graph/unlock': typeof GraphUnlockRoute
   '/$graph/': typeof GraphIndexRoute
-  '/$graph/note/$note': typeof GraphNoteNoteRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -76,7 +69,6 @@ export interface FileRoutesByTo {
   '/import': typeof ImportRoute
   '/$graph/unlock': typeof GraphUnlockRoute
   '/$graph': typeof GraphIndexRoute
-  '/$graph/note/$note': typeof GraphNoteNoteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -87,7 +79,6 @@ export interface FileRoutesById {
   '/import': typeof ImportRoute
   '/$graph_/unlock': typeof GraphUnlockRoute
   '/$graph/': typeof GraphIndexRoute
-  '/$graph/note/$note': typeof GraphNoteNoteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -99,16 +90,8 @@ export interface FileRouteTypes {
     | '/import'
     | '/$graph/unlock'
     | '/$graph/'
-    | '/$graph/note/$note'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/create'
-    | '/debug'
-    | '/import'
-    | '/$graph/unlock'
-    | '/$graph'
-    | '/$graph/note/$note'
+  to: '/' | '/create' | '/debug' | '/import' | '/$graph/unlock' | '/$graph'
   id:
     | '__root__'
     | '/'
@@ -118,7 +101,6 @@ export interface FileRouteTypes {
     | '/import'
     | '/$graph_/unlock'
     | '/$graph/'
-    | '/$graph/note/$note'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -181,24 +163,15 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof GraphUnlockRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/$graph/note/$note': {
-      id: '/$graph/note/$note'
-      path: '/note/$note'
-      fullPath: '/$graph/note/$note'
-      preLoaderRoute: typeof GraphNoteNoteRouteImport
-      parentRoute: typeof GraphRoute
-    }
   }
 }
 
 interface GraphRouteChildren {
   GraphIndexRoute: typeof GraphIndexRoute
-  GraphNoteNoteRoute: typeof GraphNoteNoteRoute
 }
 
 const GraphRouteChildren: GraphRouteChildren = {
   GraphIndexRoute: GraphIndexRoute,
-  GraphNoteNoteRoute: GraphNoteNoteRoute,
 }
 
 const GraphRouteWithChildren = GraphRoute._addFileChildren(GraphRouteChildren)
