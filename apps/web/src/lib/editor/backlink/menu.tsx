@@ -16,6 +16,7 @@ import {
 } from "../../../components/ui/command";
 import { NoteRepo, bindRt, createAtomState, createAtomStore, createSyncedAtom } from "../..";
 import { cx } from "../../cva";
+import { NoteFormat } from "../../note";
 import type { AppExtension } from "../../../editor.extension";
 import * as BrowserExtensionClient from "../../browser-extension/client";
 import * as BrowserExtensionTabNoteService from "../../browser-extension/tab-note/service";
@@ -26,8 +27,7 @@ const BACKLINK_REGEX = /\[\[([^\]\n]*)$/u;
 
 type BacklinkNote = {
   id: string;
-  title: string | null;
-  text: string;
+  title: string;
 };
 
 const CreateTabNote = bindRt((rt) =>
@@ -60,7 +60,11 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
           Stream.map(
             flow(
               Array.filter((note) => note.id !== currentNoteId),
-              Array.map(Struct.pick(["id", "title", "text"])),
+              Array.map((note) => ({
+                ...note,
+                title: NoteFormat.label(note),
+              })),
+              Array.map(Struct.pick(["id", "title"])),
             ),
           ),
         );
@@ -125,7 +129,10 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
   const onTabSelect = async (tab: BrowserExtension.TabCandidate) => {
     try {
       const note = await createTabNote(tab);
-      onSelect(note);
+      onSelect({
+        id: note.id,
+        title: NoteFormat.label(note),
+      });
     } catch {}
   };
 
@@ -152,7 +159,7 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
                 onSelect={() => onSelect(note)}
                 value={note.id}
               >
-                {note.title ?? note.text}
+                {note.title}
               </AutocompleteItem>
             )}
           </For>

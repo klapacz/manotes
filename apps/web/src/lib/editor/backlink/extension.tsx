@@ -11,6 +11,7 @@ import { createEffect, type JSX } from "solid-js";
 import * as NoteCache from "../../note-cache.service";
 import { bindRt, createAtomStore, createSyncedAtom } from "../..";
 import { type BacklinkAttrs } from "./spec";
+import { NoteFormat } from "../../note";
 import { NoteLink } from "../../note/link-component";
 
 export type { BacklinkAttrs };
@@ -41,7 +42,7 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
             Stream.map(
               Option.match({
                 onSome: (note): BacklinkLabelEntry =>
-                  BacklinkLabelEntry.Resolved({ title: note.title ?? note.text }),
+                  BacklinkLabelEntry.Resolved({ title: NoteFormat.label(note) }),
                 onNone: BacklinkLabelEntry.Missing,
               }),
             ),

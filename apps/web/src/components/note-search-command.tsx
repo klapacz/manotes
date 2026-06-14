@@ -3,6 +3,7 @@ import { Stream, Array, flow } from "effect";
 import type { JSX } from "solid-js";
 import { Index, createEffect, createSignal, onCleanup } from "solid-js";
 import { NoteRepo, bindRt, createAtomState, createAtomStore } from "../lib";
+import { NoteFormat } from "../lib/note";
 import {
   CommandDialog,
   CommandEmpty,
@@ -24,7 +25,14 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
 
         return NoteRepo.Service.use((repo) => repo.reactiveSearchPreview(filter)).pipe(
           Stream.unwrap,
-          Stream.map(flow(Array.map((note) => ({ id: note.id, title: note.title ?? note.text })))),
+          Stream.map(
+            flow(
+              Array.map((note) => ({
+                id: note.id,
+                title: NoteFormat.label(note),
+              })),
+            ),
+          ),
         );
       }),
     ),
