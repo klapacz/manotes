@@ -11,15 +11,18 @@ import {
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneSchema } from "../../lib/note/pane.schema";
 import { NoteStream } from "../../lib/note/stream";
-import { PaneStreamRow } from "./pane-stream-row";
 import { EditorPool } from "./editor-pool";
+import { PaneStreamFilter } from "./pane-stream-filter";
+import { PaneStreamRow } from "./pane-stream-row";
 import { PaneActions, PaneEmptyState, PaneShell } from "./shared";
 
 const PRELOAD_EDITOR_COUNT = 12;
 
 export function PaneStream() {
   const pane = PaneCtx.useStream();
+  const [refreshToken, setRefreshToken] = createSignal(0);
   const queryAtom = createSyncedAtom(() => PaneSchema.paneToQuery(pane()));
+  const refreshTokenAtom = createSyncedAtom(refreshToken);
 
   // Pooled editors persist across row unmounts. The pool is an Effect resource
   // owned by its atom's scope, captured under the pane owner so pooled editor
@@ -33,6 +36,7 @@ export function PaneStream() {
   const stateAtom = bindRt((rt) =>
     rt.atom((get) => {
       const query = get(queryAtom);
+      get(refreshTokenAtom);
 
       return Stream.unwrap(
         Effect.gen(function* () {
@@ -58,9 +62,15 @@ export function PaneStream() {
   // editors survive while their content stays reactive.
   const state = createAtomResultStore(stateAtom);
 
+  const refresh = () => setRefreshToken((token) => token + 1);
+
   return (
     <PaneShell>
       <div class="flex gap-3 justify-between">
+        <PaneStreamFilter
+          dirty={state._tag === "Success" ? state.value.dirty : false}
+          onRefresh={refresh}
+        />
         <PaneActions />
       </div>
       <MatchTag
