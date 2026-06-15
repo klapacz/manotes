@@ -7,7 +7,6 @@ import { nanoid } from "nanoid";
 import { LibOption } from "./effect/option";
 
 const decodeRecord = Schema.decodeEffect(NoteSchema.Record);
-const decodeRecordArray = Schema.decodeEffect(Schema.Array(NoteSchema.Record));
 const decodePreview = Schema.decodeEffect(NoteSchema.Preview);
 const decodePreviewArray = Schema.decodeEffect(Schema.Array(NoteSchema.Preview));
 const decodeMetaArray = Schema.decodeEffect(Schema.Array(NoteSchema.Meta));
@@ -173,18 +172,6 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       );
     });
 
-    const list = Effect.fn("NoteRepo.list")(function* () {
-      const records = yield* db.query((db) => db.select().from(Tables.notes));
-
-      return yield* decodeRecordArray(records);
-    });
-
-    const reactiveList = Effect.fn("NoteRepo.reactiveList")(function* () {
-      const stream = yield* db.reactiveQuery((db) => db.select().from(Tables.notes));
-
-      return stream.pipe(Stream.mapEffect((n) => decodeRecordArray(n)));
-    });
-
     const reactiveFindPreviewById = Effect.fn("NoteRepo.reactiveFindPreviewById")(function* (
       id: string,
     ) {
@@ -258,8 +245,6 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       findBootById,
       reactiveStreamList,
       reactiveFindById,
-      list,
-      reactiveList,
       reactiveFindPreviewById,
       reactiveSearchPreview,
     };
