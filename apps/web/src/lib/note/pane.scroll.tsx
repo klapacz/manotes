@@ -119,7 +119,11 @@ function prepareScrollTransition(opts: Parameters<OnListChange<Item>>[0]) {
 
     const animations = opts.removed.map((target) => {
       if (!(target.ref instanceof HTMLElement)) return;
-      return animate(target.ref, { opacity: 0 });
+      return animate(
+        target.ref,
+        { opacity: 0, filter: "blur(2px)" },
+        { duration: 0.16, ease: "easeOut" },
+      );
     });
 
     await Promise.all([scrollTo(target), ...animations]);
