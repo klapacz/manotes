@@ -1,7 +1,7 @@
 import { keyArray } from "@solid-primitives/keyed";
 import { Ref } from "@solid-primitives/refs";
 import { createListTransition } from "@solid-primitives/transition-group";
-import { For, type Accessor, type JSX } from "solid-js";
+import { For, onCleanup, type Accessor, type JSX } from "solid-js";
 import type { PaneCursor } from "./pane.cursor";
 import type { PaneSchema } from "./pane.schema";
 import { Array as Arr } from "effect";
@@ -67,7 +67,20 @@ export function Root(props: Props): JSX.Element {
 
   return (
     <For each={rendered()}>
-      {(item) => <Ref ref={(el) => (item.ref = el)}>{props.children(item.value, item.index)}</Ref>}
+      {(item) => (
+        <Ref
+          ref={(el) => {
+            item.ref = el;
+            if (!el) return;
+
+            const onFocusIn = () => void scrollTo(item);
+            el.addEventListener("focusin", onFocusIn);
+            onCleanup(() => el.removeEventListener("focusin", onFocusIn));
+          }}
+        >
+          {props.children(item.value, item.index)}
+        </Ref>
+      )}
     </For>
   );
 }
