@@ -6,6 +6,7 @@ import { PaneCursor } from "../../lib/note/pane.cursor";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneMake } from "../../lib/note/pane.make";
 import { PaneSchema } from "../../lib/note/pane.schema";
+import { PaneScroll } from "../../lib/note/pane.scroll";
 import { RebaseIcon, XIcon } from "../icons";
 import { Button } from "../ui/button";
 import { DatePicker } from "./date-picker";
@@ -45,9 +46,14 @@ export function NoteActions(props: {
   sort: PaneSchema.StreamSort;
 }) {
   const ctx = PaneCtx.use();
+  const scroll = PaneScroll.use();
   const navigate = route.useNavigate();
-  const openNext = (pane: PaneSchema.PaneInput) =>
-    void navigate(PaneCtx.linkOptions(ctx, PaneCursor.openNext(pane)));
+  const openNext = (pane: PaneSchema.PaneInput) => {
+    const result = scroll.scrollToPane(pane);
+    if (result.found) return;
+
+    return void navigate(PaneCtx.linkOptions(ctx, PaneCursor.openNext(pane)));
+  };
 
   return (
     <div class="flex gap-2 text-xs text-fg-subtle">

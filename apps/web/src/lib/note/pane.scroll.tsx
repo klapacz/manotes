@@ -1,8 +1,8 @@
 import { keyArray } from "@solid-primitives/keyed";
 import { Ref } from "@solid-primitives/refs";
 import { createListTransition } from "@solid-primitives/transition-group";
-import { For, onCleanup, type Accessor, type JSX } from "solid-js";
-import type { PaneCursor } from "./pane.cursor";
+import { For, createContext, onCleanup, useContext, type Accessor, type JSX } from "solid-js";
+import { PaneCursor } from "./pane.cursor";
 import type { PaneSchema } from "./pane.schema";
 import { Array as Arr } from "effect";
 import { DOMScroll } from "../dom-scroll";
@@ -12,6 +12,12 @@ type Props = {
   panes: Accessor<PaneCursor.Stack>;
   children: (pane: Accessor<PaneSchema.Pane>, index: Accessor<number>) => JSX.Element;
 };
+
+type Ctx = {
+  scrollToPane: (input: PaneSchema.PaneInput) => { done: Promise<void>; found: boolean };
+};
+
+const Context = createContext<Ctx>();
 
 export function Root(props: Props): JSX.Element {
   const current = keyArray(
@@ -65,24 +71,45 @@ export function Root(props: Props): JSX.Element {
     },
   });
 
-  return (
-    <For each={rendered()}>
-      {(item) => (
-        <Ref
-          ref={(el) => {
-            item.ref = el;
-            if (!el) return;
+  const scrollToPane = (input: PaneSchema.PaneInput) => {
+    const filter = PaneCursor.inputMatches(input);
 
-            const onFocusIn = () => void scrollTo(item);
-            el.addEventListener("focusin", onFocusIn);
-            onCleanup(() => el.removeEventListener("focusin", onFocusIn));
-          }}
-        >
-          {props.children(item.value, item.index)}
-        </Ref>
-      )}
-    </For>
+    // Check the canonical stack first; rendered panes can include exiting transition items.
+    const inStack = props.panes().some(filter);
+    if (!inStack) return { found: false, done: Promise.resolve() };
+
+    const inUI = rendered().find((item) => filter(item.value()));
+    if (!inUI) return { found: true, done: Promise.resolve() };
+
+    return { found: true, done: scrollTo(inUI) };
+  };
+
+  return (
+    <Context.Provider value={{ scrollToPane }}>
+      <For each={rendered()}>
+        {(item) => (
+          <Ref
+            ref={(el) => {
+              item.ref = el;
+              if (!el) return;
+
+              const onFocusIn = () => void scrollTo(item);
+              el.addEventListener("focusin", onFocusIn);
+              onCleanup(() => el.removeEventListener("focusin", onFocusIn));
+            }}
+          >
+            {props.children(item.value, item.index)}
+          </Ref>
+        )}
+      </For>
+    </Context.Provider>
   );
+}
+
+export function use(): Ctx {
+  const ctx = useContext(Context);
+  if (!ctx) throw new Error("PaneScroll.use must be used inside PaneScroll.Root");
+  return ctx;
 }
 
 async function scrollTo(item: { ref: Element | undefined }) {

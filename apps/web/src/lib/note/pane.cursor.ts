@@ -1,6 +1,7 @@
-import { Array as Arr, Option, pipe } from "effect";
+import { Array as Arr, Equal, Option, pipe, Struct } from "effect";
 import { PaneMake } from "./pane.make";
 import type { PaneSchema } from "./pane.schema";
+import { LibRecord } from "../record";
 
 export type Stack = Arr.NonEmptyReadonlyArray<PaneSchema.Pane>;
 export type InputStack = Arr.NonEmptyReadonlyArray<PaneSchema.PaneInput>;
@@ -47,6 +48,14 @@ export const replaceCurrentAndCloseRest =
       Option.getOrElse(() => cursor.stack),
       Arr.splitAtNonEmpty(cursor.index + 1),
     )[0];
+
+export const inputMatches =
+  (input: PaneSchema.PaneInput) =>
+  (pane: PaneSchema.Pane): boolean =>
+    Equal.equals(normalizeToInput(input), normalizeToInput(pane));
+
+export const normalizeToInput = (value: PaneSchema.PaneInput | PaneSchema.Pane) =>
+  LibRecord.omitUndefinedDeep(Struct.omit(value, ["paneId"]));
 
 const throughCurrent = (cursor: Cursor): InputStack =>
   Arr.splitAtNonEmpty(cursor.stack, cursor.index + 1)[0];

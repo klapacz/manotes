@@ -1,9 +1,11 @@
 import { Link } from "@tanstack/solid-router";
 import { splitProps, type ParentProps } from "solid-js";
 import { MatchTag } from "../../lib";
+import { callHandler } from "../../lib/call-handler";
 import { PaneCursor } from "../../lib/note/pane.cursor";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneMake } from "../../lib/note/pane.make";
+import { PaneScroll } from "../../lib/note/pane.scroll";
 import { NoteLinkScope, type NoteLinkRenderer } from "../../lib/note/link-component";
 import { PaneNote } from "./pane-note";
 import { PaneStream } from "./pane-stream";
@@ -19,14 +21,23 @@ export function PaneGrid(props: ParentProps) {
 export function Pane() {
   const ctx = PaneCtx.use();
   const pane = PaneCtx.usePane();
+  const scroll = PaneScroll.use();
 
   const renderNoteLink: NoteLinkRenderer = (linkProps) => {
-    const [target, anchorProps] = splitProps(linkProps, ["id", "children"]);
+    const [target, anchorProps] = splitProps(linkProps, ["id", "children", "onClick"]);
+    const input = () => PaneMake.note(target.id);
 
     return (
       <Link
-        {...PaneCtx.linkOptions(ctx, PaneCursor.openNext(PaneMake.note(target.id)))}
+        {...PaneCtx.linkOptions(ctx, PaneCursor.openNext(input()))}
         {...anchorProps}
+        onClick={(e) => {
+          if (callHandler(e, target.onClick)) return;
+          if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
+          const result = scroll.scrollToPane(input());
+          if (result.found) e.preventDefault();
+        }}
       >
         {target.children}
       </Link>
