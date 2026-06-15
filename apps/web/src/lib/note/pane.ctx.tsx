@@ -16,19 +16,15 @@ export type Ctx = {
   pane: Accessor<PaneSchema.Pane>;
 };
 
-export type Props = Pick<Ctx, "stack" | "index">;
-
 const Context = createContext<Ctx | null>(null);
 
-export function Provider(props: ParentProps<Props>): JSX.Element {
-  const pane = createMemo(() => PaneCursor.pane(toCursor(props)));
-
+export function Provider(props: ParentProps<Ctx>): JSX.Element {
   return (
     <Context.Provider
       value={{
         stack: props.stack,
         index: props.index,
-        pane,
+        pane: props.pane,
       }}
     >
       {props.children}

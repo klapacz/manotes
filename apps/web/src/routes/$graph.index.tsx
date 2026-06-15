@@ -1,10 +1,10 @@
-import { Key } from "@solid-primitives/keyed";
 import { createFileRoute } from "@tanstack/solid-router";
 import { Effect, Schema } from "effect";
 import { Pane, PaneGrid } from "../components/note/pane";
 import { PaneCtx } from "../lib/note/pane.ctx";
 import { PaneMake } from "../lib/note/pane.make";
 import { PaneSchema } from "../lib/note/pane.schema";
+import { PaneScroll } from "../lib/note/pane.scroll";
 
 export const Search = Schema.Struct({
   panes: Schema.NonEmptyArray(PaneSchema.Pane).pipe(
@@ -26,13 +26,13 @@ function NotesCanvas() {
 
   return (
     <PaneGrid>
-      <Key each={panes()} by="paneId">
-        {(_, index) => (
-          <PaneCtx.Provider index={index} stack={panes}>
+      <PaneScroll.Root panes={panes}>
+        {(pane, index) => (
+          <PaneCtx.Provider pane={pane} index={index} stack={panes}>
             <Pane />
           </PaneCtx.Provider>
         )}
-      </Key>
+      </PaneScroll.Root>
     </PaneGrid>
   );
 }
