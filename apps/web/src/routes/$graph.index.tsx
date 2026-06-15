@@ -1,6 +1,6 @@
+import { Key } from "@solid-primitives/keyed";
 import { createFileRoute } from "@tanstack/solid-router";
 import { Effect, Schema } from "effect";
-import { For } from "solid-js";
 import { Pane, PaneGrid } from "../components/note/pane";
 import { PaneCtx } from "../lib/note/pane.ctx";
 import { PaneMake } from "../lib/note/pane.make";
@@ -26,13 +26,13 @@ function NotesCanvas() {
 
   return (
     <PaneGrid>
-      <For each={panes()}>
+      <Key each={panes()} by="paneId">
         {(_, index) => (
           <PaneCtx.Provider index={index} stack={panes}>
             <Pane />
           </PaneCtx.Provider>
         )}
-      </For>
+      </Key>
     </PaneGrid>
   );
 }

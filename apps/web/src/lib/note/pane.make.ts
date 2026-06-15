@@ -1,6 +1,6 @@
 import { PaneSchema } from "./pane.schema";
 
-export function notes(): PaneSchema.Pane {
+export function notes(): PaneSchema.PaneInput {
   return {
     _tag: "stream",
     filter: { type: "notes" },
@@ -8,11 +8,11 @@ export function notes(): PaneSchema.Pane {
   };
 }
 
-export function note(id: string): PaneSchema.Pane {
+export function note(id: string): PaneSchema.PaneInput {
   return { _tag: "note", id };
 }
 
-export function backlink(targetId: string): PaneSchema.Pane {
+export function backlink(targetId: string): PaneSchema.PaneInput {
   return {
     _tag: "stream",
     filter: { type: "notes", backlinksTo: targetId },
@@ -20,7 +20,7 @@ export function backlink(targetId: string): PaneSchema.Pane {
   };
 }
 
-export function date(date: string): PaneSchema.Pane {
+export function date(date: string): PaneSchema.PaneInput {
   return {
     _tag: "stream",
     filter: { type: "notes", date },

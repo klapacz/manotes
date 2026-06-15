@@ -15,6 +15,7 @@
     "@kobalte/core": "^0.13.11",
     "@manotes/shared": "workspace:*",
     "@manotes/sql-sqlite-wasm": "workspace:*",
+    "@solid-primitives/keyed": "1.5.3",
     "@solid-primitives/memo": "^1.4.5",
     "@standard-schema/spec": "^1.1.0",
     "@tailwindcss/vite": "^4.2.2",

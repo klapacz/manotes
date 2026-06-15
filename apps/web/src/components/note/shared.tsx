@@ -46,7 +46,7 @@ export function NoteActions(props: {
 }) {
   const ctx = PaneCtx.use();
   const navigate = route.useNavigate();
-  const openNext = (pane: PaneSchema.Pane) =>
+  const openNext = (pane: PaneSchema.PaneInput) =>
     void navigate(PaneCtx.linkOptions(ctx, PaneCursor.openNext(pane)));
 
   return (

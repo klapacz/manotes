@@ -3,20 +3,21 @@ import { PaneMake } from "./pane.make";
 import type { PaneSchema } from "./pane.schema";
 
 export type Stack = Arr.NonEmptyReadonlyArray<PaneSchema.Pane>;
+export type InputStack = Arr.NonEmptyReadonlyArray<PaneSchema.PaneInput>;
 
 export type Cursor = {
   stack: Stack;
   index: number;
 };
 
-export type Transform = (cursor: Cursor) => Stack;
+export type Transform = (cursor: Cursor) => InputStack;
 
 export const pane = (cursor: Cursor): PaneSchema.Pane =>
   cursor.stack[cursor.index] ?? cursor.stack[0];
 
 /** Opens `next` after the current pane, closing panes to the right. */
 export const openNext =
-  (next: PaneSchema.Pane): Transform =>
+  (next: PaneSchema.PaneInput): Transform =>
   (cursor) =>
     Arr.append(throughCurrent(cursor), next);
 
@@ -31,7 +32,7 @@ export const focus: Transform = (cursor) => {
 };
 
 export const updateCurrent =
-  (update: (pane: PaneSchema.Pane) => PaneSchema.Pane): Transform =>
+  (update: (pane: PaneSchema.Pane) => PaneSchema.PaneInput): Transform =>
   (cursor) =>
     Option.getOrElse(
       Arr.replace(cursor.stack, cursor.index, update(pane(cursor))),
@@ -39,7 +40,7 @@ export const updateCurrent =
     );
 
 export const replaceCurrentAndCloseRest =
-  (next: PaneSchema.Pane): Transform =>
+  (next: PaneSchema.PaneInput): Transform =>
   (cursor) =>
     pipe(
       Arr.modify(cursor.stack, cursor.index, () => next),
@@ -47,7 +48,7 @@ export const replaceCurrentAndCloseRest =
       Arr.splitAtNonEmpty(cursor.index + 1),
     )[0];
 
-const throughCurrent = (cursor: Cursor): Stack =>
+const throughCurrent = (cursor: Cursor): InputStack =>
   Arr.splitAtNonEmpty(cursor.stack, cursor.index + 1)[0];
 
 export * as PaneCursor from "./pane.cursor";
