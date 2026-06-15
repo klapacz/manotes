@@ -1,10 +1,10 @@
 import { keyArray } from "@solid-primitives/keyed";
 import { Ref } from "@solid-primitives/refs";
-import { createListTransition } from "@solid-primitives/transition-group";
+import { createListTransition, type OnListChange } from "@solid-primitives/transition-group";
 import { For, createContext, onCleanup, useContext, type Accessor, type JSX } from "solid-js";
 import { PaneCursor } from "./pane.cursor";
 import type { PaneSchema } from "./pane.schema";
-import { Array as Arr } from "effect";
+import { Array as Arr, pipe, Option } from "effect";
 import { DOMScroll } from "../dom-scroll";
 import { animate } from "motion";
 
@@ -19,55 +19,38 @@ type Ctx = {
 
 const Context = createContext<Ctx>();
 
+type Item = { value: Accessor<PaneSchema.Pane>; index: Accessor<number>; ref: undefined | Element };
+
 export function Root(props: Props): JSX.Element {
   const current = keyArray(
     props.panes,
     (pane) => pane.paneId,
-    (value, index) => ({
-      value,
-      index,
-      ref: undefined as Element | undefined,
-    }),
+    (value, index): Item => ({ value, index, ref: undefined }),
   );
 
   const rendered = createListTransition(current, {
     exitMethod: "keep-index",
-    onChange: ({ list, added, removed, finishRemoved }) => {
-      const finish = () => finishRemoved(removed);
+    onChange: (opts) => {
+      const transition = prepareScrollTransition(opts);
+      if (Option.isNone(transition)) return;
 
-      // Previously rendered stack, excluding panes added by this transition.
-      const curr = list.filter((item) => !added.includes(item));
-      // Next stack, excluding panes waiting for exit completion.
-      const next = list.filter((item) => !removed.includes(item));
-      // The pane we want centered after a continuous navigation change.
-      const target = next.at(-1);
+      const { prev, next, prefix, postfix, fadeRemovedAndScrollTo, removeImmediatelyAndScrollTo } =
+        transition.value;
 
-      // Shared leading panes: A B C -> A B D has prefix A B.
-      const prefix = Arr.takeWhile(next, (item, i) => item === curr[i]);
-      // Same stack; no navigation change to animate.
-      const unchanged = curr.length === next.length && prefix.length === next.length;
-      // Pure back navigation: A B C -> A B. Removed panes must stay until scroll ends.
-      const isPop = prefix.length === next.length && curr.length > next.length;
+      if (prev.length > next.length) {
+        // Pure back navigation: A B C -> A B. Removed panes must stay until scroll ends.
+        if (prefix.length === next.length) {
+          return void fadeRemovedAndScrollTo(Arr.lastNonEmpty(next));
+        }
 
-      if (!target || !prefix.length || unchanged) return finish();
-
-      if (isPop) {
-        return void (async () => {
-          await resolveMicrotask();
-
-          const animations = removed.map((target) => {
-            if (!(target.ref instanceof HTMLElement)) return;
-            return animate(target.ref, { opacity: 0 });
-          });
-
-          await Promise.all([scrollTo(target), ...animations]);
-          finish();
-        })();
+        // Pure back navigation from the front: A B C -> B C. Removed panes must stay until scroll ends.
+        if (postfix.length === next.length) {
+          return void fadeRemovedAndScrollTo(Arr.headNonEmpty(next));
+        }
       }
 
       // Branch/forward navigation: A B C -> A B D. Remove old branch, then scroll to D.
-      finish();
-      void resolveMicrotask().then(() => scrollTo(target));
+      void removeImmediatelyAndScrollTo(Arr.lastNonEmpty(next));
     },
   });
 
@@ -106,13 +89,66 @@ export function Root(props: Props): JSX.Element {
   );
 }
 
+function prepareScrollTransition(opts: Parameters<OnListChange<Item>>[0]) {
+  const finish = () => opts.finishRemoved(opts.removed);
+
+  // Previously rendered stack, excluding panes added by this transition.
+  const prev = opts.list.filter((item) => !opts.added.includes(item));
+  // Next stack, excluding panes waiting for exit completion.
+  const next = opts.list.filter((item) => !opts.removed.includes(item));
+
+  // Shared leading panes: A B C -> A B D has prefix A B.
+  const prefix = Arr.takeWhile(next, (item, i) => item === prev[i]);
+  // Same stack; no navigation change to animate.
+  const unchanged = prev.length === next.length && prefix.length === next.length;
+
+  if (!Arr.isArrayNonEmpty(next) || unchanged) {
+    finish();
+    return Option.none();
+  }
+
+  // Shared trailing panes: A B C -> B C has postfix B C.
+  const prevReversed = Arr.reverse(prev);
+  const postfix = pipe(
+    Arr.reverse(next),
+    Arr.takeWhile((item, i) => item === prevReversed[i]),
+  );
+
+  async function fadeRemovedAndScrollTo(target: Item) {
+    await resolveMicrotask();
+
+    const animations = opts.removed.map((target) => {
+      if (!(target.ref instanceof HTMLElement)) return;
+      return animate(target.ref, { opacity: 0 });
+    });
+
+    await Promise.all([scrollTo(target), ...animations]);
+    finish();
+  }
+
+  async function removeImmediatelyAndScrollTo(target: Item) {
+    finish();
+    await resolveMicrotask();
+    await scrollTo(target);
+  }
+
+  return Option.some({
+    next,
+    prev,
+    prefix,
+    postfix,
+    fadeRemovedAndScrollTo,
+    removeImmediatelyAndScrollTo,
+  });
+}
+
 export function use(): Ctx {
   const ctx = useContext(Context);
   if (!ctx) throw new Error("PaneScroll.use must be used inside PaneScroll.Root");
   return ctx;
 }
 
-async function scrollTo(item: { ref: Element | undefined }) {
+async function scrollTo(item: Item) {
   if (!(item.ref instanceof HTMLElement)) return;
   if (DOMScroll.isCenteredInScrollParent(item.ref)) return;
 
