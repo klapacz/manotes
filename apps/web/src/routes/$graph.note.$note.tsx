@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/solid-router";
 import { Option } from "effect";
 import { createSignal, Show } from "solid-js";
 import Editor, { type BootState } from "../editor";
-import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
 import * as GraphRuntimeRouter from "../lib/graph-access/graph-runtime/router";
 import * as NoteRepo from "../lib/note.repo";
 
@@ -16,11 +15,6 @@ export const Route = createFileRoute("/$graph/note/$note")({
     if (Option.isNone(note)) {
       return { note };
     }
-
-    await GraphRuntimeRouter.runPromiseOrRedirect(
-      params.graph,
-      EditorNoteBootCache.Service.use((cache) => cache.preload(params.note)),
-    );
 
     return { note };
   },

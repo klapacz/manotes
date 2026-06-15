@@ -154,24 +154,6 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       return stream.pipe(Stream.mapEffect((n) => decodeMetaArray(n)));
     });
 
-    const reactiveFindById = Effect.fn("NoteRepo.reactiveFindById")(function* (id: string) {
-      const stream = yield* db.reactiveQuery((db) =>
-        db.select().from(Tables.notes).where(eq(Tables.notes.id, id)),
-      );
-
-      return stream.pipe(
-        Stream.mapEffect(
-          flow(
-            Array.head,
-            Option.match({
-              onNone: () => Effect.succeedNone,
-              onSome: flow(decodeRecord, Effect.asSome),
-            }),
-          ),
-        ),
-      );
-    });
-
     const reactiveFindPreviewById = Effect.fn("NoteRepo.reactiveFindPreviewById")(function* (
       id: string,
     ) {
@@ -244,7 +226,6 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       getById,
       findBootById,
       reactiveStreamList,
-      reactiveFindById,
       reactiveFindPreviewById,
       reactiveSearchPreview,
     };

@@ -3,7 +3,6 @@ import { SqlClient } from "effect/unstable/sql";
 import * as SqliteClient from "@manotes/sql-sqlite-wasm/sqlite-client";
 import * as DB from "../../db.service";
 import { SqlLive } from "../../db.service";
-import * as EditorNoteBootCache from "../../editor/note-boot-cache.service";
 import * as EditorSyncService from "../../editor-sync.service";
 import * as EventRepo from "../../event.repo";
 import * as GraphSyncConfig from "../../graph-sync/config";
@@ -66,7 +65,6 @@ export const makeLayer = (opts: SetupOpts) =>
         NoteRepo.Service.layer,
         BacklinkService.Service.layer,
         NoteCache.Service.layer,
-        EditorNoteBootCache.Service.layer,
         NoteStreamCache.Service.layer,
         MaterializationCheckpointRepo.Service.layer,
         MaterializedEventService.Service.layer,

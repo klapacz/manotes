@@ -4,8 +4,6 @@ import { Effect, Schema } from "effect";
 import { Temporal } from "temporal-polyfill";
 import * as TemporalSchema from "../lib/temporal.schema";
 import * as TemporalUtils from "../lib/temporal/utils";
-import * as EditorNoteBootCache from "../lib/editor/note-boot-cache.service";
-import * as GraphRuntimeRouter from "../lib/graph-access/graph-runtime/router";
 import { batch, createEffect, createSignal, on, untrack } from "solid-js";
 import { VList, type VListHandle } from "virtua/solid";
 
@@ -13,32 +11,7 @@ export const Route = createFileRoute("/$graph/")({
   component: RouteComponent,
   loaderDeps: ({ search: { date } }) => ({ date }),
   remountDeps: () => [],
-  loader: async ({ params, deps }) => {
-    const selectedDate = Temporal.PlainDate.from(deps.date);
-    const previousDate = selectedDate.subtract({ days: 1 }).toString();
-    const nextDate = selectedDate.add({ days: 1 }).toString();
-    const currentDate = selectedDate.toString();
-
-    await GraphRuntimeRouter.runPromiseOrRedirect(
-      params.graph,
-      Effect.gen(function* () {
-        const noteBootCache = yield* EditorNoteBootCache.Service;
-        yield* noteBootCache.preload(currentDate);
-      }),
-    );
-
-    void GraphRuntimeRouter.runPromiseExitOrRedirect(
-      params.graph,
-      Effect.gen(function* () {
-        const noteBootCache = yield* EditorNoteBootCache.Service;
-
-        yield* Effect.forEach([previousDate, nextDate], (noteId) => noteBootCache.preload(noteId), {
-          concurrency: "unbounded",
-          discard: true,
-        });
-      }),
-    );
-
+  loader: async () => {
     return null;
   },
   validateSearch: Schema.Struct({
