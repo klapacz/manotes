@@ -66,6 +66,9 @@ export function Root(props: Props): JSX.Element {
         }
       }
 
+      const previousSingleNote = singlePreviousNoteTarget(prev, next);
+      if (previousSingleNote) return void fadeRemovedAndScrollTo(previousSingleNote);
+
       // Branch/forward navigation: A B C -> A B D. Remove old branch, then scroll to D.
       void removeImmediatelyAndScrollTo(Arr.lastNonEmpty(next));
     },
@@ -207,6 +210,15 @@ export function use(): Ctx {
   const ctx = useContext(Context);
   if (!ctx) throw new Error("PaneScroll.use must be used inside PaneScroll.Root");
   return ctx;
+}
+
+function singlePreviousNoteTarget(prev: Item[], next: Arr.NonEmptyArray<Item>): Item | undefined {
+  if (prev.length === 1 || next.length !== 1) return;
+
+  const target = Arr.headNonEmpty(next);
+  const existed = Arr.findFirst(prev, (item) => item === target);
+
+  return Option.isSome(existed) ? target : undefined;
 }
 
 function resolveMicrotask() {

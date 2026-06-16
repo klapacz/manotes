@@ -7,7 +7,7 @@ import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneMake } from "../../lib/note/pane.make";
 import { PaneSchema } from "../../lib/note/pane.schema";
 import { PaneScroll } from "../../lib/note/pane.scroll";
-import { RebaseIcon, XIcon } from "../icons";
+import { ArrowsOutIcon, RebaseIcon, XIcon } from "../icons";
 import { Button } from "../ui/button";
 import { DatePicker } from "./date-picker";
 import { splitProps, type ComponentProps, type ParentProps } from "solid-js";
@@ -65,6 +65,8 @@ export function NoteActions(props: {
   const ctx = PaneCtx.use();
   const scroll = PaneScroll.use();
   const navigate = route.useNavigate();
+  const fnode = Focus.useNode();
+
   const openNext = (pane: PaneSchema.PaneInput) => {
     const result = scroll.scrollToPane(pane);
     if (result.found) return;
@@ -72,8 +74,39 @@ export function NoteActions(props: {
     return void navigate(PaneCtx.linkOptions(ctx, PaneCursor.openNext(pane)));
   };
 
+  const openOnly = () => {
+    const pane = ctx.pane();
+    const input = pane._tag === "note" ? pane : PaneMake.note(props.note.id);
+    return void navigate(PaneCtx.linkOptions(ctx, PaneCursor.replaceAll(input)));
+  };
+
+  fnode.registerKeybindings((event) => {
+    if (event.key === "o") {
+      openOnly();
+      return true;
+    }
+
+    if (event.key === "b") {
+      openNext(PaneMake.backlink(props.note.id));
+      return true;
+    }
+
+    if (event.key !== "d") return false;
+    openNext(PaneMake.date(props.note.date));
+    return true;
+  });
+
   return (
-    <div class="flex gap-2 text-xs text-fg-subtle">
+    <div class="flex items-center gap-2 text-xs text-fg-subtle">
+      <button
+        type="button"
+        aria-label="Open note only"
+        title="Open note only"
+        class="rounded px-1 hover:bg-control-hover hover:text-fg"
+        onClick={openOnly}
+      >
+        <ArrowsOutIcon class="size-3.5" />
+      </button>
       <LinkButton onClick={() => openNext(PaneMake.backlink(props.note.id))}>Backlinks</LinkButton>
       <Show when={props.note.date !== props.groupKey}>
         <LinkButton onClick={() => openNext(PaneMake.date(props.note.date))}>

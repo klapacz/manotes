@@ -49,6 +49,10 @@ export const replaceCurrentAndCloseRest =
       Arr.splitAtNonEmpty(cursor.index + 1),
     )[0];
 
+export const replaceAll =
+  (next: PaneSchema.PaneInput): Transform =>
+  () => [next];
+
 export const inputMatches =
   (input: PaneSchema.PaneInput) =>
   (pane: PaneSchema.Pane): boolean =>
