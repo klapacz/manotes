@@ -10,24 +10,43 @@ import {
   type ParentProps,
 } from "solid-js";
 import { createEventListener } from "@solid-primitives/event-listener";
+import { Data, Equal, MutableHashMap as MHS, MutableHashSet, Option } from "effect";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 
+export type FocusId = RootFocusId | PaneFocusId | NoteFocusId | EditorFocusId;
+
+class RootFocusId extends Data.TaggedClass("RootFocusId")<{}> {}
+
+class PaneFocusId extends Data.TaggedClass("PaneFocusId")<{
+  readonly paneId: string;
+}> {}
+
+class NoteFocusId extends Data.TaggedClass("NoteFocusId")<{
+  readonly paneId: string;
+  readonly noteId: string;
+}> {}
+
+class EditorFocusId extends Data.TaggedClass("EditorFocusId")<{
+  readonly paneId: string;
+  readonly noteId: string;
+}> {}
+
 type NodeRegistration = {
-  readonly id: string;
-  readonly parentId: string;
+  readonly id: FocusId;
+  readonly parentId: FocusId;
   readonly focus?: () => void;
   readonly focusWithin?: () => void;
   readonly onKeyDown?: (event: KeyboardEvent) => boolean | undefined;
 };
 
 type ContextValue = {
-  readonly focusedId: Accessor<string | null>;
+  readonly focusedId: Accessor<FocusId | null>;
   readonly register: (registration: () => NodeRegistration) => void;
-  readonly createChangeListener: (callback: (id: string) => void) => void;
-  readonly focusWhenAvailable: (id: string) => void;
-  readonly focusNode: (id: string) => void;
+  readonly createChangeListener: (callback: (id: FocusId) => void) => void;
+  readonly focusWhenAvailable: (id: FocusId) => void;
+  readonly focusNode: (id: FocusId) => void;
   readonly focusParent: () => void;
-  readonly nodes: Map<string, NodeRegistration>;
+  readonly nodes: MHS.MutableHashMap<FocusId, NodeRegistration>;
 };
 
 const Context = createContext<ContextValue>();
@@ -40,47 +59,44 @@ export function use(): ContextValue {
 }
 
 export function Provider(props: ParentProps): JSX.Element {
-  const [focusedId, setFocusedId] = createSignal<string | null>(null);
-  const nodes = new Map<string, NodeRegistration>();
-  const waitingForFocus = new Set<string>();
-  const focusChangeListeners = new Set<(id: string) => void>();
+  const [focusedId, setFocusedId] = createSignal<FocusId | null>(null);
+  const nodes = MHS.empty<FocusId, NodeRegistration>();
+  const waitingForFocus = MutableHashSet.empty<FocusId>();
+  const focusChangeListeners = new Set<(id: FocusId) => void>();
 
-  const focusWhenAvailable = (id: string) => {
-    const node = nodes.get(id);
-    if (node) return focusNode(id);
-    waitingForFocus.add(id);
+  const focusWhenAvailable = (id: FocusId) => {
+    if (Option.isSome(MHS.get(nodes, id))) return focusNode(id);
+    MutableHashSet.add(waitingForFocus, id);
   };
 
   const focusIfWaiting = (node: NodeRegistration) => {
-    const current = waitingForFocus.has(node.id);
+    const current = MutableHashSet.has(waitingForFocus, node.id);
     if (!current) return;
 
-    waitingForFocus.delete(node.id);
+    MutableHashSet.remove(waitingForFocus, node.id);
     focusNode(node.id);
   };
 
-  const focusNode = (id: string) => {
-    const node = nodes.get(id);
-    if (!node) return;
+  const focusNode = (id: FocusId) => {
+    const node = MHS.get(nodes, id);
+    if (Option.isNone(node)) return;
+
     setFocusedId(id);
     for (const listener of focusChangeListeners) listener(id);
-    node?.focus?.();
+    node.value.focus?.();
 
-    let current: NodeRegistration | undefined = node;
-    while (current) {
-      current.focusWithin?.();
-      current = nodes.get(current.parentId);
-    }
+    for (const node of nodeAncestry(nodes, id)) node.focusWithin?.();
   };
 
   const focusParent = () => {
     const current = focusedId();
     if (!current) return;
-    const parentId = nodes.get(current)?.parentId;
-    if (parentId) focusNode(parentId);
+
+    const node = MHS.get(nodes, current);
+    if (Option.isSome(node)) focusNode(node.value.parentId);
   };
 
-  const createChangeListener = (callback: (id: string) => void) => {
+  const createChangeListener = (callback: (id: FocusId) => void) => {
     focusChangeListeners.add(callback);
     onCleanup(() => focusChangeListeners.delete(callback));
   };
@@ -91,10 +107,13 @@ export function Provider(props: ParentProps): JSX.Element {
     register: (registration) => {
       createEffect(() => {
         const current = registration();
-        nodes.set(current.id, current);
+        MHS.set(nodes, current.id, current);
         focusIfWaiting(current);
         onCleanup(() => {
-          if (nodes.get(current.id) === current) nodes.delete(current.id);
+          const node = MHS.get(nodes, current.id);
+          if (Option.isSome(node) && node.value === current) {
+            MHS.remove(nodes, current.id);
+          }
         });
       });
     },
@@ -109,16 +128,15 @@ export function Provider(props: ParentProps): JSX.Element {
       return;
     }
 
-    let id = focusedId();
-    while (id) {
-      const node = nodes.get(id);
-      if (!node) break;
+    const current = focusedId();
+    if (!current) return;
+
+    for (const node of nodeAncestry(nodes, current)) {
       const handled = node.onKeyDown?.(event);
-      if (handled) {
-        event.preventDefault();
-        break;
-      }
-      id = node.parentId;
+      if (!handled) continue;
+
+      event.preventDefault();
+      break;
     }
   });
 
@@ -131,20 +149,20 @@ export function Provider(props: ParentProps): JSX.Element {
 }
 
 interface NodeAutoRegistration extends Omit<NodeRegistration, "parentId"> {
-  readonly parentId?: string;
+  readonly parentId?: FocusId;
 }
 
 export interface Node extends ContextValue {
-  id: () => string;
+  id: () => FocusId;
   focused: () => boolean;
-  focusWithin: (id?: string) => boolean;
+  focusWithin: (id?: FocusId) => boolean;
   focusSelf: () => void;
 }
 
 function RootNodeProvider(props: ParentProps) {
   const fnode = createNode(() => ({
-    id: "parent",
-    parentId: "root",
+    id: new PaneFocusId({ paneId: "root" }),
+    parentId: new RootFocusId(),
   }));
 
   return <NodeProvider node={fnode}>{props.children}</NodeProvider>;
@@ -163,22 +181,15 @@ export function createNode(registration: (ctx: ContextValue) => NodeAutoRegistra
 
   ctx.register(resolved);
 
-  const focusWithin = (_targetId?: string) => {
+  const focusWithin = (_targetId?: FocusId) => {
     const targetId = _targetId ?? resolved().id;
-    let focusedId = ctx.focusedId();
-
-    while (focusedId !== null) {
-      if (focusedId === targetId) return true;
-
-      const node = ctx.nodes.get(focusedId);
-      if (!node) return false;
-      focusedId = node.parentId;
-    }
-
-    return false;
+    return nodeAncestry(ctx.nodes, ctx.focusedId()).some((node) => Equal.equals(node.id, targetId));
   };
 
-  const focused = () => ctx.focusedId() === resolved().id;
+  const focused = () => {
+    const current = ctx.focusedId();
+    return current !== null && Equal.equals(current, resolved().id);
+  };
   const focusSelf = () => ctx.focusNode(id());
   const id = () => resolved().id;
 
@@ -196,9 +207,9 @@ export function useNode() {
 }
 
 export const id = (paneId: string) => ({
-  pane: () => `pane:${paneId}`,
-  note: (id: string) => `pane:${paneId}:note:${id}`,
-  editor: (id: string) => `pane:${paneId}:note:${id}:editor`,
+  pane: () => new PaneFocusId({ paneId }),
+  note: (noteId: string) => new NoteFocusId({ paneId, noteId }),
+  editor: (noteId: string) => new EditorFocusId({ paneId, noteId }),
 });
 
 export function useId() {
@@ -219,21 +230,44 @@ function isInteractive(target: EventTarget | null): boolean {
   return !!target.closest("input, select, textarea, [role='dialog'], [contenteditable='true']");
 }
 
+function formatId(id: FocusId): string {
+  switch (id._tag) {
+    case "RootFocusId":
+      return "root";
+    case "PaneFocusId":
+      return `pane:${id.paneId}`;
+    case "NoteFocusId":
+      return `pane:${id.paneId}:note:${id.noteId}`;
+    case "EditorFocusId":
+      return `pane:${id.paneId}:note:${id.noteId}:editor`;
+  }
+}
+
+function nodeAncestry(
+  nodes: MHS.MutableHashMap<FocusId, NodeRegistration>,
+  startId: FocusId | null,
+): Array<NodeRegistration> {
+  const result: Array<NodeRegistration> = [];
+  let id = startId;
+
+  while (id) {
+    const node = MHS.get(nodes, id);
+    if (Option.isNone(node)) break;
+
+    result.push(node.value);
+    id = node.value.parentId;
+  }
+
+  return result;
+}
+
 function DebugFocusStack(): JSX.Element {
   const ctx = use();
-  const stack = createMemo(() => {
-    const stack: Array<string> = [];
-    let id = ctx.focusedId();
-
-    while (id) {
-      stack.unshift(id);
-      const node = ctx.nodes.get(id);
-      if (!node) break;
-      id = node.parentId;
-    }
-
-    return stack;
-  });
+  const stack = createMemo(() =>
+    nodeAncestry(ctx.nodes, ctx.focusedId())
+      .map((node) => node.id)
+      .reverse(),
+  );
 
   return (
     <div class="fixed left-2 bottom-8 z-50 max-w-96 rounded bg-black/80 p-2 font-mono text-[10px] text-white shadow-lg pointer-events-none">
@@ -243,7 +277,7 @@ function DebugFocusStack(): JSX.Element {
       ) : (
         <ol class="space-y-0.5">
           {stack().map((id) => (
-            <li class="truncate">{id}</li>
+            <li class="truncate">{formatId(id)}</li>
           ))}
         </ol>
       )}

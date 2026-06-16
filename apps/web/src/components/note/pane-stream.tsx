@@ -1,4 +1,4 @@
-import { Option, Effect, Stream, Array as Arr, Number } from "effect";
+import { Option, Effect, Stream, Array as Arr, Equal, Number } from "effect";
 import { Show, createEffect, createMemo, createSignal, getOwner, onMount } from "solid-js";
 import { VList } from "virtua/solid";
 import {
@@ -83,7 +83,10 @@ export function PaneStream(props: { paneRef: HTMLElement | undefined }) {
     const ids = listOrder();
     if (!Arr.isArrayNonEmpty(ids)) return false;
 
-    const at = Arr.findFirstIndex(ids, (id) => id === fnode.focusedId());
+    const at = Arr.findFirstIndex(ids, (id) => {
+      const focusedId = fnode.focusedId();
+      return focusedId !== null && Equal.equals(id, focusedId);
+    });
     const nextIndex = at.pipe(
       Option.map((idx) => idx + delta),
       Option.map(Number.clamp({ minimum: 0, maximum: ids.length - 1 })),
