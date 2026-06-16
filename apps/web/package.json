@@ -12,6 +12,7 @@
     "@fontsource-variable/source-sans-3": "^5.2.9",
     "@fontsource/bitter": "^5.2.10",
     "@hono/standard-validator": "^0.2.2",
+    "@huggingface/transformers": "^4.2.0",
     "@kobalte/core": "^0.13.11",
     "@manotes/shared": "workspace:*",
     "@manotes/sql-sqlite-wasm": "workspace:*",

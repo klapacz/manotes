@@ -5,6 +5,7 @@ import * as EventSchema from "./event.schema";
 import * as EventRepo from "./event.repo";
 import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
 import * as BacklinkService from "./materializer/backlink/service";
+import * as NoteEmbeddingService from "./note-embedding.service";
 import * as NoteRepo from "./note.repo";
 import { extractText, findFirstH1Text, yDocToNodeJSON } from "./prosemirror-materializer.utils";
 import { toLocalDateString } from "./temporal/utils";
@@ -17,6 +18,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
     const eventRepo = yield* EventRepo.Service;
     const noteRepo = yield* NoteRepo.Service;
     const backlinkService = yield* BacklinkService.Service;
+    const noteEmbeddingService = yield* NoteEmbeddingService.Service;
     const checkpointRepo = yield* MaterializationCheckpointRepo.Service;
 
     const materializeNoteUpTo = Effect.fn("MaterializerService.materializeNoteUpTo")(function* ({
@@ -48,13 +50,15 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
 
         const materialized = buildMaterializedNoteFields({ yDoc });
 
+        const updatedAt = summary.last.createdAt;
+
         yield* noteRepo.updateById(noteId, {
           title: materialized.title,
           content: materialized.content,
           text: materialized.text,
           date: summary.latestDate ?? note.date,
           materializedYUpdate: materialized.materializedYUpdate,
-          updatedAt: summary.last.createdAt,
+          updatedAt,
           lastEventLocalSeq: upToLocalSeq,
         });
 
@@ -64,7 +68,11 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
         });
 
         yield* Effect.logInfo(`Materialized note up to event ${upToLocalSeq}`);
-        return;
+        return {
+          noteId,
+          text: materialized.text,
+          updatedAt,
+        };
       }
 
       const events = yield* eventRepo.findForNoteBetweenIds({
@@ -83,6 +91,8 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
         yDoc,
       });
 
+      const updatedAt = summary.last.createdAt;
+
       yield* noteRepo.create({
         id: noteId,
         title: materialized.title,
@@ -91,7 +101,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
         date: summary.latestDate ?? toLocalDateString(summary.first.createdAt),
         materializedYUpdate: materialized.materializedYUpdate,
         createdAt: summary.first.createdAt,
-        updatedAt: summary.last.createdAt,
+        updatedAt,
         lastEventLocalSeq: upToLocalSeq,
       });
 
@@ -101,6 +111,11 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
       });
 
       yield* Effect.logInfo(`Materialized note up to event ${upToLocalSeq}`);
+      return {
+        noteId,
+        text: materialized.text,
+        updatedAt,
+      };
     });
 
     const start = Effect.fn("MaterializerService.start")(function* () {
@@ -108,6 +123,11 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
       // This makes replay idempotent after worker restarts.
       const initialCursor = yield* checkpointRepo.getLastAppliedLocalSeq();
       yield* Effect.logInfo(`Starting materializer at global cursor ${initialCursor}`);
+
+      yield* noteEmbeddingService.backfillMissing().pipe(
+        Effect.catchCause((cause) => Effect.logError("Note embedding backfill failed", cause)),
+        Effect.forkScoped,
+      );
 
       let lastAppliedLocalSeq = initialCursor;
 
@@ -130,9 +150,9 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
         const newestLocalSeq = Arr.lastNonEmpty(batch).localSeq;
         const targets = buildMaterializationTargets(batch);
 
-        yield* db.transaction(
+        const materializedNotes = yield* db.transaction(
           Effect.gen(function* () {
-            yield* Effect.forEach(
+            const materializedNotes = yield* Effect.forEach(
               targets,
               (target) =>
                 materializeNoteUpTo({
@@ -141,12 +161,24 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
                 }),
               {
                 concurrency: 1,
-                discard: true,
               },
             );
 
             yield* checkpointRepo.setLastAppliedLocalSeq(newestLocalSeq);
+            return materializedNotes.filter((note) => note !== undefined);
           }),
+        );
+
+        yield* Effect.forEach(
+          materializedNotes,
+          (note) => noteEmbeddingService.upsertForMaterializedNote(note),
+          {
+            concurrency: 1,
+            discard: true,
+          },
+        ).pipe(
+          Effect.catchCause((cause) => Effect.logError("Note embedding generation failed", cause)),
+          Effect.forkScoped,
         );
 
         yield* Effect.logInfo(`Processed ${batch.length} events up to ${newestLocalSeq}`);
@@ -164,6 +196,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
     Layer.provide(EventRepo.Service.layer),
     Layer.provide(NoteRepo.Service.layer),
     Layer.provide(BacklinkService.Service.layer),
+    Layer.provide(NoteEmbeddingService.Service.layer),
     Layer.provide(MaterializationCheckpointRepo.Service.layer),
   );
 }

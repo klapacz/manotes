@@ -11,6 +11,8 @@ import * as MaterializationCheckpointRepo from "../../materialization-checkpoint
 import * as MaterializedEventService from "../../materialized-event.service";
 import * as BacklinkService from "../../materializer/backlink/service";
 import * as Migrator from "../../migrator";
+import * as NoteEmbeddingRepo from "../../note-embedding.repo";
+import * as NoteEmbeddingService from "../../note-embedding.service";
 import * as NoteCache from "../../note-cache.service";
 import * as NoteStreamCache from "../../note-stream-cache.service";
 import * as NoteRepo from "../../note.repo";
@@ -63,6 +65,8 @@ export const makeLayer = (opts: SetupOpts) =>
       return Layer.mergeAll(
         EventRepo.Service.layer,
         NoteRepo.Service.layer,
+        NoteEmbeddingRepo.Service.layer,
+        NoteEmbeddingService.Service.layer,
         BacklinkService.Service.layer,
         NoteCache.Service.layer,
         NoteStreamCache.Service.layer,

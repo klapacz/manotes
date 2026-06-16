@@ -1,7 +1,13 @@
 import { getRouteApi } from "@tanstack/solid-router";
 import { Option, Stream } from "effect";
 import { Show, createMemo, type JSX } from "solid-js";
-import { NoteRepo, bindRt, createAtomStore, createSyncedAtom } from "../../lib";
+import {
+  NoteRepo,
+  bindRt,
+  createAtomResultStore,
+  createAtomStore,
+  createSyncedAtom,
+} from "../../lib";
 import { NoteFormat } from "../../lib/note";
 import { PaneCursor } from "../../lib/note/pane.cursor";
 import { PaneCtx } from "../../lib/note/pane.ctx";
@@ -68,13 +74,21 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
       <Show when={pane().filter.backlinksTo}>
         {(targetId) => (
           <FilterChipButton label="Backlinks to">
-            <BacklinksFilterTarget targetId={targetId()} />
+            <NoteFilterTarget targetId={targetId()} />
+          </FilterChipButton>
+        )}
+      </Show>
+      <Show when={pane().filter.relatedTo}>
+        {(targetId) => (
+          <FilterChipButton label="Related to">
+            <NoteFilterTarget targetId={targetId()} />
           </FilterChipButton>
         )}
       </Show>
       <Show when={pane().filter.date}>
         {(date) => <FilterChipButton label="Date">{date()}</FilterChipButton>}
       </Show>
+      <EmbeddingStatsChip />
       <FilterChipButton label="Sort" title="Cycle sort order" onClick={cycleSort}>
         {pane().sort}
       </FilterChipButton>
@@ -91,6 +105,48 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
         </Button>
       </Show>
     </div>
+  );
+}
+
+function EmbeddingStatsChip() {
+  const pane = PaneCtx.useStream();
+  const queryAtom = createSyncedAtom(() => PaneSchema.paneToQuery(pane()));
+  const statsAtom = bindRt((rt) =>
+    rt.atom((get) =>
+      NoteRepo.Service.use((repo) => repo.reactiveEmbeddingStats(get(queryAtom))).pipe(
+        Stream.unwrap,
+      ),
+    ),
+  );
+  const stats = createAtomResultStore(statsAtom);
+  const label = createMemo(() => {
+    if (stats._tag === "Loading") return "checking";
+    if (stats._tag === "Error") return "unavailable";
+
+    const current = stats.value;
+    const targetPending = current.targetEmbedded === 0 ? "target pending, " : "";
+    return `${targetPending}${current.embedded}/${current.total}`;
+  });
+  const title = createMemo(() => {
+    if (stats._tag === "Loading") return "Checking embedding status";
+    if (stats._tag === "Error") return "Failed to load embedding status";
+
+    const current = stats.value;
+    const pending = current.total - current.embedded;
+    const target =
+      current.targetEmbedded === null
+        ? ""
+        : current.targetEmbedded === 1
+          ? " Target note is embedded."
+          : " Target note is not embedded yet.";
+
+    return `${current.model} (${current.dimensions}d): ${current.embedded}/${current.total} generated, ${pending} pending.${target}`;
+  });
+
+  return (
+    <FilterChipButton label="Embeddings" title={title()}>
+      {label()}
+    </FilterChipButton>
   );
 }
 
@@ -115,7 +171,7 @@ function FilterChipButton(props: {
   );
 }
 
-function BacklinksFilterTarget(props: { targetId: string }) {
+function NoteFilterTarget(props: { targetId: string }) {
   const targetIdAtom = createSyncedAtom(() => props.targetId);
   const target = createAtomStore(
     bindRt((rt) =>

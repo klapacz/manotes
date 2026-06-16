@@ -46,3 +46,16 @@ export const backlinks = sqliteTable(
     index("backlinks_target_id_idx").on(table.targetId),
   ],
 );
+
+export const noteEmbeddings = sqliteTable(
+  "note_embeddings",
+  {
+    noteId: text("noteId").primaryKey(),
+    model: text("model").notNull(),
+    dimensions: integer("dimensions").notNull(),
+    textHash: text("textHash").notNull(),
+    embedding: blob("embedding", { mode: "buffer" }).$type<Uint8Array<ArrayBufferLike>>().notNull(),
+    updatedAt: text("updatedAt").notNull(),
+  },
+  (table) => [index("note_embeddings_model_idx").on(table.model)],
+);

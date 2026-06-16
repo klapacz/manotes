@@ -20,6 +20,14 @@ export function backlink(targetId: string): PaneSchema.PaneInput {
   };
 }
 
+export function related(targetId: string): PaneSchema.PaneInput {
+  return {
+    _tag: "stream",
+    filter: { type: "all", relatedTo: targetId },
+    sort: "updated",
+  };
+}
+
 export function date(date: string): PaneSchema.PaneInput {
   return {
     _tag: "stream",

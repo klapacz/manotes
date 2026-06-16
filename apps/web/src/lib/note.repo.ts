@@ -1,16 +1,21 @@
 import { Array, Effect, flow, Layer, Option, pipe, Schema, Context, Stream } from "effect";
 import * as DB from "./db.service";
+import * as NoteEmbeddingSchema from "./note-embedding.schema";
+import * as NoteEmbeddingService from "./note-embedding.service";
 import * as NoteSchema from "./note.schema";
 import * as Tables from "./db.tables";
 import { and, desc, eq, isNotNull, isNull, like, ne, or, sql, type SQL } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { LibOption } from "./effect/option";
 
+const SEMANTIC_RESULT_LIMIT = 50;
+
 const decodeRecord = Schema.decodeEffect(NoteSchema.Record);
 const decodePreview = Schema.decodeEffect(NoteSchema.Preview);
 const decodePreviewArray = Schema.decodeEffect(Schema.Array(NoteSchema.Preview));
 const decodeMetaArray = Schema.decodeEffect(Schema.Array(NoteSchema.Meta));
 const decodeBootRecord = Schema.decodeEffect(NoteSchema.BootRecord);
+const decodeEmbeddingStats = Schema.decodeEffect(NoteEmbeddingSchema.Stats);
 
 export class Service extends Context.Service<Service>()("NoteRepo.Service", {
   make: Effect.gen(function* () {
@@ -135,6 +140,39 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
             ? [desc(Tables.notes.date), desc(Tables.notes.createdAt)]
             : [desc(Tables.notes.updatedAt)];
 
+        if (query.relatedTo !== undefined) {
+          if (query.backlinksTo === undefined) {
+            return db
+              .select({
+                ...streamColumns,
+                embedding: Tables.noteEmbeddings.embedding,
+              })
+              .from(Tables.notes)
+              .innerJoin(Tables.noteEmbeddings, eq(Tables.noteEmbeddings.noteId, Tables.notes.id))
+              .where(
+                and(...conditions, eq(Tables.noteEmbeddings.model, NoteEmbeddingService.MODEL_ID)),
+              )
+              .orderBy(...orderBy);
+          }
+
+          return db
+            .select({
+              ...streamColumns,
+              embedding: Tables.noteEmbeddings.embedding,
+            })
+            .from(Tables.notes)
+            .innerJoin(Tables.noteEmbeddings, eq(Tables.noteEmbeddings.noteId, Tables.notes.id))
+            .innerJoin(Tables.backlinks, eq(Tables.backlinks.sourceId, Tables.notes.id))
+            .where(
+              and(
+                ...conditions,
+                eq(Tables.noteEmbeddings.model, NoteEmbeddingService.MODEL_ID),
+                eq(Tables.backlinks.targetId, query.backlinksTo),
+              ),
+            )
+            .orderBy(...orderBy);
+        }
+
         if (query.backlinksTo === undefined) {
           return db
             .select(streamColumns)
@@ -150,6 +188,16 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
           .where(and(...conditions, eq(Tables.backlinks.targetId, query.backlinksTo)))
           .orderBy(...orderBy);
       });
+
+      if (query.relatedTo !== undefined) {
+        return stream.pipe(
+          Stream.mapEffect((rows) =>
+            decodeMetaArray(
+              rankSemanticRows(query.relatedTo!, rows as ReadonlyArray<SemanticStreamRow>),
+            ),
+          ),
+        );
+      }
 
       return stream.pipe(Stream.mapEffect((n) => decodeMetaArray(n)));
     });
@@ -219,6 +267,43 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       return stream.pipe(Stream.mapEffect((rows) => decodePreviewArray(rows)));
     });
 
+    const reactiveEmbeddingStats = Effect.fn("NoteRepo.reactiveEmbeddingStats")(function* (
+      query: StreamListQuery,
+    ) {
+      const stream = yield* db.reactiveQuery((db) => {
+        const conditions = [...streamFilterConditions(query), ne(Tables.notes.text, "")];
+        const select = {
+          id: Tables.notes.id,
+          embeddingNoteId: Tables.noteEmbeddings.noteId,
+        };
+
+        const joinCondition = and(
+          eq(Tables.noteEmbeddings.noteId, Tables.notes.id),
+          eq(Tables.noteEmbeddings.model, NoteEmbeddingService.MODEL_ID),
+          eq(Tables.noteEmbeddings.dimensions, NoteEmbeddingService.DIMENSIONS),
+        );
+
+        if (query.backlinksTo === undefined) {
+          return db
+            .select(select)
+            .from(Tables.notes)
+            .leftJoin(Tables.noteEmbeddings, joinCondition)
+            .where(and(...conditions));
+        }
+
+        return db
+          .select(select)
+          .from(Tables.notes)
+          .innerJoin(Tables.backlinks, eq(Tables.backlinks.sourceId, Tables.notes.id))
+          .leftJoin(Tables.noteEmbeddings, joinCondition)
+          .where(and(...conditions, eq(Tables.backlinks.targetId, query.backlinksTo)));
+      });
+
+      return stream.pipe(
+        Stream.mapEffect((rows) => decodeEmbeddingStats(buildEmbeddingStats(query, rows))),
+      );
+    });
+
     return {
       create,
       updateById,
@@ -228,6 +313,7 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       reactiveStreamList,
       reactiveFindPreviewById,
       reactiveSearchPreview,
+      reactiveEmbeddingStats,
     };
   }),
 }) {
@@ -249,9 +335,10 @@ export const bootResultEmpty = (): BootResult => ({
 });
 
 export type StreamListQuery = {
-  readonly type?: "notes" | "pages";
+  readonly type?: "all" | "notes" | "pages";
   readonly date?: string;
   readonly backlinksTo?: string;
+  readonly relatedTo?: string;
   readonly sort: "date" | "updated";
 };
 
@@ -272,4 +359,98 @@ function streamFilterConditions(query: StreamListQuery): Array<SQL> {
   if (query.date) conditions.push(eq(Tables.notes.date, query.date));
 
   return conditions;
+}
+
+type SemanticStreamRow = typeof NoteSchema.Meta.Encoded & {
+  readonly embedding: VectorBlob;
+};
+
+type EmbeddingStatsNoteRow = {
+  readonly id: string;
+  readonly embeddingNoteId: string | null;
+};
+
+function buildEmbeddingStats(query: StreamListQuery, rows: ReadonlyArray<EmbeddingStatsNoteRow>) {
+  const candidates =
+    query.relatedTo === undefined ? rows : rows.filter((row) => row.id !== query.relatedTo);
+  const target =
+    query.relatedTo === undefined ? undefined : rows.find((row) => row.id === query.relatedTo);
+
+  return {
+    model: NoteEmbeddingService.MODEL_ID,
+    dimensions: NoteEmbeddingService.DIMENSIONS,
+    total: candidates.length,
+    embedded: candidates.filter((row) => row.embeddingNoteId !== null).length,
+    targetEmbedded:
+      query.relatedTo === undefined
+        ? null
+        : target !== undefined && target.embeddingNoteId !== null
+          ? 1
+          : 0,
+  };
+}
+
+function rankSemanticRows(
+  targetId: string,
+  rows: ReadonlyArray<SemanticStreamRow>,
+): ReadonlyArray<typeof NoteSchema.Meta.Encoded> {
+  const target = pipe(
+    Array.findFirst(rows, (row) => row.id === targetId),
+    Option.flatMap((row) => decodeVector(row.embedding)),
+  );
+
+  if (Option.isNone(target)) return [];
+
+  return rows
+    .filter((row) => row.id !== targetId)
+    .flatMap((row) =>
+      Option.match(decodeVector(row.embedding), {
+        onNone: () => [],
+        onSome: (embedding) => [
+          {
+            id: row.id,
+            date: row.date,
+            updatedAt: row.updatedAt,
+            score: dotProduct(target.value, embedding),
+          },
+        ],
+      }),
+    )
+    .sort((left, right) => right.score - left.score)
+    .slice(0, SEMANTIC_RESULT_LIMIT)
+    .map(({ id, date, updatedAt }) => ({ id, date, updatedAt }));
+}
+
+type VectorBlob = Uint8Array<ArrayBufferLike> | ArrayBuffer;
+
+function decodeVector(blob: VectorBlob | null): Option.Option<Float32Array> {
+  const bytes = toVectorBytes(blob);
+  if (Option.isNone(bytes)) return Option.none();
+
+  const byteLength = NoteEmbeddingService.DIMENSIONS * Float32Array.BYTES_PER_ELEMENT;
+  if (bytes.value.byteLength !== byteLength) return Option.none();
+
+  const buffer = bytes.value.buffer.slice(
+    bytes.value.byteOffset,
+    bytes.value.byteOffset + bytes.value.byteLength,
+  );
+  return Option.some(new Float32Array(buffer));
+}
+
+function toVectorBytes(blob: VectorBlob | null): Option.Option<Uint8Array<ArrayBufferLike>> {
+  if (blob === null) return Option.none();
+  if (blob instanceof Uint8Array) return Option.some(blob);
+  if (blob instanceof ArrayBuffer) return Option.some(new Uint8Array(blob));
+
+  return Option.none();
+}
+
+function dotProduct(left: Float32Array, right: Float32Array): number {
+  let score = 0;
+
+  for (let index = 0; index < left.length; index++) {
+    score += left[index]! * right[index]!;
+  }
+
+  return score;
 }

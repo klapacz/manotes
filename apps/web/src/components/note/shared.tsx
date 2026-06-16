@@ -94,6 +94,11 @@ export function NoteActions(props: {
       return true;
     }
 
+    if (event.key === "m") {
+      openNext(PaneMake.related(props.note.id));
+      return true;
+    }
+
     if (event.key !== "d") return false;
     openNext(PaneMake.date(props.note.date));
     return true;
@@ -111,6 +116,7 @@ export function NoteActions(props: {
         <ArrowsOutIcon class="size-3.5" />
       </button>
       <LinkButton onClick={() => openNext(PaneMake.backlink(props.note.id))}>Backlinks</LinkButton>
+      <LinkButton onClick={() => openNext(PaneMake.related(props.note.id))}>Related</LinkButton>
       <Show when={props.note.date !== props.groupKey}>
         <LinkButton onClick={() => openNext(PaneMake.date(props.note.date))}>
           {NoteFormat.formatShortDate(props.note.date)}

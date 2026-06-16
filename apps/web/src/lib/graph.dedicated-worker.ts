@@ -8,6 +8,8 @@ import * as MaterializationCheckpointRepo from "./materialization-checkpoint.rep
 import * as MaterializedEventService from "./materialized-event.service";
 import * as BacklinkService from "./materializer/backlink/service";
 import * as MaterializerService from "./materializer.service";
+import * as NoteEmbeddingRepo from "./note-embedding.repo";
+import * as NoteEmbeddingService from "./note-embedding.service";
 import * as NoteRepo from "./note.repo";
 import * as GraphSync from "./graph-sync/service";
 import * as GraphSyncContext from "./graph-sync/context";
@@ -168,6 +170,8 @@ function buildServiceLayer(opts: {
     DB.Service.layer,
     EventRepo.Service.layer,
     NoteRepo.Service.layer,
+    NoteEmbeddingRepo.Service.layer,
+    NoteEmbeddingService.Service.layer,
     BacklinkService.Service.layer,
     MaterializationCheckpointRepo.Service.layer,
     MaterializedEventService.Service.layer,

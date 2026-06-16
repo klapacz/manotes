@@ -51,8 +51,7 @@ export const replaceCurrentAndCloseRest =
 
 export const replaceAll =
   (next: PaneSchema.PaneInput): Transform =>
-  () =>
-    [next];
+  () => [next];
 
 export const inputMatches =
   (input: PaneSchema.PaneInput) =>

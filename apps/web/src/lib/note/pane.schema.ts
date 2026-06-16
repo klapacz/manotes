@@ -3,11 +3,12 @@ import { nanoid } from "nanoid";
 import type * as NoteRepo from "../note.repo";
 import * as TemporalSchema from "../temporal.schema";
 
-const StreamFilterType = Schema.Literals(["notes", "pages"]);
+const StreamFilterType = Schema.Literals(["all", "notes", "pages"]);
 
 const StreamFilter = Schema.Struct({
   type: StreamFilterType.pipe(Schema.withDecodingDefault(Effect.sync(() => "notes" as const))),
   backlinksTo: Schema.optional(Schema.String),
+  relatedTo: Schema.optional(Schema.String),
   date: Schema.optional(TemporalSchema.PlainDateString),
 });
 
@@ -39,6 +40,7 @@ export function paneToQuery(pane: PaneStream): NoteRepo.StreamListQuery {
     type: pane.filter.type,
     date: pane.filter.date,
     backlinksTo: pane.filter.backlinksTo,
+    relatedTo: pane.filter.relatedTo,
     sort: pane.sort,
   };
 }
