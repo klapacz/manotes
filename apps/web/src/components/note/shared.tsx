@@ -85,11 +85,11 @@ export function NoteShell(props: ComponentProps<"article"> & { noteId: string })
     <article
       {...rest}
       tabIndex={-1}
-      onMouseDown={() => fnode().focusNode(fnode().id())}
+      onMouseDown={() => fnode.focusSelf()}
       classList={{
         ...local.classList,
-        "bg-control-hover": fnode().focused(),
-        "bg-control": fnode().focusWithin(),
+        "bg-control-hover": fnode.focused(),
+        "bg-control": fnode.focusWithin(),
       }}
     >
       {local.children}

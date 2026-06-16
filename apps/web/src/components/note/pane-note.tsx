@@ -83,7 +83,7 @@ function PaneNoteInner(props: { note: NoteSchema.Meta }) {
   const fnode = Focus.useNode();
 
   createEffect(() => {
-    if (fnode().focused() && el && document.activeElement !== el) el.focus();
+    if (fnode.focused() && el && document.activeElement !== el) el.focus();
   });
 
   return (

@@ -115,7 +115,7 @@ function createSlot(noteId: string): PooledSlot {
 
     const container = (
       <div>
-        <Focus.NodeProvider node={focusParent() ?? fnode()}>
+        <Focus.NodeProvider node={focusParent() ?? fnode}>
           <Editor
             noteId={noteId}
             onBootStateChange={setBootStateReady}
