@@ -11,7 +11,7 @@ import {
 } from "solid-js";
 import { PaneCursor } from "./pane.cursor";
 import type { PaneSchema } from "./pane.schema";
-import { Array as Arr, pipe, Option } from "effect";
+import { Array as Arr, pipe, Option, Number } from "effect";
 import { DOMScroll } from "../dom-scroll";
 import { animate } from "motion";
 import { Focus } from "../../components/note/focus";
@@ -53,6 +53,9 @@ export function Root(props: Props): JSX.Element {
 
       const { prev, next, prefix, postfix, fadeRemovedAndScrollTo, removeImmediatelyAndScrollTo } =
         transition.value;
+
+      const previousSingleNote = singlePreviousNoteTarget(prev, next);
+      if (previousSingleNote) return void fadeRemovedAndScrollTo(previousSingleNote);
 
       if (prev.length > next.length) {
         // Pure back navigation: A B C -> A B. Removed panes must stay until scroll ends.
@@ -161,12 +164,45 @@ export function Root(props: Props): JSX.Element {
     focus.focusWhenAvailable(Focus.id(last.value().paneId).pane());
   });
 
+  function move(ctx: Focus.ContextValue, delta: number) {
+    const focusedPane = ctx.focusedStack().find((e) => e._tag === "PaneFocusId");
+    const actual = rendered();
+    const index = pipe(
+      Arr.findFirstIndex(actual, (value) => value.value().paneId === focusedPane?.paneId),
+      Option.getOrElse(() => 0),
+      (idx) => idx + delta,
+      Number.clamp({
+        minimum: 0,
+        maximum: actual.length - 1,
+      }),
+    );
+
+    const pane = actual[index];
+    if (!pane) return false;
+
+    focus.focusWhenAvailable(Focus.id(pane.value().paneId).pane());
+    return true;
+  }
+
+  const fnode = Focus.createNode((ctx) => ({
+    id: new Focus.PaneGridFocusId(),
+    onKeyDown(event) {
+      if (event.key === "l" || event.key === "ArrowRight") {
+        return move(ctx, 1);
+      } else if (event.key === "h" || event.key === "ArrowLeft") {
+        return move(ctx, -1);
+      }
+    },
+  }));
+
   return (
-    <Context.Provider value={{ scrollToPane }}>
-      <For each={rendered()}>
-        {(item) => props.children(item.value, item.index, (el) => (item.ref = el))}
-      </For>
-    </Context.Provider>
+    <Focus.NodeProvider node={fnode}>
+      <Context.Provider value={{ scrollToPane }}>
+        <For each={rendered()}>
+          {(item) => props.children(item.value, item.index, (el) => (item.ref = el))}
+        </For>
+      </Context.Provider>
+    </Focus.NodeProvider>
   );
 }
 
@@ -174,6 +210,21 @@ export function use(): Ctx {
   const ctx = useContext(Context);
   if (!ctx) throw new Error("PaneScroll.use must be used inside PaneScroll.Root");
   return ctx;
+}
+
+function singlePreviousNoteTarget(prev: Array<Item>, next: Array<Item>): Item | undefined {
+  if (prev.length <= 1 || next.length !== 1) return;
+
+  const target = next[0]!;
+  const targetPane = target.value();
+  if (targetPane._tag !== "note") return;
+
+  const existedBefore = prev.some((item) => {
+    const pane = item.value();
+    return pane._tag === "note" && pane.id === targetPane.id;
+  });
+
+  return existedBefore ? target : undefined;
 }
 
 function resolveMicrotask() {

@@ -7,7 +7,7 @@ import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneMake } from "../../lib/note/pane.make";
 import { PaneSchema } from "../../lib/note/pane.schema";
 import { PaneScroll } from "../../lib/note/pane.scroll";
-import { RebaseIcon, XIcon } from "../icons";
+import { ArrowsOutIcon, RebaseIcon, XIcon } from "../icons";
 import { Button } from "../ui/button";
 import { DatePicker } from "./date-picker";
 import { splitProps, type ComponentProps, type ParentProps } from "solid-js";
@@ -27,9 +27,21 @@ export function PaneShell(props: ComponentProps<"div">) {
 export function PaneActions() {
   const ctx = PaneCtx.use();
   const navigate = route.useNavigate();
+  const fnode = Focus.useNode();
   const canFocus = () => ctx.index() > 0;
   const focusPane = () => void navigate(PaneCtx.linkOptions(ctx, PaneCursor.focus));
   const closePane = () => void navigate(PaneCtx.linkOptions(ctx, PaneCursor.close));
+
+  fnode.registerKeybindings((event) => {
+    if (event.key === "x") {
+      closePane();
+      return true;
+    }
+
+    if (event.key !== "f" || !canFocus()) return false;
+    focusPane();
+    return true;
+  });
 
   return (
     <div class="flex gap-1">
@@ -53,15 +65,51 @@ export function NoteActions(props: {
   const ctx = PaneCtx.use();
   const scroll = PaneScroll.use();
   const navigate = route.useNavigate();
+  const fnode = Focus.useNode();
   const openNext = (pane: PaneSchema.PaneInput) => {
     const result = scroll.scrollToPane(pane);
     if (result.found) return;
 
     return void navigate(PaneCtx.linkOptions(ctx, PaneCursor.openNext(pane)));
   };
+  const openOnly = () =>
+    void navigate(PaneCtx.linkOptions(ctx, PaneCursor.replaceAll(openOnlyInput())));
+  const openOnlyInput = (): PaneSchema.PaneInput => {
+    const pane = ctx.pane();
+    if (pane._tag === "note" && pane.id === props.note.id) {
+      return { _tag: "note", id: props.note.id, paneId: pane.paneId };
+    }
+
+    return PaneMake.note(props.note.id);
+  };
+
+  fnode.registerKeybindings((event) => {
+    if (event.key === "o") {
+      openOnly();
+      return true;
+    }
+
+    if (event.key === "b") {
+      openNext(PaneMake.backlink(props.note.id));
+      return true;
+    }
+
+    if (event.key !== "d") return false;
+    openNext(PaneMake.date(props.note.date));
+    return true;
+  });
 
   return (
-    <div class="flex gap-2 text-xs text-fg-subtle">
+    <div class="flex items-center gap-2 text-xs text-fg-subtle">
+      <button
+        type="button"
+        aria-label="Open note only"
+        title="Open note only"
+        class="rounded px-1 hover:bg-control-hover hover:text-fg"
+        onClick={openOnly}
+      >
+        <ArrowsOutIcon class="size-3.5" />
+      </button>
       <LinkButton onClick={() => openNext(PaneMake.backlink(props.note.id))}>Backlinks</LinkButton>
       <Show when={props.note.date !== props.groupKey}>
         <LinkButton onClick={() => openNext(PaneMake.date(props.note.date))}>
@@ -85,11 +133,11 @@ export function NoteShell(props: ComponentProps<"article"> & { noteId: string })
     <article
       {...rest}
       tabIndex={-1}
-      onMouseDown={() => fnode().focusNode(fnode().id())}
+      onMouseDown={() => fnode.focusSelf()}
       classList={{
         ...local.classList,
-        "bg-control-hover": fnode().focused(),
-        "bg-control": fnode().focusWithin(),
+        "bg-control-hover": fnode.focused(),
+        "bg-control": fnode.focusWithin(),
       }}
     >
       {local.children}

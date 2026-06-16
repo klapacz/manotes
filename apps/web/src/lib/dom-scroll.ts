@@ -21,6 +21,28 @@ export function getScrollParent(el: HTMLElement): HTMLElement | null {
   return null;
 }
 
+export function scrollIntoNearestY(el: HTMLElement, behavior: ScrollBehavior = "auto"): void {
+  const container = getVerticalScrollParent(el);
+  if (!container) return;
+
+  const elRect = el.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  const above = elRect.top - containerRect.top;
+  const below = elRect.bottom - containerRect.bottom;
+
+  if (above < 0) container.scrollBy({ top: above, behavior });
+  else if (below > 0) container.scrollBy({ top: below, behavior });
+}
+
+function getVerticalScrollParent(el: HTMLElement): HTMLElement | null {
+  let node = el.parentElement;
+  while (node) {
+    if (/(auto|scroll|overlay)/.test(getComputedStyle(node).overflowY)) return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
 export function waitForScroll(el: HTMLElement, timeout = 600): Promise<void> {
   const container = getScrollParent(el);
   return new Promise((resolve) => {
