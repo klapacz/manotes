@@ -83,7 +83,9 @@ function PaneNoteInner(props: { note: NoteSchema.Meta }) {
   const fnode = Focus.useNode();
 
   createEffect(() => {
-    if (fnode.focused() && el && document.activeElement !== el) el.focus();
+    // Keep horizontal pane scrolling owned by the pane focus node; native focus
+    // scrolling can otherwise race it and leave the target pane off-center.
+    if (fnode.focused() && el && document.activeElement !== el) el.focus({ preventScroll: true });
   });
 
   return (

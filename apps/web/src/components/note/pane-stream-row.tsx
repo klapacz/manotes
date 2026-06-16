@@ -15,6 +15,7 @@ import { Focus } from "./focus";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneSchema } from "../../lib/note/pane.schema";
 import { NoteStream } from "../../lib/note/stream";
+import { DOMScroll } from "../../lib/dom-scroll";
 import { NoteActions, NoteSeparator, NoteShell } from "./shared";
 
 export function PaneStreamRow(props: { item: NoteStream.ListItem; sort: PaneSchema.StreamSort }) {
@@ -60,8 +61,10 @@ function NoteRow(props: { row: Types.ExtractTag<NoteStream.ListItem, "note"> }) 
   const fnode = Focus.createNode((ctx) => ({
     id: fid.note(props.row.note.id),
     focus: () => {
-      el?.focus();
-      el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      // Keep horizontal pane scrolling owned by the pane focus node; native focus
+      // scrolling can otherwise race it and leave the target pane off-center.
+      el?.focus({ preventScroll: true });
+      if (el) DOMScroll.scrollIntoNearestY(el);
     },
     onKeyDown: (event) => {
       if (event.key !== "Enter") return;
@@ -71,7 +74,9 @@ function NoteRow(props: { row: Types.ExtractTag<NoteStream.ListItem, "note"> }) 
   }));
 
   createEffect(() => {
-    if (fnode.focused() && el && document.activeElement !== el) el.focus();
+    // Keep horizontal pane scrolling owned by the pane focus node; native focus
+    // scrolling can otherwise race it and leave the target pane off-center.
+    if (fnode.focused() && el && document.activeElement !== el) el.focus({ preventScroll: true });
   });
 
   return (
