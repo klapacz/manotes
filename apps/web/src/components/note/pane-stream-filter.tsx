@@ -8,6 +8,7 @@ import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneSchema } from "../../lib/note/pane.schema";
 import type * as NoteSchema from "../../lib/note.schema";
 import { Button } from "../ui/button";
+import { Focus } from "./focus";
 
 const route = getRouteApi("/$graph/");
 
@@ -17,6 +18,7 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
   const ctx = PaneCtx.use();
   const pane = PaneCtx.useStream();
   const navigate = route.useNavigate();
+  const fnode = Focus.useNode();
   const updatePane = (next: PaneSchema.PaneStream) =>
     void navigate(
       PaneCtx.linkOptions(
@@ -41,6 +43,22 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
   };
   const cycleSort = () =>
     updatePane({ ...pane(), sort: pane().sort === "date" ? "updated" : "date" });
+
+  fnode.registerKeybindings((event) => {
+    if (event.key === "t") {
+      cycleType();
+      return true;
+    }
+
+    if (event.key === "s") {
+      cycleSort();
+      return true;
+    }
+
+    if (event.key !== "r" || !props.dirty) return false;
+    props.onRefresh();
+    return true;
+  });
 
   return (
     <div class="space-x-2">

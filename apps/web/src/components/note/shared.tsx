@@ -27,9 +27,21 @@ export function PaneShell(props: ComponentProps<"div">) {
 export function PaneActions() {
   const ctx = PaneCtx.use();
   const navigate = route.useNavigate();
+  const fnode = Focus.useNode();
   const canFocus = () => ctx.index() > 0;
   const focusPane = () => void navigate(PaneCtx.linkOptions(ctx, PaneCursor.focus));
   const closePane = () => void navigate(PaneCtx.linkOptions(ctx, PaneCursor.close));
+
+  fnode.registerKeybindings((event) => {
+    if (event.key === "x") {
+      closePane();
+      return true;
+    }
+
+    if (event.key !== "f" || !canFocus()) return false;
+    focusPane();
+    return true;
+  });
 
   return (
     <div class="flex gap-1">
