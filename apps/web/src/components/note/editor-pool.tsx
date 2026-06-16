@@ -116,11 +116,7 @@ function createSlot(noteId: string): PooledSlot {
     const container = (
       <div>
         <Focus.NodeProvider node={focusParent() ?? fnode}>
-          <Editor
-            noteId={noteId}
-            onBootStateChange={setBootStateReady}
-            style={{ "padding-top": "calc(var(--spacing)*6)" }}
-          />
+          <Editor noteId={noteId} onBootStateChange={setBootStateReady} />
         </Focus.NodeProvider>
       </div>
     ) as HTMLDivElement;

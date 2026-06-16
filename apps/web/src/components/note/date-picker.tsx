@@ -38,7 +38,7 @@ export function DatePicker(props: { noteId: string; date: string }) {
       <PopoverTrigger
         aria-label="Edit note date"
         title="Edit note date"
-        class="rounded px-1 hover:bg-control-hover hover:text-fg"
+        class="rounded p-1 hover:bg-control-hover hover:text-fg"
       >
         <CalendarIcon class="size-3.5" />
       </PopoverTrigger>

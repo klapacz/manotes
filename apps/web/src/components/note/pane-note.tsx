@@ -12,7 +12,7 @@ import {
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import {
   NoteActions,
-  NoteSeparator,
+  NoteDivider,
   NoteShell,
   PaneActions,
   PaneEmptyState,
@@ -89,14 +89,12 @@ function PaneNoteInner(props: { note: NoteSchema.Meta }) {
   });
 
   return (
-    <NoteShell ref={(ref) => (el = ref)} class="overflow-y-auto" noteId={props.note.id}>
-      <NoteSeparator dateString={props.note.date} />
-      <Editor
-        noteId={props.note.id}
-        style={{ "min-height": "30svh", "padding-top": "calc(var(--spacing)*6)" }}
-      />
-
-      <NoteActions note={props.note} sort="date" />
-    </NoteShell>
+    <div>
+      <NoteDivider date={props.note.date} />
+      <NoteShell ref={(ref) => (el = ref)} class="overflow-y-auto">
+        <NoteActions note={props.note} sort="date" />
+        <Editor noteId={props.note.id} style={{ "min-height": "30svh" }} />
+      </NoteShell>
+    </div>
   );
 }

@@ -7,8 +7,9 @@ import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneMake } from "../../lib/note/pane.make";
 import { PaneSchema } from "../../lib/note/pane.schema";
 import { PaneScroll } from "../../lib/note/pane.scroll";
-import { ArrowsOutIcon, RebaseIcon, XIcon } from "../icons";
+import { ArrowsOutIcon, LinkIcon, RebaseIcon, XIcon } from "../icons";
 import { Button } from "../ui/button";
+import { cx } from "../../lib/cva";
 import { DatePicker } from "./date-picker";
 import { splitProps, type ComponentProps, type ParentProps } from "solid-js";
 import type { NoteSchema } from "../../lib";
@@ -96,45 +97,73 @@ export function NoteActions(props: {
     return true;
   });
 
+  // Stays out of the way until the note is hovered or focused, then fades in.
+  // Keyboard shortcuts (o/b/d) work regardless of visibility.
   return (
-    <div class="flex items-center gap-2 text-xs text-fg-subtle">
-      <button
-        type="button"
-        aria-label="Open note only"
-        title="Open note only"
-        class="rounded px-1 hover:bg-control-hover hover:text-fg"
-        onClick={openOnly}
-      >
+    <div
+      class="flex items-center gap-1 text-xs text-fg-subtle opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 h-6 px-6 justify-end"
+    >
+      <div class="flex items-center gap-2">
+        <Show when={props.dirty}>
+          <span class="text-warning-fg-subtle">Dirty</span>
+        </Show>
+        <Show when={props.sort === "date"}>
+          <time>{NoteFormat.formatUpdatedAt(props.note.updatedAt)}</time>
+        </Show>
+      </div>
+      <NoteActionButton label="Open note only" onClick={openOnly}>
         <ArrowsOutIcon class="size-3.5" />
-      </button>
-      <LinkButton onClick={() => openNext(PaneMake.backlink(props.note.id))}>Backlinks</LinkButton>
+      </NoteActionButton>
+      <NoteActionButton
+        label="Backlinks"
+        onClick={() => openNext(PaneMake.backlink(props.note.id))}
+      >
+        <LinkIcon class="size-3.5" />
+      </NoteActionButton>
+      <DatePicker noteId={props.note.id} date={props.note.date} />
       <Show when={props.note.date !== props.groupKey}>
         <LinkButton onClick={() => openNext(PaneMake.date(props.note.date))}>
           {NoteFormat.formatShortDate(props.note.date)}
         </LinkButton>
       </Show>
-      <DatePicker noteId={props.note.id} date={props.note.date} />
-      <Show when={props.sort === "date"}>
-        <span>{NoteFormat.formatUpdatedAt(props.note.updatedAt)}</span>
-      </Show>
-      <Show when={props.dirty}>Dirty</Show>
     </div>
   );
 }
 
-export function NoteShell(props: ComponentProps<"article"> & { noteId: string }) {
+function NoteActionButton(props: ParentProps<{ label: string; onClick: () => void }>) {
+  return (
+    <button
+      type="button"
+      aria-label={props.label}
+      title={props.label}
+      class="rounded p-1 hover:bg-control-hover hover:text-fg"
+      onClick={props.onClick}
+    >
+      {props.children}
+    </button>
+  );
+}
+
+// A focusable note row. The left accent bar marks the active note instead of a
+// full background fill: subtle while editing (focusWithin), solid once the row
+// itself is the focus target (j/k navigation).
+export function NoteShell(props: ComponentProps<"article">) {
   const fnode = Focus.useNode();
-  const [local, rest] = splitProps(props, ["classList", "children", "noteId"]);
+  const [local, rest] = splitProps(props, ["class", "classList", "children"]);
 
   return (
     <article
       {...rest}
       tabIndex={-1}
       onMouseDown={() => fnode.focusSelf()}
+      class={cx(
+        "group transition-colors outline-none relative border-t border-t-border-subtle",
+        local.class,
+      )}
       classList={{
         ...local.classList,
-        "bg-control-hover": fnode.focused(),
-        "bg-control": fnode.focusWithin(),
+        "bg-bg-subtle": fnode.focusWithin(),
+        "border-t-primary-border": fnode.focused(),
       }}
     >
       {local.children}
@@ -142,22 +171,15 @@ export function NoteShell(props: ComponentProps<"article"> & { noteId: string })
   );
 }
 
-export function NoteSeparator(props: { dateString?: string }) {
+// Group divider that heads the note below it. It sits in normal flow in the
+// gutter above the card (the row wrapper, not the tinted card, is the scroll
+// target), so it reads as a separator between notes and autoscroll keeps it
+// visible. Notes continuing a run render nothing.
+export function NoteDivider(props: { date: string }) {
   return (
-    <div class="h-[1lh] flex items-center text-xs">
-      <div class="pointer-events-none relative flex-1 border-t border-border-subtle">
-        <Show when={props.dateString}>
-          {(dateString) => (
-            <time
-              dateTime={dateString()}
-              class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-bg px-2 font-medium text-fg-subtle"
-            >
-              {NoteFormat.formatGroupLabel(dateString())}
-            </time>
-          )}
-        </Show>
-      </div>
-    </div>
+    <time dateTime={props.date} class="block font-serif font-medium my-3 text-center">
+      {NoteFormat.formatGroupLabel(props.date)}
+    </time>
   );
 }
 

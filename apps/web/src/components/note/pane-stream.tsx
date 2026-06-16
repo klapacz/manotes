@@ -172,7 +172,7 @@ export function PaneStream(props: { paneRef: HTMLElement | undefined }) {
                           bufferSize={1200}
                           style={{ height: "100%" }}
                         >
-                          {(item) => <PaneStreamRow item={item} sort={pane().sort} />}
+                          {(item) => <PaneStreamRow item={item} />}
                         </VList>
                       </div>
                     );
@@ -192,5 +192,5 @@ function preloadNoteIds(rows: ReadonlyArray<NoteStream.ListItem>): ReadonlyArray
 }
 
 function noteIdsFromRows(rows: ReadonlyArray<NoteStream.ListItem>): ReadonlyArray<string> {
-  return rows.filter((row) => row._tag === "note").map((row) => row.note.id);
+  return rows.map((row) => row.note.id);
 }

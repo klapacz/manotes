@@ -183,7 +183,7 @@ export default function Editor(props: Props): JSX.Element {
           />
           <div
             ref={current.editor.mount}
-            class="outline-none"
+            class="outline-none p-6 pt-0"
             style={props.style}
             onMouseDown={(event) => {
               const target = event.target;

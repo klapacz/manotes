@@ -13,20 +13,21 @@ export type InnerItem = {
 };
 
 /**
- * `id` is the rendered row identity used by Svelte reconciliation and the
+ * `id` is the rendered row identity used by reconciliation and the
  * virtualizer. Keeping it stable preserves mounted note editors across
  * stream updates.
+ *
+ * A group separator is not its own row: the first note of each run carries
+ * `firstInGroup`, and the row renders the dated divider above its content.
  */
-export type ListItem =
-  | { _tag: "separator"; id: string; groupKey: string }
-  | {
-      _tag: "note";
-      id: string;
-      note: NoteSchema.Meta;
-      groupKey: string;
-      dirty: boolean;
-      firstInGroup: boolean;
-    };
+export type ListItem = {
+  _tag: "note";
+  id: string;
+  note: NoteSchema.Meta;
+  groupKey: string;
+  dirty: boolean;
+  firstInGroup: boolean;
+};
 
 export type InnerItems = ReadonlyArray<InnerItem>;
 
@@ -106,32 +107,24 @@ export const retain =
     };
   };
 
-/** Inserts a separator before each run of items sharing a captured group key. */
+/** Marks the first note of each run sharing a captured group key. */
 export function list(notes: ReadonlyArray<InnerItem>): ReadonlyArray<ListItem> {
   if (!Array.isReadonlyArrayNonEmpty(notes)) return [];
 
   const [, rows] = Array.mapAccum(notes, null as string | null, (lastGroupKey, item) => {
     const noteRow: ListItem = {
-      _tag: "note" as const,
+      _tag: "note",
       id: `note:${item.note.id}`,
-      firstInGroup: false,
-      ...item,
-    };
-
-    if (item.groupKey === lastGroupKey) return [item.groupKey, [noteRow]];
-
-    // Key the separator by the note below it. A note can start at most one run,
-    // so repeated group keys caused by retained dirty notes cannot collide.
-    const separator: ListItem = {
-      _tag: "separator",
-      id: `separator:${item.note.id}`,
+      note: item.note,
       groupKey: item.groupKey,
+      dirty: item.dirty,
+      firstInGroup: item.groupKey !== lastGroupKey,
     };
 
-    return [item.groupKey, [separator, { ...noteRow, firstInGroup: true }]];
+    return [item.groupKey, noteRow];
   });
 
-  return Array.flatten(rows);
+  return rows;
 }
 
 function groupKey(note: NoteSchema.Meta, sort: StreamSort): string {
