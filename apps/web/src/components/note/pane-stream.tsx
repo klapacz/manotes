@@ -72,9 +72,15 @@ export function PaneStream(props: { paneRef: HTMLElement | undefined }) {
     return noteIdsFromRows(state.value.rows).map(fid.note);
   });
 
+  const [lastFocused, setLastFocused] = createSignal<Focus.FocusId>();
   createEffect(() => {
     const ids = listOrder();
     if (fnode.focused() && Arr.isArrayNonEmpty(ids)) {
+      const last = lastFocused();
+      if (last && Arr.contains(ids, last)) {
+        return fnode.focusWhenAvailable(last);
+      }
+
       fnode.focusWhenAvailable(Arr.headNonEmpty(ids));
     }
   });
@@ -116,6 +122,13 @@ export function PaneStream(props: { paneRef: HTMLElement | undefined }) {
       }
     },
   }));
+
+  // TODO: get from stack not single id
+  fnode.createChangeListener((id) => {
+    if (id._tag === "NoteFocusId" && id.paneId === pane().paneId) {
+      setLastFocused(id);
+    }
+  });
 
   return (
     <Focus.NodeProvider node={fnode}>
