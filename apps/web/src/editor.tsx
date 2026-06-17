@@ -1,6 +1,13 @@
 import "./editor.css";
 
-import { createEditor, defineKeymap, Priority, union, withPriority } from "prosekit/core";
+import {
+  createEditor,
+  defineKeymap,
+  Priority,
+  union,
+  withPriority,
+  type Editor as ProsekitEditor,
+} from "prosekit/core";
 import { Selection } from "prosekit/pm/state";
 import { ProseKit } from "prosekit/solid";
 import { createEffect, createMemo, on, Show, type JSX } from "solid-js";
@@ -147,21 +154,22 @@ export default function Editor(props: Props): JSX.Element {
     props.onBootStateChange?.(bootState());
   });
 
-  const focusEnd = Effect.fn("Editor.focusEnd")(function* () {
+  const selection = createSelectionRestoration(() => state().editor);
+
+  const focusEditor = Effect.fn("Editor.focusEditor")(function* () {
     yield* Deferred.await(ready);
 
-    const editor = state().editor;
+    const { editor } = state();
     if (bootState()._tag !== "Ready") return;
 
-    const view = editor.view;
-    view.dispatch(view.state.tr.setSelection(Selection.atEnd(view.state.doc)));
-    view.focus();
+    selection.restore();
+    editor.view.focus();
   });
 
   const fid = Focus.useId();
   const fnode = Focus.createNode(() => ({
     id: fid.editor(props.noteId),
-    onFocus: () => Effect.runPromise(focusEnd()),
+    onFocus: () => Effect.runPromise(focusEditor()),
     onKeyDown: (event) => {
       if (event.key !== "Escape") return;
       fnode.focusParent();
@@ -198,12 +206,46 @@ export default function Editor(props: Props): JSX.Element {
               if (suppressNextFocus) return;
               fnode.focusSelf?.();
             }}
+            onFocusOut={() => {
+              selection.save();
+            }}
           />
           <BacklinkMenu currentNoteId={props.noteId} />
         </ProseKit>
       )}
     </Show>
   );
+}
+
+function createSelectionRestoration(editor: () => ProsekitEditor) {
+  let savedSelection: unknown;
+
+  function parse(): Selection {
+    const doc = editor().view.state.doc;
+
+    if (savedSelection) {
+      try {
+        return Selection.fromJSON(doc, savedSelection);
+      } catch {
+        // Fall back to the previous behavior when the document changed enough that
+        // the saved selection can no longer be resolved.
+      }
+    }
+
+    return Selection.atEnd(doc);
+  }
+
+  function restore() {
+    const view = editor().view;
+    const selection = parse();
+    view.dispatch(view.state.tr.setSelection(selection));
+  }
+
+  function save() {
+    savedSelection = editor().view.state.selection.toJSON();
+  }
+
+  return { save, restore };
 }
 
 export interface YjsOptions {
