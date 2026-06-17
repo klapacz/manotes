@@ -46,19 +46,23 @@ function NoteRow(props: { row: NoteStream.ListItem }) {
   const slotAtom = bindRt((rt) => rt.atom((get) => pool.get(get(noteIdAtom))));
   const slotResult = useAtomValue(slotAtom);
 
-  let el: HTMLElement | undefined;
-  let rowEl: HTMLElement | undefined;
   const fid = Focus.useId();
   const fnode = Focus.createNode((ctx) => ({
     id: fid.note(props.row.note.id),
-    focus: () => {
-      // Keep horizontal pane scrolling owned by the pane focus node; native focus
-      // scrolling can otherwise race it and leave the target pane off-center.
-      el?.focus({ preventScroll: true });
-      // Scroll to the row wrapper, not the card: the wrapper includes the group
-      // divider that sits in the gutter above the card, so autoscroll keeps it
-      // visible instead of pinning the card top and clipping the label.
-      if (rowEl) DOMScroll.scrollIntoNearestY(rowEl);
+    syncFocus: (element) => {
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          // Keep scrolling owned by the app focus/scroll code; native focus scrolling
+          // can otherwise race horizontal pane centering and virtual-list autoscroll.
+          element.focus({ preventScroll: true });
+          // Keep horizontal pane scrolling owned by the pane focus node; native focus
+          // scrolling can otherwise race it and leave the target pane off-center.
+          // Scroll to the row wrapper, not the card: the wrapper includes the group
+          // divider that sits in the gutter above the card, so autoscroll keeps it
+          // visible instead of pinning the card top and clipping the label.
+          DOMScroll.scrollIntoNearestY(element);
+        }),
+      );
     },
     onKeyDown: (event) => {
       if (event.key !== "Enter") return;
@@ -67,20 +71,14 @@ function NoteRow(props: { row: NoteStream.ListItem }) {
     },
   }));
 
-  createEffect(() => {
-    // Keep horizontal pane scrolling owned by the pane focus node; native focus
-    // scrolling can otherwise race it and leave the target pane off-center.
-    if (fnode.focused() && el && document.activeElement !== el) el.focus({ preventScroll: true });
-  });
-
   return (
     <Focus.NodeProvider node={fnode}>
-      <div ref={(ref) => (rowEl = ref)}>
+      <Focus.Element class="outline-none group">
         <Show when={props.row.firstInGroup}>
           <NoteDivider date={props.row.groupKey} />
         </Show>
 
-        <NoteShell ref={(ref) => (el = ref)}>
+        <NoteShell>
           <NoteActions
             note={meta()}
             groupKey={props.row.groupKey}
@@ -98,7 +96,7 @@ function NoteRow(props: { row: NoteStream.ListItem }) {
             }}
           />
         </NoteShell>
-      </div>
+      </Focus.Element>
     </Focus.NodeProvider>
   );
 }

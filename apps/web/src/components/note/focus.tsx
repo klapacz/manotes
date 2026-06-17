@@ -1,3 +1,4 @@
+import { mergeRefs } from "@solid-primitives/refs";
 import {
   createContext,
   createEffect,
@@ -9,10 +10,15 @@ import {
   type Accessor,
   type JSX,
   type ParentProps,
+  type ComponentProps,
+  type ValidComponent,
+  splitProps,
 } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import { createEventListener } from "@solid-primitives/event-listener";
 import { Data, Equal, MutableHashMap as MHS, MutableHashSet, Option } from "effect";
 import { PaneCtx } from "../../lib/note/pane.ctx";
+import type { Setter } from "solid-js";
 
 export type FocusId =
   | RootFocusId
@@ -47,8 +53,8 @@ export type KeybindingHandler = (event: KeyboardEvent) => boolean | undefined;
 type NodeRegistration = {
   readonly id: FocusId;
   readonly parentId: FocusId;
-  readonly focus?: () => void;
-  readonly focusWithin?: () => void;
+  readonly onFocus?: () => void;
+  readonly onFocusWithin?: () => void;
   readonly onKeyDown?: KeybindingHandler;
 };
 
@@ -97,9 +103,9 @@ export function Provider(props: ParentProps): JSX.Element {
 
     setFocusedId(id);
     for (const listener of focusChangeListeners) listener(id);
-    node.value.focus?.();
+    node.value.onFocus?.();
 
-    for (const node of nodeAncestry(nodes, id)) node.focusWithin?.();
+    for (const node of nodeAncestry(nodes, id)) node.onFocusWithin?.();
   };
 
   const focusParent = () => {
@@ -179,80 +185,6 @@ export function Provider(props: ParentProps): JSX.Element {
   );
 }
 
-interface NodeAutoRegistration extends Omit<NodeRegistration, "parentId"> {
-  readonly parentId?: FocusId;
-}
-
-export interface Node extends ContextValue {
-  id: () => FocusId;
-  focused: () => boolean;
-  focusWithin: (id?: FocusId) => boolean;
-  focusSelf: () => void;
-  registerKeybindings: (handler: KeybindingHandler) => () => void;
-}
-
-export class NodeResolution implements Node {
-  readonly focusedId: ContextValue["focusedId"];
-  readonly register: ContextValue["register"];
-  readonly createChangeListener: ContextValue["createChangeListener"];
-  readonly focusWhenAvailable: ContextValue["focusWhenAvailable"];
-  readonly focusNode: ContextValue["focusNode"];
-  readonly focusParent: ContextValue["focusParent"];
-  readonly focusedStack: ContextValue["focusedStack"];
-  readonly #ctx: ContextValue;
-  readonly #resolved: Accessor<NodeRegistration>;
-  readonly #keybindings = new Set<KeybindingHandler>();
-
-  constructor(ctx: ContextValue, resolved: Accessor<NodeRegistration>) {
-    this.#ctx = ctx;
-    this.#resolved = resolved;
-    this.focusedId = ctx.focusedId;
-    this.register = ctx.register;
-    this.createChangeListener = ctx.createChangeListener;
-    this.focusWhenAvailable = ctx.focusWhenAvailable;
-    this.focusNode = ctx.focusNode;
-    this.focusParent = ctx.focusParent;
-    this.focusedStack = ctx.focusedStack;
-  }
-
-  get nodes() {
-    return this.#ctx.nodes;
-  }
-
-  readonly id = () => this.#resolved().id;
-
-  readonly focused = () => {
-    const current = this.#ctx.focusedId();
-    return current !== null && Equal.equals(current, this.id());
-  };
-
-  readonly focusWithin = (_targetId?: FocusId) => {
-    const targetId = _targetId ?? this.id();
-    return nodeAncestry(this.#ctx.nodes, this.#ctx.focusedId()).some((node) =>
-      Equal.equals(node.id, targetId),
-    );
-  };
-
-  readonly focusSelf = () => this.#ctx.focusNode(this.id());
-
-  readonly registerKeybindings = (handler: KeybindingHandler) => {
-    this.#keybindings.add(handler);
-    const cleanup = () => this.#keybindings.delete(handler);
-    if (getOwner()) onCleanup(cleanup);
-    return cleanup;
-  };
-
-  readonly onKeyDown = (event: KeyboardEvent) => {
-    if (this.#resolved().onKeyDown?.(event)) return true;
-
-    for (const handler of this.#keybindings) {
-      if (handler(event)) return true;
-    }
-
-    return false;
-  };
-}
-
 function RootNodeProvider(props: ParentProps) {
   const fnode = createNode(() => ({
     id: new RootNodeFocusId(),
@@ -262,23 +194,95 @@ function RootNodeProvider(props: ParentProps) {
   return <NodeProvider node={fnode}>{props.children}</NodeProvider>;
 }
 
-export function createNode(
-  registration: (ctx: ContextValue) => NodeAutoRegistration,
-): NodeResolution {
+interface NodeAutoRegistration {
+  readonly id: FocusId;
+  readonly parentId?: FocusId;
+  readonly syncFocus?: (element: HTMLElement) => void;
+  readonly syncFocusWithin?: (element: HTMLElement) => void;
+  readonly onFocus?: () => void;
+  readonly onFocusWithin?: () => void;
+  readonly onKeyDown?: KeybindingHandler;
+}
+
+export interface Node extends ContextValue {
+  id: () => FocusId;
+  focused: () => boolean;
+  focusWithin: (id?: FocusId) => boolean;
+  focusSelf: () => void;
+  registerKeybindings: (handler: KeybindingHandler) => () => void;
+  element: Accessor<HTMLElement | undefined>;
+  setElement: Setter<HTMLElement | undefined>;
+}
+
+export function createNode(registration: (ctx: ContextValue) => NodeAutoRegistration): Node {
   const ctx = use();
   const fparent = useContext(NodeContext);
 
-  const resolved = createMemo(() => {
-    const current = registration(ctx);
+  const resolved = createMemo(() => registration(ctx));
+  const [element, setElement] = createSignal<HTMLElement>();
+
+  const keybindings = new Set<KeybindingHandler>();
+
+  const id = () => resolved().id;
+
+  const focused = () => {
+    const current = ctx.focusedId();
+    return current !== null && Equal.equals(current, id());
+  };
+
+  const focusWithin = (_targetId?: FocusId) => {
+    const targetId = _targetId ?? id();
+    return nodeAncestry(ctx.nodes, ctx.focusedId()).some((node) => Equal.equals(node.id, targetId));
+  };
+
+  const focusSelf = () => ctx.focusNode(id());
+
+  const registerKeybindings = (handler: KeybindingHandler) => {
+    keybindings.add(handler);
+    const cleanup = () => keybindings.delete(handler);
+    if (getOwner()) onCleanup(cleanup);
+    return cleanup;
+  };
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (resolved().onKeyDown?.(event)) return true;
+
+    for (const handler of keybindings) {
+      if (handler(event)) return true;
+    }
+
+    return false;
+  };
+
+  ctx.register(() => {
+    const current = resolved();
     const parentId = current.parentId ?? fparent?.().id();
     if (!parentId) throw new Error("Expected parentId.");
-    return { ...current, parentId };
+    return { ...current, parentId, onKeyDown };
   });
 
-  const node = new NodeResolution(ctx, resolved);
-  ctx.register(() => ({ ...resolved(), onKeyDown: node.onKeyDown }));
+  createEffect(() => {
+    const current = element();
+    if (!focused() || !current || document.activeElement === current) return;
+    resolved().syncFocus?.(current);
+  });
 
-  return node;
+  createEffect(() => {
+    const current = element();
+    if (!focusWithin() || !current) return;
+    resolved().syncFocusWithin?.(current);
+  });
+
+  return {
+    ...ctx,
+    id,
+    focused,
+    focusWithin,
+    focusSelf,
+    registerKeybindings,
+    element,
+    setElement,
+  };
 }
 
 export function NodeProvider(props: ParentProps<{ node: Node }>) {
@@ -289,6 +293,24 @@ export function useNode() {
   const node = useContext(NodeContext);
   if (!node) throw new Error("Expected focus node.");
   return node();
+}
+
+export type ElementProps<T extends ValidComponent = "div"> = ComponentProps<T> & {
+  readonly as?: T;
+};
+
+export function Element<T extends ValidComponent = "div">(props: ElementProps<T>) {
+  const fnode = useNode();
+  const [local, rest] = splitProps(props as ElementProps, ["as", "ref", "tabIndex"]);
+
+  return (
+    <Dynamic
+      component={local.as ?? "div"}
+      ref={mergeRefs(fnode.setElement, local.ref)}
+      tabIndex={local.tabIndex ?? -1}
+      {...rest}
+    />
+  );
 }
 
 export const id = (paneId: string) => ({

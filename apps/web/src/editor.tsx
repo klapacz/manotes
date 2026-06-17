@@ -158,9 +158,10 @@ export default function Editor(props: Props): JSX.Element {
     view.focus();
   });
 
+  const fid = Focus.useId();
   const fnode = Focus.createNode(() => ({
-    id: Focus.useId().editor(props.noteId),
-    focus: () => Effect.runPromise(focusEnd()),
+    id: fid.editor(props.noteId),
+    onFocus: () => Effect.runPromise(focusEnd()),
     onKeyDown: (event) => {
       if (event.key !== "Escape") return;
       fnode.focusParent();

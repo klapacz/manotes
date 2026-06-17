@@ -1,5 +1,5 @@
 import { Option, Stream } from "effect";
-import { createEffect, Show } from "solid-js";
+import { Show, type ComponentProps } from "solid-js";
 import Editor from "../../editor";
 import {
   MatchTag,
@@ -19,8 +19,9 @@ import {
   PaneShell,
 } from "./shared";
 import { Focus } from "./focus";
+import { DOMScroll } from "../../lib/dom-scroll";
 
-export function PaneNote(props: { paneRef: HTMLElement | undefined }) {
+export function PaneNote(props: ComponentProps<"section">) {
   const pane = PaneCtx.useNote();
   const noteIdAtom = createSyncedAtom(() => pane().id);
   const notesAtom = bindRt((rt) =>
@@ -36,12 +37,17 @@ export function PaneNote(props: { paneRef: HTMLElement | undefined }) {
   const fid = Focus.useId();
   const fnode = Focus.createNode((ctx) => ({
     id: fid.pane(),
-    focusWithin: () => {
-      props.paneRef?.scrollIntoView({
+    syncFocusWithin: (element) => {
+      if (DOMScroll.isCenteredInScrollParent(element)) return;
+
+      element.scrollIntoView({
         block: "nearest",
         inline: "center",
         behavior: "smooth",
       });
+    },
+    syncFocus(element) {
+      element.focus({ preventScroll: true });
     },
     onKeyDown: (event) => {
       if (event.key !== "Enter") return;
@@ -52,7 +58,7 @@ export function PaneNote(props: { paneRef: HTMLElement | undefined }) {
 
   return (
     <Focus.NodeProvider node={fnode}>
-      <PaneShell>
+      <PaneShell {...props}>
         <div class="flex justify-end">
           <PaneActions />
         </div>
@@ -79,22 +85,13 @@ export function PaneNote(props: { paneRef: HTMLElement | undefined }) {
 }
 
 function PaneNoteInner(props: { note: NoteSchema.Meta }) {
-  let el: HTMLElement | undefined;
-  const fnode = Focus.useNode();
-
-  createEffect(() => {
-    // Keep horizontal pane scrolling owned by the pane focus node; native focus
-    // scrolling can otherwise race it and leave the target pane off-center.
-    if (fnode.focused() && el && document.activeElement !== el) el.focus({ preventScroll: true });
-  });
-
   return (
     <div>
       <NoteDivider date={props.note.date} />
-      <NoteShell ref={(ref) => (el = ref)} class="overflow-y-auto">
+      <Focus.Element as={NoteShell} class="overflow-y-auto outline-none group">
         <NoteActions note={props.note} sort="date" />
         <Editor noteId={props.note.id} style={{ "min-height": "30svh" }} />
-      </NoteShell>
+      </Focus.Element>
     </div>
   );
 }

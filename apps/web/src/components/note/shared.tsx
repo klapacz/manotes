@@ -17,11 +17,11 @@ import { Focus } from "./focus";
 
 const route = getRouteApi("/$graph/");
 
-export function PaneShell(props: ComponentProps<"div">) {
+export function PaneShell(props: ComponentProps<"section">) {
   return (
-    <div class="flex flex-col gap-4 h-full min-h-0 px-6 py-4" {...props}>
-      {props.children}
-    </div>
+    <section class="h-full w-[min(44rem,100vw)] shrink-0 snap-center outline-none" {...props}>
+      <div class="flex flex-col gap-4 h-full min-h-0 px-6 py-4">{props.children}</div>
+    </section>
   );
 }
 
@@ -100,9 +100,7 @@ export function NoteActions(props: {
   // Stays out of the way until the note is hovered or focused, then fades in.
   // Keyboard shortcuts (o/b/d) work regardless of visibility.
   return (
-    <div
-      class="flex items-center gap-1 text-xs text-fg-subtle opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 h-6 px-6 justify-end"
-    >
+    <div class="flex items-center gap-1 text-xs text-fg-subtle opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 h-6 px-6 justify-end">
       <div class="flex items-center gap-2">
         <Show when={props.dirty}>
           <span class="text-warning-fg-subtle">Dirty</span>
@@ -154,12 +152,7 @@ export function NoteShell(props: ComponentProps<"article">) {
   return (
     <article
       {...rest}
-      tabIndex={-1}
-      onMouseDown={() => fnode.focusSelf()}
-      class={cx(
-        "group transition-colors outline-none relative border-t border-t-border-subtle",
-        local.class,
-      )}
+      class={cx("transition-colors relative border-t border-t-border-subtle", local.class)}
       classList={{
         ...local.classList,
         "bg-bg-subtle": fnode.focusWithin(),

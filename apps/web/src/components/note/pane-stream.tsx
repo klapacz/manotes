@@ -1,5 +1,13 @@
 import { Option, Effect, Stream, Array as Arr, Equal, Number } from "effect";
-import { Show, createEffect, createMemo, createSignal, getOwner, onMount } from "solid-js";
+import {
+  Show,
+  createEffect,
+  createMemo,
+  createSignal,
+  getOwner,
+  onMount,
+  type ComponentProps,
+} from "solid-js";
 import { VList } from "virtua/solid";
 import {
   MatchTag,
@@ -20,7 +28,7 @@ import { DOMScroll } from "../../lib/dom-scroll";
 
 const PRELOAD_EDITOR_COUNT = 12;
 
-export function PaneStream(props: { paneRef: HTMLElement | undefined }) {
+export function PaneStream(props: ComponentProps<"section">) {
   const pane = PaneCtx.useStream();
   const [refreshToken, setRefreshToken] = createSignal(0);
   const queryAtom = createSyncedAtom(() => PaneSchema.paneToQuery(pane()));
@@ -104,11 +112,10 @@ export function PaneStream(props: { paneRef: HTMLElement | undefined }) {
 
   const fnode = Focus.createNode(() => ({
     id: fid.pane(),
-    focusWithin: () => {
-      if (!props.paneRef) return;
-      if (DOMScroll.isCenteredInScrollParent(props.paneRef)) return;
+    syncFocusWithin: (element) => {
+      if (DOMScroll.isCenteredInScrollParent(element)) return;
 
-      props.paneRef.scrollIntoView({
+      element.scrollIntoView({
         block: "nearest",
         inline: "center",
         behavior: "smooth",
@@ -132,7 +139,7 @@ export function PaneStream(props: { paneRef: HTMLElement | undefined }) {
 
   return (
     <Focus.NodeProvider node={fnode}>
-      <PaneShell>
+      <Focus.Element as={PaneShell} {...props}>
         <div class="flex gap-3 justify-between">
           <PaneStreamFilter
             dirty={state._tag === "Success" ? state.value.dirty : false}
@@ -182,7 +189,7 @@ export function PaneStream(props: { paneRef: HTMLElement | undefined }) {
             ),
           }}
         />
-      </PaneShell>
+      </Focus.Element>
     </Focus.NodeProvider>
   );
 }

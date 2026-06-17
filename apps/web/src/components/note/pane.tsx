@@ -9,8 +9,6 @@ import { PaneScroll } from "../../lib/note/pane.scroll";
 import { NoteLinkScope, type NoteLinkRenderer } from "../../lib/note/link-component";
 import { PaneNote } from "./pane-note";
 import { PaneStream } from "./pane-stream";
-import { mergeRefs } from "@solid-primitives/refs";
-import { createSignal } from "solid-js";
 
 export function PaneGrid(props: ParentProps) {
   return (
@@ -46,22 +44,15 @@ export function Pane(props: { ref: Ref<HTMLElement | undefined> }) {
     );
   };
 
-  const [paneRef, setPaneRef] = createSignal<HTMLElement | undefined>();
-
   return (
     <NoteLinkScope render={renderNoteLink}>
-      <section
-        class="h-full w-[min(44rem,100vw)] shrink-0 snap-center"
-        ref={mergeRefs(props.ref, setPaneRef)}
-      >
-        <MatchTag
-          when={pane()}
-          cases={{
-            stream: () => <PaneStream paneRef={paneRef()} />,
-            note: () => <PaneNote paneRef={paneRef()} />,
-          }}
-        />
-      </section>
+      <MatchTag
+        when={pane()}
+        cases={{
+          stream: () => <PaneStream ref={props.ref} />,
+          note: () => <PaneNote ref={props.ref} />,
+        }}
+      />
     </NoteLinkScope>
   );
 }
