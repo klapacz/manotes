@@ -44,21 +44,30 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
   const cycleSort = () =>
     updatePane({ ...pane(), sort: pane().sort === "date" ? "updated" : "date" });
 
-  fnode.registerKeybindings((event) => {
-    if (event.key === "t") {
-      cycleType();
-      return true;
-    }
-
-    if (event.key === "s") {
-      cycleSort();
-      return true;
-    }
-
-    if (event.key !== "r" || !props.dirty) return false;
-    props.onRefresh();
-    return true;
-  });
+  fnode.registerShortcuts([
+    {
+      key: "T",
+      handler: () => {
+        cycleType();
+        return true;
+      },
+    },
+    {
+      key: "S",
+      handler: () => {
+        cycleSort();
+        return true;
+      },
+    },
+    {
+      key: "R",
+      enabled: () => props.dirty,
+      handler: () => {
+        props.onRefresh();
+        return true;
+      },
+    },
+  ]);
 
   return (
     <div class="space-x-2">

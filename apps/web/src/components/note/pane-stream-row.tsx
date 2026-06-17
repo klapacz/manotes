@@ -47,7 +47,7 @@ function NoteRow(props: { row: NoteStream.ListItem }) {
   const slotResult = useAtomValue(slotAtom);
 
   const fid = Focus.useId();
-  const fnode = Focus.createNode((ctx) => ({
+  const fnode = Focus.createNode(() => ({
     id: fid.note(props.row.note.id),
     syncFocus: (element) => {
       requestAnimationFrame(() =>
@@ -64,12 +64,17 @@ function NoteRow(props: { row: NoteStream.ListItem }) {
         }),
       );
     },
-    onKeyDown: (event) => {
-      if (event.key !== "Enter") return;
-      ctx.focusNode(fid.editor(props.row.note.id));
-      return true;
-    },
   }));
+
+  fnode.registerShortcuts([
+    {
+      key: "Enter",
+      handler: () => {
+        fnode.focusNode(fid.editor(props.row.note.id));
+        return true;
+      },
+    },
+  ]);
 
   return (
     <Focus.NodeProvider node={fnode}>

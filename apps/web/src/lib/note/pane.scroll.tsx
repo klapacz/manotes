@@ -184,16 +184,22 @@ export function Root(props: Props): JSX.Element {
     return true;
   }
 
-  const fnode = Focus.createNode((ctx) => ({
+  const fnode = Focus.createNode(() => ({
     id: new Focus.PaneGridFocusId(),
-    onKeyDown(event) {
-      if (event.key === "l" || event.key === "ArrowRight") {
-        return move(ctx, 1);
-      } else if (event.key === "h" || event.key === "ArrowLeft") {
-        return move(ctx, -1);
-      }
-    },
   }));
+
+  fnode.registerShortcuts([
+    {
+      key: ["L", "ArrowRight"],
+      allowRepeat: true,
+      handler: () => move(fnode, 1),
+    },
+    {
+      key: ["H", "ArrowLeft"],
+      allowRepeat: true,
+      handler: () => move(fnode, -1),
+    },
+  ]);
 
   return (
     <Focus.NodeProvider node={fnode}>

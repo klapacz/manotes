@@ -22,6 +22,7 @@
     "@solid-primitives/transition-group": "^1.1.2",
     "@standard-schema/spec": "^1.1.0",
     "@tailwindcss/vite": "^4.2.2",
+    "@tanstack/hotkeys": "^0.8.0",
     "@tanstack/router-plugin": "^1.133.21",
     "@tanstack/solid-form": "1.29.0",
     "@tanstack/solid-router": "^1.133.20",

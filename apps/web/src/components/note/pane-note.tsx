@@ -35,7 +35,7 @@ export function PaneNote(props: ComponentProps<"section">) {
   const note = createAtomResultStore(notesAtom);
 
   const fid = Focus.useId();
-  const fnode = Focus.createNode((ctx) => ({
+  const fnode = Focus.createNode(() => ({
     id: fid.pane(),
     syncFocusWithin: (element) => {
       if (DOMScroll.isCenteredInScrollParent(element)) return;
@@ -49,12 +49,17 @@ export function PaneNote(props: ComponentProps<"section">) {
     syncFocus(element) {
       element.focus({ preventScroll: true });
     },
-    onKeyDown: (event) => {
-      if (event.key !== "Enter") return;
-      ctx.focusNode(fid.editor(pane().id));
-      return true;
-    },
   }));
+
+  fnode.registerShortcuts([
+    {
+      key: "Enter",
+      handler: () => {
+        fnode.focusNode(fid.editor(pane().id));
+        return true;
+      },
+    },
+  ]);
 
   return (
     <Focus.NodeProvider node={fnode}>

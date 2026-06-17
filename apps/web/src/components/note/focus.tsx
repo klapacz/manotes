@@ -16,6 +16,7 @@ import {
 } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { createEventListener } from "@solid-primitives/event-listener";
+import { matchesKeyboardEvent, type Hotkey } from "@tanstack/hotkeys";
 import { Data, Equal, MutableHashMap as MHS, MutableHashSet, Option } from "effect";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import type { Setter } from "solid-js";
@@ -47,6 +48,17 @@ class EditorFocusId extends Data.TaggedClass("EditorFocusId")<{
   readonly paneId: string;
   readonly noteId: string;
 }> {}
+
+export type ShortcutHandler = (event: KeyboardEvent) => boolean | undefined | void;
+
+export type ShortcutBinding = {
+  readonly key: Hotkey | ReadonlyArray<Hotkey>;
+  readonly enabled?: () => boolean;
+  readonly handler: ShortcutHandler;
+  readonly preventDefault?: boolean;
+  readonly stopPropagation?: boolean;
+  readonly allowRepeat?: boolean;
+};
 
 export type KeybindingHandler = (event: KeyboardEvent) => boolean | undefined;
 
@@ -161,9 +173,7 @@ export function Provider(props: ParentProps): JSX.Element {
   };
 
   createEventListener(document.body, "keydown", (event) => {
-    if (isInteractive(event.target) || event.metaKey || event.ctrlKey || event.altKey) {
-      return;
-    }
+    if (isInteractive(event.target)) return;
 
     const current = focusedId();
     if (!current) return;
@@ -209,7 +219,7 @@ export interface Node extends ContextValue {
   focused: () => boolean;
   focusWithin: (id?: FocusId) => boolean;
   focusSelf: () => void;
-  registerKeybindings: (handler: KeybindingHandler) => () => void;
+  registerShortcuts: (shortcuts: ReadonlyArray<ShortcutBinding>) => () => void;
   element: Accessor<HTMLElement | undefined>;
   setElement: Setter<HTMLElement | undefined>;
 }
@@ -221,7 +231,7 @@ export function createNode(registration: (ctx: ContextValue) => NodeAutoRegistra
   const resolved = createMemo(() => registration(ctx));
   const [element, setElement] = createSignal<HTMLElement>();
 
-  const keybindings = new Set<KeybindingHandler>();
+  const shortcutSets = new Set<ReadonlyArray<ShortcutBinding>>();
 
   const id = () => resolved().id;
 
@@ -237,19 +247,21 @@ export function createNode(registration: (ctx: ContextValue) => NodeAutoRegistra
 
   const focusSelf = () => ctx.focusNode(id());
 
-  const registerKeybindings = (handler: KeybindingHandler) => {
-    keybindings.add(handler);
-    const cleanup = () => keybindings.delete(handler);
+  const registerShortcuts = (shortcuts: ReadonlyArray<ShortcutBinding>) => {
+    shortcutSets.add(shortcuts);
+    const cleanup = () => shortcutSets.delete(shortcuts);
     if (getOwner()) onCleanup(cleanup);
     return cleanup;
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
-    if (resolved().onKeyDown?.(event)) return true;
-
-    for (const handler of keybindings) {
-      if (handler(event)) return true;
+    for (const shortcuts of shortcutSets) {
+      for (const shortcut of shortcuts) {
+        if (dispatchShortcut(shortcut, event)) return true;
+      }
     }
+
+    if (resolved().onKeyDown?.(event)) return true;
 
     return false;
   };
@@ -279,7 +291,7 @@ export function createNode(registration: (ctx: ContextValue) => NodeAutoRegistra
     focused,
     focusWithin,
     focusSelf,
-    registerKeybindings,
+    registerShortcuts,
     element,
     setElement,
   };
@@ -329,6 +341,25 @@ export function useId() {
     note: (id: string) => inner().note(id),
     editor: (id: string) => inner().editor(id),
   };
+}
+
+function dispatchShortcut(shortcut: ShortcutBinding, event: KeyboardEvent): boolean {
+  if (!shortcut.allowRepeat && event.repeat) return false;
+  if (shortcut.enabled && !shortcut.enabled()) return false;
+  if (!matchesShortcut(shortcut.key, event)) return false;
+
+  const handled = shortcut.handler(event) === true;
+  if (!handled) return false;
+
+  if (shortcut.preventDefault !== false) event.preventDefault();
+  if (shortcut.stopPropagation) event.stopPropagation();
+
+  return true;
+}
+
+function matchesShortcut(key: Hotkey | ReadonlyArray<Hotkey>, event: KeyboardEvent): boolean {
+  const keys = Array.isArray(key) ? key : [key];
+  return keys.some((key) => matchesKeyboardEvent(event, key as Hotkey));
 }
 
 function isInteractive(target: EventTarget | null): boolean {

@@ -33,16 +33,23 @@ export function PaneActions() {
   const focusPane = () => void navigate(PaneCtx.linkOptions(ctx, PaneCursor.focus));
   const closePane = () => void navigate(PaneCtx.linkOptions(ctx, PaneCursor.close));
 
-  fnode.registerKeybindings((event) => {
-    if (event.key === "x") {
-      closePane();
-      return true;
-    }
-
-    if (event.key !== "f" || !canFocus()) return false;
-    focusPane();
-    return true;
-  });
+  fnode.registerShortcuts([
+    {
+      key: "X",
+      handler: () => {
+        closePane();
+        return true;
+      },
+    },
+    {
+      key: "F",
+      enabled: canFocus,
+      handler: () => {
+        focusPane();
+        return true;
+      },
+    },
+  ]);
 
   return (
     <div class="flex gap-1">
@@ -81,21 +88,29 @@ export function NoteActions(props: {
     return void navigate(PaneCtx.linkOptions(ctx, PaneCursor.replaceAll(input)));
   };
 
-  fnode.registerKeybindings((event) => {
-    if (event.key === "o") {
-      openOnly();
-      return true;
-    }
-
-    if (event.key === "b") {
-      openNext(PaneMake.backlink(props.note.id));
-      return true;
-    }
-
-    if (event.key !== "d") return false;
-    openNext(PaneMake.date(props.note.date));
-    return true;
-  });
+  fnode.registerShortcuts([
+    {
+      key: "O",
+      handler: () => {
+        openOnly();
+        return true;
+      },
+    },
+    {
+      key: "B",
+      handler: () => {
+        openNext(PaneMake.backlink(props.note.id));
+        return true;
+      },
+    },
+    {
+      key: "D",
+      handler: () => {
+        openNext(PaneMake.date(props.note.date));
+        return true;
+      },
+    },
+  ]);
 
   // Stays out of the way until the note is hovered or focused, then fades in.
   // Keyboard shortcuts (o/b/d) work regardless of visibility.

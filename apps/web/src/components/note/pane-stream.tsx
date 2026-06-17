@@ -121,14 +121,20 @@ export function PaneStream(props: ComponentProps<"section">) {
         behavior: "smooth",
       });
     },
-    onKeyDown: (event) => {
-      if (event.key === "j" || event.key === "ArrowDown") {
-        if (move(1)) return true;
-      } else if (event.key === "k" || event.key === "ArrowUp") {
-        if (move(-1)) return true;
-      }
-    },
   }));
+
+  fnode.registerShortcuts([
+    {
+      key: ["J", "ArrowDown"],
+      allowRepeat: true,
+      handler: () => move(1),
+    },
+    {
+      key: ["K", "ArrowUp"],
+      allowRepeat: true,
+      handler: () => move(-1),
+    },
+  ]);
 
   // TODO: get from stack not single id
   fnode.createChangeListener((id) => {
