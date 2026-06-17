@@ -135,6 +135,9 @@ importers:
       kysely:
         specifier: ^0.28.8
         version: 0.28.8
+      lucide-solid:
+        specifier: ^1.20.0
+        version: 1.20.0(solid-js@1.9.10)
       motion:
         specifier: ^12.40.0
         version: 12.40.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -5244,6 +5247,11 @@ packages:
   lru.min@1.1.4:
     resolution: {integrity: sha512-DqC6n3QQ77zdFpCMASA1a3Jlb64Hv2N2DciFGkO/4L9+q/IpIAuRlKOvCXabtRW6cQf8usbmM6BE/TOPysCdIA==}
     engines: {bun: '>=1.0.0', deno: '>=1.30.0', node: '>=8.0.0'}
+
+  lucide-solid@1.20.0:
+    resolution: {integrity: sha512-27Hzrx2NJaOFNLS5HACEoK4C0W9IaAfh6Zl3EDpMpSJeTzL3rU7RzEzz/tDwzgf2JSKPihm8N8FKfLJJvbwA+A==}
+    peerDependencies:
+      solid-js: ^1.4.7
 
   magic-string@0.25.9:
     resolution: {integrity: sha512-RmF0AsMzgt25qzqqLc1+MbHmhdx0ojF2Fvs4XnOqz2ZOBXzzkEwc/dJQZCYHAn7v1jbVOjAZfK8msRn4BxO4VQ==}
@@ -12353,6 +12361,10 @@ snapshots:
       yallist: 3.1.1
 
   lru.min@1.1.4: {}
+
+  lucide-solid@1.20.0(solid-js@1.9.10):
+    dependencies:
+      solid-js: 1.9.10
 
   magic-string@0.25.9:
     dependencies:

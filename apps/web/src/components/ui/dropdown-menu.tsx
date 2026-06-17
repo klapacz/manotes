@@ -2,6 +2,7 @@ import type { ComponentProps, ValidComponent } from "solid-js";
 import { mergeProps, splitProps } from "solid-js";
 import { DropdownMenu as DropdownMenuPrimitive } from "@kobalte/core/dropdown-menu";
 import { createLink } from "@tanstack/solid-router";
+import { Check, ChevronRight, Circle } from "lucide-solid";
 
 import { cx } from "../../lib/cva";
 
@@ -82,16 +83,7 @@ export const DropdownMenuSubTrigger = <T extends ValidComponent = "div">(
       {...rest}
     >
       {props.children}
-      <svg xmlns="http://www.w3.org/2000/svg" class="ml-auto" viewBox="0 0 24 24">
-        <path
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="m9 18l6-6l-6-6"
-        />
-      </svg>
+      <ChevronRight class="ml-auto" />
     </DropdownMenuPrimitive.SubTrigger>
   );
 };
@@ -193,20 +185,8 @@ export const DropdownMenuCheckboxItem = <T extends ValidComponent = "div">(
       {...rest}
     >
       <span class="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
-        <DropdownMenuPrimitive.ItemIndicator
-          as="svg"
-          xmlns="http://www.w3.org/2000/svg"
-          class="size-4"
-          viewBox="0 0 24 24"
-        >
-          <path
-            fill="none"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M20 6L9 17l-5-5"
-          />
+        <DropdownMenuPrimitive.ItemIndicator>
+          <Check class="size-4" />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
       {props.children}
@@ -233,22 +213,8 @@ export const DropdownMenuRadioItem = <T extends ValidComponent = "div">(
       {...rest}
     >
       <span class="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
-        <DropdownMenuPrimitive.ItemIndicator
-          as="svg"
-          xmlns="http://www.w3.org/2000/svg"
-          class="size-2"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-            fill="currentColor"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-          />
+        <DropdownMenuPrimitive.ItemIndicator>
+          <Circle class="size-2 fill-current" />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
       {props.children}

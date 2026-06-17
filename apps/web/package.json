@@ -34,6 +34,7 @@
     "effect": "4.0.0-beta.74",
     "hono": "^4.12.9",
     "kysely": "^0.28.8",
+    "lucide-solid": "^1.20.0",
     "motion": "^12.40.0",
     "nanoid": "^5.1.6",
     "prosekit": "^0.16.3",

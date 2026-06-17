@@ -100,7 +100,7 @@ export function NoteActions(props: {
   // Stays out of the way until the note is hovered or focused, then fades in.
   // Keyboard shortcuts (o/b/d) work regardless of visibility.
   return (
-    <div class="flex items-center gap-1 text-xs text-fg-subtle opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 h-6 px-6 justify-end">
+    <div class="flex items-end gap-1 text-xs text-fg-subtle opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 h-6 px-6 justify-end">
       <div class="flex items-center gap-2">
         <Show when={props.dirty}>
           <span class="text-warning-fg-subtle">Dirty</span>
