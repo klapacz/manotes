@@ -66,7 +66,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
         db
           .select()
           .from(Tables.events)
-          .where(and(eq(Tables.events.type, "update"), isNull(Tables.events.commitSeq)))
+          .where(isNull(Tables.events.commitSeq))
           .orderBy(asc(Tables.events.localSeq))
           .limit(limit),
       );
@@ -177,7 +177,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
         db
           .select({ localSeq: Tables.events.localSeq })
           .from(Tables.events)
-          .where(and(eq(Tables.events.type, "update"), isNull(Tables.events.commitSeq)))
+          .where(isNull(Tables.events.commitSeq))
           .orderBy(asc(Tables.events.localSeq))
           .limit(1),
       );

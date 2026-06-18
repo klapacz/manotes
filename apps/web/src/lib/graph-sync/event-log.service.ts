@@ -104,7 +104,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
 
                     yield* eventRepo.create({
                       noteId: decrypted.noteId,
-                      type: "update",
+                      type: decrypted.type,
                       payload: decrypted.payload,
                       createdAt: event.createdAt,
                       id: event.id,
@@ -137,6 +137,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
             streamRef,
             createdAt: event.createdAt,
             noteId: event.noteId,
+            type: event.type,
             payload: event.payload,
           });
           const encodedEnvelope = yield* GraphSyncEncryptionSchema.encodeEnvelope(encryptedPayload);

@@ -56,12 +56,14 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
       streamRef,
       createdAt,
       noteId,
+      type,
       payload,
     }: {
       id: string;
       streamRef: Uint8Array<ArrayBufferLike>;
       createdAt: EncryptionSchema.CreatedAt;
       noteId: string;
+      type: EncryptionSchema.Body["type"];
       payload: Uint8Array<ArrayBufferLike>;
     }) {
       const authenticatedMetadata = yield* remapError(
@@ -77,6 +79,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
       const body = yield* remapError(
         EncryptionSchema.encodeBody({
           noteId,
+          type,
           payload,
         }),
         (cause) => new EventEncryptionError({ cause }),

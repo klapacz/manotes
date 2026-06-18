@@ -1,5 +1,6 @@
 import { Msgpack } from "effect/unstable/encoding";
 import { Schema } from "effect";
+import * as EventSchema from "../../event.schema";
 
 export const EnvelopeSchema = Schema.Struct({
   version: Schema.Literals([0]),
@@ -14,6 +15,7 @@ export const encodeEnvelope = Schema.encodeEffect(EnvelopeMsgPack);
 
 export const BodySchema = Schema.Struct({
   noteId: Schema.NonEmptyString,
+  type: EventSchema.Type,
   payload: Schema.Uint8Array,
 });
 export type Body = Schema.Schema.Type<typeof BodySchema>;
