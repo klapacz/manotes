@@ -16,6 +16,7 @@ import { Route as GraphRouteImport } from './routes/$graph'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GraphIndexRouteImport } from './routes/$graph.index'
 import { Route as GraphUnlockRouteImport } from './routes/$graph_.unlock'
+import { Route as GraphStudioRouteImport } from './routes/$graph.studio'
 
 const ImportRoute = ImportRouteImport.update({
   id: '/import',
@@ -52,6 +53,11 @@ const GraphUnlockRoute = GraphUnlockRouteImport.update({
   path: '/$graph/unlock',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GraphStudioRoute = GraphStudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
+  getParentRoute: () => GraphRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/create': typeof CreateRoute
   '/debug': typeof DebugRoute
   '/import': typeof ImportRoute
+  '/$graph/studio': typeof GraphStudioRoute
   '/$graph/unlock': typeof GraphUnlockRoute
   '/$graph/': typeof GraphIndexRoute
 }
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/create': typeof CreateRoute
   '/debug': typeof DebugRoute
   '/import': typeof ImportRoute
+  '/$graph/studio': typeof GraphStudioRoute
   '/$graph/unlock': typeof GraphUnlockRoute
   '/$graph': typeof GraphIndexRoute
 }
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/create': typeof CreateRoute
   '/debug': typeof DebugRoute
   '/import': typeof ImportRoute
+  '/$graph/studio': typeof GraphStudioRoute
   '/$graph_/unlock': typeof GraphUnlockRoute
   '/$graph/': typeof GraphIndexRoute
 }
@@ -88,10 +97,18 @@ export interface FileRouteTypes {
     | '/create'
     | '/debug'
     | '/import'
+    | '/$graph/studio'
     | '/$graph/unlock'
     | '/$graph/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/create' | '/debug' | '/import' | '/$graph/unlock' | '/$graph'
+  to:
+    | '/'
+    | '/create'
+    | '/debug'
+    | '/import'
+    | '/$graph/studio'
+    | '/$graph/unlock'
+    | '/$graph'
   id:
     | '__root__'
     | '/'
@@ -99,6 +116,7 @@ export interface FileRouteTypes {
     | '/create'
     | '/debug'
     | '/import'
+    | '/$graph/studio'
     | '/$graph_/unlock'
     | '/$graph/'
   fileRoutesById: FileRoutesById
@@ -163,14 +181,23 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof GraphUnlockRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$graph/studio': {
+      id: '/$graph/studio'
+      path: '/studio'
+      fullPath: '/$graph/studio'
+      preLoaderRoute: typeof GraphStudioRouteImport
+      parentRoute: typeof GraphRoute
+    }
   }
 }
 
 interface GraphRouteChildren {
+  GraphStudioRoute: typeof GraphStudioRoute
   GraphIndexRoute: typeof GraphIndexRoute
 }
 
 const GraphRouteChildren: GraphRouteChildren = {
+  GraphStudioRoute: GraphStudioRoute,
   GraphIndexRoute: GraphIndexRoute,
 }
 
