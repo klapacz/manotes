@@ -61,6 +61,20 @@ export function useCreateNote() {
 /** The keybinding that triggers note creation on a pane's focus node. */
 export const shortcut: Hotkey[][] = [["Mod+Enter"]];
 
+/** Builds a page payload: a note whose title materializes from a leading H1. */
+export function pagePayload(title: string): Uint8Array<ArrayBufferLike> {
+  const yDoc = prosemirrorJSONToYDoc(
+    NOTE_SCHEMA,
+    {
+      type: "doc",
+      content: [{ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: title }] }],
+    },
+    PROSEMIRROR_XML_FRAGMENT_KEY,
+  );
+
+  return Y.encodeStateAsUpdate(yDoc);
+}
+
 /** Seeds a new note's content from the stream pane's filters. */
 export function prefilledPayload(pane: PaneSchema.PaneStream): Uint8Array<ArrayBufferLike> {
   const content: Array<Record<string, unknown>> = [];

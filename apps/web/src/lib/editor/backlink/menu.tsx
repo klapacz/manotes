@@ -6,13 +6,14 @@ import {
   AutocompleteList,
   AutocompletePopover,
 } from "prosekit/solid/autocomplete";
-import { For, onCleanup, onMount } from "solid-js";
+import { For, Show, onCleanup, onMount } from "solid-js";
 import {
   commandEmptyClass,
   commandItemBaseClass,
   commandListClass,
   commandSurfaceClass,
 } from "../../../components/ui/command";
+import { NoteCreate } from "../../../components/note/note-create";
 import { NoteRepo, bindRt, createAtomState, createAtomStore, createSyncedAtom } from "../..";
 import { cx } from "../../cva";
 import { NoteFormat } from "../../note";
@@ -45,10 +46,17 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
   const editor = useEditor<AppExtension>();
   const onSelect = createBacklinkInsertion(editor);
 
-  const [, setRawQuery, rawQueryAtom] = createAtomState("");
+  const [query, setRawQuery, rawQueryAtom] = createAtomState("");
   const currentNoteIdAtom = createSyncedAtom(() => props.currentNoteId);
   const [isOpen, setOpen, openAtom] = createAtomState(false);
   useArrowKeyAliases(editor, isOpen);
+
+  const createNote = NoteCreate.useCreateNote();
+
+  const onCreatePage = (title: string) =>
+    createNote({ payload: NoteCreate.pagePayload(title) }, (note) =>
+      onSelect({ id: note.id, title: NoteFormat.label(note) }),
+    );
 
   const notes = createAtomStore(
     bindRt((rt) =>
@@ -96,6 +104,21 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
             </AutocompleteItem>
           )}
         </For>
+
+        {/* Keyed so the item is recreated on each query change: the prosekit
+            solid wrapper renders children via solid-js/h and does not track
+            dynamic text children reactively after first render. */}
+        <Show when={query().trim()} keyed>
+          {(title) => (
+            <AutocompleteItem
+              class={cx(commandItemBaseClass, "data-focused:bg-control-hover data-focused:text-fg")}
+              onSelect={() => onCreatePage(title)}
+              value={`create:${title}`}
+            >
+              Create page “{title}”
+            </AutocompleteItem>
+          )}
+        </Show>
       </AutocompleteList>
     </AutocompletePopover>
   );
@@ -191,7 +214,9 @@ function useArrowKeyAliases(editor: AppEditor, isOpen: () => boolean) {
       const aliased = key === "n" ? "ArrowDown" : key === "p" ? "ArrowUp" : null;
       if (!aliased) return;
       event.preventDefault();
-      dom.dispatchEvent(new KeyboardEvent("keydown", { key: aliased, bubbles: true, cancelable: true }));
+      dom.dispatchEvent(
+        new KeyboardEvent("keydown", { key: aliased, bubbles: true, cancelable: true }),
+      );
     };
     dom.addEventListener("keydown", handler, { capture: true });
     onCleanup(() => dom.removeEventListener("keydown", handler, { capture: true }));
