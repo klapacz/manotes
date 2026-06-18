@@ -107,12 +107,12 @@ export function PaneNote(props: ComponentProps<"section">) {
 
 function PaneNoteInner(props: { note: NoteSchema.Meta }) {
   return (
-    <div>
+    <Focus.Element class="overflow-y-auto outline-none group">
       <NoteDivider date={props.note.date} />
-      <Focus.Element as={NoteShell} class="overflow-y-auto outline-none group">
+      <NoteShell>
         <NoteActions note={props.note} sort="date" />
         <Editor noteId={props.note.id} style={{ "min-height": "30svh" }} />
-      </Focus.Element>
-    </div>
+      </NoteShell>
+    </Focus.Element>
   );
 }
