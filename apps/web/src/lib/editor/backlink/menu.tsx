@@ -6,9 +6,8 @@ import {
   AutocompleteList,
   AutocompletePopover,
 } from "prosekit/solid/autocomplete";
-import { For, Show } from "solid-js";
+import { For } from "solid-js";
 import {
-  CommandLabel,
   commandEmptyClass,
   commandItemBaseClass,
   commandListClass,
@@ -24,6 +23,7 @@ import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
 import { useAtom } from "@effect/atom-solid";
 
 const BACKLINK_REGEX = /\[\[([^\]\n]*)$/u;
+const TAB_REGEX = /\[@([^\]\n]*)$/u;
 
 type BacklinkNote = {
   id: string;
@@ -43,6 +43,7 @@ const CreateTabNote = bindRt((rt) =>
 
 export default function BacklinkMenu(props: { currentNoteId: string }) {
   const editor = useEditor<AppExtension>();
+  const onSelect = createBacklinkInsertion(editor);
 
   const [, setRawQuery, rawQueryAtom] = createAtomState("");
   const currentNoteIdAtom = createSyncedAtom(() => props.currentNoteId);
@@ -73,40 +74,96 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
     [] as BacklinkNote[],
   );
 
+  return (
+    <AutocompletePopover
+      regex={BACKLINK_REGEX}
+      class={cx(commandSurfaceClass, commandListClass, "block w-56 border p-1 shadow-md")}
+      onOpenChange={setOpen}
+      onQueryChange={makeQueryHandler(editor, BACKLINK_REGEX, setRawQuery)}
+    >
+      <AutocompleteList filter={() => true}>
+        <AutocompleteEmpty class={commandEmptyClass}>No matching notes</AutocompleteEmpty>
+
+        <For each={notes.value}>
+          {(note) => (
+            <AutocompleteItem
+              class={cx(commandItemBaseClass, "data-focused:bg-control-hover data-focused:text-fg")}
+              onSelect={() => onSelect(note)}
+              value={note.id}
+            >
+              {note.title}
+            </AutocompleteItem>
+          )}
+        </For>
+      </AutocompleteList>
+    </AutocompletePopover>
+  );
+}
+
+export function TabMenu() {
+  const editor = useEditor<AppExtension>();
+  const onSelect = createBacklinkInsertion(editor);
+
+  const [, setRawQuery, rawQueryAtom] = createAtomState("");
+  const [, setOpen, openAtom] = createAtomState(false);
+
   const tabs = createAtomStore(
     bindRt((rt) =>
-      rt.atom((get) =>
-        get(openAtom)
-          ? BrowserExtensionClient.watchTabs
-          : Stream.succeed([] as BrowserExtension.TabCandidate[]),
-      ),
+      rt.atom((get) => {
+        const query = get(rawQueryAtom);
+        if (!get(openAtom)) return Stream.succeed([] as BrowserExtension.TabCandidate[]);
+
+        return BrowserExtensionClient.watchTabs.pipe(Stream.map(filterTabs(query)));
+      }),
     ),
     [] as BrowserExtension.TabCandidate[],
   );
 
-  const handleQueryChange = (fallbackQuery: string) => {
-    try {
-      const view = editor().view;
-      const { $from } = view.state.selection;
-      const parentOffset = $from.parentOffset;
-      const textBeforeCursor = $from.parent.textBetween(
-        Math.max(0, parentOffset - 200),
-        parentOffset,
-      );
-      const match = BACKLINK_REGEX.exec(textBeforeCursor);
+  const [, createTabNote] = useAtom(CreateTabNote, { mode: "promise" });
 
-      setRawQuery((match?.[1] ?? fallbackQuery).trim());
-    } catch {
-      setRawQuery(fallbackQuery.trim());
-    }
+  const onTabSelect = async (tab: BrowserExtension.TabCandidate) => {
+    try {
+      const note = await createTabNote(tab);
+      onSelect({ id: note.id, title: NoteFormat.label(note) });
+    } catch {}
   };
 
+  return (
+    <AutocompletePopover
+      regex={TAB_REGEX}
+      class={cx(commandSurfaceClass, commandListClass, "block w-56 border p-1 shadow-md")}
+      onOpenChange={setOpen}
+      onQueryChange={makeQueryHandler(editor, TAB_REGEX, setRawQuery)}
+    >
+      <AutocompleteList filter={() => true}>
+        <AutocompleteEmpty class={commandEmptyClass}>No matching tabs</AutocompleteEmpty>
+
+        <For each={tabs.value}>
+          {(tab) => (
+            <AutocompleteItem
+              class={cx(commandItemBaseClass, "data-focused:bg-control-hover data-focused:text-fg")}
+              onSelect={() => onTabSelect(tab)}
+              value={tab.id.toString()}
+            >
+              <div class="min-w-0">
+                <div class="truncate">{tab.title}</div>
+                <div class="truncate text-xs text-fg-subtle">{tab.url}</div>
+              </div>
+            </AutocompleteItem>
+          )}
+        </For>
+      </AutocompleteList>
+    </AutocompletePopover>
+  );
+}
+
+type AppEditor = ReturnType<typeof useEditor<AppExtension>>;
+
+function createBacklinkInsertion(editor: AppEditor) {
   const insertBacklink = (note: BacklinkNote) => {
     editor().view.focus();
 
-    const inserted = editor().commands.insertBacklink({
-      id: note.id,
-    });
+    const inserted = editor().commands.insertBacklink({ id: note.id });
 
     if (!inserted) {
       editor().commands.insertText({ text: `[[${note.id}]] ` });
@@ -116,76 +173,36 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
     editor().commands.insertText({ text: " " });
   };
 
-  const onSelect = (note: BacklinkNote) => {
-    // Autocomplete emits valueChange and also runs its internal submit handler.
-    // Deferring insertion avoids the submit deletion step removing the node.
-    queueMicrotask(() => {
-      insertBacklink(note);
-    });
-  };
-
-  const [, createTabNote] = useAtom(CreateTabNote, { mode: "promise" });
-
-  const onTabSelect = async (tab: BrowserExtension.TabCandidate) => {
-    try {
-      const note = await createTabNote(tab);
-      onSelect({
-        id: note.id,
-        title: NoteFormat.label(note),
-      });
-    } catch {}
-  };
-
-  return (
-    <AutocompletePopover
-      regex={BACKLINK_REGEX}
-      class={cx(commandSurfaceClass, commandListClass, "block w-56 border p-1 shadow-md")}
-      onOpenChange={setOpen}
-      onQueryChange={handleQueryChange}
-    >
-      <AutocompleteList filter={() => true}>
-        <AutocompleteEmpty class={commandEmptyClass}>No matching notes or tabs</AutocompleteEmpty>
-
-        <Show when={notes.value.length > 0}>
-          <CommandLabel>Notes</CommandLabel>
-
-          <For each={notes.value}>
-            {(note) => (
-              <AutocompleteItem
-                class={cx(
-                  commandItemBaseClass,
-                  "data-focused:bg-control-hover data-focused:text-fg",
-                )}
-                onSelect={() => onSelect(note)}
-                value={note.id}
-              >
-                {note.title}
-              </AutocompleteItem>
-            )}
-          </For>
-        </Show>
-
-        <Show when={tabs.value.length > 0}>
-          <CommandLabel>Tabs</CommandLabel>
-          <For each={tabs.value}>
-            {(tab) => (
-              <AutocompleteItem
-                class={cx(
-                  commandItemBaseClass,
-                  "data-focused:bg-control-hover data-focused:text-fg",
-                )}
-                onSelect={() => onTabSelect(tab)}
-                value={tab.id.toString()}
-              >
-                <div class="min-w-0">
-                  <div class="truncate">{tab.title}</div>
-                  <div class="truncate text-xs text-fg-subtle">{tab.url}</div>
-                </div>
-              </AutocompleteItem>
-            )}
-          </For>
-        </Show>
-      </AutocompleteList>
-    </AutocompletePopover>
-  );
+  // Autocomplete emits valueChange and also runs its internal submit handler.
+  // Deferring insertion avoids the submit deletion step removing the node.
+  return (note: BacklinkNote) => queueMicrotask(() => insertBacklink(note));
 }
+
+function makeQueryHandler(editor: AppEditor, regex: RegExp, setRawQuery: (query: string) => void) {
+  return (fallbackQuery: string) => {
+    try {
+      const view = editor().view;
+      const { $from } = view.state.selection;
+      const parentOffset = $from.parentOffset;
+      const textBeforeCursor = $from.parent.textBetween(
+        Math.max(0, parentOffset - 200),
+        parentOffset,
+      );
+      const match = regex.exec(textBeforeCursor);
+
+      setRawQuery((match?.[1] ?? fallbackQuery).trim());
+    } catch {
+      setRawQuery(fallbackQuery.trim());
+    }
+  };
+}
+
+const filterTabs =
+  (query: string) =>
+  (tabs: readonly BrowserExtension.TabCandidate[]): BrowserExtension.TabCandidate[] => {
+    const needle = query.trim().toLowerCase();
+    if (needle === "") return [...tabs];
+    return tabs.filter(
+      (tab) => tab.title.toLowerCase().includes(needle) || tab.url.toLowerCase().includes(needle),
+    );
+  };

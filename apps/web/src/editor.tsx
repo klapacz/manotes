@@ -25,7 +25,7 @@ import { EditorSyncService, MatchTag, bindRt, createSyncedAtom } from "./lib";
 import { getProsemirrorXmlFragment } from "./lib/prosemirror/yjs";
 import { Cause, Data, Deferred, Effect, SubscriptionRef } from "effect";
 import { AsyncResult, type Atom } from "effect/unstable/reactivity";
-import BacklinkMenu from "./lib/editor/backlink/menu";
+import BacklinkMenu, { TabMenu } from "./lib/editor/backlink/menu";
 import { useAtomValue } from "@effect/atom-solid";
 import { Focus } from "./components/note/focus";
 
@@ -211,6 +211,7 @@ export default function Editor(props: Props): JSX.Element {
             }}
           />
           <BacklinkMenu currentNoteId={props.noteId} />
+          <TabMenu />
         </ProseKit>
       )}
     </Show>
