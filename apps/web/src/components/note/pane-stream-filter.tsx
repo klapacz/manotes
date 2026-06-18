@@ -46,21 +46,21 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
 
   fnode.registerShortcuts([
     {
-      key: "T",
+      key: [["T"]],
       handler: () => {
         cycleType();
         return true;
       },
     },
     {
-      key: "S",
+      key: [["S"]],
       handler: () => {
         cycleSort();
         return true;
       },
     },
     {
-      key: "R",
+      key: [["R"]],
       enabled: () => props.dirty,
       handler: () => {
         props.onRefresh();
@@ -77,7 +77,14 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
       <Show when={pane().filter.backlinksTo}>
         {(targetId) => (
           <FilterChipButton label="Backlinks to">
-            <BacklinksFilterTarget targetId={targetId()} />
+            <NotePreviewTarget noteId={targetId()} />
+          </FilterChipButton>
+        )}
+      </Show>
+      <Show when={pane().filter.linksFrom}>
+        {(sourceId) => (
+          <FilterChipButton label="Links from">
+            <NotePreviewTarget noteId={sourceId()} />
           </FilterChipButton>
         )}
       </Show>
@@ -124,8 +131,8 @@ function FilterChipButton(props: {
   );
 }
 
-function BacklinksFilterTarget(props: { targetId: string }) {
-  const targetIdAtom = createSyncedAtom(() => props.targetId);
+function NotePreviewTarget(props: { noteId: string }) {
+  const targetIdAtom = createSyncedAtom(() => props.noteId);
   const target = createAtomStore(
     bindRt((rt) =>
       rt.atom((get) =>

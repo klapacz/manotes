@@ -4,6 +4,7 @@ export {
   ChevronRight as ChevronRightIcon,
   ChevronsUpDown as ChevronsUpDownIcon,
   Download as DownloadIcon,
+  ArrowUpRight as ArrowUpRightIcon,
   Expand as ArrowsOutIcon,
   GitPullRequestArrow as RebaseIcon,
   Link as LinkIcon,

@@ -8,6 +8,7 @@ const StreamFilterType = Schema.Literals(["notes", "pages"]);
 const StreamFilter = Schema.Struct({
   type: StreamFilterType.pipe(Schema.withDecodingDefault(Effect.sync(() => "notes" as const))),
   backlinksTo: Schema.optional(Schema.String),
+  linksFrom: Schema.optional(Schema.String),
   date: Schema.optional(TemporalSchema.PlainDateString),
 });
 
@@ -39,6 +40,7 @@ export function paneToQuery(pane: PaneStream): NoteRepo.StreamListQuery {
     type: pane.filter.type,
     date: pane.filter.date,
     backlinksTo: pane.filter.backlinksTo,
+    linksFrom: pane.filter.linksFrom,
     sort: pane.sort,
   };
 }

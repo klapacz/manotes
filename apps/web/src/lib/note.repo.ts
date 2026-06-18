@@ -135,19 +135,30 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
             ? [desc(Tables.notes.date), desc(Tables.notes.createdAt)]
             : [desc(Tables.notes.updatedAt)];
 
-        if (query.backlinksTo === undefined) {
+        // Incoming backlinks: notes whose links target the given note.
+        if (query.backlinksTo !== undefined) {
           return db
             .select(streamColumns)
             .from(Tables.notes)
-            .where(and(...conditions))
+            .innerJoin(Tables.backlinks, eq(Tables.backlinks.sourceId, Tables.notes.id))
+            .where(and(...conditions, eq(Tables.backlinks.targetId, query.backlinksTo)))
+            .orderBy(...orderBy);
+        }
+
+        // Outgoing links: notes the given note links to.
+        if (query.linksFrom !== undefined) {
+          return db
+            .select(streamColumns)
+            .from(Tables.notes)
+            .innerJoin(Tables.backlinks, eq(Tables.backlinks.targetId, Tables.notes.id))
+            .where(and(...conditions, eq(Tables.backlinks.sourceId, query.linksFrom)))
             .orderBy(...orderBy);
         }
 
         return db
           .select(streamColumns)
           .from(Tables.notes)
-          .innerJoin(Tables.backlinks, eq(Tables.backlinks.sourceId, Tables.notes.id))
-          .where(and(...conditions, eq(Tables.backlinks.targetId, query.backlinksTo)))
+          .where(and(...conditions))
           .orderBy(...orderBy);
       });
 
@@ -252,6 +263,7 @@ export type StreamListQuery = {
   readonly type?: "notes" | "pages";
   readonly date?: string;
   readonly backlinksTo?: string;
+  readonly linksFrom?: string;
   readonly sort: "date" | "updated";
 };
 

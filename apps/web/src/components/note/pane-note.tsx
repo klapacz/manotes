@@ -62,7 +62,7 @@ export function PaneNote(props: ComponentProps<"section">) {
 
   fnode.registerShortcuts([
     {
-      key: "Enter",
+      key: [["Enter"]],
       handler: () => {
         fnode.focusNode(fid.editor(pane().id));
         return true;

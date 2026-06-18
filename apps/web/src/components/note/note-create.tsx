@@ -59,7 +59,7 @@ export function useCreateNote() {
 }
 
 /** The keybinding that triggers note creation on a pane's focus node. */
-export const shortcut: Hotkey = "Mod+Enter";
+export const shortcut: Hotkey[][] = [["Mod+Enter"]];
 
 /** Seeds a new note's content from the stream pane's filters. */
 export function prefilledPayload(pane: PaneSchema.PaneStream): Uint8Array<ArrayBufferLike> {

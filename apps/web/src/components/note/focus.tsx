@@ -4,7 +4,6 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  getOwner,
   onCleanup,
   useContext,
   type Accessor,
@@ -16,7 +15,7 @@ import {
 } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { createEventListener } from "@solid-primitives/event-listener";
-import { matchesKeyboardEvent, type Hotkey } from "@tanstack/hotkeys";
+import { createSequenceMatcher, isModifierKey, type Hotkey } from "@tanstack/hotkeys";
 import { Data, Equal, MutableHashMap as MHS, MutableHashSet, Option } from "effect";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import type { Setter } from "solid-js";
@@ -51,14 +50,20 @@ class EditorFocusId extends Data.TaggedClass("EditorFocusId")<{
 
 export type ShortcutHandler = (event: KeyboardEvent) => boolean | undefined | void;
 
-export type ShortcutBinding = {
-  readonly key: Hotkey | ReadonlyArray<Hotkey>;
+export type ShortcutBindingInput = {
+  readonly key: ReadonlyArray<ReadonlyArray<Hotkey>>;
   readonly enabled?: () => boolean;
   readonly handler: ShortcutHandler;
   readonly preventDefault?: boolean;
   readonly stopPropagation?: boolean;
   readonly allowRepeat?: boolean;
 };
+
+type SequenceMatcher = ReturnType<typeof createSequenceMatcher>;
+
+interface ShortcutBinding extends ShortcutBindingInput {
+  readonly matchers: ReadonlyArray<SequenceMatcher>;
+}
 
 export type KeybindingHandler = (event: KeyboardEvent) => boolean | undefined;
 
@@ -219,7 +224,7 @@ export interface Node extends ContextValue {
   focused: () => boolean;
   focusWithin: (id?: FocusId) => boolean;
   focusSelf: () => void;
-  registerShortcuts: (shortcuts: ReadonlyArray<ShortcutBinding>) => () => void;
+  registerShortcuts: (shortcuts: ReadonlyArray<ShortcutBindingInput>) => void;
   element: Accessor<HTMLElement | undefined>;
   setElement: Setter<HTMLElement | undefined>;
 }
@@ -230,8 +235,6 @@ export function createNode(registration: (ctx: ContextValue) => NodeAutoRegistra
 
   const resolved = createMemo(() => registration(ctx));
   const [element, setElement] = createSignal<HTMLElement>();
-
-  const shortcutSets = new Set<ReadonlyArray<ShortcutBinding>>();
 
   const id = () => resolved().id;
 
@@ -247,17 +250,35 @@ export function createNode(registration: (ctx: ContextValue) => NodeAutoRegistra
 
   const focusSelf = () => ctx.focusNode(id());
 
-  const registerShortcuts = (shortcuts: ReadonlyArray<ShortcutBinding>) => {
+  const shortcutSets = new Set<ReadonlyArray<ShortcutBinding>>();
+
+  const registerShortcuts = (inputs: ReadonlyArray<ShortcutBindingInput>) => {
+    const shortcuts = inputs.map(
+      (input): ShortcutBinding => ({
+        ...input,
+        matchers: input.key.map((steps) => createSequenceMatcher([...steps])),
+      }),
+    );
     shortcutSets.add(shortcuts);
-    const cleanup = () => shortcutSets.delete(shortcuts);
-    if (getOwner()) onCleanup(cleanup);
-    return cleanup;
+    onCleanup(() => shortcutSets.delete(shortcuts));
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
+    // Modifier-only events neither advance nor reset a sequence, so chained
+    // modifier chords (e.g. "Shift+R" then "Shift+T") keep working. The matcher
+    // alone would reset on a lone modifier, so we filter those here.
+    if (isModifierKey(event.key)) return false;
+
     for (const shortcuts of shortcutSets) {
       for (const shortcut of shortcuts) {
-        if (dispatchShortcut(shortcut, event)) return true;
+        if (!shortcut.allowRepeat && event.repeat) continue;
+        if (shortcut.enabled && !shortcut.enabled()) continue;
+
+        for (const matcher of shortcut.matchers) {
+          if (matcher.match(event)) {
+            if (fireShortcut(shortcut, event)) return true;
+          }
+        }
       }
     }
 
@@ -343,11 +364,7 @@ export function useId() {
   };
 }
 
-function dispatchShortcut(shortcut: ShortcutBinding, event: KeyboardEvent): boolean {
-  if (!shortcut.allowRepeat && event.repeat) return false;
-  if (shortcut.enabled && !shortcut.enabled()) return false;
-  if (!matchesShortcut(shortcut.key, event)) return false;
-
+function fireShortcut(shortcut: ShortcutBindingInput, event: KeyboardEvent): boolean {
   const handled = shortcut.handler(event) === true;
   if (!handled) return false;
 
@@ -355,11 +372,6 @@ function dispatchShortcut(shortcut: ShortcutBinding, event: KeyboardEvent): bool
   if (shortcut.stopPropagation) event.stopPropagation();
 
   return true;
-}
-
-function matchesShortcut(key: Hotkey | ReadonlyArray<Hotkey>, event: KeyboardEvent): boolean {
-  const keys = Array.isArray(key) ? key : [key];
-  return keys.some((key) => matchesKeyboardEvent(event, key as Hotkey));
 }
 
 function isInteractive(target: EventTarget | null): boolean {
@@ -407,7 +419,7 @@ function stackFromAncestry(ancestry: Array<NodeRegistration>): Array<FocusId> {
   return ancestry.map((node) => node.id).reverse();
 }
 
-function DebugFocusStack(): JSX.Element {
+export function DebugFocusStack(): JSX.Element {
   const ctx = use();
   const stack = createMemo(() => ctx.focusedStack());
 

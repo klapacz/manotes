@@ -7,7 +7,7 @@ import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneMake } from "../../lib/note/pane.make";
 import { PaneSchema } from "../../lib/note/pane.schema";
 import { PaneScroll } from "../../lib/note/pane.scroll";
-import { ArrowsOutIcon, LinkIcon, PlusIcon, RebaseIcon, XIcon } from "../icons";
+import { ArrowsOutIcon, ArrowUpRightIcon, LinkIcon, PlusIcon, RebaseIcon, XIcon } from "../icons";
 import { Button } from "../ui/button";
 import { cx } from "../../lib/cva";
 import { DatePicker } from "./date-picker";
@@ -35,14 +35,14 @@ export function PaneActions(props: { onCreate?: () => void }) {
 
   fnode.registerShortcuts([
     {
-      key: "X",
+      key: [["X"]],
       handler: () => {
         closePane();
         return true;
       },
     },
     {
-      key: "F",
+      key: [["F"]],
       enabled: canFocus,
       handler: () => {
         focusPane();
@@ -104,21 +104,28 @@ export function NoteActions(props: {
 
   fnode.registerShortcuts([
     {
-      key: "O",
-      handler: () => {
-        openOnly();
-        return true;
-      },
-    },
-    {
-      key: "B",
+      key: [["B", "I"]],
       handler: () => {
         openNext(PaneMake.backlink(props.note.id));
         return true;
       },
     },
     {
-      key: "D",
+      key: [["B", "O"]],
+      handler: () => {
+        openNext(PaneMake.outgoing(props.note.id));
+        return true;
+      },
+    },
+    {
+      key: [["O"]],
+      handler: () => {
+        openOnly();
+        return true;
+      },
+    },
+    {
+      key: [["D"]],
       handler: () => {
         openNext(PaneMake.date(props.note.date));
         return true;
@@ -127,7 +134,7 @@ export function NoteActions(props: {
   ]);
 
   // Stays out of the way until the note is hovered or focused, then fades in.
-  // Keyboard shortcuts (o/b/d) work regardless of visibility.
+  // Keyboard shortcuts (o, b-i/b-o, d) work regardless of visibility.
   return (
     <div class="flex items-end gap-1 text-xs text-fg-subtle opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 h-6 px-6 justify-end">
       <div class="flex items-center gap-2">
@@ -142,10 +149,16 @@ export function NoteActions(props: {
         <ArrowsOutIcon class="size-3.5" />
       </NoteActionButton>
       <NoteActionButton
-        label="Backlinks"
+        label="Incoming backlinks (b i)"
         onClick={() => openNext(PaneMake.backlink(props.note.id))}
       >
         <LinkIcon class="size-3.5" />
+      </NoteActionButton>
+      <NoteActionButton
+        label="Outgoing links (b o)"
+        onClick={() => openNext(PaneMake.outgoing(props.note.id))}
+      >
+        <ArrowUpRightIcon class="size-3.5" />
       </NoteActionButton>
       <DatePicker noteId={props.note.id} date={props.note.date} />
       <Show when={props.note.date !== props.groupKey}>

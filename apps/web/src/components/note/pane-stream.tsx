@@ -142,12 +142,12 @@ export function PaneStream(props: ComponentProps<"section">) {
 
   fnode.registerShortcuts([
     {
-      key: ["J", "ArrowDown"],
+      key: [["J"], ["ArrowDown"]],
       allowRepeat: true,
       handler: () => move(1),
     },
     {
-      key: ["K", "ArrowUp"],
+      key: [["K"], ["ArrowUp"]],
       allowRepeat: true,
       handler: () => move(-1),
     },

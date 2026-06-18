@@ -190,12 +190,12 @@ export function Root(props: Props): JSX.Element {
 
   fnode.registerShortcuts([
     {
-      key: ["L", "ArrowRight"],
+      key: [["L"], ["ArrowRight"]],
       allowRepeat: true,
       handler: () => move(fnode, 1),
     },
     {
-      key: ["H", "ArrowLeft"],
+      key: [["H"], ["ArrowLeft"]],
       allowRepeat: true,
       handler: () => move(fnode, -1),
     },

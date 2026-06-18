@@ -79,7 +79,7 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem; onRefresh: () =
       },
     },
     {
-      key: "Enter",
+      key: [["Enter"]],
       handler: () => {
         fnode.focusNode(fid.editor(props.row.note.id));
         return true;
