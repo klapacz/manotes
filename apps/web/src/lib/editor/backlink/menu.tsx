@@ -6,7 +6,7 @@ import {
   AutocompleteList,
   AutocompletePopover,
 } from "prosekit/solid/autocomplete";
-import { For } from "solid-js";
+import { For, onCleanup, onMount } from "solid-js";
 import {
   commandEmptyClass,
   commandItemBaseClass,
@@ -47,7 +47,8 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
 
   const [, setRawQuery, rawQueryAtom] = createAtomState("");
   const currentNoteIdAtom = createSyncedAtom(() => props.currentNoteId);
-  const [, setOpen, openAtom] = createAtomState(false);
+  const [isOpen, setOpen, openAtom] = createAtomState(false);
+  useArrowKeyAliases(editor, isOpen);
 
   const notes = createAtomStore(
     bindRt((rt) =>
@@ -105,7 +106,8 @@ export function TabMenu() {
   const onSelect = createBacklinkInsertion(editor);
 
   const [, setRawQuery, rawQueryAtom] = createAtomState("");
-  const [, setOpen, openAtom] = createAtomState(false);
+  const [isOpen, setOpen, openAtom] = createAtomState(false);
+  useArrowKeyAliases(editor, isOpen);
 
   const tabs = createAtomStore(
     bindRt((rt) =>
@@ -176,6 +178,24 @@ function createBacklinkInsertion(editor: AppEditor) {
   // Autocomplete emits valueChange and also runs its internal submit handler.
   // Deferring insertion avoids the submit deletion step removing the node.
   return (note: BacklinkNote) => queueMicrotask(() => insertBacklink(note));
+}
+
+// The listbox navigates on ArrowDown/ArrowUp keydown events forwarded through
+// ProseMirror. Alias Ctrl-N / Ctrl-P to those keys while the popover is open.
+function useArrowKeyAliases(editor: AppEditor, isOpen: () => boolean) {
+  onMount(() => {
+    const dom = editor().view.dom;
+    const handler = (event: KeyboardEvent) => {
+      if (!isOpen() || !event.ctrlKey || event.metaKey || event.altKey) return;
+      const key = event.key.toLowerCase();
+      const aliased = key === "n" ? "ArrowDown" : key === "p" ? "ArrowUp" : null;
+      if (!aliased) return;
+      event.preventDefault();
+      dom.dispatchEvent(new KeyboardEvent("keydown", { key: aliased, bubbles: true, cancelable: true }));
+    };
+    dom.addEventListener("keydown", handler, { capture: true });
+    onCleanup(() => dom.removeEventListener("keydown", handler, { capture: true }));
+  });
 }
 
 function makeQueryHandler(editor: AppEditor, regex: RegExp, setRawQuery: (query: string) => void) {
