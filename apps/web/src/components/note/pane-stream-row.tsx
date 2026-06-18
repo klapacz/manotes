@@ -14,13 +14,11 @@ import { Focus } from "./focus";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { NoteStream } from "../../lib/note/stream";
 import { DOMScroll } from "../../lib/dom-scroll";
+import { NoteCreate } from "./note-create";
 import { NoteActions, NoteDivider, NoteShell } from "./shared";
 
-export function PaneStreamRow(props: { item: NoteStream.ListItem }) {
-  return <NoteRow row={props.item} />;
-}
-
-function NoteRow(props: { row: NoteStream.ListItem }) {
+export function PaneStreamRow(props: { row: NoteStream.ListItem; onRefresh: () => void }) {
+  const createNote = NoteCreate.useCreateNote();
   // The stream stops refreshing a note once it leaves the query (it is only
   // retained); the shared per-note cache keeps its metadata live regardless.
   const noteIdAtom = createSyncedAtom(() => props.row.note.id);
@@ -67,6 +65,19 @@ function NoteRow(props: { row: NoteStream.ListItem }) {
   }));
 
   fnode.registerShortcuts([
+    {
+      key: NoteCreate.shortcut,
+      handler: () => {
+        createNote(
+          { date: props.row.note.date, pool, payload: NoteCreate.prefilledPayload(pane()) },
+          (note) => {
+            props.onRefresh();
+            fnode.focusWhenAvailable(fid.editor(note.id));
+          },
+        );
+        return true;
+      },
+    },
     {
       key: "Enter",
       handler: () => {

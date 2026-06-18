@@ -7,7 +7,7 @@ import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneMake } from "../../lib/note/pane.make";
 import { PaneSchema } from "../../lib/note/pane.schema";
 import { PaneScroll } from "../../lib/note/pane.scroll";
-import { ArrowsOutIcon, LinkIcon, RebaseIcon, XIcon } from "../icons";
+import { ArrowsOutIcon, LinkIcon, PlusIcon, RebaseIcon, XIcon } from "../icons";
 import { Button } from "../ui/button";
 import { cx } from "../../lib/cva";
 import { DatePicker } from "./date-picker";
@@ -25,7 +25,7 @@ export function PaneShell(props: ComponentProps<"section">) {
   );
 }
 
-export function PaneActions() {
+export function PaneActions(props: { onCreate?: () => void }) {
   const ctx = PaneCtx.use();
   const navigate = route.useNavigate();
   const fnode = Focus.useNode();
@@ -53,6 +53,20 @@ export function PaneActions() {
 
   return (
     <div class="flex gap-1">
+      <Show when={props.onCreate}>
+        {(onCreate) => (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            rounded="full"
+            title="Create note (Ctrl+Enter)"
+            onClick={() => onCreate()()}
+          >
+            <PlusIcon />
+          </Button>
+        )}
+      </Show>
       <Show when={canFocus()}>
         <Button type="button" variant="ghost" size="icon-xs" rounded="full" onClick={focusPane}>
           <RebaseIcon />

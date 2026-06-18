@@ -20,6 +20,7 @@ import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneSchema } from "../../lib/note/pane.schema";
 import { NoteStream } from "../../lib/note/stream";
 import { EditorPool } from "./editor-pool";
+import { NoteCreate } from "./note-create";
 import { PaneStreamFilter } from "./pane-stream-filter";
 import { Focus } from "./focus";
 import { PaneStreamRow } from "./pane-stream-row";
@@ -73,6 +74,22 @@ export function PaneStream(props: ComponentProps<"section">) {
   const state = createAtomResultStore(stateAtom);
 
   const refresh = () => setRefreshToken((token) => token + 1);
+
+  const createNote = NoteCreate.useCreateNote();
+  const handleCreate = () => {
+    if (state._tag !== "Success") return;
+    createNote(
+      {
+        date: pane().filter.date,
+        pool: state.value.pool,
+        payload: NoteCreate.prefilledPayload(pane()),
+      },
+      (note) => {
+        refresh();
+        fnode.focusWhenAvailable(fid.editor(note.id));
+      },
+    );
+  };
 
   const fid = Focus.useId();
   const listOrder = createMemo(() => {
@@ -134,6 +151,14 @@ export function PaneStream(props: ComponentProps<"section">) {
       allowRepeat: true,
       handler: () => move(-1),
     },
+    {
+      key: NoteCreate.shortcut,
+      enabled: () => state._tag === "Success",
+      handler: () => {
+        handleCreate();
+        return true;
+      },
+    },
   ]);
 
   // TODO: get from stack not single id
@@ -151,7 +176,7 @@ export function PaneStream(props: ComponentProps<"section">) {
             dirty={state._tag === "Success" ? state.value.dirty : false}
             onRefresh={refresh}
           />
-          <PaneActions />
+          <PaneActions onCreate={state._tag === "Success" ? handleCreate : undefined} />
         </div>
         <MatchTag
           when={state}
@@ -185,7 +210,7 @@ export function PaneStream(props: ComponentProps<"section">) {
                           bufferSize={1200}
                           style={{ height: "100%" }}
                         >
-                          {(item) => <PaneStreamRow item={item} />}
+                          {(item) => <PaneStreamRow row={item} onRefresh={refresh} />}
                         </VList>
                       </div>
                     );

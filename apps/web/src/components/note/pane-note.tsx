@@ -1,3 +1,4 @@
+import { getRouteApi } from "@tanstack/solid-router";
 import { Option, Stream } from "effect";
 import { Show, type ComponentProps } from "solid-js";
 import Editor from "../../editor";
@@ -9,6 +10,8 @@ import {
   createAtomResultStore,
   createSyncedAtom,
 } from "../../lib";
+import * as NoteLink from "../../lib/note/link";
+import { NoteCreate } from "./note-create";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import {
   NoteActions,
@@ -21,7 +24,13 @@ import {
 import { Focus } from "./focus";
 import { DOMScroll } from "../../lib/dom-scroll";
 
+const route = getRouteApi("/$graph/");
+
 export function PaneNote(props: ComponentProps<"section">) {
+  const navigate = route.useNavigate();
+  const createNote = NoteCreate.useCreateNote();
+  const handleCreate = () =>
+    createNote({}, (note) => void navigate(NoteLink.getOptions({ id: note.id })));
   const pane = PaneCtx.useNote();
   const noteIdAtom = createSyncedAtom(() => pane().id);
   const notesAtom = bindRt((rt) =>
@@ -59,13 +68,20 @@ export function PaneNote(props: ComponentProps<"section">) {
         return true;
       },
     },
+    {
+      key: NoteCreate.shortcut,
+      handler: () => {
+        handleCreate();
+        return true;
+      },
+    },
   ]);
 
   return (
     <Focus.NodeProvider node={fnode}>
       <PaneShell {...props}>
         <div class="flex justify-end">
-          <PaneActions />
+          <PaneActions onCreate={handleCreate} />
         </div>
         <MatchTag
           when={note}
