@@ -195,7 +195,7 @@ export function Provider(props: ParentProps): JSX.Element {
   return (
     <Context.Provider value={value}>
       <RootNodeProvider>{props.children}</RootNodeProvider>
-      <DebugFocusStack />
+      {/*<DebugFocusStack />*/}
     </Context.Provider>
   );
 }
