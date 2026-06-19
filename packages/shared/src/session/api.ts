@@ -10,6 +10,12 @@ export const Session = Schema.Struct({
 
 export type Session = typeof Session.Type;
 
+export const ApiKey = Schema.Struct({
+  apiKey: Schema.NonEmptyString,
+});
+
+export type ApiKey = typeof ApiKey.Type;
+
 export const WaitlistRequest = Schema.Struct({
   email: EmailSchema.Email,
 });
@@ -45,6 +51,12 @@ export const SessionApi = HttpApi.make("SessionApi").add(
         // Intentional duplicate of SessionAuth.Middleware's error:
         // runtime merges middleware errors, but AtomHttpApi.query currently types
         // AsyncResult errors from endpoint-local _Error["Type"] only.
+        error: SessionAuth.AuthMiddlewareError,
+      }).middleware(SessionAuth.Middleware),
+    )
+    .add(
+      HttpApiEndpoint.post("createApiKey", "/api/auth/api-key", {
+        success: ApiKey,
         error: SessionAuth.AuthMiddlewareError,
       }).middleware(SessionAuth.Middleware),
     )

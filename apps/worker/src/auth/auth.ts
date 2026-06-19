@@ -8,10 +8,20 @@ import { SessionKvService } from "./session-kv.ts";
 import AccountsDurableObject from "../accounts/durable-object.ts";
 
 const SessionCookie = Schema.Struct({ session: Schema.NonEmptyString });
+const AuthorizationHeader = Schema.Struct({ authorization: Schema.NonEmptyString });
 
 const readSessionCookie = HttpServerRequest.schemaCookies(SessionCookie).pipe(
   Effect.map((_) => _.session),
 );
+
+const readBearerToken = HttpServerRequest.schemaHeaders(AuthorizationHeader).pipe(
+  Effect.flatMap(({ authorization }) => {
+    const match = /^Bearer\s+(.+)$/i.exec(authorization);
+    return match?.[1] ? Effect.succeed(match[1]) : Effect.fail("Missing bearer token");
+  }),
+);
+
+const readSessionToken = readSessionCookie.pipe(Effect.catch(() => readBearerToken));
 
 export class AuthService extends Context.Service<AuthService>()("Auth.AuthService", {
   make: Effect.gen(function* () {
@@ -75,9 +85,9 @@ export class AuthService extends Context.Service<AuthService>()("Auth.AuthServic
     });
 
     const resolve = Effect.fn("Auth.resolve")(function* () {
-      const token = yield* readSessionCookie.pipe(
+      const token = yield* readSessionToken.pipe(
         Effect.mapError(
-          (cause) => new Errors.UnauthorizedError({ reason: "Missing session cookie", cause }),
+          (cause) => new Errors.UnauthorizedError({ reason: "Missing session token", cause }),
         ),
       );
       return yield* session.resolve(token).pipe(

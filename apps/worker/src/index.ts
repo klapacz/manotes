@@ -9,9 +9,15 @@ import { SessionKvService } from "./auth/session-kv.ts";
 import * as Routes from "./routes.ts";
 import * as Alchemy from "alchemy";
 
+const layerCloudflareBindings = Layer.mergeAll(
+  Cloudflare.KVNamespaceBindingLive,
+  Cloudflare.SendEmailBindingLive,
+);
+
 const layerAppServices = AuthService.layer.pipe(
-  Layer.provide(Layer.mergeAll(EmailService.layer, OtpService.layer, SessionKvService.layer)),
-  Layer.provide(Layer.mergeAll(Cloudflare.KVNamespaceBindingLive, Cloudflare.SendEmailBindingLive)),
+  Layer.provide(Layer.mergeAll(EmailService.layer, OtpService.layer)),
+  Layer.provideMerge(SessionKvService.layer),
+  Layer.provide(layerCloudflareBindings),
 );
 
 const corsMiddleware = HttpMiddleware.cors({

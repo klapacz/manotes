@@ -4,6 +4,7 @@ import * as SessionApi from "@manotes/shared/session/api";
 import * as SessionAuth from "@manotes/shared/session/auth";
 import * as Accounts from "../accounts/durable-object.ts";
 import { AuthService } from "../auth/auth.ts";
+import { SessionKvService } from "../auth/session-kv.ts";
 import AccountsDurableObject from "../accounts/durable-object.ts";
 
 export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
@@ -13,6 +14,7 @@ export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
         const auth = yield* AuthService;
 
         const accountsNS = yield* AccountsDurableObject;
+        const sessionKv = yield* SessionKvService;
 
         const getSessionValue = Effect.fn("SessionRoutes.getSessionValue")(function* () {
           const session = yield* SessionAuth.Current;
@@ -21,6 +23,13 @@ export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
             accountId: session.accountId,
             email: session.email,
           };
+        });
+
+        const createApiKey = Effect.fn("SessionRoutes.createApiKey")(function* () {
+          const session = yield* SessionAuth.Current;
+          const apiKey = yield* sessionKv.create(session.email, session.accountId);
+
+          return { apiKey };
         });
 
         const checkWaitlistValue = Effect.fn("SessionRoutes.checkWaitlistValue")(function* (
@@ -33,6 +42,14 @@ export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
 
         return handlers
           .handleRaw("getSession", () => getSessionValue())
+          .handle("createApiKey", () =>
+            createApiKey().pipe(
+              Effect.catchTag("Auth.SessionStoreError", () =>
+                Effect.fail(new HttpApiError.InternalServerError({})),
+              ),
+              Effect.catch(() => Effect.fail(new HttpApiError.InternalServerError({}))),
+            ),
+          )
           .handle("checkWaitlist", ({ payload }) => checkWaitlistValue(payload.email))
           .handle("requestOtp", ({ payload }) =>
             auth.requestOtp(payload.email).pipe(
