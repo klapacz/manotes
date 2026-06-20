@@ -34,6 +34,13 @@
             shellHook = ''
               export PC_CONFIG_FILES=process-compose.yaml
 
+              # workerd (used by Alchemy local remote bindings) does not always
+              # discover Nix's CA bundle on its own. Without this, local KV/email
+              # calls to Cloudflare fail TLS verification with
+              # "unable to get local issuer certificate".
+              export SSL_CERT_FILE="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+              export NIX_SSL_CERT_FILE="$SSL_CERT_FILE"
+
               echo "manotes-rewrite dev shell"
               echo "- Node: $(node --version)"
               echo "- pnpm: $(pnpm --version)"
