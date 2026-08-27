@@ -103,59 +103,85 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
       yield* Effect.logInfo(`Materialized note up to event ${upToLocalSeq}`);
     });
 
-    const start = Effect.fn("MaterializerService.start")(function* () {
+    // Both the CLI and worker use this batch path so note updates and checkpoint
+    // advancement stay in the same transaction.
+    const processNextBatch = Effect.fn("MaterializerService.processNextBatch")(function* (
+      lastAppliedLocalSeq: number,
+    ) {
+      const stream = yield* eventRepo.streamAfterGlobalId(
+        lastAppliedLocalSeq,
+        MAX_FETCHED_UNDONE_EVENTS,
+      );
+
+      const nextBatch = yield* stream.pipe(
+        Stream.filter(Arr.isReadonlyArrayNonEmpty),
+        Stream.runHead,
+      );
+
+      if (Option.isNone(nextBatch)) {
+        return yield* Effect.fail(
+          new Error("Event stream ended while materialization was running."),
+        );
+      }
+
+      const batch = nextBatch.value;
+      const newestLocalSeq = Arr.lastNonEmpty(batch).localSeq;
+      const targets = buildMaterializationTargets(batch);
+
       // Checkpoint advances only after a batch is fully materialized.
       // This makes replay idempotent after worker restarts.
-      const initialCursor = yield* checkpointRepo.getLastAppliedLocalSeq();
-      yield* Effect.logInfo(`Starting materializer at global cursor ${initialCursor}`);
+      yield* db.transaction(
+        Effect.gen(function* () {
+          yield* Effect.forEach(
+            targets,
+            (target) =>
+              materializeNoteUpTo({
+                noteId: target.noteId,
+                upToLocalSeq: target.upToLocalSeq,
+              }),
+            {
+              concurrency: 1,
+              discard: true,
+            },
+          );
 
-      let lastAppliedLocalSeq = initialCursor;
+          yield* checkpointRepo.setLastAppliedLocalSeq(newestLocalSeq);
+        }),
+      );
+
+      yield* Effect.logInfo(`Processed ${batch.length} events up to ${newestLocalSeq}`);
+      return newestLocalSeq;
+    });
+
+    // The CLI drains the backlog observed at entry, then returns to write Markdown.
+    // A batch may include newer events, but later writes do not extend the target.
+    const catchUp = Effect.fn("MaterializerService.catchUp")(function* () {
+      let lastAppliedLocalSeq = yield* checkpointRepo.getLastAppliedLocalSeq();
+      const targetLocalSeq = yield* eventRepo.getMaxLocalSeq();
+      yield* Effect.logInfo(
+        `Catching up materializer from global cursor ${lastAppliedLocalSeq} to ${targetLocalSeq}`,
+      );
+
+      while (lastAppliedLocalSeq < targetLocalSeq) {
+        lastAppliedLocalSeq = yield* processNextBatch(lastAppliedLocalSeq);
+      }
+    });
+
+    // The app worker keeps following events instead of stopping after catch-up.
+    const start = Effect.fn("MaterializerService.start")(function* () {
+      let lastAppliedLocalSeq = yield* checkpointRepo.getLastAppliedLocalSeq();
+      yield* Effect.logInfo(`Starting materializer at global cursor ${lastAppliedLocalSeq}`);
 
       while (true) {
-        const stream = yield* eventRepo.streamAfterGlobalId(
-          lastAppliedLocalSeq,
-          MAX_FETCHED_UNDONE_EVENTS,
-        );
-
-        const nextBatch = yield* stream.pipe(
-          Stream.filter(Arr.isReadonlyArrayNonEmpty),
-          Stream.runHead,
-        );
-
-        if (Option.isNone(nextBatch)) {
-          continue;
-        }
-
-        const batch = nextBatch.value;
-        const newestLocalSeq = Arr.lastNonEmpty(batch).localSeq;
-        const targets = buildMaterializationTargets(batch);
-
-        yield* db.transaction(
-          Effect.gen(function* () {
-            yield* Effect.forEach(
-              targets,
-              (target) =>
-                materializeNoteUpTo({
-                  noteId: target.noteId,
-                  upToLocalSeq: target.upToLocalSeq,
-                }),
-              {
-                concurrency: 1,
-                discard: true,
-              },
-            );
-
-            yield* checkpointRepo.setLastAppliedLocalSeq(newestLocalSeq);
-          }),
-        );
-
-        yield* Effect.logInfo(`Processed ${batch.length} events up to ${newestLocalSeq}`);
-        lastAppliedLocalSeq = newestLocalSeq;
+        lastAppliedLocalSeq = yield* processNextBatch(lastAppliedLocalSeq);
       }
     });
 
     return {
+      catchUp,
       start,
+      // Callers saving an event can update the note and backlinks in the same transaction.
+      materializeNoteUpTo,
     };
   }),
 }) {

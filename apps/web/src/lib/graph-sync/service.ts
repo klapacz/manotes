@@ -12,39 +12,44 @@ export class Service extends Context.Service<Service>()("GraphSyncService", {
   make: Effect.gen(function* () {
     const status = yield* Status.Ref;
 
-    return {
-      start: Effect.fn("GraphSyncService.start")(function* () {
-        return yield* Session.run().pipe(
-          Effect.tapCause(
-            Effect.fn(function* (cause) {
-              const syncState = Option.match(Cause.findErrorOption(cause), {
-                onNone: () => "Disconnected" as const,
-                onSome: (error) => {
-                  if (error._tag === "SocketError" && error.reason._tag === "SocketOpenError") {
-                    return "Failed" as const;
-                  }
-                  return "Disconnected" as const;
-                },
-              });
+    const run = Effect.fn("GraphSyncService.run")(function* () {
+      return yield* Session.run().pipe(
+        Effect.tapCause(
+          Effect.fn(function* (cause) {
+            const syncState = Option.match(Cause.findErrorOption(cause), {
+              onNone: () => "Disconnected" as const,
+              onSome: (error) => {
+                if (error._tag === "SocketError" && error.reason._tag === "SocketOpenError") {
+                  return "Failed" as const;
+                }
+                return "Disconnected" as const;
+              },
+            });
 
-              yield* Effect.logWarning(`Graph sync ${syncState}`, cause);
-              yield* SubscriptionRef.update(
-                status,
-                (prev) =>
-                  new SyncStatusCloud({
-                    mode: prev.mode,
-                    hasPending: prev.hasPending,
-                    syncState,
-                  }),
-              );
-            }),
-          ),
-          Effect.retry(
-            Schedule.exponential("250 millis").pipe(Schedule.either(Schedule.spaced("1 minute"))),
-          ),
-        );
-      }),
-    };
+            yield* Effect.logWarning(`Graph sync ${syncState}`, cause);
+            yield* SubscriptionRef.update(
+              status,
+              (prev) =>
+                new SyncStatusCloud({
+                  mode: prev.mode,
+                  hasPending: prev.hasPending,
+                  syncState,
+                }),
+            );
+          }),
+        ),
+      );
+    });
+
+    const start = Effect.fn("GraphSyncService.start")(function* () {
+      return yield* run().pipe(
+        Effect.retry(
+          Schedule.exponential("250 millis").pipe(Schedule.either(Schedule.spaced("1 minute"))),
+        ),
+      );
+    });
+
+    return { run, start };
   }),
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(

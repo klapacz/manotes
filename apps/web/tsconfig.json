@@ -6,7 +6,7 @@
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     // vite/client: Vite's import.meta.env and asset imports
     // vite-plugin-pwa/client: virtual:pwa-register module type
-    "types": ["vite/client", "vite-plugin-pwa/client"],
+    "types": ["vite/client", "vite-plugin-pwa/client", "node"],
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo"
   },

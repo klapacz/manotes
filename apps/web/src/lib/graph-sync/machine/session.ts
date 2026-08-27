@@ -78,7 +78,8 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
 const createSocket = Effect.fn("GraphSyncMachineSession.createSocket")(function* () {
   const sync = yield* GraphSyncContext.Context;
 
-  const socketUrl = new URL(`/api/sync/${encodeURIComponent(sync.graphId)}`, self.location.origin);
+  const origin = sync.origin ?? self.location.origin;
+  const socketUrl = new URL(`/api/sync/${encodeURIComponent(sync.graphId)}`, origin);
   socketUrl.protocol = socketUrl.protocol === "https:" ? "wss:" : "ws:";
 
   return yield* Socket.makeWebSocket(socketUrl.toString(), {

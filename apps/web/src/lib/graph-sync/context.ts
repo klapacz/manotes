@@ -5,5 +5,6 @@ export class Context extends C.Service<
   {
     readonly graphId: string;
     readonly graphKey: Uint8Array;
+    readonly origin?: string;
   }
 >()("GraphSync.Context") {}

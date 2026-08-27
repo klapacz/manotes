@@ -7,6 +7,7 @@ import { nanoid } from "nanoid";
 import { LibOption } from "./effect/option";
 
 const decodeRecord = Schema.decodeEffect(NoteSchema.Record);
+const decodeRecordArray = Schema.decodeEffect(Schema.Array(NoteSchema.Record));
 const decodePreview = Schema.decodeEffect(NoteSchema.Preview);
 const decodePreviewArray = Schema.decodeEffect(Schema.Array(NoteSchema.Preview));
 const decodeMetaArray = Schema.decodeEffect(Schema.Array(NoteSchema.Meta));
@@ -78,6 +79,45 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       return note.value;
     });
 
+    // Previews of outgoing [[link]] targets prime the note cache. They are optional:
+    // a failed preview query must not prevent loading the note itself.
+    const findOutgoingBacklinkPreviews = Effect.fn("NoteRepo.findOutgoingBacklinkPreviews")(
+      function* (id: string) {
+        return yield* db
+          .query((db) =>
+            db
+              .select({
+                id: Tables.notes.id,
+                title: Tables.notes.title,
+                text: Tables.notes.text,
+                date: Tables.notes.date,
+                createdAt: Tables.notes.createdAt,
+                updatedAt: Tables.notes.updatedAt,
+              })
+              .from(Tables.backlinks)
+              .innerJoin(Tables.notes, eq(Tables.notes.id, Tables.backlinks.targetId))
+              .where(eq(Tables.backlinks.sourceId, id)),
+          )
+          .pipe(
+            Effect.flatMap(decodePreviewArray),
+            Effect.orElseSucceed(() => []),
+          );
+      },
+    );
+
+    const findByIdWithBacklinks = Effect.fn("NoteRepo.findByIdWithBacklinks")(function* (
+      id: string,
+    ) {
+      const [record, backlinks] = yield* Effect.all(
+        [findById(id), findOutgoingBacklinkPreviews(id)],
+        { concurrency: "unbounded" },
+      );
+
+      if (Option.isNone(record)) return Option.none();
+
+      return Option.some<NoteWithBacklinks>({ record: record.value, backlinks });
+    });
+
     const findBootById = Effect.fn("NoteRepo.findBootById")(function* (id: string) {
       const [record, backlinks] = yield* Effect.all(
         [
@@ -92,28 +132,7 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
                 .where(eq(Tables.notes.id, id)),
             )
             .pipe(Effect.flatMap(LibOption.mapEffect(decodeBootRecord))),
-          // Previews of the note's outgoing [[link]] targets, for priming
-          // the note cache; a paint nicety — failures fall back to empty
-          // instead of failing the boot.
-          db
-            .query((db) =>
-              db
-                .select({
-                  id: Tables.notes.id,
-                  title: Tables.notes.title,
-                  text: Tables.notes.text,
-                  date: Tables.notes.date,
-                  createdAt: Tables.notes.createdAt,
-                  updatedAt: Tables.notes.updatedAt,
-                })
-                .from(Tables.backlinks)
-                .innerJoin(Tables.notes, eq(Tables.notes.id, Tables.backlinks.targetId))
-                .where(eq(Tables.backlinks.sourceId, id)),
-            )
-            .pipe(
-              Effect.flatMap(decodePreviewArray),
-              Effect.orElseSucceed(() => []),
-            ),
+          findOutgoingBacklinkPreviews(id),
         ],
         { concurrency: "unbounded" },
       );
@@ -121,6 +140,18 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       if (Option.isNone(record)) return Option.none();
 
       return Option.some<BootResult>({ record: record.value, backlinks });
+    });
+
+    const findAllRecords = Effect.fn("NoteRepo.findAllRecords")(function* () {
+      return yield* db
+        .query((db) => db.select().from(Tables.notes))
+        .pipe(Effect.flatMap(decodeRecordArray));
+    });
+
+    const reactiveStreamRecords = Effect.fn("NoteRepo.reactiveStreamRecords")(function* () {
+      return yield* db
+        .reactiveQuery((db) => db.select().from(Tables.notes))
+        .pipe(Effect.map(Stream.mapEffect((rows) => decodeRecordArray(rows))));
     });
 
     const reactiveStreamList = Effect.fn("NoteRepo.reactiveStreamList")(function* (
@@ -235,7 +266,10 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       updateById,
       findById,
       getById,
+      findByIdWithBacklinks,
       findBootById,
+      findAllRecords,
+      reactiveStreamRecords,
       reactiveStreamList,
       reactiveFindPreviewById,
       reactiveSearchPreview,
@@ -244,6 +278,12 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
+
+export type NoteWithBacklinks = {
+  readonly record: NoteSchema.Record;
+  /** Previews of the note's outgoing [[link]] targets. */
+  readonly backlinks: ReadonlyArray<typeof NoteSchema.Preview.Type>;
+};
 
 export type BootResult = {
   readonly record: NoteSchema.BootRecord;

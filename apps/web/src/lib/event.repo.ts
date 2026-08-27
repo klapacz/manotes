@@ -2,7 +2,7 @@ import { Array, Effect, Layer, Option, pipe, Schema, Context, Stream } from "eff
 import * as DB from "./db.service";
 import * as EventSchema from "./event.schema";
 import * as Tables from "./db.tables";
-import { and, asc, eq, gt, isNull, lte, max } from "drizzle-orm";
+import { and, asc, count, eq, gt, isNull, lte, max } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 const decodeRecord = Schema.decodeEffect(EventSchema.Record);
@@ -12,6 +12,17 @@ const IMPORT_BACKUP_BATCH_SIZE = 180;
 export class Service extends Context.Service<Service>()("EventRepo.Service", {
   make: Effect.gen(function* () {
     const db = yield* DB.Service;
+    const countPending = Effect.fn("EventRepo.countPending")(function* () {
+      // Acknowledgements update these rows in place; no separate status is stored.
+      return yield* db
+        .find((db) =>
+          db
+            .select({ count: count().as("count") })
+            .from(Tables.events)
+            .where(isNull(Tables.events.commitSeq)),
+        )
+        .pipe(Effect.map(Option.match({ onNone: () => 0, onSome: (row) => row.count })));
+    });
 
     const create = Effect.fn("EventRepo.create")(function* (event: typeof EventSchema.Create.Type) {
       const encoded = yield* pipe(event, Schema.encodeEffect(EventSchema.Create));
@@ -130,6 +141,14 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
         Option.map((row) => row.commitSeq ?? 0),
         Option.getOrElse(() => 0),
       );
+    });
+
+    const getMaxLocalSeq = Effect.fn("EventRepo.getMaxLocalSeq")(function* () {
+      return yield* db
+        .find((db) =>
+          db.select({ localSeq: max(Tables.events.localSeq).as("localSeq") }).from(Tables.events),
+        )
+        .pipe(Effect.map(Option.match({ onNone: () => 0, onSome: (row) => row.localSeq ?? 0 })));
     });
 
     const findUpdatesForNote = Effect.fn("EventRepo.findUpdatesForNote")(function* (
@@ -256,8 +275,10 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       deleteByLocalSeq,
       findByEventId,
       getLastCommitSeq,
+      getMaxLocalSeq,
       importBackupEvents,
       findPending,
+      countPending,
       findUpdatesForNote,
       findForNoteBetweenIds,
       listAllForBackup,
