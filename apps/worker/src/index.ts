@@ -7,10 +7,7 @@ import { EmailService } from "./auth/email.ts";
 import { OtpService } from "./auth/otp.ts";
 import { SessionKvService } from "./auth/session-kv.ts";
 import * as Routes from "./routes.ts";
-import * as SessionRoutes from "./session/routes.ts";
 import * as Alchemy from "alchemy";
-
-const layerRouteServices = Layer.mergeAll(Routes.Service.layer, SessionRoutes.Service.layer);
 
 const layerAppServices = AuthService.layer.pipe(
   Layer.provide(Layer.mergeAll(EmailService.layer, OtpService.layer, SessionKvService.layer)),
@@ -63,5 +60,5 @@ export default Cloudflare.Worker(
         HttpRouter.toHttpEffect,
       ),
     };
-  }).pipe(Effect.provide(Layer.mergeAll(layerRouteServices, layerAppServices))),
+  }).pipe(Effect.provide(layerAppServices)),
 );

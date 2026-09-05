@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from "effect";
+import { Effect, Layer } from "effect";
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi";
 import * as SessionApi from "@manotes/shared/session/api";
 import * as SessionAuth from "@manotes/shared/session/auth";
@@ -11,10 +11,29 @@ export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
     HttpApiBuilder.group(SessionApi.SessionApi, "session", (handlers) =>
       Effect.gen(function* () {
         const auth = yield* AuthService;
-        const svc = yield* Service;
+
+        const accountsNS = yield* AccountsDurableObject;
+
+        const getSessionValue = Effect.fn("SessionRoutes.getSessionValue")(function* () {
+          const session = yield* SessionAuth.Current;
+
+          return {
+            accountId: session.accountId,
+            email: session.email,
+          };
+        });
+
+        const checkWaitlistValue = Effect.fn("SessionRoutes.checkWaitlistValue")(function* (
+          email: string,
+        ) {
+          const accounts = accountsNS.getByName(Accounts.NAMESPACE_KEY);
+          const result = yield* accounts.checkOrWaitlist(email).pipe(Effect.orDie);
+          return { status: result.status };
+        });
+
         return handlers
-          .handleRaw("getSession", () => svc.getSessionValue())
-          .handle("checkWaitlist", ({ payload }) => svc.checkWaitlistValue(payload.email))
+          .handleRaw("getSession", () => getSessionValue())
+          .handle("checkWaitlist", ({ payload }) => checkWaitlistValue(payload.email))
           .handle("requestOtp", ({ payload }) =>
             auth.requestOtp(payload.email).pipe(
               Effect.map(() => undefined),
@@ -56,30 +75,3 @@ export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
     ),
   ),
 );
-
-export class Service extends Context.Service<Service>()("SessionRoutes.Service", {
-  make: Effect.gen(function* () {
-    const accountsNS = yield* AccountsDurableObject;
-
-    const getSessionValue = Effect.fn("SessionRoutes.getSessionValue")(function* () {
-      const session = yield* SessionAuth.Current;
-
-      return {
-        accountId: session.accountId,
-        email: session.email,
-      };
-    });
-
-    const checkWaitlistValue = Effect.fn("SessionRoutes.checkWaitlistValue")(function* (
-      email: string,
-    ) {
-      const accounts = accountsNS.getByName(Accounts.NAMESPACE_KEY);
-      const result = yield* accounts.checkOrWaitlist(email).pipe(Effect.orDie);
-      return { status: result.status };
-    });
-
-    return { getSessionValue, checkWaitlistValue };
-  }),
-}) {
-  static readonly layer = Layer.effect(this, this.make);
-}

@@ -1,5 +1,5 @@
 import * as SessionAuth from "@manotes/shared/session/auth";
-import { Context, Effect, Layer, pipe, Result, Schema } from "effect";
+import { Effect, Layer, pipe, Result, Schema } from "effect";
 import {
   HttpRouter,
   HttpServerError,
@@ -15,50 +15,6 @@ const GraphIdParams = Schema.Struct({ graphId: Schema.NonEmptyString });
 
 export const protectedRoutesLayer = HttpRouter.addAll(
   Effect.gen(function* () {
-    const svc = yield* Service;
-
-    const pathParam = HttpRouter.schemaPathParams(GraphIdParams).pipe(
-      Effect.result,
-      Effect.flatMap(
-        Effect.fnUntraced(function* (result) {
-          if (Result.isSuccess(result)) return result.success;
-
-          return yield* Effect.fail(
-            new HttpServerError.HttpServerError({
-              reason: new HttpServerError.RequestParseError({
-                request: yield* HttpServerRequest.HttpServerRequest,
-                cause: result.failure,
-              }),
-            }),
-          );
-        }),
-      ),
-    );
-
-    return [
-      HttpRouter.route("POST", "/api/rpc/graph-registry", () => svc.proxyToGraphRegistry()),
-      HttpRouter.route("*", "/api/sync/:graphId", () =>
-        pipe(
-          pathParam,
-          Effect.flatMap((params) => svc.proxyToGraphSync({ params })),
-        ),
-      ),
-      HttpRouter.route("*", "/api/*", () =>
-        HttpServerResponse.json({ error: "Not found" }, { status: 404 }),
-      ),
-    ] as const;
-  }),
-).pipe(Layer.provide(AuthSession.RouterMiddleware.layer));
-
-export const layer = Layer.mergeAll(
-  HttpRouter.add("GET", "/api/health", HttpServerResponse.jsonUnsafe({ ok: true })),
-  HttpRouter.add("*", "/*", HttpServerResponse.empty({ status: 404 })),
-  SessionRoutes.layer.pipe(Layer.provide(AuthSession.HttpApiMiddlewareLayer)),
-  protectedRoutesLayer,
-);
-
-export class Service extends Context.Service<Service>()("Routes.Service", {
-  make: Effect.gen(function* () {
     const graphRegistryNS = yield* GraphRegistryDurableObject;
     const graphSyncNS = yield* GraphSyncDurableObject;
 
@@ -93,8 +49,42 @@ export class Service extends Context.Service<Service>()("Routes.Service", {
       return yield* DO.fetch(request);
     });
 
-    return { proxyToGraphRegistry, proxyToGraphSync };
+    const pathParam = HttpRouter.schemaPathParams(GraphIdParams).pipe(
+      Effect.result,
+      Effect.flatMap(
+        Effect.fnUntraced(function* (result) {
+          if (Result.isSuccess(result)) return result.success;
+
+          return yield* Effect.fail(
+            new HttpServerError.HttpServerError({
+              reason: new HttpServerError.RequestParseError({
+                request: yield* HttpServerRequest.HttpServerRequest,
+                cause: result.failure,
+              }),
+            }),
+          );
+        }),
+      ),
+    );
+
+    return [
+      HttpRouter.route("POST", "/api/rpc/graph-registry", () => proxyToGraphRegistry()),
+      HttpRouter.route("*", "/api/sync/:graphId", () =>
+        pipe(
+          pathParam,
+          Effect.flatMap((params) => proxyToGraphSync({ params })),
+        ),
+      ),
+      HttpRouter.route("*", "/api/*", () =>
+        HttpServerResponse.json({ error: "Not found" }, { status: 404 }),
+      ),
+    ] as const;
   }),
-}) {
-  static readonly layer = Layer.effect(this, this.make);
-}
+).pipe(Layer.provide(AuthSession.RouterMiddleware.layer));
+
+export const layer = Layer.mergeAll(
+  HttpRouter.add("GET", "/api/health", HttpServerResponse.jsonUnsafe({ ok: true })),
+  HttpRouter.add("*", "/*", HttpServerResponse.empty({ status: 404 })),
+  SessionRoutes.layer.pipe(Layer.provide(AuthSession.HttpApiMiddlewareLayer)),
+  protectedRoutesLayer,
+);
