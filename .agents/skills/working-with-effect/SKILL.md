@@ -7,7 +7,15 @@ description: Project conventions for Effect APIs, span naming, and SQL schema de
 
 ## Reference
 
-The Effect repository is cloned to `.reference/effect` for local API lookups and examples. Use it for reference only; do not modify it.
+Use `opensrc` for dependency source lookups. From the workspace, run:
+
+```sh
+scripts/nix-develop -c opensrc path effect
+```
+
+Read the source at the returned path for API lookups and examples. Keep it read-only. Use `effect@<version>` to request a specific version.
+
+For other packages or repositories, replace `effect` with a package name or `owner/repo`.
 
 ## Effect spans
 
