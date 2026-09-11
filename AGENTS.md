@@ -19,8 +19,6 @@ When copying code from a dependency or reference repository, document the source
 
 This project uses **Jujutsu (jj)** for version control. Always use `--git` flag with `jj diff` and similar commands to get properly formatted diffs (e.g. `jj diff --git`, `jj log -p --git`).
 
-For working with Jujutsu changes (squashing, splitting, partial commits, etc.), use the `jj-hunk` skill.
-
 ## Development shell
 
 Run development commands through `scripts/nix-develop -c <command>` so nested jj workspaces use the main checkout's Nix devshell. Run commands from the workspace, not the main checkout.
