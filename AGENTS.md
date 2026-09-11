@@ -21,6 +21,10 @@ This project uses **Jujutsu (jj)** for version control. Always use `--git` flag 
 
 For working with Jujutsu changes (squashing, splitting, partial commits, etc.), use the `jj-hunk` skill.
 
+## Development shell
+
+Run development commands through `scripts/nix-develop -c <command>` so nested jj workspaces use the main checkout's Nix devshell. Run commands from the workspace, not the main checkout.
+
 ## Migrations
 
 Do not create Drizzle migration SQL files by hand. Generate migrations with `drizzle-kit generate`.

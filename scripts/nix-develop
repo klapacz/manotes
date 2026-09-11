@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+
+root="$(git rev-parse --show-toplevel)"
+
+exec nix develop "$root" "$@"
