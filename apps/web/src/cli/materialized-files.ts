@@ -36,7 +36,7 @@ export const writeAll = Effect.fn("MaterializedFiles.writeAll")(function* () {
 
 // Metadata belongs to the exported file, not the editable ProseMirror body.
 function formatFile(record: Pick<NoteSchema.Record, "date" | "updatedAt">, body: string): string {
-  return `---\ndate: "${record.date}"\nupdated_at: "${DateTime.formatIso(record.updatedAt)}"\n---\n\n${body}`;
+  return `---\ndate: "${record.date}"\nmodified: "${DateTime.formatIso(record.updatedAt)}"\n---\n\n${body}`;
 }
 
 export * as MaterializedFiles from "./materialized-files.ts";

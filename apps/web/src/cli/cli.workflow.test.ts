@@ -55,7 +55,7 @@ describe("CLI local workflow", () => {
           `${dedent`
           ---
           date: "${note.date}"
-          updated_at: "2026-09-12T10:24:36.000Z"
+          modified: "2026-09-12T10:24:36.000Z"
           ---
 
           ---

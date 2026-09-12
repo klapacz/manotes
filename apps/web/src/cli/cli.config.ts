@@ -1,4 +1,5 @@
 import { constants } from "node:fs";
+import path from "node:path";
 import { Context, Effect, FileSystem, Layer, Schema } from "effect";
 import * as DB from "../lib/db.service";
 import { CliPaths } from "./cli.paths";
@@ -49,6 +50,11 @@ export const write = Effect.fn("CliConfig.write")(function* () {
   const encoded = yield* encodeConfigFile(config);
 
   yield* fs.writeFileString(paths.configPath, encoded, { mode: CONFIG_MODE, flag: "wx" });
+
+  const zkDir = path.join(paths.dir, ".zk");
+  yield* fs.makeDirectory(zkDir, { recursive: true });
+  // An empty config enables zk's defaults. Append mode preserves existing settings.
+  yield* fs.writeFileString(path.join(zkDir, "config.toml"), "", { flag: "a" });
 });
 
 const CONFIG_MODE = constants.S_IRUSR | constants.S_IWUSR;
