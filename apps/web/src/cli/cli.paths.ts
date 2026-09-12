@@ -42,6 +42,23 @@ export const layer = Layer.effect(
   }),
 );
 
+export const ensureEmpty = Effect.fn("CliPaths.ensureEmpty")(function* () {
+  const paths = yield* Service;
+  const fs = yield* FileSystem.FileSystem;
+
+  const exists = yield* fs.exists(paths.dir);
+  if (!exists) return;
+
+  const entries = yield* fs.readDirectory(paths.dir);
+  if (entries.length > 0) {
+    return yield* Effect.fail(
+      new Error(
+        `Cannot initialize in non-empty directory: ${paths.dir}. Choose an empty directory.`,
+      ),
+    );
+  }
+});
+
 export const mkdir = Effect.fn("CliPaths.mkdir")(function* () {
   const workspacePaths = yield* Service;
   const fs = yield* FileSystem.FileSystem;

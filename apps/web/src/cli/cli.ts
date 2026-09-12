@@ -22,6 +22,7 @@ const init = Command.make(
     secret: Flag.string("secret"),
   },
   Effect.fn("Cli.init")(function* (input) {
+    yield* CliPaths.ensureEmpty();
     const origin = CliConfig.normalizeOrigin(input.origin);
     const graphKey = yield* CliGraphKey.fetchUnwrapped({ ...input, origin });
     const layerConfig = CliConfig.makeLayer({
@@ -43,9 +44,7 @@ const init = Command.make(
       Effect.provide(layerConfig),
     );
   }, Effect.provide(CliPaths.layer)),
-).pipe(
-  Command.withDescription("Create .manotes/ in the current directory and materialize the graph."),
-);
+).pipe(Command.withDescription("Initialize an empty directory and materialize the graph."));
 
 const sync = Command.make(
   "sync",

@@ -24,6 +24,38 @@ const CLI_ENTRY = fileURLToPath(new URL("./cli.ts", import.meta.url));
 const NOTE_ID = "workflow-note";
 
 describe("CLI local workflow", () => {
+  it.each(["note.md", ".hidden"])(
+    "rejects init in a directory containing %s before contacting the server",
+    { timeout: 30_000 },
+    async (filename) => {
+      const workspace = await mkdtemp(path.join(tmpdir(), "manotes-cli-init-"));
+      try {
+        await writeFile(path.join(workspace, filename), "Keep me.");
+
+        const result = await runCli(workspace, [
+          "init",
+          "--origin",
+          "http://127.0.0.1:1",
+          "--token",
+          "test-token",
+          "--graph-id",
+          "test-graph",
+          "--secret",
+          "test-secret",
+        ]);
+
+        expect(result.code).not.toBe(0);
+        expect(result.stdout + result.stderr).toContain(
+          "Cannot initialize in non-empty directory:",
+        );
+        expect(await readdir(workspace)).toEqual([filename]);
+        expect(await readFile(path.join(workspace, filename), "utf8")).toBe("Keep me.");
+      } finally {
+        await rm(workspace, { recursive: true, force: true });
+      }
+    },
+  );
+
   it(
     "executes files and stdin offline, reports pending changes, and fails sync cleanly",
     { timeout: 30_000 },
