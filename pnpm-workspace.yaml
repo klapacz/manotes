@@ -18,6 +18,12 @@ overrides:
   vite: "catalog:"
   vitest: "catalog:"
 
+# vite-plus-core's bundled tsdown requires picomatch but declares it only as a dev dependency.
+packageExtensions:
+  "@voidzero-dev/vite-plus-core@0.1.16":
+    dependencies:
+      picomatch: "^4.0.3"
+
 patchedDependencies:
   alchemy: patches/alchemy.patch
   drizzle-orm: patches/drizzle-orm.patch
