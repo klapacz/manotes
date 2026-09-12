@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "process-compose up",
+    "dev": "vp run --cache @manotes/shared#build && vp run --cache @manotes/sql-sqlite-wasm#build && env vp run --parallel --log labeled --filter @manotes/shared --filter @manotes/sql-sqlite-wasm --filter @manotes/worker dev",
+    "dev:extension": "vp run --cache @manotes/shared#build && vp run --cache @manotes/sql-sqlite-wasm#build && env vp run --parallel --log labeled --filter @manotes/shared --filter @manotes/sql-sqlite-wasm --filter @manotes/worker --filter @manotes/extension dev",
     "deploy": "vp check && vp run worker#deploy"
   },
   "devDependencies": {

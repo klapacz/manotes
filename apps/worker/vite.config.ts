@@ -5,9 +5,7 @@ export default defineConfig({
     tasks: {
       dev: {
         command: "alchemy dev --env-file .env.local",
-        // These are set by flake.nix so workerd can verify Cloudflare TLS certs.
-        // vite-plus tasks only receive env vars explicitly listed here.
-        untrackedEnv: ["SSL_CERT_FILE", "NIX_SSL_CERT_FILE"],
+        cache: false,
       },
       deploy: {
         command: "alchemy deploy --env-file .env.prod --stage prod",

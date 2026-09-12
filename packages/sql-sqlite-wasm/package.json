@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "vp pack",
-    "dev": "vp pack --watch"
+    "dev": "vp pack --watch --no-clean"
   },
   "dependencies": {
     "effect": "4.0.0-beta.74",

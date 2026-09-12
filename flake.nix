@@ -53,15 +53,12 @@
               nodejs_24
               pnpm
               bun
-              process-compose
               jq
               # Use the installed zk fork rather than overriding it with nixpkgs' zk.
               (writeShellScriptBin "tasks" (builtins.readFile ./scripts/tasks))
             ];
 
             shellHook = ''
-              export PC_CONFIG_FILES=process-compose.yaml
-
               # workerd (used by Alchemy local remote bindings) does not always
               # discover Nix's CA bundle on its own. Without this, local KV/email
               # calls to Cloudflare fail TLS verification with
@@ -73,8 +70,8 @@
               echo "- Node: $(node --version)"
               echo "- pnpm: $(pnpm --version)"
               echo "- Bun: $(bun --version)"
-              echo "- process-compose: $(process-compose version)"
-              echo "- process-compose config: $PC_CONFIG_FILES"
+              echo "- Development: vp run dev"
+              echo "- With extension: vp run dev:extension"
             '';
           };
         }
