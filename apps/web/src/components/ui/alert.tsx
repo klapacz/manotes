@@ -8,7 +8,7 @@ import { cva, cx } from "../../lib/cva";
 // Adapted from shadcn-solid (commit 4c75b89, using @kobalte/core 0.13.11 / solid-js 1.9.10).
 // Source: apps/docs/src/registry/ui/alert.tsx
 // Why: pre-graph routes repeated inline error and warning blocks with no shared styling.
-// Modifications: replaced registry alias imports with local helpers, simplified the layout, and added a warning variant using Manotes tokens.
+// Modifications: replaced registry alias imports with local helpers, simplified the layout, and added warning and success variants using Manotes tokens.
 export const alertVariants = cva({
   base: "relative w-full rounded-lg border px-4 py-3 text-sm",
   variants: {
@@ -16,6 +16,7 @@ export const alertVariants = cva({
       default: "border-border-subtle bg-bg-subtle text-fg",
       destructive: "border-error-border-subtle bg-error-bg-subtle text-error-fg",
       warning: "border-warning-border-subtle bg-warning-bg-subtle text-warning-fg",
+      success: "border-success-border-subtle bg-success-bg-subtle text-success-fg",
     },
   },
   defaultVariants: {

@@ -15,5 +15,6 @@ export {
   PanelLeftOpen as PanelLeftOpenIcon,
   Plus as PlusIcon,
   Search as SearchIcon,
+  Terminal as TerminalIcon,
   X as XIcon,
 } from "lucide-solid";

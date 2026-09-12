@@ -20,10 +20,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { ChevronLeftIcon, ChevronsUpDownIcon, DownloadIcon, LockIcon } from "./icons";
+import { ChevronLeftIcon, ChevronsUpDownIcon, DownloadIcon, LockIcon, TerminalIcon } from "./icons";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import { useAtom } from "@effect/atom-solid";
 import { Button } from "./ui/button";
+import { CliSetupDialog } from "./cli-setup-dialog";
 
 // Adapted from shadcn-solid using @kobalte/core 0.13.11 / solid-js 1.9.10.
 // Source: .reference/shadcn-solid/apps/docs/src/registry/blocks/sidebar-01/components/nav-user.tsx
@@ -122,13 +123,24 @@ export const GraphMenu = () => {
             </DropdownMenuItem>
             <Show when={cloudGraph()}>
               {(cloudGraph) => (
-                <DropdownMenuItem
-                  onSelect={() => void handleLockGraph(cloudGraph().graphKeyEnvelope)}
-                  disabled={lockGraphResult().waiting}
-                >
-                  <LockIcon class="size-4" />
-                  Lock graph
-                </DropdownMenuItem>
+                <>
+                  {/* Keep the menu mounted while its dialog is open. */}
+                  <CliSetupDialog<typeof DropdownMenuItem>
+                    graph={cloudGraph()}
+                    as={DropdownMenuItem}
+                    closeOnSelect={false}
+                  >
+                    <TerminalIcon class="size-4" />
+                    Set up CLI
+                  </CliSetupDialog>
+                  <DropdownMenuItem
+                    onSelect={() => void handleLockGraph(cloudGraph().graphKeyEnvelope)}
+                    disabled={lockGraphResult().waiting}
+                  >
+                    <LockIcon class="size-4" />
+                    Lock graph
+                  </DropdownMenuItem>
+                </>
               )}
             </Show>
             <DropdownMenuItemLink to="/">
