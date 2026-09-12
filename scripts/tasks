@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+workspace="$(jj root)"
 cd "$(git rev-parse --show-toplevel)/.tasks"
 
 if [[ "${1:-}" == -- ]]; then
   shift
   exec "$@"
 fi
+
+if [[ "${1:-}" == tui ]] || { (( $# == 0 )) && [[ -t 0 && -t 1 ]]; }; then
+  if [[ "${1:-}" == tui ]]; then shift; fi
+  exec bun "$workspace/apps/tasks/bin/watch.ts" "$@"
+fi
+
+if [[ "${1:-}" == list ]]; then shift; fi
 
 if (( $# )); then
   exec cat -- "$1.md"
