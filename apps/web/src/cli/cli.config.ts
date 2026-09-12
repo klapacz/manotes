@@ -4,11 +4,15 @@ import { Context, Effect, FileSystem, Layer, Schema } from "effect";
 import * as DB from "../lib/db.service";
 import { CliPaths } from "./cli.paths";
 
+export const GraphKey = Schema.RedactedFromValue(
+  Schema.Uint8ArrayFromBase64.pipe(Schema.check(Schema.isLengthBetween(32, 32))),
+);
+
 export const Config = Schema.Struct({
   origin: Schema.NonEmptyString,
   token: Schema.NonEmptyString,
   graphId: Schema.NonEmptyString,
-  graphKey: Schema.Uint8ArrayFromBase64,
+  graphKey: GraphKey,
 });
 export type Config = typeof Config.Type;
 

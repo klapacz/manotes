@@ -1,4 +1,4 @@
-import { Effect, Layer, Option, Stream, SubscriptionRef } from "effect";
+import { Effect, Layer, Option, Redacted, Stream, SubscriptionRef } from "effect";
 import { NodeWS } from "@effect/platform-node/NodeSocket";
 import * as Socket from "effect/unstable/socket/Socket";
 import * as GraphSync from "../lib/graph-sync/service";
@@ -20,7 +20,7 @@ export const layer = Layer.unwrap(
     const deps = Layer.mergeAll(
       Layer.succeed(GraphSyncContext.Context, {
         graphId: config.graphId,
-        graphKey: config.graphKey,
+        graphKey: Redacted.value(config.graphKey),
         origin: config.origin,
       }),
       webSocketConstructorLayer(config.token),

@@ -1,10 +1,9 @@
 import path from "node:path";
-import { Console, Effect, Option, flow } from "effect";
+import { Console, Effect, Option, Redacted, Schema, flow } from "effect";
 import * as Reactivity from "effect/unstable/reactivity/Reactivity";
-import { Argument, Command, Flag } from "effect/unstable/cli";
+import { Argument, CliError, Command, Flag } from "effect/unstable/cli";
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { CliConfig } from "./cli.config";
-import { CliGraphKey } from "./cli.graph-key";
 import { CliPaths } from "./cli.paths";
 import { CliSync } from "./cli.sync";
 import { MaterializedFiles } from "./materialized-files";
@@ -19,17 +18,33 @@ const init = Command.make(
     origin: Flag.string("origin"),
     token: Flag.string("token"),
     graphId: Flag.string("graph-id"),
-    secret: Flag.string("secret"),
+    graphKey: Flag.redacted("graph-key").pipe(
+      Flag.mapEffect(
+        flow(
+          Redacted.value,
+          Schema.decodeEffect(CliConfig.GraphKey),
+          Effect.mapError(
+            () =>
+              new CliError.InvalidValue({
+                kind: "flag",
+                option: "graph-key",
+                value: "<redacted>",
+                expected: "a base64-encoded 32-byte graph key",
+              }),
+          ),
+        ),
+      ),
+      Flag.withDescription("Base64-encoded, unwrapped 32-byte graph key from the app."),
+    ),
   },
   Effect.fn("Cli.init")(function* (input) {
     yield* CliPaths.ensureEmpty();
     const origin = CliConfig.normalizeOrigin(input.origin);
-    const graphKey = yield* CliGraphKey.fetchUnwrapped({ ...input, origin });
     const layerConfig = CliConfig.makeLayer({
       origin,
       token: input.token,
       graphId: input.graphId,
-      graphKey,
+      graphKey: input.graphKey,
     });
 
     // Create db dir before initializing database via Runtime.layer

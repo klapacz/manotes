@@ -40,8 +40,8 @@ describe("CLI local workflow", () => {
           "test-token",
           "--graph-id",
           "test-graph",
-          "--secret",
-          "test-secret",
+          "--graph-key",
+          Buffer.alloc(32).toString("base64"),
         ]);
 
         expect(result.code).not.toBe(0);
@@ -52,6 +52,72 @@ describe("CLI local workflow", () => {
         expect(await readFile(path.join(workspace, filename), "utf8")).toBe("Keep me.");
       } finally {
         await rm(workspace, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.each([
+    "not-base64!",
+    Buffer.alloc(31).toString("base64"),
+    Buffer.alloc(33).toString("base64"),
+  ])("rejects invalid graph key %# without writing files", { timeout: 30_000 }, async (key) => {
+    const workspace = await mkdtemp(path.join(tmpdir(), "manotes-cli-init-"));
+    try {
+      const result = await runCli(workspace, [
+        "init",
+        "--origin",
+        "http://127.0.0.1:1",
+        "--token",
+        "test-token",
+        "--graph-id",
+        "test-graph",
+        "--graph-key",
+        key,
+      ]);
+
+      expect(result.code).not.toBe(0);
+      expect(result.stdout + result.stderr).toContain("a base64-encoded 32-byte graph key");
+      expect(result.stdout + result.stderr).not.toContain(key);
+      expect(await readdir(workspace)).toEqual([]);
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it(
+    "saves the supplied key before syncing, without fetching a key envelope",
+    { timeout: 30_000 },
+    async () => {
+      const root = await mkdtemp(path.join(tmpdir(), "manotes-cli-init-"));
+      const workspace = path.join(root, "notes");
+      const graphKey = Buffer.alloc(32, 7).toString("base64");
+      try {
+        const result = await runCli(workspace, [
+          "init",
+          "--origin",
+          "http://127.0.0.1:1",
+          "--token",
+          "test-token",
+          "--graph-id",
+          "test-graph",
+          "--graph-key",
+          graphKey,
+        ]);
+
+        // The unavailable server fails sync, not key acquisition. Local setup remains retryable.
+        expect(result.code).not.toBe(0);
+        expect(result.stderr).toContain("Sync failed.");
+        expect(result.stderr).toContain("Retry with `manotes sync`.");
+        expect(JSON.parse(await readFile(path.join(workspace, ".manotes/config"), "utf8"))).toEqual(
+          {
+            origin: "http://127.0.0.1:1",
+            token: "test-token",
+            graphId: "test-graph",
+            graphKey,
+          },
+        );
+      } finally {
+        await rm(root, { recursive: true, force: true });
       }
     },
   );
