@@ -15,6 +15,7 @@ import type { UnknownNodeJSON } from "../lib/node-json";
 import * as EventSchema from "../lib/event.schema";
 import * as NoteRepo from "../lib/note.repo";
 import { NOTE_SCHEMA } from "../lib/prosemirror/app-schema";
+import { toLocalDateString } from "../lib/temporal/utils";
 import { MdParse } from "../lib/prosemirror/md/parse";
 import { MdSerialize } from "../lib/prosemirror/md/serialize";
 import { getProsemirrorXmlFragment, PROSEMIRROR_XML_FRAGMENT_KEY } from "../lib/prosemirror/yjs";
@@ -168,7 +169,7 @@ describe("ExecuteApi.editNote", () => {
     );
   });
 
-  it("exposes only editNote and writes one event for an ordered edit batch", async () => {
+  it("exposes editing and creation and writes one event for an ordered edit batch", async () => {
     await runIntegration(
       Effect.gen(function* () {
         yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
@@ -179,7 +180,7 @@ describe("ExecuteApi.editNote", () => {
 
         yield* runTestScript(dedent`
           export default async function (api) {
-            if (Object.keys(api).join(",") !== "editNote") throw new Error("unexpected API");
+            if (Object.keys(api).sort().join(",") !== "createNote,editNote") throw new Error("unexpected API");
             await api.editNote("${NOTE_ID}", [
               { kind: "replace", text: "Alpha", with: "Beta" },
               { kind: "append", markdown: "Beta follows." },
@@ -358,6 +359,138 @@ describe("ExecuteApi.editNote", () => {
           Caught up.
         `}\n`,
         );
+      }),
+    );
+  });
+});
+
+describe("ExecuteApi.createNote", () => {
+  it("creates a supplied ID with ordered appends and the last date, then allows editing", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        yield* runTestScript(dedent`
+          export default async function (api) {
+            const id = await api.createNote("created-note", [
+              { kind: "date", date: "invalid but superseded" },
+              { kind: "append", markdown: "# Created" },
+              { kind: "append", markdown: "See [Target](./target.md)." },
+              { kind: "date", date: "2024-02-29" },
+            ]);
+            if (id !== "created-note") throw new Error("unexpected ID");
+            await api.editNote(id, [{ kind: "append", markdown: "Next." }]);
+          }
+        `);
+        const noteRepo = yield* NoteRepo.Service;
+        const eventRepo = yield* EventRepo.Service;
+        const note = yield* noteRepo.getById("created-note");
+        expect(note.title).toBe("Created");
+        expect(note.date).toBe("2024-02-29");
+        const markdown = "# Created\n\nSee [target](./target.md).\n\nNext.\n";
+        expect(markdownFromContent(note.content)).toBe(markdown);
+        const updates = yield* eventRepo.findUpdatesForNote(note.id);
+        expect(markdownAfterReplay(updates.map((event) => event.payload))).toBe(markdown);
+        expect((yield* eventRepo.findPending(10)).map((event) => event.type)).toEqual([
+          "update",
+          "date",
+          "update",
+        ]);
+      }),
+    );
+  });
+
+  it("generates distinct IDs and persists empty and date-only notes", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        yield* runTestScript(dedent`
+          export default async function (api) {
+            const first = await api.createNote(undefined, []);
+            const second = await api.createNote(undefined, [{ kind: "date", date: "2024-02-29" }]);
+            if (!first || !second || first === second) throw new Error("invalid generated IDs");
+            await api.editNote(first, [{ kind: "append", markdown: "Generated." }]);
+          }
+        `);
+        const noteRepo = yield* NoteRepo.Service;
+        const notes = yield* noteRepo.findAllRecords();
+        expect(notes).toHaveLength(2);
+        const dated = notes.find((note) => note.date === "2024-02-29");
+        expect(dated).toBeDefined();
+        expect(markdownFromContent(dated!.content).trim()).toBe("");
+        const generated = notes.find((note) => note.id !== dated!.id);
+        expect(markdownFromContent(generated!.content)).toBe("Generated.\n");
+        expect(generated!.date).toBe(toLocalDateString(generated!.createdAt));
+      }),
+    );
+  });
+
+  it("rejects empty IDs, replacement actions, and invalid final dates without saving", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        for (const call of [
+          'api.createNote("", [])',
+          'api.createNote("invalid", [{ kind: "replace", text: "", with: "no" }])',
+          'api.createNote("invalid", [{ kind: "append", markdown: "Not saved" }, { kind: "date", date: "2025-02-29" }])',
+        ]) {
+          const result = yield* runTestScript(
+            `export default async (api) => { await ${call}; };`,
+          ).pipe(Effect.result);
+          expect(Result.isFailure(result)).toBe(true);
+        }
+        const noteRepo = yield* NoteRepo.Service;
+        const eventRepo = yield* EventRepo.Service;
+        expect(yield* noteRepo.findAllRecords()).toEqual([]);
+        expect(yield* eventRepo.countPending()).toBe(0);
+      }),
+    );
+  });
+
+  it("rejects existing IDs, including notes with only unmaterialized events", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
+        const noteRepo = yield* NoteRepo.Service;
+        const eventRepo = yield* EventRepo.Service;
+        const before = yield* noteRepo.getById(NOTE_ID);
+        yield* eventRepo.create({
+          noteId: "unmaterialized",
+          type: "update",
+          payload: fullUpdateFromMarkdown("Existing."),
+          createdAt: yield* DateTime.now,
+        });
+        for (const id of [NOTE_ID, "unmaterialized"]) {
+          const result = yield* runTestScript(dedent`
+            export default async function (api) {
+              await api.createNote("${id}", [{ kind: "append", markdown: "Never saved." }]);
+            }
+          `).pipe(Effect.result);
+          expect(Result.isFailure(result)).toBe(true);
+          if (Result.isFailure(result))
+            expect(String(result.failure)).toContain(`Note already exists: ${id}`);
+        }
+        expect(yield* noteRepo.getById(NOTE_ID)).toEqual(before);
+        expect(yield* eventRepo.countPending()).toBe(1);
+        expect(yield* eventRepo.findUpdatesForNote("unmaterialized")).toHaveLength(1);
+      }),
+    );
+  });
+
+  it("allows only one concurrent creation for a supplied ID", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        yield* runTestScript(dedent`
+          export default async function (api) {
+            const results = await Promise.allSettled([
+              api.createNote("same-id", [{ kind: "append", markdown: "First." }]),
+              api.createNote("same-id", [{ kind: "append", markdown: "Second." }]),
+            ]);
+            if (results.filter((result) => result.status === "fulfilled").length !== 1) {
+              throw new Error("Expected one successful creation");
+            }
+          }
+        `);
+        const noteRepo = yield* NoteRepo.Service;
+        const eventRepo = yield* EventRepo.Service;
+        expect(yield* noteRepo.findAllRecords()).toHaveLength(1);
+        expect(yield* eventRepo.countPending()).toBe(2);
       }),
     );
   });

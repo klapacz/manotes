@@ -1,11 +1,11 @@
 ---
 name: manotes-cli
-description: Read, filter, and edit Manotes notes with zk and the CLI, then sync changes.
+description: Read, filter, create, and edit Manotes notes with zk and the CLI, then sync changes.
 ---
 
 # Manotes CLI
 
-- Purpose: Read and filter Manotes notes with zk; edit through `manotes execute`.
+- Purpose: Read and filter Manotes notes with zk; create and edit through `manotes execute`.
 - Workspace: Use the current directory unless told otherwise.
 - Read `<note-id>.md` files, but never edit them or `.manotes/` directly.
 - Metadata: Frontmatter `date` is the logical assigned date, called `created` in zk. `modified` is the last update in UTC.
@@ -58,7 +58,7 @@ zk 0.15.6 limitations:
 
 [Filtering reference](https://zk-org.github.io/zk/notes/note-filtering.html).
 
-## Edit notes
+## Create and edit notes
 
 - Body edits exclude frontmatter. Use a `date` action to change the assigned date.
 - Default-export an async function receiving this API:
@@ -69,13 +69,17 @@ type Edit =
   | { kind: "append"; markdown: string }
   | { kind: "date"; date: string }; // YYYY-MM-DD
 
+type CreateEdit = { kind: "append"; markdown: string } | { kind: "date"; date: string };
+
 type Api = {
   editNote(noteId: string, edits: readonly Edit[]): Promise<void>;
+  createNote(noteId: string | undefined, edits: readonly CreateEdit[]): Promise<string>;
 };
 ```
 
 - Note ID: Filename without `.md`.
-- Edits run in order; each awaited `editNote` call saves independently.
+- Create: Pass `undefined` to generate an ID, or a non-empty unused ID. Returns the created ID. Date defaults to today.
+- Edits run in order; each awaited `editNote` or `createNote` call saves independently.
 - Replacement text matches literal Markdown in the body, not a regex.
 - Occurrence: Omit for exactly one match; otherwise use a zero-based index or `"all"`.
 - Delete: Set `with: ""`.
@@ -83,6 +87,11 @@ type Api = {
 ```sh
 manotes execute <<'JS'
 export default async (api) => {
+  await api.createNote(undefined, [
+    { kind: "append", markdown: "# New note\n\nFirst paragraph." },
+    { kind: "date", date: "2026-09-12" },
+  ]);
+
   await api.editNote("note-id", [
     { kind: "replace", text: "# Draft", with: "# Plan" },
     { kind: "replace", text: "TODO", with: "Done", occurrence: 0 },

@@ -1,6 +1,7 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Array, DateTime, Effect, FileSystem, flow, Option, Schema } from "effect";
+import { nanoid } from "nanoid";
 import { tsImport } from "tsx/esm/api";
 import * as Y from "yjs";
 import { initProseMirrorDoc, updateYFragment } from "y-prosemirror";
@@ -8,6 +9,7 @@ import * as DB from "../lib/db.service";
 import * as EventRepo from "../lib/event.repo";
 import * as EventSchema from "../lib/event.schema";
 import { PlainDateString } from "../lib/temporal.schema";
+import { toLocalDateString } from "../lib/temporal/utils";
 import * as Materializer from "../lib/materializer.service";
 import * as NoteRepo from "../lib/note.repo";
 import { NOTE_SCHEMA } from "../lib/prosemirror/app-schema";
@@ -17,9 +19,11 @@ import { EditDocument } from "./edit-document";
 import { BacklinkLabels } from "./backlink-labels";
 
 export type Edit = EditDocument.Edit | { readonly kind: "date"; readonly date: string };
+export type CreateEdit = Extract<Edit, { readonly kind: "append" | "date" }>;
 
 export type Api = {
   readonly editNote: (id: string, edits: readonly Edit[]) => Promise<void>;
+  readonly createNote: (id: string | undefined, edits: readonly CreateEdit[]) => Promise<string>;
 };
 
 export const runScript = Effect.fn("ExecuteApi.runScript")(function* (scriptPath: string) {
@@ -119,7 +123,50 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
     );
   });
 
-  return { editNote: (id, edits) => Effect.runPromise(editNote(id, edits)) } satisfies Api;
+  const createNote = Effect.fn("ExecuteApi.createNote")(function* (
+    requestedId: string | undefined,
+    edits: readonly CreateEdit[],
+  ) {
+    const id = yield* Schema.decodeUnknownEffect(Schema.NonEmptyString)(requestedId ?? nanoid());
+    // Scripts can be plain JavaScript, so enforce the narrower creation API at runtime too.
+    if (edits.some((edit) => edit.kind !== "append" && edit.kind !== "date")) {
+      return yield* Effect.fail(new Error("createNote only accepts append and date edits"));
+    }
+
+    return yield* db.transaction(
+      Effect.gen(function* () {
+        // An existing note may still be represented only by unmaterialized events.
+        yield* materializer.materializeNoteUpTo({
+          noteId: id,
+          upToLocalSeq: yield* eventRepo.getMaxLocalSeq(),
+        });
+        const existing = yield* noteRepo.findById(id);
+        if (Option.isSome(existing)) {
+          return yield* Effect.fail(new Error(`Note already exists: ${id}`));
+        }
+
+        const resolved = yield* resolveEdits(edits);
+        const bodyUpdate = yield* createInitialUpdate(resolved.bodyEdits);
+        const createdAt = yield* DateTime.now;
+        yield* eventRepo.create({ noteId: id, type: "update", payload: bodyUpdate, createdAt });
+
+        const date = Option.getOrElse(resolved.date, () => toLocalDateString(createdAt));
+        const event = yield* eventRepo.create({
+          noteId: id,
+          type: "date",
+          payload: yield* EventSchema.encodeDatePayload({ date }),
+          createdAt,
+        });
+        yield* materializer.materializeNoteUpTo({ noteId: id, upToLocalSeq: event.localSeq });
+        return id;
+      }),
+    );
+  });
+
+  return {
+    editNote: (id, edits) => Effect.runPromise(editNote(id, edits)),
+    createNote: (id, edits) => Effect.runPromise(createNote(id, edits)),
+  } satisfies Api;
 });
 
 const resolveEdits = Effect.fn("ExecuteApi.resolveEdits")(function* (edits: readonly Edit[]) {
@@ -133,6 +180,25 @@ const resolveEdits = Effect.fn("ExecuteApi.resolveEdits")(function* (edits: read
   const bodyEdits = Array.filter(edits, (edit) => edit.kind !== "date");
   return { date, bodyEdits };
 });
+
+const createInitialUpdate = Effect.fn("ExecuteApi.createInitialUpdate")(function* (
+  edits: readonly EditDocument.Edit[],
+) {
+  // Creation must persist the empty paragraph too; a date event alone has no body.
+  const doc = yield* Effect.try({
+    try: () =>
+      EditDocument.apply(NOTE_SCHEMA.node("doc", null, [NOTE_SCHEMA.node("paragraph")]), edits),
+    catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+  });
+  const yDoc = yield* Effect.acquireRelease(
+    Effect.sync(() => new Y.Doc()),
+    (yDoc) => Effect.sync(() => yDoc.destroy()),
+  );
+  const fragment = getProsemirrorXmlFragment(yDoc);
+  const { meta } = initProseMirrorDoc(fragment, NOTE_SCHEMA);
+  updateYFragment(yDoc, fragment, doc, meta);
+  return Y.encodeStateAsUpdate(yDoc);
+}, Effect.scoped);
 
 const createBodyUpdate = Effect.fn("ExecuteApi.createBodyUpdate")(function* (
   snapshot: Uint8Array<ArrayBufferLike> | null,
