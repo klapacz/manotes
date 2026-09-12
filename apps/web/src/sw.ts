@@ -22,7 +22,7 @@ self.addEventListener("activate", (event) => {
 cleanupOutdatedCaches();
 
 // Pre-cache all assets listed in the manifest injected by vite-plugin-pwa at build time.
-// The manifest contains every hashed JS/CSS/HTML/WASM file from dist/client/.
+// The manifest contains every hashed JS/CSS/HTML/WASM file from the client build.
 // Cache invalidation is automatic: new deploy = new hashes = new cache entries.
 precacheAndRoute(self.__WB_MANIFEST);
 

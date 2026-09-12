@@ -1,4 +1,3 @@
-import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite-plus";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
@@ -8,8 +7,6 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  // Match Alchemy's client output so standalone builds also populate the SW precache.
-  build: { outDir: "dist/client" },
   server: {
     proxy: {
       "/api": {
@@ -41,10 +38,8 @@ export default defineConfig({
       // Running the SW on top of that would layer two interceptors and break /api/* proxying.
       devOptions: { enabled: false },
       injectManifest: {
-        // Alchemy builds this Vite project from apps/worker with rootDir: "../web".
-        // workbox-build resolves globDirectory from process.cwd(), not Vite's root,
-        // so keep this absolute to scan the web client's actual output directory.
-        globDirectory: fileURLToPath(new URL("./dist/client", import.meta.url)),
+        // Use the plugin's default absolute directory from Vite's resolved outDir.
+        // Alchemy builds into dist/client; standalone Vite builds into dist.
         globPatterns: ["**/*.{js,css,html,wasm,woff,woff2}"],
       },
     }),
