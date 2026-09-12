@@ -44,7 +44,7 @@ describe("CliSetup.prepare", () => {
     );
 
     expect(command).toBe(
-      " manotes init --origin 'https://manotes.example' --token 'cli-token' " +
+      " manotes init --auto-sync --origin 'https://manotes.example' --token 'cli-token' " +
         "--graph-id 'cloud'\\''id; $(printf wrong)' " +
         `--graph-key '${Buffer.from(graphKey).toString("base64")}'`,
     );

@@ -22,6 +22,7 @@ export const prepare = Effect.fn("GraphAccessCommandsCliSetup.prepare")(function
 
   return [
     " manotes init",
+    "--auto-sync",
     `--origin ${shellQuote(input.origin)}`,
     `--token ${shellQuote(apiKey)}`,
     `--graph-id ${shellQuote(input.graph.graphId)}`,

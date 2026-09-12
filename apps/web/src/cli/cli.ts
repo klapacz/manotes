@@ -1,5 +1,5 @@
 import path from "node:path";
-import { Console, Effect, Option, Redacted, Schema, flow } from "effect";
+import { Console, Effect, Option, Redacted, Result, Schema, flow } from "effect";
 import * as Reactivity from "effect/unstable/reactivity/Reactivity";
 import { Argument, CliError, Command, Flag } from "effect/unstable/cli";
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
@@ -18,6 +18,11 @@ const init = Command.make(
     origin: Flag.string("origin"),
     token: Flag.string("token"),
     graphId: Flag.string("graph-id"),
+    autoSync: Flag.boolean("auto-sync").pipe(
+      Flag.withDescription(
+        "Enable auto sync after successful edits. Can be changed later in .manotes/config.",
+      ),
+    ),
     graphKey: Flag.redacted("graph-key").pipe(
       Flag.mapEffect(
         flow(
@@ -45,6 +50,7 @@ const init = Command.make(
       token: input.token,
       graphId: input.graphId,
       graphKey: input.graphKey,
+      autoSync: input.autoSync,
     });
 
     // Create db dir before initializing database via Runtime.layer
@@ -110,7 +116,23 @@ const execute = Command.make(
 
       yield* Console.log("Local changes saved.");
       const pending = yield* printPending();
-      if (pending > 0) yield* Console.log("Run `manotes sync` to publish.");
+      if (pending === 0) return;
+
+      const config = yield* CliConfig.Service;
+      if (!config.autoSync) {
+        yield* Console.log("Run `manotes sync` to publish.");
+        return;
+      }
+
+      const result = yield* CliSync.run().pipe(Effect.provide(CliSync.layer), Effect.result);
+      if (Result.isFailure(result)) {
+        yield* Console.error("Automatic sync failed. Local changes remain saved.");
+        yield* printPending();
+        yield* Console.error("Retry with `manotes sync`.");
+        return;
+      }
+
+      yield* writeSyncedChanges();
     },
     flow(
       Effect.provide(CliRuntime.layer),
@@ -119,7 +141,7 @@ const execute = Command.make(
     ),
   ),
 ).pipe(
-  Command.withDescription("Run a trusted local script and save changes without syncing."),
+  Command.withDescription("Run a trusted local script and save changes."),
   Command.withExamples([
     {
       command: "cat edit.ts | manotes execute",
@@ -140,9 +162,7 @@ const status = Command.make("status", {}, () =>
 const syncAndWrite = Effect.fn("Cli.syncAndWrite")(function* () {
   yield* Effect.gen(function* () {
     yield* CliSync.run();
-    const materializer = yield* Materializer.Service;
-    yield* materializer.catchUp();
-    yield* MaterializedFiles.writeAll();
+    yield* writeSyncedChanges();
   }).pipe(
     Effect.tapCause(() =>
       Effect.gen(function* () {
@@ -153,7 +173,12 @@ const syncAndWrite = Effect.fn("Cli.syncAndWrite")(function* () {
       }),
     ),
   );
+});
 
+const writeSyncedChanges = Effect.fn("Cli.writeSyncedChanges")(function* () {
+  const materializer = yield* Materializer.Service;
+  yield* materializer.catchUp();
+  yield* MaterializedFiles.writeAll();
   yield* Console.log("Sync complete.");
   yield* printPending();
 });

@@ -72,3 +72,18 @@ it("decodes existing configuration into a redacted key and preserves its stored 
   expect(JSON.stringify(decoded.graphKey)).not.toContain(encoded.graphKey);
   expect(await Effect.runPromise(Schema.encodeEffect(CliConfig.Config)(decoded))).toEqual(encoded);
 });
+
+it.each([true, false])("round trips autoSync=%s", async (autoSync) => {
+  const value = { ...config, autoSync };
+  const encoded = await Effect.runPromise(Schema.encodeEffect(CliConfig.Config)(value));
+  expect(encoded.autoSync).toBe(autoSync);
+  const decoded = await Effect.runPromise(Schema.decodeEffect(CliConfig.Config)(encoded));
+  expect(decoded.autoSync).toBe(autoSync);
+});
+
+it.each(["true", 1, null])("rejects invalid autoSync=%j", async (autoSync) => {
+  const encoded = await Effect.runPromise(Schema.encodeEffect(CliConfig.Config)(config));
+  await expect(
+    Effect.runPromise(Schema.decodeUnknownEffect(CliConfig.Config)({ ...encoded, autoSync })),
+  ).rejects.toThrow();
+});

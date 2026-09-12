@@ -13,6 +13,7 @@ export const Config = Schema.Struct({
   token: Schema.NonEmptyString,
   graphId: Schema.NonEmptyString,
   graphKey: GraphKey,
+  autoSync: Schema.optionalKey(Schema.Boolean),
 });
 export type Config = typeof Config.Type;
 

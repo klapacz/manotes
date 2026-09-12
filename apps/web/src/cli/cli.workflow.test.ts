@@ -84,10 +84,10 @@ describe("CLI local workflow", () => {
     }
   });
 
-  it(
-    "saves the supplied key before syncing, without fetching a key envelope",
+  it.each([false, true])(
+    "saves the supplied key and autoSync=%s before syncing, without fetching a key envelope",
     { timeout: 30_000 },
-    async () => {
+    async (autoSync) => {
       const root = await mkdtemp(path.join(tmpdir(), "manotes-cli-init-"));
       const workspace = path.join(root, "notes");
       const graphKey = Buffer.alloc(32, 7).toString("base64");
@@ -102,6 +102,7 @@ describe("CLI local workflow", () => {
           "test-graph",
           "--graph-key",
           graphKey,
+          ...(autoSync ? ["--auto-sync"] : []),
         ]);
 
         // The unavailable server fails sync, not key acquisition. Local setup remains retryable.
@@ -114,6 +115,7 @@ describe("CLI local workflow", () => {
             token: "test-token",
             graphId: "test-graph",
             graphKey,
+            autoSync,
           },
         );
       } finally {
@@ -122,10 +124,10 @@ describe("CLI local workflow", () => {
     },
   );
 
-  it(
-    "executes files and stdin offline, reports pending changes, and fails sync cleanly",
+  it.each([undefined, false, true])(
+    "executes files and stdin offline with autoSync=%s, reports pending changes, and fails manual sync cleanly",
     { timeout: 30_000 },
-    async () => {
+    async (autoSync) => {
       const workspace = await mkdtemp(path.join(tmpdir(), "manotes-cli-workflow-"));
       try {
         const manotesDir = path.join(workspace, ".manotes");
@@ -139,6 +141,7 @@ describe("CLI local workflow", () => {
             token: "offline-test-token",
             graphId: "offline-test-graph",
             graphKey: Buffer.alloc(32).toString("base64"),
+            ...(autoSync === undefined ? {} : { autoSync }),
           }),
         );
         const note = await seedWorkspace(databasePath);
@@ -148,6 +151,7 @@ describe("CLI local workflow", () => {
           "export default async function () {}\n",
         );
         expect(exportResult.code, exportResult.stdout + exportResult.stderr).toBe(0);
+        expect(exportResult.stderr).not.toContain("Automatic sync failed.");
         const initialFile = await readFile(path.join(workspace, `${NOTE_ID}.md`), "utf8");
         expect(initialFile).toBe(
           `${dedent`
@@ -185,6 +189,14 @@ describe("CLI local workflow", () => {
         expect(fileResult.code, fileResult.stdout + fileResult.stderr).toBe(0);
         expect(fileResult.stdout).toContain("Local changes saved.");
         expect(fileResult.stdout).toContain("Pending publication: 1 changes");
+        if (autoSync) {
+          expect(fileResult.stderr).toContain("Automatic sync failed. Local changes remain saved.");
+          expect(fileResult.stderr).toContain("Retry with `manotes sync`.");
+          expect(fileResult.stdout).not.toContain("Sync complete.");
+        } else {
+          expect(fileResult.stderr).not.toContain("Automatic sync failed.");
+          expect(fileResult.stdout).toContain("Run `manotes sync` to publish.");
+        }
         expect(await readFile(path.join(workspace, `${NOTE_ID}.md`), "utf8")).toContain(
           "From file.\n",
         );
@@ -202,26 +214,33 @@ describe("CLI local workflow", () => {
         );
         expect(stdinResult.code, stdinResult.stdout + stdinResult.stderr).toBe(0);
         expect(stdinResult.stdout).toContain("Pending publication: 2 changes");
+        expect(stdinResult.stderr.includes("Automatic sync failed.")).toBe(autoSync === true);
 
         const failedStdinResult = await runCli(
           workspace,
           ["execute"],
-          'export default async function () { throw new Error("stdin failure"); }\n',
+          `export default async function (api) {
+            await api.editNote("${NOTE_ID}", [{ kind: "append", markdown: "Before failure." }]);
+            throw new Error("stdin failure");
+          }\n`,
         );
         expect(failedStdinResult.code).not.toBe(0);
         expect(failedStdinResult.stderr).toContain("Execution failed.");
+        expect(failedStdinResult.stderr).not.toContain("Automatic sync failed.");
+        expect(failedStdinResult.stdout).toContain("Pending publication: 3 changes");
         expect((await readdir(manotesDir)).filter((name) => name.startsWith("execute-"))).toEqual(
           [],
         );
 
         const statusResult = await runCli(workspace, ["status"]);
         expect(statusResult.code).toBe(0);
-        expect(statusResult.stdout).toContain("Pending publication: 2 changes");
+        expect(statusResult.stdout).toContain("Pending publication: 3 changes");
+        expect(statusResult.stderr).not.toContain("Automatic sync failed.");
 
         const syncResult = await runCli(workspace, ["sync"]);
         expect(syncResult.code).not.toBe(0);
         expect(syncResult.stderr).toContain("Sync failed.");
-        expect(syncResult.stdout).toContain("Pending publication: 2 changes");
+        expect(syncResult.stdout).toContain("Pending publication: 3 changes");
         expect(syncResult.stderr).toContain("Retry with `manotes sync`.");
       } finally {
         await rm(workspace, { recursive: true, force: true });

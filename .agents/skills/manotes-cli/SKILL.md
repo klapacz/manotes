@@ -103,4 +103,3 @@ Saved script: `manotes execute edit.ts`.
 ## Sync
 
 - `manotes sync` publishes local edits and downloads remote changes.
-- `execute` saves locally and never syncs automatically.
