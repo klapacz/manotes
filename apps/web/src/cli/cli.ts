@@ -5,6 +5,7 @@ import { Argument, CliError, Command, Flag } from "effect/unstable/cli";
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { CliConfig } from "./cli.config";
 import { CliPaths } from "./cli.paths";
+import { CliUrl } from "./url";
 import { CliSync } from "./cli.sync";
 import { MaterializedFiles } from "./materialized-files";
 import * as Materializer from "../lib/materializer.service";
@@ -165,6 +166,29 @@ const status = Command.make("status", {}, () =>
   ),
 ).pipe(Command.withDescription("Show the number of local changes awaiting publication."));
 
+const url = Command.make(
+  "url",
+  {
+    id: Argument.string("id").pipe(
+      Argument.optional,
+      Argument.withDescription("Note ID to open. Omit to show the graph root URL."),
+    ),
+    open: Flag.boolean("open").pipe(Flag.withDescription("Open the URL in the default browser.")),
+  },
+  Effect.fn("Cli.url")(
+    function* ({ id, open }) {
+      const config = yield* CliConfig.Service;
+      const url = CliUrl.make(config, Option.getOrUndefined(id));
+      yield* Console.log(url);
+
+      if (!open) return;
+
+      yield* CliUrl.open(url);
+    },
+    flow(Effect.provide(CliConfig.layerFromFile), Effect.provide(CliPaths.layer)),
+  ),
+).pipe(Command.withDescription("Print a web URL for a note or the graph root."));
+
 const syncAndWrite = Effect.fn("Cli.syncAndWrite")(function* () {
   yield* Effect.gen(function* () {
     yield* CliSync.run();
@@ -201,7 +225,7 @@ function printPending() {
 
 const cli = Command.make("manotes").pipe(
   Command.withDescription("Materialize a cloud graph onto the local filesystem."),
-  Command.withSubcommands([sync, init, execute, status]),
+  Command.withSubcommands([sync, init, execute, status, url]),
   Command.withGlobalFlags([CliPaths.DirFlag]),
 );
 
