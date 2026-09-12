@@ -16,7 +16,7 @@ export type WaitlistResult = {
   readonly status: "WAITLIST" | "ACTIVE";
 };
 
-export default class AccountsDurableObject extends Cloudflare.DurableObjectNamespace<AccountsDurableObject>()(
+export default class AccountsDurableObject extends Cloudflare.DurableObject<AccountsDurableObject>()(
   "AccountsDurableObject",
   // Resolve configuration in Alchemy's shared phase so it is available in the deployed worker.
   Effect.gen(function* () {

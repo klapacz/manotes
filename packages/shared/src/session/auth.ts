@@ -1,6 +1,5 @@
-import type * as Alchemy from "alchemy";
 import { Context } from "effect";
-import { HttpApiError, HttpApiMiddleware } from "effect/unstable/httpapi";
+import { HttpApiError } from "effect/unstable/httpapi";
 
 export interface CurrentSession {
   readonly accountId: string;
@@ -20,8 +19,3 @@ export const InternalServerError = HttpApiError.InternalServerErrorNoContent;
 
 // Separate response schemas preserve each error's HTTP status and empty body.
 export const AuthMiddlewareError = [UnauthorizedError, InternalServerError] as const;
-
-export class Middleware extends HttpApiMiddleware.Service<
-  Middleware,
-  { requires: Alchemy.RuntimeContext; provides: Current }
->()("Shared.Session.Middleware", { error: AuthMiddlewareError }) {}

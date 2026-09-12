@@ -13,11 +13,11 @@ export default Alchemy.Stack(
     const worker = yield* Worker;
     const stage = yield* Alchemy.Stage;
 
-    const web = yield* Cloudflare.Vite("App", {
+    const web = yield* Cloudflare.Website.Vite("App", {
       rootDir: "../web",
       dev: { port: 5173 },
-      url: false,
-      domain: stage === "prod" ? ["sand.manotes.dev"] : undefined,
+      workersDev: false,
+      domain: stage === "prod" ? "sand.manotes.dev" : undefined,
     });
 
     return {

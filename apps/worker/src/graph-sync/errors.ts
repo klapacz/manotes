@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-export class ProtocolViolationError extends Schema.TaggedErrorClass<ProtocolViolationError>()(
+export class ProtocolViolationError extends Schema.TaggedError<ProtocolViolationError>()(
   "GraphSyncProtocolViolationError",
   { reason: Schema.String },
 ) {

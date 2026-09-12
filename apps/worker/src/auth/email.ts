@@ -13,8 +13,8 @@ export class EmailService extends Context.Service<EmailService>()("Auth.EmailSer
     const EMAIL_ADDRESS = yield* Config.nonEmptyString("EMAIL_ADDRESS");
     const IS_DEV = yield* Config.boolean("IS_DEV");
 
-    const Email = yield* Cloudflare.SendEmail("Email");
-    const email = yield* Cloudflare.SendEmail.bind(Email);
+    const Email = yield* Cloudflare.Email.SendEmail("Email");
+    const email = yield* Cloudflare.Email.Send(Email);
 
     const send = Effect.fn("AuthEmail.send")(function* (message: EmailMessage) {
       if (IS_DEV) {

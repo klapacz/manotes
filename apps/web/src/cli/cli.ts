@@ -20,6 +20,7 @@ const init = Command.make(
     token: Flag.string("token"),
     graphId: Flag.string("graph-id"),
     autoSync: Flag.boolean("auto-sync").pipe(
+      Flag.withDefault(false),
       Flag.withDescription(
         "Enable auto sync after successful edits. Can be changed later in .manotes/config.",
       ),
@@ -173,7 +174,10 @@ const url = Command.make(
       Argument.optional,
       Argument.withDescription("Note ID to open. Omit to show the graph root URL."),
     ),
-    open: Flag.boolean("open").pipe(Flag.withDescription("Open the URL in the default browser.")),
+    open: Flag.boolean("open").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription("Open the URL in the default browser."),
+    ),
   },
   Effect.fn("Cli.url")(
     function* ({ id, open }) {

@@ -17,6 +17,7 @@ export const protectedRoutesLayer = HttpRouter.addAll(
   Effect.gen(function* () {
     const graphRegistryNS = yield* GraphRegistryDurableObject;
     const graphSyncNS = yield* GraphSyncDurableObject;
+    const withSession = yield* AuthSession.RouterMiddleware;
 
     const proxyToGraphRegistry = Effect.fn("Routes.proxyToGraphRegistry")(function* () {
       const session = yield* SessionAuth.Current;
@@ -68,23 +69,27 @@ export const protectedRoutesLayer = HttpRouter.addAll(
     );
 
     return [
-      HttpRouter.route("POST", "/api/rpc/graph-registry", () => proxyToGraphRegistry()),
+      HttpRouter.route("POST", "/api/rpc/graph-registry", () =>
+        withSession(proxyToGraphRegistry()),
+      ),
       HttpRouter.route("*", "/api/sync/:graphId", () =>
-        pipe(
-          pathParam,
-          Effect.flatMap((params) => proxyToGraphSync({ params })),
+        withSession(
+          pipe(
+            pathParam,
+            Effect.flatMap((params) => proxyToGraphSync({ params })),
+          ),
         ),
       ),
       HttpRouter.route("*", "/api/*", () =>
-        HttpServerResponse.json({ error: "Not found" }, { status: 404 }),
+        withSession(HttpServerResponse.json({ error: "Not found" }, { status: 404 })),
       ),
     ] as const;
   }),
-).pipe(Layer.provide(AuthSession.RouterMiddleware.layer));
+);
 
 export const layer = Layer.mergeAll(
   HttpRouter.add("GET", "/api/health", HttpServerResponse.jsonUnsafe({ ok: true })),
   HttpRouter.add("*", "/*", HttpServerResponse.empty({ status: 404 })),
-  SessionRoutes.layer.pipe(Layer.provide(AuthSession.HttpApiMiddlewareLayer)),
+  SessionRoutes.layer,
   protectedRoutesLayer,
 );

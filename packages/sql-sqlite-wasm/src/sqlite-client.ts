@@ -211,6 +211,9 @@ export const make = (
         executeUnprepared(sql, params, transformRows) {
           return this.execute(sql, params, transformRows);
         },
+        executeValuesUnprepared(sql, params) {
+          return run(sql, params, "array");
+        },
         executeStream() {
           return Stream.die("executeStream not implemented");
         },

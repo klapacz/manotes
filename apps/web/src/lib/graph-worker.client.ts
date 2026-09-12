@@ -209,7 +209,7 @@ const becomeLeader = Effect.fn("GraphWorkerClient.becomeLeader")(function* (
 
   // Retry worker creation - a transferred MessagePort can't be reused, so on failure we recreate everything.
   const retrySchedule = Schedule.exponential("50 millis").pipe(
-    Schedule.tapOutput((delay) =>
+    Schedule.tap(({ output: delay }) =>
       Effect.logWarning(`Retrying worker creation in ${Duration.toMillis(delay)}ms`),
     ),
   );

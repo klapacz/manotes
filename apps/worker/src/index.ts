@@ -1,3 +1,4 @@
+import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Output from "alchemy/Output";
 import { Effect, Layer } from "effect";
@@ -7,11 +8,10 @@ import { EmailService } from "./auth/email.ts";
 import { OtpService } from "./auth/otp.ts";
 import { SessionKvService } from "./auth/session-kv.ts";
 import * as Routes from "./routes.ts";
-import * as Alchemy from "alchemy";
 
 const layerCloudflareBindings = Layer.mergeAll(
-  Cloudflare.KVNamespaceBindingLive,
-  Cloudflare.SendEmailBindingLive,
+  Cloudflare.KV.ReadWriteNamespaceBinding,
+  Cloudflare.Email.SendBinding,
 );
 
 const layerAppServices = AuthService.layer.pipe(
@@ -41,31 +41,31 @@ const corsLayer = HttpRouter.middleware(
   { global: true },
 );
 
-export default Cloudflare.Worker(
+export default class Api extends Cloudflare.Worker<Api>()(
   "Api",
   {
     main: import.meta.filename,
     dev: { port: 3000 },
-    // Nested raw Effects in props are not resolved by Alchemy's input walker,
-    // so wrap the stage-dependent routes as an Output for deploy-time resolution.
-    // SAFETY: Alchemy supplies Stage while evaluating Outputs during planning, but
-    // asOutput's public type currently accepts only Effects with no requirements.
-    routes: Output.asOutput(
+    routes: Output.fromEffect(
       Alchemy.Stage.useSync((stage) =>
         stage === "prod"
           ? [{ pattern: "sand.manotes.dev/api*", zoneName: "manotes.dev" }]
           : undefined,
-      ) as Effect.Effect<Cloudflare.WorkerRouteProps[] | undefined>,
+      ),
     ),
-    url: false,
+    // Disable public workers.dev and version-preview URLs; keep the custom route.
+    workersDev: false,
   },
   Effect.gen(function* () {
+    // The router layers only register handler closures and provide pure services, so no
+    // scoped resources escape initialization. Alchemy still supplies each request's Scope.
     return {
       fetch: yield* Routes.layer.pipe(
         Layer.provide(corsLayer),
         Layer.provide(HttpServer.layerServices),
         HttpRouter.toHttpEffect,
+        Effect.scoped,
       ),
     };
   }).pipe(Effect.provide(layerAppServices)),
-);
+) {}

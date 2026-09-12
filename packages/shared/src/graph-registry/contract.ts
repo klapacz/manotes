@@ -4,7 +4,7 @@ import * as GraphEncryption from "../graph-encryption";
 
 export const DisplayNameSchema = Schema.Trim.pipe(Schema.check(Schema.isNonEmpty()));
 
-export class DisplayNameTakenError extends Schema.TaggedErrorClass<DisplayNameTakenError>()(
+export class DisplayNameTakenError extends Schema.TaggedError<DisplayNameTakenError>()(
   "GraphRegistry.DisplayNameTakenError",
   { displayName: Schema.String },
 ) {}

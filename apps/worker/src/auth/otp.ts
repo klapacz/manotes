@@ -8,8 +8,8 @@ const OTP_TTL = Duration.minutes(10);
 
 export class OtpService extends Context.Service<OtpService>()("Auth.OtpService", {
   make: Effect.gen(function* () {
-    const OTP_KV = yield* Cloudflare.KVNamespace("OTP_KV");
-    const kv = yield* Cloudflare.KVNamespace.bind(OTP_KV);
+    const OTP_KV = yield* Cloudflare.KV.Namespace("OTP_KV");
+    const kv = yield* Cloudflare.KV.ReadWriteNamespace(OTP_KV);
 
     const create = Effect.fn("AuthOtp.create")(function* (email: string) {
       const otp = generateOtp();

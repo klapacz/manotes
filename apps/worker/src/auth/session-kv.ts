@@ -16,8 +16,8 @@ const SESSION_TTL = Duration.days(30);
 
 export class SessionKvService extends Context.Service<SessionKvService>()("Auth.SessionKvService", {
   make: Effect.gen(function* () {
-    const SESSION_KV = yield* Cloudflare.KVNamespace("SESSION_KV");
-    const kv = yield* Cloudflare.KVNamespace.bind(SESSION_KV);
+    const SESSION_KV = yield* Cloudflare.KV.Namespace("SESSION_KV");
+    const kv = yield* Cloudflare.KV.ReadWriteNamespace(SESSION_KV);
 
     const create = Effect.fn("AuthSessionKv.create")(function* (email: string, accountId: string) {
       const token = crypto.randomUUID();

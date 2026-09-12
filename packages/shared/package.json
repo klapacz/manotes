@@ -19,8 +19,7 @@
     "dev": "vp pack --watch --no-clean"
   },
   "dependencies": {
-    "alchemy": "2.0.0-beta.50",
-    "effect": "4.0.0-beta.74"
+    "effect": "catalog:"
   },
   "devDependencies": {
     "@typescript/native-preview": "7.0.0-dev.20260707.2",

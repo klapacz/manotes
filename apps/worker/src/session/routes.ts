@@ -4,6 +4,7 @@ import * as SessionApi from "@manotes/shared/session/api";
 import * as SessionAuth from "@manotes/shared/session/auth";
 import * as Accounts from "../accounts/durable-object.ts";
 import { AuthService } from "../auth/auth.ts";
+import * as AuthSession from "../auth/session.ts";
 import { SessionKvService } from "../auth/session-kv.ts";
 import AccountsDurableObject from "../accounts/durable-object.ts";
 
@@ -15,6 +16,7 @@ export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
 
         const accountsNS = yield* AccountsDurableObject;
         const sessionKv = yield* SessionKvService;
+        const withSession = yield* AuthSession.RouterMiddleware;
 
         const getSessionValue = Effect.fn("SessionRoutes.getSessionValue")(function* () {
           const session = yield* SessionAuth.Current;
@@ -42,13 +44,15 @@ export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
         });
 
         return handlers
-          .handleRaw("getSession", () => getSessionValue())
+          .handleRaw("getSession", () => withSession(getSessionValue()))
           .handle("createApiKey", () =>
-            createApiKey().pipe(
-              Effect.catchTag("Auth.SessionStoreError", () =>
-                Effect.fail(new HttpApiError.InternalServerError({})),
+            withSession(
+              createApiKey().pipe(
+                Effect.catchTag("Auth.SessionStoreError", () =>
+                  Effect.fail(new HttpApiError.InternalServerError({})),
+                ),
+                Effect.catch(() => Effect.fail(new HttpApiError.InternalServerError({}))),
               ),
-              Effect.catch(() => Effect.fail(new HttpApiError.InternalServerError({}))),
             ),
           )
           .handle("checkWaitlist", ({ payload }) => checkWaitlistValue(payload.email))

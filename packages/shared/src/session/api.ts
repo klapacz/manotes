@@ -50,17 +50,14 @@ export const SessionApi = HttpApi.make("SessionApi").add(
     .add(
       HttpApiEndpoint.get("getSession", "/api/session", {
         success: Session,
-        // Intentional duplicate of SessionAuth.Middleware's error:
-        // runtime merges middleware errors, but AtomHttpApi.query currently types
-        // AsyncResult errors from endpoint-local _Error["Type"] only.
         error: SessionAuth.AuthMiddlewareError,
-      }).middleware(SessionAuth.Middleware),
+      }),
     )
     .add(
       HttpApiEndpoint.post("createApiKey", "/api/auth/api-key", {
         success: ApiKey,
         error: SessionAuth.AuthMiddlewareError,
-      }).middleware(SessionAuth.Middleware),
+      }),
     )
     .add(
       HttpApiEndpoint.post("checkWaitlist", "/api/waitlist", {

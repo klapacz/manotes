@@ -9,7 +9,7 @@ import * as Repo from "./repo.ts";
 import * as Errors from "./errors.ts";
 import { webSocketMessageToUint8Array } from "./websocket-message.ts";
 
-export default class GraphSyncDurableObject extends Cloudflare.DurableObjectNamespace<GraphSyncDurableObject>()(
+export default class GraphSyncDurableObject extends Cloudflare.DurableObject<GraphSyncDurableObject>()(
   "GraphSyncDurableObject",
   // oxlint-disable-next-line require-yield
   Effect.gen(function* () {
@@ -38,7 +38,7 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObjectName
       });
 
       const handleWebSocketFailure = Effect.fn(function* <E>(
-        ws: Cloudflare.DurableWebSocket,
+        ws: Cloudflare.WebSocket,
         cause: Cause.Cause<Errors.ProtocolViolationError | E>,
       ) {
         const failure = cause.reasons.find(Cause.isFailReason);
@@ -70,7 +70,7 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObjectName
       });
 
       const respondToWebSocketMessage = Effect.fn(function* (
-        ws: Cloudflare.DurableWebSocket,
+        ws: Cloudflare.WebSocket,
         result: Protocol.ResponsePlan,
       ) {
         for (const response of result.reply)
@@ -81,7 +81,7 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObjectName
 
       const broadcast = Effect.fn(function* (
         message: Messages.ServerMessage,
-        except: Cloudflare.DurableWebSocket,
+        except: Cloudflare.WebSocket,
       ) {
         const encoded = Codec.encodeServerMessageUnsafe(message);
 
@@ -98,7 +98,7 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObjectName
           return response;
         }),
         webSocketMessage: Effect.fnUntraced(function* (
-          socket: Cloudflare.DurableWebSocket,
+          socket: Cloudflare.WebSocket,
           rawMessage: string | ArrayBuffer,
         ) {
           const messageExit = yield* parseWebsocketMessage(rawMessage).pipe(Effect.exit);
@@ -122,12 +122,12 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObjectName
 
         // WebSocket errors are opaque values passed through to logging.
         // oxlint-disable-next-line anti-slop/no-unknown-parameters
-        webSocketError: Effect.fn(function* (_ws: Cloudflare.DurableWebSocket, error: unknown) {
+        webSocketError: Effect.fn(function* (_ws: Cloudflare.WebSocket, error: unknown) {
           yield* Effect.logWarning("Graph sync websocket error", error);
         }),
 
         webSocketClose: Effect.fn(function* (
-          ws: Cloudflare.DurableWebSocket,
+          ws: Cloudflare.WebSocket,
           code: number,
           reason: string,
         ) {

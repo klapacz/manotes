@@ -60,7 +60,7 @@ const RpcHttpAppLayer = Layer.effect(RpcHttpApp, RpcServer.toHttpEffect(GraphReg
 // Durable Object
 // ---------------------------------------------------------------------------
 
-export default class GraphRegistryDurableObject extends Cloudflare.DurableObjectNamespace<GraphRegistryDurableObject>()(
+export default class GraphRegistryDurableObject extends Cloudflare.DurableObject<GraphRegistryDurableObject>()(
   "GraphRegistryDurableObject",
   // oxlint-disable-next-line require-yield
   Effect.gen(function* () {

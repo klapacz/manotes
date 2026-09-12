@@ -11,10 +11,10 @@
   },
   "dependencies": {
     "@corvu/calendar": "^0.1.2",
-    "@effect/atom-solid": "4.0.0-beta.74",
-    "@effect/platform-browser": "4.0.0-beta.74",
-    "@effect/platform-node": "4.0.0-beta.74",
-    "@effect/sql-sqlite-node": "4.0.0-beta.50",
+    "@effect/atom-solid": "catalog:",
+    "@effect/platform-browser": "catalog:",
+    "@effect/platform-node": "catalog:",
+    "@effect/sql-sqlite-node": "catalog:",
     "@fontsource-variable/source-sans-3": "^5.2.9",
     "@fontsource/bitter": "^5.2.10",
     "@hono/standard-validator": "^0.2.2",
@@ -38,7 +38,7 @@
     "cmdk-solid": "^1.1.2",
     "cva": "1.0.0-beta.4",
     "drizzle-orm": "^0.44.7",
-    "effect": "4.0.0-beta.74",
+    "effect": "catalog:",
     "hono": "^4.12.9",
     "kysely": "^0.28.8",
     "lucide-solid": "^1.20.0",
@@ -83,6 +83,6 @@
     "workbox-window": "^7.4.1"
   },
   "engines": {
-    "node": ">=22"
+    "node": "^22.16.0 || >=24.0.0"
   }
 }

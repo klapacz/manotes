@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@manotes/shared": "workspace:*",
-    "effect": "4.0.0-beta.74"
+    "effect": "catalog:"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

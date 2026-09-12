@@ -4,12 +4,12 @@
   "type": "module",
   "scripts": {},
   "dependencies": {
-    "@effect/platform-bun": "4.0.0-beta.74",
-    "@effect/platform-node": "4.0.0-beta.74",
-    "@effect/sql-sqlite-do": "4.0.0-beta.74",
+    "@effect/platform-bun": "catalog:",
+    "@effect/platform-node": "catalog:",
+    "@effect/sql-sqlite-do": "catalog:",
     "@manotes/shared": "workspace:*",
-    "alchemy": "2.0.0-beta.50",
-    "effect": "4.0.0-beta.74",
+    "alchemy": "catalog:",
+    "effect": "catalog:",
     "jose": "6.2.2",
     "nanoid": "^5.1.6",
     "vite": "catalog:"

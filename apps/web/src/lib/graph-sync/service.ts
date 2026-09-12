@@ -6,11 +6,12 @@ import {
   Effect,
   Layer,
   Option,
+  Predicate,
   Schedule,
   Context,
   SubscriptionRef,
-  Predicate,
 } from "effect";
+import { Socket } from "effect/unstable/socket";
 import * as EventRepo from "../event.repo";
 import * as GraphSyncEventLog from "./event-log.service";
 import * as Session from "./machine/session";
@@ -29,7 +30,7 @@ export class Service extends Context.Service<Service>()("GraphSyncService", {
               onNone: () => "Disconnected" as const,
               onSome: (error) => {
                 if (
-                  Predicate.isTagged(error, "SocketError") &&
+                  Socket.SocketError.is(error) &&
                   Predicate.isTagged(error.reason, "SocketOpenError")
                 ) {
                   return "Failed" as const;
@@ -57,7 +58,7 @@ export class Service extends Context.Service<Service>()("GraphSyncService", {
     const start = Effect.fn("GraphSyncService.start")(function* () {
       return yield* run().pipe(
         Effect.retry(
-          Schedule.exponential("250 millis").pipe(Schedule.either(Schedule.spaced("1 minute"))),
+          Schedule.min([Schedule.exponential("250 millis"), Schedule.spaced("1 minute")]),
         ),
       );
     });

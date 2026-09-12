@@ -6,7 +6,6 @@ import * as EventRepo from "../lib/event.repo";
 import * as GraphSync from "../lib/graph-sync/service";
 import * as GraphSyncContext from "../lib/graph-sync/context";
 import * as GraphSyncEventLog from "../lib/graph-sync/event-log.service";
-import * as GraphSyncErrors from "../lib/graph-sync/machine/errors";
 import * as GraphSyncModel from "../lib/graph-sync/machine/model";
 import * as GraphSyncStatus from "../lib/graph-sync/status";
 import { SyncStatusCloud } from "../lib/graph.worker-rpc";
@@ -83,20 +82,24 @@ describe("CliSync.run", () => {
   });
 
   it("propagates a failed background session", async () => {
+    const failure = new Socket.SocketError({
+      reason: new Socket.SocketCloseError({ code: 1006, closeReason: "Connection lost" }),
+    });
+
     const program = Effect.gen(function* () {
       const statusRef = yield* SubscriptionRef.make(initialStatus());
       yield* CliSync.run().pipe(
         Effect.provideService(GraphSyncStatus.Ref, statusRef),
         Effect.provide(
           Layer.mock(GraphSync.Service, {
-            run: () => Effect.fail(new GraphSyncErrors.SocketClosedError()),
+            run: () => Effect.fail(failure),
           }),
         ),
         Effect.provide(unusedSessionDependencies),
       );
     });
 
-    await expect(Effect.runPromise(program)).rejects.toThrow("Graph sync socket closed");
+    await expect(Effect.runPromise(program)).rejects.toBe(failure);
   });
 
   it("fails if the session ends without publishing Ready", async () => {
