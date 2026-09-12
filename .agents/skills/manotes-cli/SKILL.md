@@ -51,11 +51,6 @@ zk list --format '{{path}}\t{{created}}' \
   --link-to PROJECT_ID.md --sort created- --limit 3
 ```
 
-zk 0.15.6 limitations:
-
-- Run zk commands one at a time.
-- Use `--match-strategy exact` when combining text and link filters.
-
 [Filtering reference](https://zk-org.github.io/zk/notes/note-filtering.html).
 
 ## Create and edit notes
