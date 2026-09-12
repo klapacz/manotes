@@ -1,21 +1,15 @@
 import { createFileRoute } from "@tanstack/solid-router";
-import { Effect, Schema } from "effect";
+import { Schema } from "effect";
 import { Pane, PaneGrid } from "../components/note/pane";
 import { PaneCtx } from "../lib/note/pane.ctx";
-import { PaneMake } from "../lib/note/pane.make";
-import { PaneSchema } from "../lib/note/pane.schema";
 import { PaneScroll } from "../lib/note/pane.scroll";
 import { Focus } from "../components/note/focus";
 
-export const Search = Schema.Struct({
-  panes: Schema.NonEmptyArray(PaneSchema.Pane).pipe(
-    Schema.withDecodingDefault(Effect.sync(() => [PaneMake.notes()])),
-  ),
-});
+import { NoteSearch } from "../lib/note/search";
 
 export const Route = createFileRoute("/$graph/")({
   component: RouteComponent,
-  validateSearch: Search.pipe(Schema.toStandardSchemaV1),
+  validateSearch: NoteSearch.Schema.pipe(Schema.toStandardSchemaV1),
 });
 
 function RouteComponent() {

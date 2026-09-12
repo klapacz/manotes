@@ -6,6 +6,7 @@ import { GraphProvider } from "../lib/graph-access/graph-runtime/context";
 import * as GraphRuntime from "../lib/graph-access/graph-runtime";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import { Stream } from "effect";
+import { GraphDestination } from "../lib/graph-access/graph-runtime/destination";
 
 export const Route = createFileRoute("/$graph")({
   component: RouteComponent,
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/$graph")({
 
 function RouteComponent() {
   const params = Route.useParams();
+  const returnTo = GraphDestination.useCurrent();
   const localGraphIdAtom = createSyncedAtom(() => params().graph);
 
   const stateAtom = GraphAccessRuntime.atom.atom((get) =>
@@ -39,7 +41,9 @@ function RouteComponent() {
           when={state()}
           cases={{
             Missing: (state) => <Navigate {...GraphRuntime.Router.redirectLinkOptions(state())} />,
-            Locked: (state) => <Navigate {...GraphRuntime.Router.redirectLinkOptions(state())} />,
+            Locked: (state) => (
+              <Navigate {...GraphRuntime.Router.redirectLinkOptions(state(), returnTo())} />
+            ),
             Ready: (graph) => (
               <GraphProvider graph={graph}>
                 <div class="flex h-svh flex-col overflow-hidden">

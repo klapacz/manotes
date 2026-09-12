@@ -1,54 +1,41 @@
 import { useAtom } from "@effect/atom-solid";
-import { createFileRoute, Navigate, redirect } from "@tanstack/solid-router";
-import { Match, Option, Schema } from "effect";
+import { createFileRoute, redirect, useRouter } from "@tanstack/solid-router";
+import { Match, Schema } from "effect";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { AppForm, useAppForm } from "../components/ui/form";
 import { MatchAsyncResult } from "../lib";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import * as GraphAccessCommands from "../lib/graph-access/commands";
-import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as Resolution from "../lib/graph-access/resolution/service";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
+import { GraphDestination } from "../lib/graph-access/graph-runtime/destination";
 
 const UnlockGraphFormSchema = Schema.Struct({
   password: GraphEncryption.PasswordSchema,
 }).pipe(Schema.toStandardSchemaV1);
 
 export const Route = createFileRoute("/$graph_/unlock")({
-  beforeLoad: async ({ params }) => {
+  validateSearch: GraphDestination.UnlockSearch.pipe(Schema.toStandardSchemaV1),
+  beforeLoad: async ({ params, search }) => {
     const resolution = await GraphAccessRuntime.rt.runPromise(Resolution.find(params.graph));
 
-    Match.value(resolution).pipe(
-      Match.tagsExhaustive({
-        Missing: () => {
-          throw redirect({ to: "/" });
-        },
-        Local: () => {
-          throw redirect({ to: "/$graph", params: { graph: params.graph } });
-        },
-        CloudUnlocked: () => {
-          throw redirect({ to: "/$graph", params: { graph: params.graph } });
-        },
-        CloudLocked: () => undefined,
+    return Match.value(resolution).pipe(
+      Match.tag("Missing", () => {
+        throw redirect({ to: "/", replace: true });
       }),
+      Match.tag("Local", "CloudUnlocked", () => {
+        throw redirect(GraphDestination.linkOptions(params.graph, search.returnTo));
+      }),
+      Match.tag("CloudLocked", ({ record }) => ({ graph: record })),
+      Match.exhaustive,
     );
-  },
-  loader: async ({ params }) => {
-    const graph = await GraphAccessRuntime.rt.runPromise(
-      LocalRegistry.Repo.findGraph({ localGraphId: params.graph }),
-    );
-    // Graph not found
-    if (Option.isNone(graph)) throw redirect({ to: "/" });
-    // Let's unlock the cloud graph
-    if (graph.value.mode === "cloud") return { graph: graph.value };
-    // Redirect to local graph
-    throw redirect({ to: "/$graph", params: { graph: params.graph } });
   },
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const data = Route.useLoaderData();
+  const data = Route.useRouteContext();
+  const router = useRouter();
 
   const [unlockGraphResult, unlockGraph] = useAtom(
     () => GraphAccessCommands.Atom.unlockCloudGraph,
@@ -68,6 +55,7 @@ function RouteComponent() {
         graph: data().graph,
         password: GraphEncryption.normalizePassword(value.password),
       });
+      await router.invalidate();
     },
   }));
 
@@ -83,7 +71,6 @@ function RouteComponent() {
       <AppForm form={form} AppForm={form.AppForm}>
         <MatchAsyncResult
           when={unlockGraphResult()}
-          onSuccess={(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
           onError={(error) => (
             <Alert variant="destructive">
               <AlertDescription>
