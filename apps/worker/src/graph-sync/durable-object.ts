@@ -119,10 +119,12 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObjectName
         }),
 
         webSocketClose: Effect.fn(function* (
-          _ws: Cloudflare.DurableWebSocket,
+          ws: Cloudflare.DurableWebSocket,
           code: number,
           reason: string,
         ) {
+          // Complete the closing handshake so clients do not wait for a socket timeout.
+          yield* ws.close(1000, "");
           yield* Effect.logWarning("Graph sync websocket closed", { code, reason });
         }),
       };
