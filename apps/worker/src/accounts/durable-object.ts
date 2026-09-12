@@ -1,8 +1,9 @@
-import { Data, Effect, Layer } from "effect";
+import { Config, Data, Effect, Layer, Option } from "effect";
 import { Struct } from "effect";
 import { SqliteClient } from "@effect/sql-sqlite-do";
 import * as Repo from "./repo.ts";
 import * as Cloudflare from "alchemy/Cloudflare";
+import { Email } from "@manotes/shared/schema/email";
 
 export const NAMESPACE_KEY = "accounts-v1";
 
@@ -17,8 +18,13 @@ export type WaitlistResult = {
 
 export default class AccountsDurableObject extends Cloudflare.DurableObjectNamespace<AccountsDurableObject>()(
   "AccountsDurableObject",
-  // oxlint-disable-next-line require-yield
+  // Resolve configuration in Alchemy's shared phase so it is available in the deployed worker.
   Effect.gen(function* () {
+    const bootstrapEmail = yield* Config.schema(Email, "BOOTSTRAP_ACCOUNT_EMAIL").pipe(
+      Config.option,
+      Effect.orDie,
+    );
+
     return Effect.gen(function* () {
       const state = yield* Cloudflare.DurableObjectState;
       const layer = Repo.Service.layer.pipe(
@@ -31,7 +37,14 @@ export default class AccountsDurableObject extends Cloudflare.DurableObjectNames
       );
 
       yield* state.blockConcurrencyWhile(() =>
-        Repo.migrate.pipe(Effect.provide(layer), Effect.orDie),
+        Effect.gen(function* () {
+          yield* Repo.migrate;
+          // One-way bootstrap: removing the setting does not deactivate an existing account.
+          if (Option.isSome(bootstrapEmail)) {
+            const repo = yield* Repo.Service;
+            yield* repo.activateByEmail({ email: bootstrapEmail.value });
+          }
+        }).pipe(Effect.provide(layer), Effect.orDie),
       );
 
       return {

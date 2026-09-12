@@ -56,10 +56,34 @@ export class Service extends Context.Service<Service>()("AccountsRepo.Service", 
       return yield* createAccount(request);
     });
 
+    const activateByEmail = SqlSchema.void({
+      Request: S.Struct({ email: S.NonEmptyString }),
+      execute: Effect.fn("AccountsRepo.activateByEmail.execute")(function* ({ email }) {
+        const timestamp = yield* DateTime.now;
+        const values = yield* Schema.encodeAccount({
+          accountId: nanoid(ACCOUNT_ID_LENGTH),
+          email,
+          status: "ACTIVE",
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
+
+        // Preserve identity and creation time; already-active accounts are left untouched.
+        return yield* sql`
+          INSERT INTO accounts ${sql.insert(values)}
+          ON CONFLICT(email) DO UPDATE SET
+            status = 'ACTIVE',
+            updatedAt = excluded.updatedAt
+          WHERE accounts.status = 'WAITLIST'
+        `;
+      }),
+    });
+
     return {
       getAccountByEmail,
       createAccount,
       findOrCreate,
+      activateByEmail,
     };
   }),
 }) {

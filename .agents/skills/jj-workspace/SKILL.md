@@ -17,6 +17,7 @@ Create a new Jujutsu workspace with `jj workspace add`. This creates an isolated
    - ```sh
      mkdir -p .workspace/$workspace_name
      jj workspace add .workspace/$workspace_name --name $workspace_name
+     cp apps/worker/.env.local .workspace/$workspace_name/apps/worker/.env.local
      cd .workspace/$workspace_name
      direnv allow
      vp install
