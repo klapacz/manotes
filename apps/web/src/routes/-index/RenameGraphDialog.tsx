@@ -30,9 +30,12 @@ type Props<T extends ValidComponent = typeof Button> = {
 
 export function RenameGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
   const [open, setOpen] = createSignal(false);
+
   const [renameGraphResult, renameGraph] = useAtom(() => GraphAccessCommands.Atom.renameGraph, {
     mode: "promise",
   });
+
+  // SAFETY: Erasing the trigger's polymorphic parameter lets Solid remove graph; remaining props are forwarded unchanged to DialogTrigger.
   const [local, triggerProps] = splitProps(props as Props, ["graph"]);
 
   const form = useAppForm(() => ({
@@ -59,6 +62,7 @@ export function RenameGraphDialog<T extends ValidComponent = typeof Button>(prop
       open={open()}
       onOpenChange={(nextOpen) => {
         if (renameGraphResult().waiting) return;
+
         if (nextOpen) form.reset();
         setOpen(nextOpen);
       }}

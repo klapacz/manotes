@@ -23,11 +23,13 @@ export const Route = createFileRoute("/")({
 const localGraphsAtom = GraphAccessRuntime.atom.atom(
   Effect.fnUntraced(function* (ctx) {
     const session = yield* ctx.result(SessionAtom.find);
+
     return LocalRegistry.Repo.reactiveListGraph({
       accountId: session.pipe(Option.map((s) => s.accountId)),
     });
   }, Stream.unwrap),
 );
+
 const cloudGraphsAtom = RemoteRegistryService.Service.listGraphs;
 
 const cloudGraphsNotOnDeviceAtom = GraphAccessRuntime.atom.atom(
@@ -48,7 +50,8 @@ const cloudGraphsNotOnDeviceAtom = GraphAccessRuntime.atom.atom(
 );
 
 function RouteComponent() {
-  const localGraphs = createAtomStore(() => localGraphsAtom, [] as LocalRegistry.Schema.Record[]);
+  const initialLocalGraphs: LocalRegistry.Schema.Record[] = [];
+  const localGraphs = createAtomStore(() => localGraphsAtom, initialLocalGraphs);
   const session = useAtomValue(() => SessionAtom.find);
 
   return (
@@ -95,6 +98,7 @@ function RouteComponent() {
           onInitial={() => <p class="text-sm text-fg-subtle">Checking sign-in status...</p>}
           onFailure={(error) => {
             createEffect(() => console.log(error()));
+
             return <p class="text-sm text-fg-subtle">Failed to load sign-in status.</p>;
           }}
         />
@@ -149,6 +153,7 @@ function RouteComponent() {
 
 function CloudGraphsSection() {
   const cloudGraphsNotOnDevice = useAtomValue(() => cloudGraphsNotOnDeviceAtom);
+
   const [openCloudGraphResult, openCloudGraph] = useAtom(
     () => GraphAccessCommands.Atom.openCloudOnDevice,
   );

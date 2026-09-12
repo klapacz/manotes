@@ -8,7 +8,7 @@ import {
   type ParentProps,
 } from "solid-js";
 import { PaneCursor } from "./pane.cursor";
-import type { PaneSchema } from "./pane.schema";
+import { PaneSchema } from "./pane.schema";
 
 export type Ctx = {
   stack: Accessor<PaneCursor.Stack>;
@@ -34,7 +34,9 @@ export function Provider(props: ParentProps<Ctx>): JSX.Element {
 
 export function use(): Ctx {
   const ctx = useContext(Context);
+
   if (!ctx) throw new Error("Must use inside PaneCtx.Provider");
+
   return ctx;
 }
 
@@ -44,18 +46,24 @@ export function usePane(): Accessor<PaneSchema.Pane> {
 
 export function useNote(): Accessor<PaneSchema.PaneNote> {
   const pane = usePane();
+
   return createMemo(() => {
     const current = pane();
-    if (current._tag !== "note") throw new Error("Current pane is not a note");
+
+    if (!PaneSchema.Pane.guards.note(current)) throw new Error("Current pane is not a note");
+
     return current;
   });
 }
 
 export function useStream(): Accessor<PaneSchema.PaneStream> {
   const pane = usePane();
+
   return createMemo(() => {
     const current = pane();
-    if (current._tag !== "stream") throw new Error("Current pane is not a stream");
+
+    if (!PaneSchema.Pane.guards.stream(current)) throw new Error("Current pane is not a stream");
+
     return current;
   });
 }

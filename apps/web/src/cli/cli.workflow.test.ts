@@ -20,7 +20,9 @@ import { PROSEMIRROR_XML_FRAGMENT_KEY } from "../lib/prosemirror/yjs";
 import { CliRuntime } from "./cli.runtime";
 
 const APP_DIR = fileURLToPath(new URL("../..", import.meta.url));
+
 const CLI_ENTRY = fileURLToPath(new URL("./cli.ts", import.meta.url));
+
 const NOTE_ID = "workflow-note";
 
 describe("CLI local workflow", () => {
@@ -29,6 +31,7 @@ describe("CLI local workflow", () => {
     { timeout: 30_000 },
     async (filename) => {
       const workspace = await mkdtemp(path.join(tmpdir(), "manotes-cli-init-"));
+
       try {
         await writeFile(path.join(workspace, filename), "Keep me.");
 
@@ -62,6 +65,7 @@ describe("CLI local workflow", () => {
     Buffer.alloc(33).toString("base64"),
   ])("rejects invalid graph key %# without writing files", { timeout: 30_000 }, async (key) => {
     const workspace = await mkdtemp(path.join(tmpdir(), "manotes-cli-init-"));
+
     try {
       const result = await runCli(workspace, [
         "init",
@@ -91,6 +95,7 @@ describe("CLI local workflow", () => {
       const root = await mkdtemp(path.join(tmpdir(), "manotes-cli-init-"));
       const workspace = path.join(root, "notes");
       const graphKey = Buffer.alloc(32, 7).toString("base64");
+
       try {
         const result = await runCli(workspace, [
           "init",
@@ -129,6 +134,7 @@ describe("CLI local workflow", () => {
     { timeout: 30_000 },
     async (autoSync) => {
       const workspace = await mkdtemp(path.join(tmpdir(), "manotes-cli-workflow-"));
+
       try {
         const manotesDir = path.join(workspace, ".manotes");
         const databasePath = path.join(manotesDir, "db.sqlite");
@@ -141,15 +147,17 @@ describe("CLI local workflow", () => {
             token: "offline-test-token",
             graphId: "offline-test-graph",
             graphKey: Buffer.alloc(32).toString("base64"),
-            ...(autoSync === undefined ? {} : { autoSync }),
+            autoSync,
           }),
         );
         const note = await seedWorkspace(databasePath);
+
         const exportResult = await runCli(
           workspace,
           ["execute"],
           "export default async function () {}\n",
         );
+
         expect(exportResult.code, exportResult.stdout + exportResult.stderr).toBe(0);
         expect(exportResult.stderr).not.toContain("Automatic sync failed.");
         const initialFile = await readFile(path.join(workspace, `${NOTE_ID}.md`), "utf8");
@@ -167,11 +175,13 @@ describe("CLI local workflow", () => {
           Initial.
         `}\n`,
         );
+
         const reexportResult = await runCli(
           workspace,
           ["execute"],
           "export default async function () {}\n",
         );
+
         expect(reexportResult.code, reexportResult.stdout + reexportResult.stderr).toBe(0);
         expect(await readFile(path.join(workspace, `${NOTE_ID}.md`), "utf8")).toBe(initialFile);
         await writeFile(
@@ -189,6 +199,7 @@ describe("CLI local workflow", () => {
         expect(fileResult.code, fileResult.stdout + fileResult.stderr).toBe(0);
         expect(fileResult.stdout).toContain("Local changes saved.");
         expect(fileResult.stdout).toContain("Pending publication: 1 changes");
+
         if (autoSync) {
           expect(fileResult.stderr).toContain("Automatic sync failed. Local changes remain saved.");
           expect(fileResult.stderr).toContain("Retry with `manotes sync`.");
@@ -197,6 +208,7 @@ describe("CLI local workflow", () => {
           expect(fileResult.stderr).not.toContain("Automatic sync failed.");
           expect(fileResult.stdout).toContain("Run `manotes sync` to publish.");
         }
+
         expect(await readFile(path.join(workspace, `${NOTE_ID}.md`), "utf8")).toContain(
           "From file.\n",
         );
@@ -212,6 +224,7 @@ describe("CLI local workflow", () => {
             }
           `,
         );
+
         expect(stdinResult.code, stdinResult.stdout + stdinResult.stderr).toBe(0);
         expect(stdinResult.stdout).toContain("Pending publication: 2 changes");
         expect(stdinResult.stderr.includes("Automatic sync failed.")).toBe(autoSync === true);
@@ -224,6 +237,7 @@ describe("CLI local workflow", () => {
             throw new Error("stdin failure");
           }\n`,
         );
+
         expect(failedStdinResult.code).not.toBe(0);
         expect(failedStdinResult.stderr).toContain("Execution failed.");
         expect(failedStdinResult.stderr).not.toContain("Automatic sync failed.");
@@ -261,6 +275,7 @@ async function seedWorkspace(databasePath: string) {
     `).toJSON(),
     PROSEMIRROR_XML_FRAGMENT_KEY,
   );
+
   const update = Y.encodeStateAsUpdate(yDoc);
   yDoc.destroy();
 
@@ -268,10 +283,12 @@ async function seedWorkspace(databasePath: string) {
     DB.Config,
     DB.Config.of({ localGraphId: "offline-test-graph", databasePath }),
   );
+
   return Effect.runPromise(
     Effect.gen(function* () {
       const eventRepo = yield* EventRepo.Service;
       const materializer = yield* Materializer.Service;
+
       const event = yield* eventRepo.create({
         noteId: NOTE_ID,
         type: "update",
@@ -279,8 +296,10 @@ async function seedWorkspace(databasePath: string) {
         createdAt: DateTime.makeUnsafe("2026-09-12T10:24:36.000Z"),
         commitSeq: 1,
       });
+
       yield* materializer.materializeNoteUpTo({ noteId: NOTE_ID, upToLocalSeq: event.localSeq });
       const noteRepo = yield* NoteRepo.Service;
+
       return yield* noteRepo.getById(NOTE_ID);
     }).pipe(
       Effect.provide(CliRuntime.layer),
@@ -300,11 +319,13 @@ type CliResult = {
 
 function runCli(workspace: string, args: readonly string[], input?: string): Promise<CliResult> {
   const { promise, resolve, reject } = Promise.withResolvers<CliResult>();
+
   const child = spawn(
     process.execPath,
     ["--import", "tsx", CLI_ENTRY, "--dir", workspace, ...args],
     { cwd: APP_DIR, timeout: 20_000 },
   );
+
   let stdout = "";
   let stderr = "";
 

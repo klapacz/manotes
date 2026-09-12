@@ -58,6 +58,7 @@ export type ButtonProps<T extends ValidComponent = "button"> = ComponentProps<
   VariantProps<typeof buttonVariants>;
 
 export const Button = <T extends ValidComponent = "button">(props: ButtonProps<T>) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as ButtonProps, ["class", "variant", "size", "rounded"]);
 
   return (

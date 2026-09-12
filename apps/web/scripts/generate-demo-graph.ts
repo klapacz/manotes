@@ -5,7 +5,7 @@
  * Usage: tsx scripts/generate-demo-graph.ts <output-path>
  */
 import { writeFileSync } from "node:fs";
-import { DateTime, Effect } from "effect";
+import { DateTime, Effect, Predicate, Record } from "effect";
 import { nanoid } from "nanoid";
 import { prosemirrorJSONToYDoc } from "y-prosemirror";
 import * as Y from "yjs";
@@ -15,7 +15,7 @@ import { NOTE_SCHEMA } from "../src/lib/prosemirror/app-schema";
 import { PROSEMIRROR_XML_FRAGMENT_KEY } from "../src/lib/prosemirror/yjs";
 import { toLocalDateString } from "../src/lib/temporal/utils";
 import { ENTRIES, PAGES, SOURCE_GRAPH_DISPLAY_NAME } from "./demo-content";
-import type { Block, Inline, PageKey } from "./demo-content";
+import type { Block, Inline } from "./demo-content";
 
 const outputPath = process.argv[2];
 
@@ -24,13 +24,11 @@ if (process.argv.length !== 3 || !outputPath) {
   process.exit(1);
 }
 
-const pageIds = Object.fromEntries(Object.keys(PAGES).map((key) => [key, nanoid()])) as Record<
-  PageKey,
-  string
->;
+const pageIds = Record.map(PAGES, () => nanoid());
 
 function inlineToJSON(inline: Inline) {
-  if (typeof inline === "string") return { type: "text", text: inline };
+  if (Predicate.isString(inline)) return { type: "text", text: inline };
+
   return { type: "backlink", attrs: { id: pageIds[inline.backlink] } };
 }
 
@@ -38,6 +36,7 @@ function blockToJSON(block: Block) {
   if ("h1" in block) {
     return { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: block.h1 }] };
   }
+
   return { type: "paragraph", content: block.p.map(inlineToJSON) };
 }
 
@@ -47,6 +46,7 @@ function buildPayload(blocks: Array<Block>): Uint8Array<ArrayBufferLike> {
     { type: "doc", content: blocks.map(blockToJSON) },
     PROSEMIRROR_XML_FRAGMENT_KEY,
   );
+
   return Y.encodeStateAsUpdate(yDoc);
 }
 
@@ -60,13 +60,14 @@ function event(
 }
 
 const now = DateTime.nowUnsafe();
+
 const events: Array<BackupSchema.Record> = [];
 
 // Pages are created first (oldest), staggered by a second so order is stable.
-Object.entries(PAGES).forEach(([key, page], index) => {
+for (const [index, [key, page]] of Record.toEntries(PAGES).entries()) {
   const createdAt = DateTime.add(DateTime.subtract(now, { days: 90 }), { seconds: index });
-  events.push(event(pageIds[key as PageKey], "update", buildPayload(page.blocks), createdAt));
-});
+  events.push(event(pageIds[key], "update", buildPayload(page.blocks), createdAt));
+}
 
 // Journal entries: an `update` event plus a `date` event pinning the day.
 for (const entry of ENTRIES) {
@@ -89,6 +90,7 @@ const bundle: BackupSchema.Bundle = {
 };
 
 const json = Effect.runSync(BackupSchema.encodeFile(bundle));
+
 writeFileSync(outputPath, json);
 
 console.log(

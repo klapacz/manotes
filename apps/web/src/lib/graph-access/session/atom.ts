@@ -1,4 +1,4 @@
-import { Option, Cause, Result, identity } from "effect";
+import { Option, Cause, Result, identity, Predicate } from "effect";
 import { Atom, AtomHttpApi } from "effect/unstable/reactivity";
 import * as SessionApi from "@manotes/shared/session/api";
 import { AsyncResult } from "effect/unstable/reactivity";
@@ -15,8 +15,11 @@ export const get = SessionHttp.query("session", "getSession", {
 });
 
 export const checkWaitlist = SessionHttp.mutation("session", "checkWaitlist");
+
 export const requestOtp = SessionHttp.mutation("session", "requestOtp");
+
 export const verifyOtp = SessionHttp.mutation("session", "verifyOtp");
+
 export const logout = SessionHttp.mutation("session", "logout");
 
 export const find = Atom.map(get, (result) => {
@@ -27,7 +30,10 @@ export const find = Atom.map(get, (result) => {
       onInitial: identity,
       onFailure: (failure) => {
         const result = Cause.findError(failure.cause);
-        if (Result.isFailure(result) || result.success._tag !== "Unauthorized") return failure;
+
+        if (Result.isFailure(result) || !Predicate.isTagged(result.success, "Unauthorized"))
+          return failure;
+
         return AsyncResult.success(Option.none());
       },
     }),

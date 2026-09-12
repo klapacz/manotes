@@ -23,6 +23,7 @@ export class EmailService extends Context.Service<EmailService>()("Auth.EmailSer
           subject: message.subject,
           text: message.text,
         });
+
         return;
       }
 

@@ -4,6 +4,7 @@ import { SqlClient, SqlSchema } from "effect/unstable/sql";
 import * as Schema from "./schema.ts";
 
 const ACCOUNT_ID_LENGTH = 12;
+
 const ACCOUNT_COLUMNS = "accountId, email, status, createdAt, updatedAt";
 
 const CreateAccountRequest = S.Struct({
@@ -31,6 +32,7 @@ export class Service extends Context.Service<Service>()("AccountsRepo.Service", 
       Result: Schema.Account,
       execute: Effect.fn("AccountsRepo.createAccount.execute")(function* ({ email, status }) {
         const timestamp = yield* DateTime.now;
+
         const values = yield* Schema.encodeAccount({
           accountId: nanoid(ACCOUNT_ID_LENGTH),
           email,
@@ -60,6 +62,7 @@ export class Service extends Context.Service<Service>()("AccountsRepo.Service", 
       Request: S.Struct({ email: S.NonEmptyString }),
       execute: Effect.fn("AccountsRepo.activateByEmail.execute")(function* ({ email }) {
         const timestamp = yield* DateTime.now;
+
         const values = yield* Schema.encodeAccount({
           accountId: nanoid(ACCOUNT_ID_LENGTH),
           email,

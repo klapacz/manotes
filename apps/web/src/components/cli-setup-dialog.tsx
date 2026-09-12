@@ -27,6 +27,9 @@ type Props<T extends ValidComponent = typeof Button> = {
 } & DialogTriggerProps<T>;
 
 export function CliSetupDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
+  // SAFETY: Solid's splitProps cannot preserve Kobalte's polymorphic component parameter
+  // through the Props<T> intersection; the cast changes no runtime properties and only
+  // removes the local `graph` key from the trigger prop bag.
   const [local, triggerProps] = splitProps(props as Props, ["graph"]);
 
   return (
@@ -46,6 +49,7 @@ function CliSetupContent(props: { readonly graph: LocalRegistry.CloudRecord }) {
       Effect.provide(FetchHttpClient.layer),
     ),
   );
+
   const [prepared, prepare] = useAtom(() => prepareAtom);
   const copyAtom = Atom.fn(CliSetup.copy);
   const [copied, copy] = useAtom(() => copyAtom);

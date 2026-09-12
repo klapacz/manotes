@@ -38,6 +38,7 @@ export function PaneActions(props: { onCreate?: () => void }) {
       key: [["X"]],
       handler: () => {
         closePane();
+
         return true;
       },
     },
@@ -46,6 +47,7 @@ export function PaneActions(props: { onCreate?: () => void }) {
       enabled: canFocus,
       handler: () => {
         focusPane();
+
         return true;
       },
     },
@@ -78,6 +80,7 @@ export function PaneActions(props: { onCreate?: () => void }) {
     </div>
   );
 }
+
 export function NoteActions(props: {
   note: NoteSchema.Meta;
   groupKey?: string;
@@ -91,6 +94,7 @@ export function NoteActions(props: {
 
   const openNext = (pane: PaneSchema.PaneInput) => {
     const result = scroll.scrollToPane(pane);
+
     if (result.found) return;
 
     return void navigate(PaneCtx.linkOptions(ctx, PaneCursor.openNext(pane)));
@@ -98,7 +102,8 @@ export function NoteActions(props: {
 
   const openOnly = () => {
     const pane = ctx.pane();
-    const input = pane._tag === "note" ? pane : PaneMake.note(props.note.id);
+    const input = PaneSchema.Pane.guards.note(pane) ? pane : PaneMake.note(props.note.id);
+
     return void navigate(PaneCtx.linkOptions(ctx, PaneCursor.replaceAll(input)));
   };
 
@@ -107,6 +112,7 @@ export function NoteActions(props: {
       key: [["B", "I"]],
       handler: () => {
         openNext(PaneMake.backlink(props.note.id));
+
         return true;
       },
     },
@@ -114,6 +120,7 @@ export function NoteActions(props: {
       key: [["B", "O"]],
       handler: () => {
         openNext(PaneMake.outgoing(props.note.id));
+
         return true;
       },
     },
@@ -121,6 +128,7 @@ export function NoteActions(props: {
       key: [["O"]],
       handler: () => {
         openOnly();
+
         return true;
       },
     },
@@ -128,6 +136,7 @@ export function NoteActions(props: {
       key: [["D"]],
       handler: () => {
         openNext(PaneMake.date(props.note.date));
+
         return true;
       },
     },

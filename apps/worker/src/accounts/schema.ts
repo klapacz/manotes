@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 
 export const Status = Schema.Literals(["WAITLIST", "ACTIVE"]);
+
 export type Status = typeof Status.Type;
 
 export const Account = Schema.Struct({
@@ -12,7 +13,9 @@ export const Account = Schema.Struct({
 });
 
 export type Account = typeof Account.Type;
+
 export type RawAccount = typeof Account.Encoded;
 
 export const encodeAccount = Schema.encodeEffect(Account);
+
 export const decodeAccount = Schema.decodeEffect(Account);

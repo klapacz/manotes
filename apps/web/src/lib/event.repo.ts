@@ -6,12 +6,15 @@ import { and, asc, count, eq, gt, isNull, lte, max } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 const decodeRecord = Schema.decodeEffect(EventSchema.Record);
+
 const decodeAll = Schema.decodeEffect(Schema.Array(EventSchema.Record));
+
 const IMPORT_BACKUP_BATCH_SIZE = 180;
 
 export class Service extends Context.Service<Service>()("EventRepo.Service", {
   make: Effect.gen(function* () {
     const db = yield* DB.Service;
+
     const countPending = Effect.fn("EventRepo.countPending")(function* () {
       // Acknowledgements update these rows in place; no separate status is stored.
       return yield* db

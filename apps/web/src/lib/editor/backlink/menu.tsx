@@ -1,4 +1,4 @@
-import { Effect, flow, Stream, Array, Struct } from "effect";
+import { Effect, flow, Stream, Array, Struct, Match } from "effect";
 import { useEditor } from "prosekit/solid";
 import {
   AutocompleteEmpty,
@@ -24,6 +24,7 @@ import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
 import { useAtom } from "@effect/atom-solid";
 
 const BACKLINK_REGEX = /\[\[([^\]\n]*)$/u;
+
 const TAB_REGEX = /\[@([^\]\n]*)$/u;
 
 type BacklinkNote = {
@@ -31,12 +32,17 @@ type BacklinkNote = {
   title: string;
 };
 
+const EMPTY_BACKLINK_NOTES: BacklinkNote[] = [];
+
+const EMPTY_TAB_CANDIDATES: BrowserExtension.TabCandidate[] = [];
+
 const CreateTabNote = bindRt((rt) =>
   rt.fn(
     Effect.fn("LibEditorBacklinkMenu.createTabNote")(function* (
       tab: BrowserExtension.TabCandidate,
     ) {
       const service = yield* BrowserExtensionTabNoteService.Service;
+
       return yield* service.createFromTab(tab);
     }),
   ),
@@ -63,7 +69,8 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
       rt.atom((get) => {
         const query = get(rawQueryAtom);
         const currentNoteId = get(currentNoteIdAtom);
-        if (!get(openAtom)) return Stream.succeed([] as BacklinkNote[]);
+
+        if (!get(openAtom)) return Stream.succeed(EMPTY_BACKLINK_NOTES);
 
         return NoteRepo.Service.use((repo) => repo.reactiveSearchPreview(query)).pipe(
           Stream.unwrap,
@@ -80,7 +87,7 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
         );
       }),
     ),
-    [] as BacklinkNote[],
+    EMPTY_BACKLINK_NOTES,
   );
 
   return (
@@ -136,12 +143,13 @@ export function TabMenu() {
     bindRt((rt) =>
       rt.atom((get) => {
         const query = get(rawQueryAtom);
-        if (!get(openAtom)) return Stream.succeed([] as BrowserExtension.TabCandidate[]);
+
+        if (!get(openAtom)) return Stream.succeed(EMPTY_TAB_CANDIDATES);
 
         return BrowserExtensionClient.watchTabs.pipe(Stream.map(filterTabs(query)));
       }),
     ),
-    [] as BrowserExtension.TabCandidate[],
+    EMPTY_TAB_CANDIDATES,
   );
 
   const [, createTabNote] = useAtom(CreateTabNote, { mode: "promise" });
@@ -192,6 +200,7 @@ function createBacklinkInsertion(editor: AppEditor) {
 
     if (!inserted) {
       editor().commands.insertText({ text: `[[${note.id}]] ` });
+
       return;
     }
 
@@ -208,16 +217,24 @@ function createBacklinkInsertion(editor: AppEditor) {
 function useArrowKeyAliases(editor: AppEditor, isOpen: () => boolean) {
   onMount(() => {
     const dom = editor().view.dom;
+
     const handler = (event: KeyboardEvent) => {
       if (!isOpen() || !event.ctrlKey || event.metaKey || event.altKey) return;
       const key = event.key.toLowerCase();
-      const aliased = key === "n" ? "ArrowDown" : key === "p" ? "ArrowUp" : null;
+
+      const aliased = Match.value(key).pipe(
+        Match.when("n", () => "ArrowDown"),
+        Match.when("p", () => "ArrowUp"),
+        Match.orElse(() => null),
+      );
+
       if (!aliased) return;
       event.preventDefault();
       dom.dispatchEvent(
         new KeyboardEvent("keydown", { key: aliased, bubbles: true, cancelable: true }),
       );
     };
+
     dom.addEventListener("keydown", handler, { capture: true });
     onCleanup(() => dom.removeEventListener("keydown", handler, { capture: true }));
   });
@@ -229,10 +246,12 @@ function makeQueryHandler(editor: AppEditor, regex: RegExp, setRawQuery: (query:
       const view = editor().view;
       const { $from } = view.state.selection;
       const parentOffset = $from.parentOffset;
+
       const textBeforeCursor = $from.parent.textBetween(
         Math.max(0, parentOffset - 200),
         parentOffset,
       );
+
       const match = regex.exec(textBeforeCursor);
 
       setRawQuery((match?.[1] ?? fallbackQuery).trim());
@@ -246,7 +265,9 @@ const filterTabs =
   (query: string) =>
   (tabs: readonly BrowserExtension.TabCandidate[]): BrowserExtension.TabCandidate[] => {
     const needle = query.trim().toLowerCase();
+
     if (needle === "") return [...tabs];
+
     return tabs.filter(
       (tab) => tab.title.toLowerCase().includes(needle) || tab.url.toLowerCase().includes(needle),
     );

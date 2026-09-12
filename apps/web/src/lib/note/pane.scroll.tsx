@@ -39,6 +39,7 @@ type Item = {
 
 export function Root(props: Props): JSX.Element {
   const focus = Focus.use();
+
   const current = keyArray(
     props.panes,
     (pane) => pane.paneId,
@@ -49,6 +50,7 @@ export function Root(props: Props): JSX.Element {
     exitMethod: "keep-index",
     onChange: (opts) => {
       const transition = prepareScrollTransition(opts);
+
       if (Option.isNone(transition)) return;
 
       const { prev, next, prefix, postfix, fadeRemovedAndScrollTo, removeImmediatelyAndScrollTo } =
@@ -67,6 +69,7 @@ export function Root(props: Props): JSX.Element {
       }
 
       const previousSingleNote = singlePreviousNoteTarget(prev, next);
+
       if (previousSingleNote) return void fadeRemovedAndScrollTo(previousSingleNote);
 
       // Branch/forward navigation: A B C -> A B D. Remove old branch, then scroll to D.
@@ -79,9 +82,11 @@ export function Root(props: Props): JSX.Element {
 
     // Check the canonical stack first; rendered panes can include exiting transition items.
     const inStack = props.panes().some(filter);
+
     if (!inStack) return { found: false, done: Promise.resolve() };
 
     const inUI = rendered().find((item) => filter(item.value()));
+
     if (!inUI) return { found: true, done: Promise.resolve() };
 
     return { found: true, done: scrollTo(inUI) };
@@ -102,11 +107,13 @@ export function Root(props: Props): JSX.Element {
 
     if (!Arr.isArrayNonEmpty(next) || unchanged) {
       finish();
+
       return Option.none();
     }
 
     // Shared trailing panes: A B C -> B C has postfix B C.
     const prevReversed = Arr.reverse(prev);
+
     const postfix = pipe(
       Arr.reverse(next),
       Arr.takeWhile((item, i) => item === prevReversed[i]),
@@ -117,6 +124,7 @@ export function Root(props: Props): JSX.Element {
 
       const animations = opts.removed.map((target) => {
         if (!(target.ref instanceof HTMLElement)) return;
+
         return animate(
           target.ref,
           { opacity: 0, filter: "blur(2px)" },
@@ -146,7 +154,9 @@ export function Root(props: Props): JSX.Element {
 
   async function scrollTo(item: Item) {
     focus.focusNode(Focus.id(item.value().paneId).pane());
+
     if (!item.ref) return;
+
     if (DOMScroll.isCenteredInScrollParent(item.ref)) return;
 
     await DOMScroll.waitForScroll(item.ref);
@@ -154,6 +164,7 @@ export function Root(props: Props): JSX.Element {
 
   onMount(() => {
     const last = rendered()?.at(-1);
+
     if (!last) return;
 
     last.ref?.scrollIntoView({
@@ -165,8 +176,10 @@ export function Root(props: Props): JSX.Element {
   });
 
   function move(ctx: Focus.ContextValue, delta: number) {
+    // eslint-disable-next-line anti-slop-effect/no-manual-tag-comparison -- The inline comparison lets TypeScript infer the find predicate.
     const focusedPane = ctx.focusedStack().find((e) => e._tag === "PaneFocusId");
     const actual = rendered();
+
     const index = pipe(
       Arr.findFirstIndex(actual, (value) => value.value().paneId === focusedPane?.paneId),
       Option.getOrElse(() => 0),
@@ -178,9 +191,11 @@ export function Root(props: Props): JSX.Element {
     );
 
     const pane = actual[index];
+
     if (!pane) return false;
 
     focus.focusWhenAvailable(Focus.id(pane.value().paneId).pane());
+
     return true;
   }
 
@@ -214,7 +229,9 @@ export function Root(props: Props): JSX.Element {
 
 export function use(): Ctx {
   const ctx = useContext(Context);
+
   if (!ctx) throw new Error("PaneScroll.use must be used inside PaneScroll.Root");
+
   return ctx;
 }
 

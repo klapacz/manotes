@@ -93,6 +93,7 @@ const RpcHandler = GraphSharedWorkerRpc.toLayer(
           yield* Effect.logInfo("Received MessagePort from leader");
 
           const existingConnection = yield* ScopedRef.get(dedicatedWorkerRef);
+
           if (Option.isSome(existingConnection)) {
             yield* Effect.logInfo("Replacing existing connection (leader failover)");
           }
@@ -110,6 +111,7 @@ const RpcHandler = GraphSharedWorkerRpc.toLayer(
                   `Failed to create dedicated worker client: ${Cause.pretty(cause)}`,
                 );
                 yield* Effect.logError("Failed to create dedicated worker client", cause);
+
                 return false;
               }),
             ),
@@ -135,6 +137,7 @@ const RpcHandler = GraphSharedWorkerRpc.toLayer(
           if (Option.isNone(current)) {
             yield* dedicatedWorkerHealth.setStatus("down", "No dedicated worker available");
             yield* Effect.logWarning("No dedicated worker connected yet");
+
             return;
           }
 

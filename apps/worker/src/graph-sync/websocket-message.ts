@@ -1,6 +1,11 @@
+import { Predicate } from "effect";
+
+const textEncoder = new TextEncoder();
+
 export function webSocketMessageToUint8Array(
   message: string | ArrayBuffer,
 ): Uint8Array<ArrayBuffer> {
-  if (typeof message === "string") return new TextEncoder().encode(message);
+  if (Predicate.isString(message)) return textEncoder.encode(message);
+
   return new Uint8Array(message);
 }

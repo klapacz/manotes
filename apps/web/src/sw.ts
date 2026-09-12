@@ -13,6 +13,7 @@ declare const self: ServiceWorkerGlobalScope;
 // Combined with clients.claim() this means the SW controls all open tabs as
 // soon as it installs, rather than only after a full page reload.
 void self.skipWaiting();
+
 self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
@@ -48,6 +49,7 @@ registerRoute(
         // cache 401 so a "logged out" state is preserved across offline sessions.
         cacheWillUpdate: async ({ response }) => {
           if (response.status === 200 || response.status === 401) return response;
+
           return null;
         },
       },

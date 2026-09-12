@@ -20,8 +20,7 @@ export default defineConfig({
       { name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" },
       { name: "anti-slop-effect", specifier: "./tools/oxlint/anti-slop/effect/index.ts" },
     ],
-    // task:WOUY still has existing findings. Keep the strict audit opt-in until migrated.
-    rules: process.env.MANOTES_ANTI_SLOP === "1" ? antiSlopRules : undefined,
+    rules: antiSlopRules,
   },
   test: {
     exclude: ["**/node_modules/**", ".reference/**", ".opencode/**", ".direnv", ".workspace/**"],

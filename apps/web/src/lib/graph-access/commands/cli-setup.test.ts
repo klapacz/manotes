@@ -20,7 +20,9 @@ const graph: LocalRegistry.CloudRecord = {
     wrappedGraphKey: new Uint8Array(48),
   },
 };
+
 const origin = "https://manotes.example";
+
 const graphKey = new Uint8Array(32).fill(7);
 
 afterEach(() => vi.unstubAllGlobals());
@@ -35,6 +37,7 @@ describe("CliSetup.prepare", () => {
       Effect.gen(function* () {
         const keys = yield* KeyStore.Service;
         yield* keys.set(graph.graphKeyEnvelope, graphKey);
+
         return yield* CliSetup.prepare({ graph, origin });
       }).pipe(
         Effect.provide(KeyStore.Service.layer),
@@ -81,6 +84,7 @@ describe("CliSetup.prepare", () => {
         Effect.gen(function* () {
           const keys = yield* KeyStore.Service;
           yield* keys.set(graph.graphKeyEnvelope, graphKey);
+
           return yield* CliSetup.prepare({ graph, origin });
         }).pipe(
           Effect.provide(KeyStore.Service.layer),
@@ -115,6 +119,7 @@ describe("CliSetup.copy", () => {
       .fn()
       .mockRejectedValueOnce(new Error("Clipboard denied"))
       .mockResolvedValueOnce(undefined);
+
     vi.stubGlobal("navigator", { clipboard: { writeText } });
     const command = " manotes init --token 'test-token'";
 

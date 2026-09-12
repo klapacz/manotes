@@ -1,4 +1,4 @@
-import { Data } from "effect";
+import { Data, Predicate } from "effect";
 import type { SqlError } from "effect/unstable/sql";
 import type { SqlErrorReason } from "effect/unstable/sql/SqlError";
 
@@ -16,8 +16,8 @@ export function remapDisplayNameSqlError(error: SqlError.SqlError, displayName: 
 
 export function isDisplayNameUniquenessSqlError(reason: SqlErrorReason): boolean {
   return (
-    reason._tag === "UnknownError" &&
-    typeof reason.cause === "string" &&
+    Predicate.isTagged(reason, "UnknownError") &&
+    Predicate.isString(reason.cause) &&
     reason.cause.includes("UNIQUE constraint failed") &&
     reason.cause.includes("graphs.displayName")
   );
@@ -25,8 +25,8 @@ export function isDisplayNameUniquenessSqlError(reason: SqlErrorReason): boolean
 
 export function isGraphIdUniquenessSqlError(reason: SqlErrorReason): boolean {
   return (
-    reason._tag === "UnknownError" &&
-    typeof reason.cause === "string" &&
+    Predicate.isTagged(reason, "UnknownError") &&
+    Predicate.isString(reason.cause) &&
     reason.cause.includes("UNIQUE constraint failed") &&
     reason.cause.includes("graphs.graphId")
   );

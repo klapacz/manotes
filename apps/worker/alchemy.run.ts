@@ -12,6 +12,7 @@ export default Alchemy.Stack(
   Effect.gen(function* () {
     const worker = yield* Worker;
     const stage = yield* Alchemy.Stage;
+
     const web = yield* Cloudflare.Vite("App", {
       rootDir: "../web",
       dev: { port: 5173 },

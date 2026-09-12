@@ -9,6 +9,7 @@ import { getProsemirrorXmlFragment } from "./prosemirror/yjs";
 export function yDocToNodeJSON(opts: { yDoc: Y.Doc }): UnknownNodeJSON {
   const xmlFragment = getProsemirrorXmlFragment(opts.yDoc);
   const rootNode = yXmlFragmentToProseMirrorRootNode(xmlFragment, NOTE_SCHEMA);
+
   return jsonFromNode(rootNode);
 }
 
@@ -20,6 +21,7 @@ export function findFirstH1Text(node: UnknownNodeJSON): string {
   });
 
   if (!firstHeading) return "";
+
   return normalizeText(collectText(firstHeading));
 }
 
@@ -50,10 +52,12 @@ function findFirstMatchingNode(
   if (predicate(node)) return node;
 
   const children = node.content;
+
   if (!children) return null;
 
   for (const child of children) {
     const match = findFirstMatchingNode(child, predicate);
+
     if (match) return match;
   }
 
@@ -69,6 +73,7 @@ function collectText(node: UnknownNodeJSON): string {
   const children = node.content ?? [];
 
   let nestedText = "";
+
   for (const child of children) {
     nestedText += collectText(child);
   }

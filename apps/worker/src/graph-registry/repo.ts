@@ -136,6 +136,8 @@ function remapDisplayNameSqlError(error: SqlError.SqlError, displayName: string)
   return error;
 }
 
+// Driver causes are opaque; keep the existing message-based fallback.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 function isDisplayNameUniquenessSqlError(error: unknown): boolean {
   let message: string;
 

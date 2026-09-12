@@ -56,6 +56,7 @@ export class Service extends Context.Service<Service>()("MaterializedEventServic
 
     const setDate = Effect.fn("MaterializedEventService.setDate")(function* (input: SetDateInput) {
       const payload = yield* EventSchema.encodeDatePayload({ date: input.date });
+
       const event = yield* eventRepo.create({
         noteId: input.noteId,
         payload,

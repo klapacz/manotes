@@ -30,6 +30,7 @@ export type AlertProps<T extends ValidComponent = "div"> = ComponentProps<
   VariantProps<typeof alertVariants>;
 
 export const Alert = <T extends ValidComponent = "div">(props: AlertProps<T>) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as AlertProps, ["class", "variant"]);
 
   return (

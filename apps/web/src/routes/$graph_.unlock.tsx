@@ -43,6 +43,7 @@ function RouteComponent() {
       mode: "promise",
     },
   );
+
   const form = useAppForm(() => ({
     defaultValues: {
       password: "",

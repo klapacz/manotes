@@ -16,7 +16,7 @@ import {
 import { Dynamic } from "solid-js/web";
 import { createEventListener } from "@solid-primitives/event-listener";
 import { createSequenceMatcher, isModifierKey, type Hotkey } from "@tanstack/hotkeys";
-import { Data, Equal, MutableHashMap as MHS, MutableHashSet, Option } from "effect";
+import { Data, Equal, Match, MutableHashMap as MHS, MutableHashSet, Option } from "effect";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import type { Setter } from "solid-js";
 
@@ -87,11 +87,14 @@ export type ContextValue = {
 };
 
 const Context = createContext<ContextValue>();
+
 export const NodeContext = createContext<Accessor<Node>>();
 
 export function use(): ContextValue {
   const ctx = useContext(Context);
+
   if (!ctx) throw new Error("PaneStreamFocus.use must be used within Provider");
+
   return ctx;
 }
 
@@ -108,6 +111,7 @@ export function Provider(props: ParentProps): JSX.Element {
 
   const focusIfWaiting = (node: NodeRegistration) => {
     const current = MutableHashSet.has(waitingForFocus, node.id);
+
     if (!current) return;
 
     MutableHashSet.remove(waitingForFocus, node.id);
@@ -116,9 +120,11 @@ export function Provider(props: ParentProps): JSX.Element {
 
   const focusNode = (id: FocusId) => {
     const node = MHS.get(nodes, id);
+
     if (Option.isNone(node)) return;
 
     setFocusedId(id);
+
     for (const listener of focusChangeListeners) listener(id);
     node.value.onFocus?.();
 
@@ -127,9 +133,11 @@ export function Provider(props: ParentProps): JSX.Element {
 
   const focusParent = () => {
     const current = focusedId();
+
     if (!current) return;
 
     const node = MHS.get(nodes, current);
+
     if (Option.isSome(node)) focusNode(node.value.parentId);
   };
 
@@ -142,6 +150,7 @@ export function Provider(props: ParentProps): JSX.Element {
 
   const focusedIdIs = (id: FocusId) => {
     const current = focusedId();
+
     return current !== null && Equal.equals(current, id);
   };
 
@@ -155,6 +164,7 @@ export function Provider(props: ParentProps): JSX.Element {
         focusIfWaiting(current);
         onCleanup(() => {
           const node = MHS.get(nodes, current.id);
+
           if (Option.isSome(node) && node.value === current) {
             const shouldFocusParent = focusedIdIs(current.id);
             MHS.remove(nodes, current.id);
@@ -181,10 +191,12 @@ export function Provider(props: ParentProps): JSX.Element {
     if (isInteractive(event.target)) return;
 
     const current = focusedId();
+
     if (!current) return;
 
     for (const node of nodeAncestry(nodes, current)) {
       const handled = node.onKeyDown?.(event);
+
       if (!handled) continue;
 
       event.preventDefault();
@@ -240,11 +252,13 @@ export function createNode(registration: (ctx: ContextValue) => NodeAutoRegistra
 
   const focused = () => {
     const current = ctx.focusedId();
+
     return current !== null && Equal.equals(current, id());
   };
 
   const focusWithin = (_targetId?: FocusId) => {
     const targetId = _targetId ?? id();
+
     return nodeAncestry(ctx.nodes, ctx.focusedId()).some((node) => Equal.equals(node.id, targetId));
   };
 
@@ -257,6 +271,7 @@ export function createNode(registration: (ctx: ContextValue) => NodeAutoRegistra
       ...input,
       matchers: input.key.map((steps) => createSequenceMatcher([...steps])),
     }));
+
     shortcutSets.add(shortcuts);
     onCleanup(() => shortcutSets.delete(shortcuts));
   };
@@ -270,6 +285,7 @@ export function createNode(registration: (ctx: ContextValue) => NodeAutoRegistra
     for (const shortcuts of shortcutSets) {
       for (const shortcut of shortcuts) {
         if (!shortcut.allowRepeat && event.repeat) continue;
+
         if (shortcut.enabled && !shortcut.enabled()) continue;
 
         for (const matcher of shortcut.matchers) {
@@ -288,18 +304,22 @@ export function createNode(registration: (ctx: ContextValue) => NodeAutoRegistra
   ctx.register(() => {
     const current = resolved();
     const parentId = current.parentId ?? fparent?.().id();
+
     if (!parentId) throw new Error("Expected parentId.");
+
     return { ...current, parentId, onKeyDown };
   });
 
   createEffect(() => {
     const current = element();
+
     if (!focused() || !current || document.activeElement === current) return;
     resolved().syncFocus?.(current);
   });
 
   createEffect(() => {
     const current = element();
+
     if (!focusWithin() || !current) return;
     resolved().syncFocusWithin?.(current);
   });
@@ -322,7 +342,9 @@ export function NodeProvider(props: ParentProps<{ node: Node }>) {
 
 export function useNode() {
   const node = useContext(NodeContext);
+
   if (!node) throw new Error("Expected focus node.");
+
   return node();
 }
 
@@ -332,7 +354,7 @@ export type ElementProps<T extends ValidComponent = "div"> = ComponentProps<T> &
 
 export function Element<T extends ValidComponent = "div">(props: ElementProps<T>) {
   const fnode = useNode();
-  const [local, rest] = splitProps(props as ElementProps, ["as", "ref", "tabIndex"]);
+  const [local, rest] = splitProps(props, ["as", "ref", "tabIndex"]);
 
   return (
     <Dynamic
@@ -364,9 +386,11 @@ export function useId() {
 
 function fireShortcut(shortcut: ShortcutBindingInput, event: KeyboardEvent): boolean {
   const handled = shortcut.handler(event) === true;
+
   if (!handled) return false;
 
   if (shortcut.preventDefault !== false) event.preventDefault();
+
   if (shortcut.stopPropagation) event.stopPropagation();
 
   return true;
@@ -374,25 +398,23 @@ function fireShortcut(shortcut: ShortcutBindingInput, event: KeyboardEvent): boo
 
 function isInteractive(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
+
   if (target.isContentEditable) return true;
+
   return !!target.closest("input, select, textarea, [role='dialog'], [contenteditable='true']");
 }
 
 function formatId(id: FocusId): string {
-  switch (id._tag) {
-    case "RootFocusId":
-      return "root";
-    case "RootNodeFocusId":
-      return "root-node";
-    case "PaneGridFocusId":
-      return "pane-grid";
-    case "PaneFocusId":
-      return `pane:${id.paneId}`;
-    case "NoteFocusId":
-      return `pane:${id.paneId}:note:${id.noteId}`;
-    case "EditorFocusId":
-      return `pane:${id.paneId}:note:${id.noteId}:editor`;
-  }
+  return Match.value(id).pipe(
+    Match.tagsExhaustive({
+      RootFocusId: () => "root",
+      RootNodeFocusId: () => "root-node",
+      PaneGridFocusId: () => "pane-grid",
+      PaneFocusId: (id) => `pane:${id.paneId}`,
+      NoteFocusId: (id) => `pane:${id.paneId}:note:${id.noteId}`,
+      EditorFocusId: (id) => `pane:${id.paneId}:note:${id.noteId}:editor`,
+    }),
+  );
 }
 
 function nodeAncestry(
@@ -404,6 +426,7 @@ function nodeAncestry(
 
   while (id) {
     const node = MHS.get(nodes, id);
+
     if (Option.isNone(node)) break;
 
     result.push(node.value);

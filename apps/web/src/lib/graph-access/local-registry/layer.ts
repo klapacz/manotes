@@ -28,6 +28,7 @@ export const Layer = EffectLayer.unwrap(
   Effect.gen(function* () {
     const context = yield* EffectLayer.build(BaseLayer);
     yield* Repo.migrate.pipe(Effect.provide(context));
+
     return EffectLayer.succeedContext(
       context.pipe(Context.pick(SqliteClient.SqliteClient, SqlClient.SqlClient)),
     );

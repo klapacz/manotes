@@ -3,6 +3,7 @@ import { Context, Data, Duration, Effect, Layer } from "effect";
 import { customAlphabet } from "nanoid";
 
 const generateOtp = customAlphabet("0123456789", 6);
+
 const OTP_TTL = Duration.minutes(10);
 
 export class OtpService extends Context.Service<OtpService>()("Auth.OtpService", {
@@ -26,9 +27,11 @@ export class OtpService extends Context.Service<OtpService>()("Auth.OtpService",
       const stored = yield* kv
         .get(email)
         .pipe(Effect.mapError((cause) => new OtpStoreError({ operation: "read", cause })));
+
       if (stored === null || stored !== otp) {
         return yield* Effect.fail(new OtpVerificationError());
       }
+
       yield* kv
         .delete(email)
         .pipe(Effect.mapError((cause) => new OtpStoreError({ operation: "delete", cause })));

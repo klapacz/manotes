@@ -11,6 +11,7 @@ const initialHealth = new DedicatedWorkerHealth({
   consecutiveFailures: 0,
   lastFailure: "",
 });
+
 const WorkerHealth = bindRt((rt) =>
   rt.atom(
     GraphWorkerClient.Service.useSync((svc) => svc.client.healthStream({})).pipe(

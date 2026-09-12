@@ -37,6 +37,7 @@ export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
         ) {
           const accounts = accountsNS.getByName(Accounts.NAMESPACE_KEY);
           const result = yield* accounts.checkOrWaitlist(email).pipe(Effect.orDie);
+
           return { status: result.status };
         });
 

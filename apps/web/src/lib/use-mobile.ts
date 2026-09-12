@@ -15,5 +15,6 @@ export const useIsMobile = () => {
   onCleanup(() => {
     mql.removeEventListener("change", update);
   });
+
   return state;
 };

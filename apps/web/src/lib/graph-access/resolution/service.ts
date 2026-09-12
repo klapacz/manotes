@@ -87,7 +87,9 @@ const resolveWithoutKeyLookup = (
 ): ResolveWithoutKeyLookupResult => {
   if (Option.isNone(option)) return Result.succeed(Resolution.Missing());
   const record = option.value;
+
   if (record.status === "deleting") return Result.succeed(Resolution.Missing());
+
   if (record.mode === "local") return Result.succeed(Resolution.Local({ record }));
 
   // Cloud graphs are only resolvable when the session belongs to the same account.

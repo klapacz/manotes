@@ -23,6 +23,7 @@ import { Focus } from "./focus";
 // the slot has been idle past the TTL.
 
 const SLOT_IDLE_TTL = "7 seconds";
+
 const PRELOAD_CONCURRENCY = 10;
 
 export class EditorBootError extends Data.TaggedError("EditorBootError")<{
@@ -53,6 +54,7 @@ export const make = Effect.fn("EditorPool.make")(function* (owner: Owner | null)
       Effect.acquireRelease(
         Effect.sync(() => {
           if (!owner) throw new Error("EditorPool requires a Solid owner");
+
           return runWithOwner(owner, () => createSlot(noteId))!;
         }),
         (slot) => Effect.sync(() => slot.dispose()),
@@ -79,7 +81,9 @@ export function Provider(props: ParentProps<{ pool: Pool }>): JSX.Element {
 
 export function use(): Pool {
   const pool = useContext(Context);
+
   if (!pool) throw new Error("Must use inside EditorPool.Provider");
+
   return pool;
 }
 
@@ -96,23 +100,19 @@ function createSlot(noteId: string): PooledSlot {
     const setBootStateReady = (state: BootState) => {
       setBootState(state);
 
-      switch (state._tag) {
-        case "Ready": {
-          Effect.runSync(Deferred.succeed(ready, undefined));
-          break;
-        }
-        case "Error": {
-          Effect.runSync(
-            Deferred.fail(ready, new EditorBootError({ noteId, message: state.message })),
-          );
-          break;
-        }
-      }
+      BootState.$match(state, {
+        Loading: () => undefined,
+        Ready: () => Effect.runSync(Deferred.succeed(ready, undefined)),
+        Error: ({ message }) =>
+          Effect.runSync(Deferred.fail(ready, new EditorBootError({ noteId, message }))),
+      });
     };
 
     const fnode = Focus.useNode();
     const [focusParent, setFocusParent] = createSignal<Focus.Node>();
 
+    // SAFETY: Solid's DOM JSX transform returns the intrinsic `div` element synchronously;
+    // its public JSX.Element type is broader than the generated runtime value.
     const container = (
       <div>
         <Focus.NodeProvider node={focusParent() ?? fnode}>

@@ -63,6 +63,7 @@ describe("app Markdown conversion", () => {
 
       - plain
     `);
+
     expect(doc.childCount).toBe(3);
     expect(doc.child(0).type.name).toBe("list");
     expect(doc.child(0).attrs).toMatchObject({ kind: "ordered", order: 1 });
@@ -75,6 +76,7 @@ describe("app Markdown conversion", () => {
     const doc = MdParse.parse(
       "See [**Display**](./note%20%281%29.md) and [remote](https://example.com/note.md).",
     );
+
     const backlink = doc.firstChild!.child(1);
     expect(backlink.type.name).toBe("backlink");
     expect(backlink.attrs.id).toBe("note (1)");
@@ -88,6 +90,7 @@ describe("app Markdown conversion", () => {
     const doc = MdParse.parse(
       "Before **[one](./one.md)[two](./two.md)** after [web](https://example.com).",
     );
+
     const paragraph = doc.firstChild!;
     expect(paragraph.child(0).text).toBe("Before ");
     expect(paragraph.child(1).attrs.id).toBe("one");
@@ -104,6 +107,7 @@ describe("app Markdown conversion", () => {
       - [X] checked
       - [ ] unchecked
     `);
+
     expect(doc.child(0).attrs.kind).toBe("toggle");
     expect(doc.child(0).textContent).toBe("[x] literal");
     expect(doc.child(1).attrs).toMatchObject({ kind: "task", checked: true });
@@ -114,6 +118,7 @@ describe("app Markdown conversion", () => {
     const doc = MdParse.parse(
       "[asset](./asset.png) [parent](../note.md) [fragment](./note.md#section)",
     );
+
     expect(doc.firstChild!.child(0).marks[0]!.type.name).toBe("link");
     expect(doc.firstChild!.child(2).marks[0]!.type.name).toBe("link");
     expect(doc.firstChild!.child(4).marks[0]!.type.name).toBe("link");
@@ -128,11 +133,13 @@ describe("app Markdown conversion", () => {
       \`\`\`\`
     ` +
       "\n\n";
+
     const doc = NOTE_SCHEMA.node(
       "doc",
       null,
       NOTE_SCHEMA.node("codeBlock", { language: "ts" }, NOTE_SCHEMA.text(text)),
     );
+
     expect(MdSerialize.serialize(doc)).toContain("`````ts");
     expect(MdParse.parse(MdSerialize.serialize(doc)).eq(doc)).toBe(true);
   });
@@ -150,6 +157,7 @@ describe("app Markdown conversion", () => {
       code
       \`\`\`
     `);
+
     const { markdown, blocks } = MdSerialize.withBlockSpans(doc);
     expect(markdown).toBe(MdSerialize.serialize(doc));
     expect(blocks).toHaveLength(doc.childCount);
@@ -191,6 +199,7 @@ describe("app Markdown conversion", () => {
 
       8. new run
     `);
+
     expect(doc.child(0).attrs.order).toBe(1);
     expect(doc.child(1).attrs.order).toBe(2);
     expect(doc.child(2).child(1).attrs.order).toBe(1);
@@ -202,6 +211,7 @@ describe("app Markdown conversion", () => {
   it("overrides stored numbering on export without mutating the source", () => {
     const paragraph = NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("item"));
     const nested = NOTE_SCHEMA.node("list", { kind: "ordered", order: 9 }, paragraph);
+
     const doc = NOTE_SCHEMA.node("doc", null, [
       NOTE_SCHEMA.node("list", { kind: "ordered", order: 3 }, [paragraph, nested]),
       NOTE_SCHEMA.node("list", { kind: "ordered", order: 1 }, paragraph),
@@ -209,6 +219,7 @@ describe("app Markdown conversion", () => {
       paragraph,
       NOTE_SCHEMA.node("list", { kind: "ordered", order: 42 }, paragraph),
     ]);
+
     const before = doc.toJSON();
     const { markdown, blocks } = MdSerialize.withBlockSpans(doc);
     expect(markdown.match(/^\d+\. /gm)).toEqual(["1. ", "2. ", "3. ", "1. "]);
@@ -236,6 +247,7 @@ describe("app Markdown conversion", () => {
       { kind: "task", checked: "false" },
       NOTE_SCHEMA.node("paragraph"),
     );
+
     expect(() => MdSerialize.serialize(NOTE_SCHEMA.node("doc", null, task))).toThrow(/boolean/);
     const paragraph = NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.node("backlink", { id: "" }));
     expect(() => MdSerialize.serialize(NOTE_SCHEMA.node("doc", null, paragraph))).toThrow(
@@ -249,6 +261,7 @@ describe("app Markdown conversion", () => {
       { kind: "toggle", collapsed: true },
       NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("hidden")),
     );
+
     const doc = NOTE_SCHEMA.node("doc", null, item);
     const before = doc.toJSON();
     expect(MdParse.parse(MdSerialize.serialize(doc)).firstChild!.attrs.collapsed).toBe(false);

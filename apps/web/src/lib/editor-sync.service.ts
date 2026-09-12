@@ -1,5 +1,6 @@
 import { Chunk, Data, Deferred, Effect, Layer, pipe, Queue, Context, Stream } from "effect";
 import * as Y from "yjs";
+import { ySyncPluginKey } from "y-prosemirror";
 import * as EventRepo from "./event.repo";
 import { Array, DateTime, Option } from "effect";
 import * as NoteSchema from "./note.schema";
@@ -9,9 +10,16 @@ import { streamDebounceNoDrop } from "./stream-debounce-no-drop";
 
 const REMOTE_ORIGIN = Symbol("remote");
 
+type EditorUpdateOrigin = typeof REMOTE_ORIGIN | typeof ySyncPluginKey | Y.UndoManager | null;
+
+type EditorUpdateListener = (
+  update: Uint8Array<ArrayBufferLike>,
+  origin: EditorUpdateOrigin,
+) => void;
+
 class OutcomingUpdateCtx extends Data.Class<{
   update: Uint8Array<ArrayBufferLike>;
-  origin: unknown;
+  origin: EditorUpdateOrigin;
 }> {}
 
 export type SetupInput = { noteId: string };
@@ -98,7 +106,7 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
     ) {
       yield* Stream.callback<OutcomingUpdateCtx>((queue) =>
         Effect.sync(() => {
-          const listener = (update: Uint8Array<ArrayBufferLike>, origin: unknown) => {
+          const listener: EditorUpdateListener = (update, origin) => {
             Queue.offerUnsafe(queue, new OutcomingUpdateCtx({ update, origin }));
           };
 

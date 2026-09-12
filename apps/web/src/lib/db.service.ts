@@ -1,4 +1,4 @@
-import { Data, Effect, Layer, Option, Context } from "effect";
+import { Data, Effect, Layer, Option, Context, Predicate, Schema } from "effect";
 
 import type { RunnableQuery as DrizzleQuery } from "drizzle-orm/runnable-query";
 
@@ -53,33 +53,33 @@ export class Service extends Context.Service<Service>()("DB", {
 
     const transaction = sql.withTransaction;
 
-    type QueryCallbackFn<T> = (db: typeof drizzle) => DrizzleQuery<T, "sqlite">;
+    type QueryCallbackFn<T> = (
+      db: typeof drizzle,
+    ) => DrizzleQuery<T, "sqlite"> & { toSQL(): Query };
 
     const reactiveQuery = Effect.fn("DB.reactiveQuery")(function* <T extends object[]>(
       cb: QueryCallbackFn<T>,
     ) {
       const query = cb(drizzle);
-      const statement = yield* queryToSQL(query);
+      const statement = query.toSQL();
 
       return sql.reactive(
         yield* getUsedTables(query),
-        sql.unsafe<T[number]>(statement.sql, statement.params as ReadonlyArray<unknown>),
+        sql.unsafe<T[number]>(statement.sql, statement.params),
       );
     });
 
     const query = Effect.fn("DB.query")(function* <T extends object[]>(cb: QueryCallbackFn<T>) {
       const query = cb(drizzle);
-      const statement = yield* queryToSQL(query);
+      const statement = query.toSQL();
 
-      return yield* sql.unsafe<T[number]>(
-        statement.sql,
-        statement.params as ReadonlyArray<unknown>,
-      );
+      return yield* sql.unsafe<T[number]>(statement.sql, statement.params);
     });
 
     const find = Effect.fn("DB.find")(function* <T extends object[]>(cb: QueryCallbackFn<T>) {
-      const [result] = yield* query(cb);
-      return Option.fromNullishOr(result as T[number]);
+      const [result] = yield* query<T>(cb);
+
+      return Option.fromNullishOr(result);
     });
 
     return {
@@ -93,18 +93,12 @@ export class Service extends Context.Service<Service>()("DB", {
   static readonly layer = Layer.effect(this, this.make);
 }
 
-const queryToSQL = Effect.fnUntraced(function* (query: DrizzleQuery<any, "sqlite">) {
-  if (!("toSQL" in query) || typeof query.toSQL !== "function") {
+const decodeUsedTables = Schema.decodeUnknownEffect(Schema.Array(Schema.String));
+
+const getUsedTables = Effect.fnUntraced(function* <T>(query: DrizzleQuery<T, "sqlite">) {
+  if (!("getUsedTables" in query) || !Predicate.isFunction(query.getUsedTables)) {
     return yield* Effect.die("Provided query is not a valid Drizzle query");
   }
 
-  return query.toSQL() as Query;
-});
-
-const getUsedTables = Effect.fnUntraced(function* (query: DrizzleQuery<any, "sqlite">) {
-  if (!("getUsedTables" in query) || typeof query.getUsedTables !== "function") {
-    return yield* Effect.die("Provided query is not a valid Drizzle query");
-  }
-
-  return query.getUsedTables() as string[];
+  return yield* decodeUsedTables(query.getUsedTables()).pipe(Effect.orDie);
 });

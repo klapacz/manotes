@@ -31,6 +31,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Sy
       if (Option.isNone(originalLocalGraph)) {
         return yield* Effect.fail(new GraphAccessErrors.LocalGraphNotFoundError({ localGraphId }));
       }
+
       if (originalLocalGraph.value.mode === "cloud") {
         return yield* Effect.fail(
           new GraphAccessErrors.LocalGraphAlreadySyncedError({
@@ -64,6 +65,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Sy
         Effect.catchCause((cause) => {
           // Remove the key from the store on error.
           const remove = keyStore.remove(graph.graphKeyEnvelope).pipe(Effect.ignore);
+
           return Effect.andThen(remove, Effect.failCause(cause));
         }),
       );
@@ -77,6 +79,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Sy
       if (Option.isNone(originalGraph)) {
         return yield* Effect.fail(new GraphAccessErrors.LocalGraphNotFoundError({ localGraphId }));
       }
+
       if (originalGraph.value.mode === "local") {
         return originalGraph.value;
       }

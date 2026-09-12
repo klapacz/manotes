@@ -14,16 +14,20 @@ function createToggleTaskListItemCommand(): Command {
 
     for (let depth = $from.depth; depth >= 0; depth -= 1) {
       const node = $from.node(depth);
+
       if (node.type.name !== "list" || node.attrs.kind !== "task") {
         continue;
       }
 
       const listPos = $from.before(depth);
+
       const tr = state.tr.setNodeMarkup(listPos, null, {
         ...node.attrs,
         checked: !node.attrs.checked,
       });
+
       dispatch?.(tr);
+
       return true;
     }
 

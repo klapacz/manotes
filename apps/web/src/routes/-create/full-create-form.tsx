@@ -15,6 +15,10 @@ const CreateGraphFormSchema = Schema.Struct({
   password: Schema.String,
 }).pipe(Schema.toStandardSchemaV1);
 
+type CreateGraphSubmitMeta = {
+  mode: "local" | "cloud";
+};
+
 const createGraphAtom = GraphAccessRuntime.atom.fn(
   Effect.fn("RoutesCreate.createGraph")(function* ({
     mode,
@@ -26,19 +30,23 @@ const createGraphAtom = GraphAccessRuntime.atom.fn(
     password: string;
   }) {
     const provision = yield* GraphAccessCommandsProvision.Service;
+
     if (mode === "local") {
       return yield* provision.createLocal({ displayName });
     }
+
     return yield* provision.createSynced({ displayName, password });
   }),
 );
 
 export function FullCreateForm() {
   const [createResult, createGraph] = useAtom(() => createGraphAtom, { mode: "promise" });
+  const initialSubmitMeta: CreateGraphSubmitMeta = { mode: "local" };
+
   const form = useAppForm(() => ({
     defaultValues: { displayName: "", password: "" },
     validators: { onDynamic: CreateGraphFormSchema },
-    onSubmitMeta: { mode: "local" as "local" | "cloud" },
+    onSubmitMeta: initialSubmitMeta,
     async onSubmit({ value, meta }) {
       const password = GraphEncryption.normalizePassword(value.password);
       form.setErrorMap({ onSubmit: { fields: {} } });

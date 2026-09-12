@@ -70,6 +70,7 @@ export type DropdownMenuSubTriggerProps<T extends ValidComponent = "div"> = Comp
 export const DropdownMenuSubTrigger = <T extends ValidComponent = "div">(
   props: DropdownMenuSubTriggerProps<T>,
 ) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as DropdownMenuSubTriggerProps, ["class", "children", "inset"]);
 
   return (
@@ -95,6 +96,7 @@ export type DropdownMenuSubContentProps<T extends ValidComponent = "div"> = Comp
 export const DropdownMenuSubContent = <T extends ValidComponent = "div">(
   props: DropdownMenuSubContentProps<T>,
 ) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as DropdownMenuSubContentProps, ["class"]);
 
   return (
@@ -117,6 +119,7 @@ export type DropdownMenuContentProps<T extends ValidComponent = "div"> = Compone
 export const DropdownMenuContent = <T extends ValidComponent = "div">(
   props: DropdownMenuContentProps<T>,
 ) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as DropdownMenuContentProps, ["class"]);
 
   return (
@@ -142,6 +145,7 @@ export type DropdownMenuItemProps<T extends ValidComponent = "div"> = ComponentP
 export const DropdownMenuItem = <T extends ValidComponent = "div">(
   props: DropdownMenuItemProps<T>,
 ) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as DropdownMenuItemProps, ["class", "inset", "variant"]);
 
   return (
@@ -173,6 +177,7 @@ export type DropdownMenuCheckboxItemProps<T extends ValidComponent = "div"> = Co
 export const DropdownMenuCheckboxItem = <T extends ValidComponent = "div">(
   props: DropdownMenuCheckboxItemProps<T>,
 ) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as DropdownMenuCheckboxItemProps, ["class", "children"]);
 
   return (
@@ -201,6 +206,7 @@ export type DropdownMenuRadioItemProps<T extends ValidComponent = "div"> = Compo
 export const DropdownMenuRadioItem = <T extends ValidComponent = "div">(
   props: DropdownMenuRadioItemProps<T>,
 ) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as DropdownMenuRadioItemProps, ["class", "children"]);
 
   return (
@@ -231,6 +237,7 @@ export type DropdownMenuGroupLabelProps<T extends ValidComponent = "span"> = Com
 export const DropdownMenuGroupLabel = <T extends ValidComponent = "span">(
   props: DropdownMenuGroupLabelProps<T>,
 ) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as DropdownMenuGroupLabelProps, ["class", "inset"]);
 
   return (
@@ -253,6 +260,7 @@ export type DropdownMenuItemLabelProps<T extends ValidComponent = "div"> = Compo
 export const DropdownMenuItemLabel = <T extends ValidComponent = "div">(
   props: DropdownMenuItemLabelProps<T>,
 ) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as DropdownMenuItemLabelProps, ["class", "inset"]);
 
   return (
@@ -272,6 +280,7 @@ export type DropdownMenuSeparatorProps<T extends ValidComponent = "hr"> = Compon
 export const DropdownMenuSeparator = <T extends ValidComponent = "hr">(
   props: DropdownMenuSeparatorProps<T>,
 ) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as DropdownMenuSeparatorProps, ["class"]);
 
   return (

@@ -48,7 +48,8 @@ export default Cloudflare.Worker(
     dev: { port: 3000 },
     // Nested raw Effects in props are not resolved by Alchemy's input walker,
     // so wrap the stage-dependent routes as an Output for deploy-time resolution.
-    // asOutput's type only accepts no-requirement Effects; Alchemy provides Stage while planning.
+    // SAFETY: Alchemy supplies Stage while evaluating Outputs during planning, but
+    // asOutput's public type currently accepts only Effects with no requirements.
     routes: Output.asOutput(
       Alchemy.Stage.useSync((stage) =>
         stage === "prod"

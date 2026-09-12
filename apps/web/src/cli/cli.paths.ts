@@ -3,7 +3,9 @@ import { Context, Effect, Layer, Option, FileSystem } from "effect";
 import { Flag, GlobalFlag } from "effect/unstable/cli";
 
 export const MANOTES_DIR = ".manotes";
+
 export const CONFIG_FILE = "config";
+
 export const DATABASE_FILE = "db.sqlite";
 
 export type Paths = {
@@ -47,9 +49,11 @@ export const ensureEmpty = Effect.fn("CliPaths.ensureEmpty")(function* () {
   const fs = yield* FileSystem.FileSystem;
 
   const exists = yield* fs.exists(paths.dir);
+
   if (!exists) return;
 
   const entries = yield* fs.readDirectory(paths.dir);
+
   if (entries.length > 0) {
     return yield* Effect.fail(
       new Error(

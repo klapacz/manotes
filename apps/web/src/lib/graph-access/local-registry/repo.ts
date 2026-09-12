@@ -2,6 +2,7 @@ import { SqlClient, SqlSchema } from "effect/unstable/sql";
 import { Array, Effect, Option, Stream, Schema as S } from "effect";
 import * as Schema from "./schema";
 import * as Errors from "./errors";
+
 const GRAPH_COLUMNS =
   "localGraphId, displayName, status, mode, graphId, accountId, graphKeyEnvelope";
 

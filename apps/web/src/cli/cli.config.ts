@@ -15,10 +15,13 @@ export const Config = Schema.Struct({
   graphKey: GraphKey,
   autoSync: Schema.optionalKey(Schema.Boolean),
 });
+
 export type Config = typeof Config.Type;
 
 const ConfigFile = Schema.fromJsonString(Config);
+
 const encodeConfigFile = Schema.encodeEffect(ConfigFile);
+
 const decodeConfigFile = Schema.decodeEffect(ConfigFile);
 
 export class Service extends Context.Service<Service, Config>()("CliConfig.Service") {}
@@ -38,6 +41,7 @@ export const makeLayer = (config: Config) =>
   Layer.unwrap(
     Effect.gen(function* () {
       const paths = yield* CliPaths.Service;
+
       return Layer.mergeAll(
         Layer.succeed(Service, config),
         Layer.succeed(

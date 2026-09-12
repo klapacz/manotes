@@ -7,10 +7,15 @@ import { nanoid } from "nanoid";
 import { LibOption } from "./effect/option";
 
 const decodeRecord = Schema.decodeEffect(NoteSchema.Record);
+
 const decodeRecordArray = Schema.decodeEffect(Schema.Array(NoteSchema.Record));
+
 const decodePreview = Schema.decodeEffect(NoteSchema.Preview);
+
 const decodePreviewArray = Schema.decodeEffect(Schema.Array(NoteSchema.Preview));
+
 const decodeMetaArray = Schema.decodeEffect(Schema.Array(NoteSchema.Meta));
+
 const decodeBootRecord = Schema.decodeEffect(NoteSchema.BootRecord);
 
 export class Service extends Context.Service<Service>()("NoteRepo.Service", {
@@ -159,6 +164,7 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
     ) {
       const stream = yield* db.reactiveQuery((db) => {
         const conditions = streamFilterConditions(query);
+
         // Within a date, newest-created first — createdAt keeps positions
         // stable across edits, unlike updatedAt.
         const orderBy =
@@ -229,6 +235,7 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
     const reactiveSearchPreview = Effect.fn("NoteRepo.reactiveSearch")(function* (filter: string) {
       const stream = yield* db.reactiveQuery((db) => {
         const trimmed = filter.trim();
+
         const where = and(
           ne(Tables.notes.text, ""),
           trimmed.length > 0
@@ -319,6 +326,7 @@ function streamFilterConditions(query: StreamListQuery): Array<SQL> {
   const conditions: Array<SQL> = [];
 
   if (query.type === "pages") conditions.push(isNotNull(Tables.notes.title));
+
   if (query.type === "notes") conditions.push(isNull(Tables.notes.title));
 
   if (query.date) conditions.push(eq(Tables.notes.date, query.date));

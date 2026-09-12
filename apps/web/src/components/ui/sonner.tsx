@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onMount, splitProps, type JSX } from "solid-js";
+import { createSignal, onCleanup, onMount, splitProps } from "solid-js";
 import { CircleCheck, Info, LoaderCircle, OctagonX, TriangleAlert } from "lucide-solid";
 import { Toaster as Sonner, type ToasterProps as SonnerProps } from "somoto";
 
@@ -55,7 +55,7 @@ export const Toaster = (props: SonnerProps) => {
         "--error-border": "var(--color-error-border-subtle)",
         "--error-text": "var(--color-error-fg)",
         "--border-radius": "var(--radius)",
-        ...(local.style as JSX.CSSProperties | undefined),
+        ...local.style,
       }}
       {...rest}
     />

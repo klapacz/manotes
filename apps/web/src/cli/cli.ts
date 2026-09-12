@@ -45,6 +45,7 @@ const init = Command.make(
   Effect.fn("Cli.init")(function* (input) {
     yield* CliPaths.ensureEmpty();
     const origin = CliConfig.normalizeOrigin(input.origin);
+
     const layerConfig = CliConfig.makeLayer({
       origin,
       token: input.token,
@@ -116,19 +117,24 @@ const execute = Command.make(
 
       yield* Console.log("Local changes saved.");
       const pending = yield* printPending();
+
       if (pending === 0) return;
 
       const config = yield* CliConfig.Service;
+
       if (!config.autoSync) {
         yield* Console.log("Run `manotes sync` to publish.");
+
         return;
       }
 
       const result = yield* CliSync.run().pipe(Effect.provide(CliSync.layer), Effect.result);
+
       if (Result.isFailure(result)) {
         yield* Console.error("Automatic sync failed. Local changes remain saved.");
         yield* printPending();
         yield* Console.error("Retry with `manotes sync`.");
+
         return;
       }
 
@@ -188,6 +194,7 @@ function printPending() {
     const eventRepo = yield* EventRepo.Service;
     const count = yield* eventRepo.countPending();
     yield* Console.log(`Pending publication: ${count} changes`);
+
     return count;
   });
 }

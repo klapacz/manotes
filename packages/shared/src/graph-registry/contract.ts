@@ -15,6 +15,7 @@ export const Graph = Schema.Struct({
   createdAt: Schema.NonEmptyString,
   graphKeyEnvelope: GraphEncryption.GraphKeyEnvelopeSchema,
 });
+
 export type Graph = typeof Graph.Type;
 
 export class GraphRegistryRpc extends RpcGroup.make(

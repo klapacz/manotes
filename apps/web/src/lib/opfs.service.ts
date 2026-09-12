@@ -20,6 +20,7 @@ export const getFileHandleFromOpfsRoot = Effect.fn("getFileHandleFromOpfsRoot")(
       if (cause instanceof DOMException && cause.name === "NotFoundError") {
         return new NotFoundError({ cause });
       }
+
       return new Error({ cause });
     },
   });
@@ -37,6 +38,7 @@ export const removeFileFromOpfsRoot = Effect.fn("removeFileFromOpfsRoot")(functi
       if (cause instanceof DOMException && cause.name === "NotFoundError") {
         return new NotFoundError({ cause });
       }
+
       return new Error({ cause });
     },
   });

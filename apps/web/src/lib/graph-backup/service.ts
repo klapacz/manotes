@@ -36,6 +36,7 @@ export function getSuggestedGraphName({
   if (backupName.length > 0) return backupName;
 
   const stem = fileName.replace(/\.[^.]+$/, "").trim();
+
   return stem.length > 0 ? stem : "Imported graph";
 }
 

@@ -10,9 +10,11 @@ export const prepare = Effect.fn("GraphAccessCommandsCliSetup.prepare")(function
 }) {
   const keyStore = yield* KeyStore.Service;
   const key = yield* keyStore.get(input.graph.graphKeyEnvelope);
+
   if (Option.isNone(key)) {
     return yield* Effect.fail(new Error("Unlock the graph before setting up the CLI."));
   }
+
   const graphKey = yield* Schema.encodeEffect(Schema.Uint8ArrayFromBase64)(key.value);
 
   // The graph key decrypts content; a separate bearer session authorizes server access.

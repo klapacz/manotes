@@ -7,10 +7,10 @@ import {
   type SolidNodeViewComponent,
   type SolidNodeViewProps,
 } from "prosekit/solid";
-import { createEffect, type JSX } from "solid-js";
+import { createEffect, createMemo, type JSX } from "solid-js";
 import * as NoteCache from "../../note-cache.service";
 import { bindRt, createAtomStore, createSyncedAtom } from "../..";
-import { type BacklinkAttrs } from "./spec";
+import { decodeBacklinkAttrs, type BacklinkAttrs } from "./spec";
 import { NoteFormat } from "../../note";
 import { NoteLink } from "../../note/link-component";
 
@@ -30,8 +30,10 @@ const BacklinkLabelEntry = Data.taggedEnum<BacklinkLabelEntry>();
 
 function createBacklinkView(labelSnapshot: Map<string, string>) {
   return function BacklinkView(props: SolidNodeViewProps): JSX.Element {
-    const noteId = () => (props.node.attrs as BacklinkAttrs).id;
+    const attrs = createMemo(() => decodeBacklinkAttrs(props.node.attrs));
+    const noteId = () => attrs().id;
     const noteIdAtom = createSyncedAtom(noteId);
+
     const state = createAtomStore(
       bindRt((rt) =>
         rt.atom((get) => {
@@ -89,14 +91,12 @@ function clipboardLeafText(
   labelSnapshot: ReadonlyMap<string, string>,
 ): string {
   if (node.type.name === "backlink") {
-    return labelSnapshot.get((node.attrs as BacklinkAttrs).id) ?? (node.attrs as BacklinkAttrs).id;
+    const { id } = decodeBacklinkAttrs(node.attrs);
+
+    return labelSnapshot.get(id) ?? id;
   }
 
-  if (typeof node.type.spec.leafText === "function") {
-    return node.type.spec.leafText(node);
-  }
-
-  return "";
+  return node.type.spec.leafText?.(node) ?? "";
 }
 
 // ---------------------------------------------------------------------------
@@ -115,7 +115,7 @@ export function defineBacklinkRuntime() {
         return {
           ...nodes,
           backlink: (node) => {
-            const { id } = node.attrs as BacklinkAttrs;
+            const { id } = decodeBacklinkAttrs(node.attrs);
 
             return [
               "span",

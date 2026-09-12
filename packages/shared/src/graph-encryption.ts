@@ -73,9 +73,11 @@ export async function createGraphKey(password: string): Promise<{
   const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
   const wrappingIv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
   const passwordKey = await derivePasswordKey(password, salt);
+
   const wrappingKey = await crypto.subtle.importKey("raw", passwordKey, "AES-GCM", false, [
     "encrypt",
   ]);
+
   const wrappedGraphKey = await crypto.subtle.encrypt(
     {
       name: "AES-GCM",
@@ -118,9 +120,11 @@ export async function unwrapGraphKey({
       castArray(envelope.salt),
       envelope.iterations,
     );
+
     const wrappingKey = await crypto.subtle.importKey("raw", passwordKey, "AES-GCM", false, [
       "decrypt",
     ]);
+
     const decrypted = await crypto.subtle.decrypt(
       {
         name: "AES-GCM",
@@ -154,6 +158,7 @@ async function derivePasswordKey(
     false,
     ["deriveBits"],
   );
+
   const bits = await crypto.subtle.deriveBits(
     {
       name: "PBKDF2",
@@ -173,19 +178,24 @@ async function derivePasswordKey(
 // ============================================================================
 
 const textEncoder = new TextEncoder();
+
 const textDecoder = new TextDecoder();
 
 /**
- * Effect Schema's `Uint8ArrayFromBase64` decodes to `Uint8Array<ArrayBufferLike>`.
- *
- * That is correct at runtime, but Web Crypto's TypeScript overloads are
- * stricter and only accept typed arrays backed by `ArrayBuffer`.
- *
- * So this cast exists only to satisfy the browser typings at the exact
- * `crypto.subtle` boundary. It does not transform or copy the bytes.
+ * Effect Schema decodes base64 data to a view backed by `ArrayBufferLike`,
+ * while Web Crypto accepts only `ArrayBuffer`-backed views. Reuse the buffer
+ * when possible and copy only when the source is backed by `SharedArrayBuffer`.
  */
 export function castArray(arrayBufferLike: Uint8Array<ArrayBufferLike>): Uint8Array<ArrayBuffer> {
-  return arrayBufferLike as Uint8Array<ArrayBuffer>;
+  if (arrayBufferLike.buffer instanceof ArrayBuffer) {
+    return new Uint8Array(
+      arrayBufferLike.buffer,
+      arrayBufferLike.byteOffset,
+      arrayBufferLike.byteLength,
+    );
+  }
+
+  return new Uint8Array(arrayBufferLike);
 }
 
 // Normalizes password input before any KDF work.

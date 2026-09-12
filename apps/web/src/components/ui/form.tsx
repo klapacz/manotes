@@ -118,7 +118,7 @@ function AppFileField(props: AppFileFieldProps) {
         {(description) => <p class="text-fg-subtle text-sm">{description()}</p>}
       </Show>
       <Show when={messages().length > 0}>
-        {(_) => <div class="text-error-fg text-sm">{messages().join(", ")}</div>}
+        <div class="text-error-fg text-sm">{messages().join(", ")}</div>
       </Show>
     </div>
   );
@@ -162,6 +162,7 @@ const appFormHook = createFormHook({
 export const useAppForm: typeof appFormHook.useAppForm = (options) =>
   appFormHook.useAppForm(() => {
     const next = options();
+
     return {
       ...next,
       validationLogic: next.validationLogic ?? appValidationLogic,
@@ -197,9 +198,12 @@ function getErrorMessages(errors: ReadonlyArray<unknown>): Array<string> {
   return errors.flatMap(getErrorMessagesFromValue);
 }
 
+// eslint-disable-next-line anti-slop/no-unknown-parameters -- TanStack errors may be strings, message objects, or nested arrays.
 function getErrorMessagesFromValue(value: unknown): Array<string> {
   if (Array.isArray(value)) return value.flatMap(getErrorMessagesFromValue);
+
   if (Predicate.isString(value)) return [value];
+
   if (
     Predicate.isObject(value) &&
     Predicate.hasProperty(value, "message") &&

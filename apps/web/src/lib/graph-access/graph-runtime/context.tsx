@@ -12,6 +12,8 @@ export function GraphProvider(props: { graph: () => Context; children: JSX.Eleme
 
 export function useGraph() {
   const graph = useContext(GraphContext);
+
   if (!graph) throw new Error("Missing GraphContext");
+
   return graph;
 }

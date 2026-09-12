@@ -29,10 +29,13 @@ const route = getRouteApi("/$graph/");
 export function PaneNote(props: ComponentProps<"section">) {
   const navigate = route.useNavigate();
   const createNote = NoteCreate.useCreateNote();
+
   const handleCreate = () =>
     createNote({}, (note) => void navigate(NoteLink.getOptions({ id: note.id })));
+
   const pane = PaneCtx.useNote();
   const noteIdAtom = createSyncedAtom(() => pane().id);
+
   const notesAtom = bindRt((rt) =>
     rt.atom((get) =>
       NoteCache.Service.use((cache) => cache.changes(get(noteIdAtom))).pipe(
@@ -41,9 +44,11 @@ export function PaneNote(props: ComponentProps<"section">) {
       ),
     ),
   );
+
   const note = createAtomResultStore(notesAtom);
 
   const fid = Focus.useId();
+
   const fnode = Focus.createNode(() => ({
     id: fid.pane(),
     syncFocusWithin: (element) => {
@@ -65,6 +70,7 @@ export function PaneNote(props: ComponentProps<"section">) {
       key: [["Enter"]],
       handler: () => {
         fnode.focusNode(fid.editor(pane().id));
+
         return true;
       },
     },
@@ -72,6 +78,7 @@ export function PaneNote(props: ComponentProps<"section">) {
       key: NoteCreate.shortcut,
       handler: () => {
         handleCreate();
+
         return true;
       },
     },

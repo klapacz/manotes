@@ -27,6 +27,7 @@ export default class AccountsDurableObject extends Cloudflare.DurableObjectNames
 
     return Effect.gen(function* () {
       const state = yield* Cloudflare.DurableObjectState;
+
       const layer = Repo.Service.layer.pipe(
         Layer.provideMerge(
           SqliteClient.layer({
@@ -39,6 +40,7 @@ export default class AccountsDurableObject extends Cloudflare.DurableObjectNames
       yield* state.blockConcurrencyWhile(() =>
         Effect.gen(function* () {
           yield* Repo.migrate;
+
           // One-way bootstrap: removing the setting does not deactivate an existing account.
           if (Option.isSome(bootstrapEmail)) {
             const repo = yield* Repo.Service;
@@ -57,6 +59,7 @@ export default class AccountsDurableObject extends Cloudflare.DurableObjectNames
               Struct.pick(["email", "accountId"]),
             ),
           );
+
           return result;
         }, Effect.provide(layer)),
 
@@ -64,6 +67,7 @@ export default class AccountsDurableObject extends Cloudflare.DurableObjectNames
           const result: WaitlistResult = yield* checkOrWaitlist(email).pipe(
             Effect.map(Struct.pick(["status"])),
           );
+
           return result;
         }, Effect.provide(layer)),
       };

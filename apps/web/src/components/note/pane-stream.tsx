@@ -1,4 +1,4 @@
-import { Option, Effect, Stream, Array as Arr, Equal, Number } from "effect";
+import { Option, Effect, Stream, Array as Arr, Equal, Number, Predicate } from "effect";
 import {
   Show,
   createEffect,
@@ -68,6 +68,7 @@ export function PaneStream(props: ComponentProps<"section">) {
       );
     }),
   );
+
   // Reconciliation keys row nodes by ListItem.id, keeping row references
   // stable across emissions — virtua reuses rows by identity, so mounted
   // editors survive while their content stays reactive.
@@ -76,8 +77,9 @@ export function PaneStream(props: ComponentProps<"section">) {
   const refresh = () => setRefreshToken((token) => token + 1);
 
   const createNote = NoteCreate.useCreateNote();
+
   const handleCreate = () => {
-    if (state._tag !== "Success") return;
+    if (!Predicate.isTagged(state, "Success")) return;
     createNote(
       {
         date: pane().filter.date,
@@ -92,16 +94,20 @@ export function PaneStream(props: ComponentProps<"section">) {
   };
 
   const fid = Focus.useId();
+
   const listOrder = createMemo(() => {
-    if (state._tag !== "Success") return [];
+    if (!Predicate.isTagged(state, "Success")) return [];
+
     return noteIdsFromRows(state.value.rows).map(fid.note);
   });
 
   const [lastFocused, setLastFocused] = createSignal<Focus.FocusId>();
   createEffect(() => {
     const ids = listOrder();
+
     if (fnode.focused() && Arr.isArrayNonEmpty(ids)) {
       const last = lastFocused();
+
       if (last && Arr.contains(ids, last)) {
         return fnode.focusWhenAvailable(last);
       }
@@ -112,18 +118,23 @@ export function PaneStream(props: ComponentProps<"section">) {
 
   const move = (delta: number) => {
     const ids = listOrder();
+
     if (!Arr.isArrayNonEmpty(ids)) return false;
 
     const at = Arr.findFirstIndex(ids, (id) => {
       const focusedId = fnode.focusedId();
+
       return focusedId !== null && Equal.equals(id, focusedId);
     });
+
     const nextIndex = at.pipe(
       Option.map((idx) => idx + delta),
       Option.map(Number.clamp({ minimum: 0, maximum: ids.length - 1 })),
       Option.getOrElse(() => 0),
     );
+
     fnode.focusNode(ids[nextIndex]!);
+
     return true;
   };
 
@@ -153,9 +164,10 @@ export function PaneStream(props: ComponentProps<"section">) {
     },
     {
       key: NoteCreate.shortcut,
-      enabled: () => state._tag === "Success",
+      enabled: () => Predicate.isTagged(state, "Success"),
       handler: () => {
         handleCreate();
+
         return true;
       },
     },
@@ -163,7 +175,7 @@ export function PaneStream(props: ComponentProps<"section">) {
 
   // TODO: get from stack not single id
   fnode.createChangeListener((id) => {
-    if (id._tag === "NoteFocusId" && id.paneId === pane().paneId) {
+    if (Predicate.isTagged(id, "NoteFocusId") && id.paneId === pane().paneId) {
       setLastFocused(id);
     }
   });
@@ -173,10 +185,10 @@ export function PaneStream(props: ComponentProps<"section">) {
       <Focus.Element as={PaneShell} {...props}>
         <div class="flex gap-3 justify-between">
           <PaneStreamFilter
-            dirty={state._tag === "Success" ? state.value.dirty : false}
+            dirty={Predicate.isTagged(state, "Success") ? state.value.dirty : false}
             onRefresh={refresh}
           />
-          <PaneActions onCreate={state._tag === "Success" ? handleCreate : undefined} />
+          <PaneActions onCreate={Predicate.isTagged(state, "Success") ? handleCreate : undefined} />
         </div>
         <MatchTag
           when={state}
@@ -188,33 +200,7 @@ export function PaneStream(props: ComponentProps<"section">) {
                   when={state().value.rows.length > 0}
                   fallback={<PaneEmptyState>No notes in this pane.</PaneEmptyState>}
                 >
-                  {(_) => {
-                    const [revealed, setRevealed] = createSignal(false);
-
-                    onMount(() => {
-                      // Double rAF: the first frame commits opacity:0 (and the booted editors'
-                      // layout) to pixels, the second flips to opacity:1 so the CSS fade-in
-                      // actually animates.
-                      requestAnimationFrame(() => requestAnimationFrame(() => setRevealed(true)));
-                    });
-
-                    return (
-                      <div
-                        class="min-h-0 flex-1 transition-opacity duration-150 ease-out"
-                        classList={{
-                          "opacity-0": !revealed(),
-                        }}
-                      >
-                        <VList
-                          data={state().value.rows}
-                          bufferSize={1200}
-                          style={{ height: "100%" }}
-                        >
-                          {(item) => <PaneStreamRow row={item} onRefresh={refresh} />}
-                        </VList>
-                      </div>
-                    );
-                  }}
+                  <RevealedRows rows={state().value.rows} onRefresh={refresh} />
                 </Show>
               </EditorPool.Provider>
             ),
@@ -222,6 +208,30 @@ export function PaneStream(props: ComponentProps<"section">) {
         />
       </Focus.Element>
     </Focus.NodeProvider>
+  );
+}
+
+function RevealedRows(props: { rows: ReadonlyArray<NoteStream.ListItem>; onRefresh: () => void }) {
+  const [revealed, setRevealed] = createSignal(false);
+
+  onMount(() => {
+    // Double rAF: the first frame commits opacity:0 (and the booted editors'
+    // layout) to pixels, the second flips to opacity:1 so the CSS fade-in
+    // actually animates.
+    requestAnimationFrame(() => requestAnimationFrame(() => setRevealed(true)));
+  });
+
+  return (
+    <div
+      class="min-h-0 flex-1 transition-opacity duration-150 ease-out"
+      classList={{
+        "opacity-0": !revealed(),
+      }}
+    >
+      <VList data={props.rows} bufferSize={1200} style={{ height: "100%" }}>
+        {(item) => <PaneStreamRow row={item} onRefresh={props.onRefresh} />}
+      </VList>
+    </div>
   );
 }
 

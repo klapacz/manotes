@@ -7,10 +7,13 @@ export const EnvelopeSchema = Schema.Struct({
   iv: Schema.Uint8ArrayFromBase64,
   ciphertext: Schema.Uint8ArrayFromBase64,
 });
+
 export type Envelope = Schema.Schema.Type<typeof EnvelopeSchema>;
 
 const EnvelopeMsgPack = Msgpack.schema(EnvelopeSchema);
+
 export const decodeEnvelope = Schema.decodeEffect(EnvelopeMsgPack);
+
 export const encodeEnvelope = Schema.encodeEffect(EnvelopeMsgPack);
 
 export const BodySchema = Schema.Struct({
@@ -18,10 +21,13 @@ export const BodySchema = Schema.Struct({
   type: EventSchema.Type,
   payload: Schema.Uint8Array,
 });
+
 export type Body = Schema.Schema.Type<typeof BodySchema>;
 
 const BodyMsgPack = Msgpack.schema(BodySchema);
+
 export const decodeBody = Schema.decodeEffect(BodyMsgPack);
+
 export const encodeBody = Schema.encodeEffect(BodyMsgPack);
 
 export type CreatedAt = Schema.Schema.Type<typeof Schema.DateTimeUtc>;
@@ -32,7 +38,9 @@ export const AuthenticatedMetadataSchema = Schema.Struct({
   streamRef: Schema.Uint8Array,
   createdAt: Schema.DateTimeUtcFromString,
 });
+
 export type AuthenticatedMetadata = Schema.Schema.Type<typeof AuthenticatedMetadataSchema>;
 
 const AuthenticatedMetadataMsgPack = Msgpack.schema(AuthenticatedMetadataSchema);
+
 export const encodeAuthenticatedMetadata = Schema.encodeEffect(AuthenticatedMetadataMsgPack);

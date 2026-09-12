@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 
 export const BridgeChannel = "manotes-browser-extension";
+
 export const BridgePortName = BridgeChannel;
 
 const MessageBase = {
@@ -13,6 +14,7 @@ export const TabCandidate = Schema.Struct({
   url: Schema.NonEmptyString,
   title: Schema.String,
 });
+
 export type TabCandidate = typeof TabCandidate.Type;
 
 export const ListTabsRequest = Schema.Struct({
@@ -20,9 +22,11 @@ export const ListTabsRequest = Schema.Struct({
   kind: Schema.Literal("request"),
   type: Schema.Literal("listTabs"),
 });
+
 export type ListTabsRequest = typeof ListTabsRequest.Type;
 
 export const BridgeRequest = ListTabsRequest;
+
 export type BridgeRequest = typeof BridgeRequest.Type;
 
 export const ListTabsResponse = Schema.Struct({
@@ -31,12 +35,15 @@ export const ListTabsResponse = Schema.Struct({
   type: Schema.Literal("listTabs"),
   tabs: Schema.Array(TabCandidate),
 });
+
 export type ListTabsResponse = typeof ListTabsResponse.Type;
 
 export const BridgeResponse = ListTabsResponse;
+
 export type BridgeResponse = typeof BridgeResponse.Type;
 
 export const decodeBridgeRequest = Schema.decodeUnknownOption(BridgeRequest);
+
 export const decodeBridgeResponse = Schema.decodeUnknownOption(BridgeResponse);
 
 export function makeListTabsRequest(): ListTabsRequest {

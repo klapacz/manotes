@@ -5,8 +5,11 @@ const StoredSession = Schema.Struct({
   email: Schema.NonEmptyString,
   accountId: Schema.NonEmptyString,
 });
+
 const StoredSessionJson = Schema.fromJsonString(StoredSession);
+
 const encodeSession = Schema.encodeEffect(StoredSessionJson);
+
 const decodeSession = Schema.decodeEffect(StoredSessionJson);
 
 const SESSION_TTL = Duration.days(30);
@@ -24,6 +27,7 @@ export class SessionKvService extends Context.Service<SessionKvService>()("Auth.
           expirationTtl: Duration.toSeconds(SESSION_TTL),
         })
         .pipe(Effect.mapError((cause) => new SessionStoreError({ operation: "write", cause })));
+
       return token;
     });
 
@@ -31,7 +35,9 @@ export class SessionKvService extends Context.Service<SessionKvService>()("Auth.
       const raw = yield* kv
         .get(token)
         .pipe(Effect.mapError((cause) => new SessionStoreError({ operation: "read", cause })));
+
       if (raw === null) return yield* Effect.fail(new SessionNotFoundError());
+
       return yield* decodeSession(raw);
     });
 

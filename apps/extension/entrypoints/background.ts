@@ -15,7 +15,12 @@ export default defineBackground(() => {
     });
 
     port.onMessage.addListener((message) => {
-      void handleMessage(message);
+      const request = pipe(
+        Contract.decodeBridgeRequest(message),
+        Option.getOrElse(() => null),
+      );
+
+      if (request !== null) void handleMessage(request);
     });
   });
 
@@ -33,14 +38,7 @@ export default defineBackground(() => {
   });
 });
 
-async function handleMessage(message: unknown) {
-  const request = pipe(
-    Contract.decodeBridgeRequest(message),
-    Option.getOrElse(() => null),
-  );
-
-  if (request === null) return;
-
+async function handleMessage(request: Contract.BridgeRequest) {
   await Match.value(request).pipe(
     Match.when({ type: "listTabs" }, async () => {
       await broadcastTabs();
@@ -57,6 +55,7 @@ async function broadcastTabs() {
       Contract.makeListTabsResponse(
         tabs.flatMap((tab) => {
           const normalized = normalizeTab(tab);
+
           return normalized === null ? [] : [normalized];
         }),
       ),

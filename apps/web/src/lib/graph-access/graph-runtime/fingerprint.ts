@@ -37,5 +37,6 @@ export const create = Effect.fn("GraphRuntimeFingerprint.create")(function* (
         }),
     }),
   );
+
   return result;
 });

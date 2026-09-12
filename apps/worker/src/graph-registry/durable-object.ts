@@ -86,12 +86,14 @@ export default class GraphRegistryDurableObject extends Cloudflare.DurableObject
       return {
         fetch: Effect.gen(function* () {
           const httpApp = yield* RpcHttpApp;
+
           return yield* httpApp;
         }).pipe(Effect.scoped, Effect.provide(layer)),
 
         graphExists: Effect.fn(function* (graphId: string) {
           const repo = yield* Repo.Service;
           const graph = yield* repo.getGraph({ graphId });
+
           return Option.isSome(graph);
         }, Effect.provide(layer)),
       };
@@ -113,6 +115,7 @@ function narrowError<A, R, E>(
   return effect.pipe(
     Effect.catch((e) => {
       if (Predicate.isTagged(e, "GraphRegistry.DisplayNameTakenError")) return Effect.fail(e);
+
       return Effect.die(e);
     }),
   );

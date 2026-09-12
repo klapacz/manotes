@@ -15,6 +15,7 @@ export class Service extends Context.Service<Service>()("BrowserExtensionTabNote
       tab: BrowserExtension.TabCandidate,
     ) {
       const noteId = nanoid();
+
       const yDoc = prosemirrorJSONToYDoc(
         NOTE_SCHEMA,
         {
@@ -40,6 +41,7 @@ export class Service extends Context.Service<Service>()("BrowserExtensionTabNote
         },
         PROSEMIRROR_XML_FRAGMENT_KEY,
       );
+
       const payload = Y.encodeStateAsUpdate(yDoc);
 
       return yield* materializedEventService.create({

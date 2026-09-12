@@ -24,6 +24,7 @@ export function DatePicker(props: { noteId: string; date: string }) {
 
   async function handleSelect(value: Date | null) {
     if (!value || setDateResult().waiting) return;
+
     try {
       await setDate({
         noteId: props.noteId,
@@ -100,6 +101,7 @@ const SetDate = bindRt((rt) =>
       readonly date: string;
     }) {
       const service = yield* MaterializedEventService.Service;
+
       return yield* service.setDate({
         noteId: input.noteId,
         date: input.date,

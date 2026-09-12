@@ -79,10 +79,12 @@ export const retain =
         // Items that no longer match the SQL result have no live slot of their
         // own, so emit them immediately before the next still-live item.
         const [retained, rest] = Array.span(remaining, (item) => !liveById.has(item.note.id));
+
         return Array.matchLeft(rest, {
           onNonEmpty: (slotFiller, upcoming) => {
             const moved = slotFiller.note.id !== liveNote.id;
             const filler = moved ? { ...slotFiller, dirty: true } : slotFiller;
+
             return [upcoming, [...retained, filler]];
           },
           onEmpty: () => [[], retained],
@@ -95,6 +97,7 @@ export const retain =
         groupKey: groupKey(liveNote, sort),
         dirty: false,
       };
+
       return [remaining, [incoming]];
     });
 
@@ -111,8 +114,11 @@ export const retain =
 export function list(notes: ReadonlyArray<InnerItem>): ReadonlyArray<ListItem> {
   if (!Array.isReadonlyArrayNonEmpty(notes)) return [];
 
+  // SAFETY: The accumulator starts as null and becomes each item's string group key.
   const [, rows] = Array.mapAccum(notes, null as string | null, (lastGroupKey, item) => {
     const noteRow: ListItem = {
+      // This plain row tag has no existing Effect constructor.
+      // oxlint-disable-next-line anti-slop-effect/no-manual-tagged-construction
       _tag: "note",
       id: `note:${item.note.id}`,
       note: item.note,

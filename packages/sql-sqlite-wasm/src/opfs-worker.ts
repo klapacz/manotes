@@ -1,4 +1,11 @@
 /**
+ * Adapted from Effect's `packages/sql/sqlite-wasm/src/OpfsWorker.ts`; the
+ * copied revision was not recorded. Local changes use cooperative OPFS and
+ * broadcast update notifications across tabs.
+ */
+/* eslint-disable anti-slop/no-known-value-widening, anti-slop/no-unknown-parameters, anti-slop/require-safety-comment-for-type-assertion -- Preserve the copied Effect worker's dynamic message and wa-sqlite glue. */
+
+/**
  * @since 1.0.0
  */
 /// <reference lib="webworker" />
@@ -32,6 +39,7 @@ export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> =>
     const sqlite3 = WaSqlite.Factory(factory);
     const vfs = yield* Effect.promise(() => OPFSCoopSyncVFS.create("opfs", factory));
     sqlite3.vfs_register(vfs, false);
+
     const db = yield* Effect.acquireRelease(
       Effect.tryPromise({
         try: () => sqlite3.open_v2(options.dbName, undefined, "opfs"),
@@ -52,27 +60,34 @@ export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> =>
       const onMessage = async (event: any) => {
         let messageId: number = -1; // custom: initialized here for catch block
         const message = event.data as OpfsWorkerMessage;
+
         try {
           switch (message[0]) {
             case "close": {
               updateBroadcast?.close();
               options.port.close();
+
               return resume(Effect.void);
             }
+
             case "import": {
               const [, id, data] = message;
               messageId = id;
               (sqlite3 as any).deserialize(db, "main", data, data.length, data.length, 1 | 2);
               options.port.postMessage([id, void 0, void 0]);
+
               return;
             }
+
             case "export": {
               const [, id] = message;
               messageId = id;
               const data = (sqlite3 as any).serialize(db, "main");
               options.port.postMessage([id, undefined, data], [data.buffer]);
+
               return;
             }
+
             // Custom: sqlite3_update_hook is per-connection and only fires
             // for changes made by that connection. Since each tab runs its
             // own worker with a separate WASM SQLite instance, we use a
@@ -84,6 +99,7 @@ export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> =>
               updateBroadcast.onmessage = (e) => {
                 options.port.postMessage(["update_hook", e.data[0], e.data[1]]);
               };
+
               sqlite3.update_hook(
                 db,
                 (_op: unknown, _db: unknown, table: unknown, rowid: unknown) => {
@@ -93,22 +109,28 @@ export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> =>
                   updateBroadcast!.postMessage([table, Number(rowid)]);
                 },
               );
+
               return;
             }
+
             default: {
               const [id, sql, params] = message;
               messageId = id;
               const results: Array<any> = [];
               let columns: Array<string> | undefined;
+
               for await (const stmt of sqlite3.statements(db, sql)) {
                 sqlite3.bind_collection(stmt, params as any);
+
                 while ((await sqlite3.step(stmt)) === WaSqlite.SQLITE_ROW) {
                   columns = columns ?? sqlite3.column_names(stmt);
                   const row = sqlite3.row(stmt);
                   results.push(row);
                 }
               }
+
               options.port.postMessage([id, undefined, [columns ?? [], results]]);
+
               return;
             }
           }
@@ -117,8 +139,10 @@ export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> =>
           options.port.postMessage([messageId!, message, undefined]);
         }
       };
+
       options.port.addEventListener("message", onMessage);
       options.port.postMessage(["ready", undefined, undefined]);
+
       return Effect.sync(() => {
         options.port.removeEventListener("message", onMessage);
       });

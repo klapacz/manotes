@@ -19,16 +19,9 @@ export const run = Effect.fn("GraphSyncMachineRunner.run")(function* ({
 }) {
   const status = yield* Status.Ref;
 
-  // `runFoldEffect` infers the accumulator from the initial value here, so
-  // without widening it, TypeScript locks the fold state to `Bootstrapping`
-  // and rejects the `Ready` / `Committing` transitions.
-  const initialState = Model.State.Bootstrapping({
-    bufferedCommitted: [],
-  }) as Model.State;
-
   return yield* Stream.fromQueue(inputQueue).pipe(
     Stream.runFoldEffect(
-      () => initialState,
+      (): Model.State => Model.State.Bootstrapping({ bufferedCommitted: [] }),
       Effect.fn(function* (currentState, signal) {
         yield* Effect.logDebug("Received Message", { currentState, signal });
         const nextState = yield* step(currentState, signal);

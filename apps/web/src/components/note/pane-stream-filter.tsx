@@ -6,19 +6,17 @@ import { NoteFormat } from "../../lib/note";
 import { PaneCursor } from "../../lib/note/pane.cursor";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneSchema } from "../../lib/note/pane.schema";
-import type * as NoteSchema from "../../lib/note.schema";
 import { Button } from "../ui/button";
 import { Focus } from "./focus";
 
 const route = getRouteApi("/$graph/");
-
-type NotePreview = typeof NoteSchema.Preview.Type;
 
 export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void }) {
   const ctx = PaneCtx.use();
   const pane = PaneCtx.useStream();
   const navigate = route.useNavigate();
   const fnode = Focus.useNode();
+
   const updatePane = (next: PaneSchema.PaneStream) =>
     void navigate(
       PaneCtx.linkOptions(
@@ -26,6 +24,7 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
         PaneCursor.updateCurrent(() => next),
       ),
     );
+
   // Panes to the right were opened from this pane's content, so a type switch
   // invalidates them.
   const updatePaneAndCloseRest = (next: PaneSchema.PaneStream) =>
@@ -41,6 +40,7 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
       sort: nextType === "notes" ? "date" : "updated",
     });
   };
+
   const cycleSort = () =>
     updatePane({ ...pane(), sort: pane().sort === "date" ? "updated" : "date" });
 
@@ -49,6 +49,7 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
       key: [["T"]],
       handler: () => {
         cycleType();
+
         return true;
       },
     },
@@ -56,6 +57,7 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
       key: [["S"]],
       handler: () => {
         cycleSort();
+
         return true;
       },
     },
@@ -64,6 +66,7 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
       enabled: () => props.dirty,
       handler: () => {
         props.onRefresh();
+
         return true;
       },
     },
@@ -133,6 +136,7 @@ function FilterChipButton(props: {
 
 function NotePreviewTarget(props: { noteId: string }) {
   const targetIdAtom = createSyncedAtom(() => props.noteId);
+
   const target = createAtomStore(
     bindRt((rt) =>
       rt.atom((get) =>
@@ -142,8 +146,9 @@ function NotePreviewTarget(props: { noteId: string }) {
         ),
       ),
     ),
-    { note: null as NotePreview | null },
+    { note: null },
   );
+
   const label = createMemo(() =>
     target.value.note === null ? "Unknown" : NoteFormat.label(target.value.note),
   );

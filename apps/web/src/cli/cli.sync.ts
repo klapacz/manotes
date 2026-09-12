@@ -40,6 +40,7 @@ export const layer = Layer.unwrap(
 export const run = Effect.fn("CliSync.run")(function* () {
   const graphSync = yield* GraphSync.Service;
   const statusRef = yield* GraphSyncStatus.Ref;
+
   const session = graphSync.run().pipe(
     Effect.andThen(Effect.fail(new Error("Graph sync session ended before synchronization."))),
     // Close the socket and its background tasks when Ready wins the race.
@@ -74,6 +75,7 @@ function webSocketConstructorLayer(token: string) {
   return Layer.succeed(
     Socket.WebSocketConstructor,
     (url, protocols) =>
+      // eslint-disable-next-line anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- ws implements the WebSocket operations consumed by Effect's Node adapter.
       new NodeWS.WebSocket(url, protocols, {
         headers: { authorization: `Bearer ${token}` },
       }) as unknown as globalThis.WebSocket,

@@ -2,6 +2,7 @@ import { Effect, HashMap, Layer, Schema, Context, Stream, SubscriptionRef } from
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 
 type GraphKeyId = string;
+
 type UnwrappedGraphKey = Uint8Array<ArrayBuffer>;
 
 const encodeWrappedGraphKey = Schema.encodeEffect(Schema.Uint8ArrayFromBase64);

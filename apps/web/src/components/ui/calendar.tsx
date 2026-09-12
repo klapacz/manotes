@@ -17,6 +17,7 @@ export type CalendarNavProps<T extends ValidComponent = "button"> = ComponentPro
 >;
 
 export const CalendarNav = <T extends ValidComponent = "button">(props: CalendarNavProps<T>) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as CalendarNavProps, ["action", "class"]);
 
   return (
@@ -46,6 +47,7 @@ export type CalendarLabelProps<T extends ValidComponent = "h2"> = ComponentProps
 >;
 
 export const CalendarLabel = <T extends ValidComponent = "h2">(props: CalendarLabelProps<T>) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as CalendarLabelProps, ["class"]);
 
   return (
@@ -72,6 +74,7 @@ export type CalendarHeadCellProps<T extends ValidComponent = "th"> = ComponentPr
 export const CalendarHeadCell = <T extends ValidComponent = "th">(
   props: CalendarHeadCellProps<T>,
 ) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as CalendarHeadCellProps, ["class"]);
 
   return (
@@ -88,6 +91,7 @@ export type CalendarCellProps<T extends ValidComponent = "td"> = ComponentProps<
 >;
 
 export const CalendarCell = <T extends ValidComponent = "td">(props: CalendarCellProps<T>) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as CalendarCellProps, ["class"]);
 
   return (
@@ -109,6 +113,7 @@ export type CalendarCellTriggerProps<T extends ValidComponent = "button"> = Comp
 export const CalendarCellTrigger = <T extends ValidComponent = "button">(
   props: CalendarCellTriggerProps<T>,
 ) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as CalendarCellTriggerProps, ["class"]);
 
   return (

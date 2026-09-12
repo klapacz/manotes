@@ -7,6 +7,8 @@ self.addEventListener(
   "message",
   (event: MessageEvent<{ dbName: string }>) => {
     const { dbName } = event.data;
+
+    // SAFETY: This entrypoint runs in a worker; the app's DOM types describe self as Window.
     void run({ port: self as any, dbName }).pipe(Effect.runPromise);
   },
   { once: true },

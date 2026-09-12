@@ -15,7 +15,9 @@ export class Current extends Context.Service<Current, CurrentSession>()("Shared.
 // an empty 401 response for signed-out requests. Using HttpApiError.Unauthorized
 // would describe a typed error body instead.
 export const UnauthorizedError = HttpApiError.UnauthorizedNoContent;
+
 export const InternalServerError = HttpApiError.InternalServerErrorNoContent;
+
 export const AuthMiddlewareError = Schema.Union([UnauthorizedError, InternalServerError]);
 
 export class Middleware extends HttpApiMiddleware.Service<

@@ -22,6 +22,7 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem; onRefresh: () =
   // The stream stops refreshing a note once it leaves the query (it is only
   // retained); the shared per-note cache keeps its metadata live regardless.
   const noteIdAtom = createSyncedAtom(() => props.row.note.id);
+
   const live = createAtomStore(
     bindRt((rt) =>
       rt.atom((get) =>
@@ -31,8 +32,9 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem; onRefresh: () =
         ),
       ),
     ),
-    null as NoteCache.NotePreview | null,
+    null,
   );
+
   const meta = createMemo((): NoteSchema.Meta => live.value ?? props.row.note);
   const pane = PaneCtx.useStream();
 
@@ -45,6 +47,7 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem; onRefresh: () =
   const slotResult = useAtomValue(slotAtom);
 
   const fid = Focus.useId();
+
   const fnode = Focus.createNode(() => ({
     id: fid.note(props.row.note.id),
     syncFocus: (element) => {
@@ -75,6 +78,7 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem; onRefresh: () =
             fnode.focusWhenAvailable(fid.editor(note.id));
           },
         );
+
         return true;
       },
     },
@@ -82,6 +86,7 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem; onRefresh: () =
       key: [["Enter"]],
       handler: () => {
         fnode.focusNode(fid.editor(props.row.note.id));
+
         return true;
       },
     },
@@ -108,6 +113,7 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem; onRefresh: () =
                 slot().setFocusParent(fnode);
                 onCleanup(() => slot().setFocusParent(undefined));
               });
+
               return slot().container;
             }}
           />

@@ -25,7 +25,9 @@ const GraphAccessLayer = Layer.mergeAll(
   CommandsSync.Service.layer,
   CommandsUnlock.Service.layer,
 ).pipe(Layer.provideMerge(Layer.succeed(AtomRegistry.AtomRegistry, registry)));
+
 const memoMap = Layer.makeMemoMapUnsafe();
 
 export const atom = Atom.context({ memoMap })(GraphAccessLayer);
+
 export const rt = ManagedRuntime.make(GraphAccessLayer, { memoMap });

@@ -20,11 +20,13 @@ export const CommittedEventFromRecord = Record.pipe(
 export const CreateRecord = Record.mapFields(Struct.omit(["commitSeq"]));
 
 export type RawRecord = typeof Record.Encoded;
+
 export type RawCreateRecord = typeof CreateRecord.Encoded;
 
 export const decodeNonEmptyArray = Schema.decodeEffect(
   Schema.NonEmptyArray(CommittedEventFromRecord),
 );
+
 export const decodeArray = Schema.decodeEffect(Schema.Array(CommittedEventFromRecord));
 
 export const encodeCreateRecords = Schema.encodeEffect(Schema.Array(CreateRecord));

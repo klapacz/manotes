@@ -5,6 +5,7 @@ import * as TemporalSchema from "./temporal.schema";
 export const Type = Schema.Literals(["update", "date"]);
 
 const EventId = Schema.NonEmptyString;
+
 const CommitSeq = Schema.Union([Schema.Null, Schema.Number]);
 
 export const DatePayload = Schema.Struct({
@@ -12,7 +13,9 @@ export const DatePayload = Schema.Struct({
 });
 
 const DatePayloadBytes = Msgpack.schema(DatePayload);
+
 export const encodeDatePayload = Schema.encodeEffect(DatePayloadBytes);
+
 export const decodeDatePayload = Schema.decodeEffect(DatePayloadBytes);
 
 export const Record = Schema.Struct({
@@ -24,6 +27,7 @@ export const Record = Schema.Struct({
   id: EventId,
   commitSeq: CommitSeq,
 });
+
 export type Record = typeof Record.Type;
 
 export const Create = Schema.Struct({
@@ -34,4 +38,5 @@ export const Create = Schema.Struct({
   id: Schema.optional(Schema.NonEmptyString),
   commitSeq: Schema.optional(Schema.Number),
 });
+
 export type Create = typeof Create.Type;

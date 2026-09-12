@@ -1,4 +1,3 @@
-// task:WOUY: enable in the default check after migrating the existing findings.
 export const antiSlopRules = {
   "oxc/no-accumulating-spread": "error",
   "anti-slop/no-array-filter-map": "error",

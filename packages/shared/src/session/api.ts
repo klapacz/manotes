@@ -34,10 +34,12 @@ export const OtpVerify = Schema.Struct({
 });
 
 const AuthOtpRequestError = HttpApiError.InternalServerErrorNoContent;
+
 const AuthOtpVerifyError = Schema.Union([
   HttpApiError.UnauthorizedNoContent,
   HttpApiError.InternalServerErrorNoContent,
 ]);
+
 const LogoutError = HttpApiError.InternalServerErrorNoContent;
 
 export const SessionApi = HttpApi.make("SessionApi").add(

@@ -11,8 +11,11 @@ export const Record = Schema.Struct({
 });
 
 export type Record = typeof Record.Type;
+
 export type RawRecord = typeof Record.Encoded;
 
 export const encodeRecord = Schema.encodeEffect(Record);
+
 export const decodeRecord = Schema.decodeEffect(Record);
+
 export const decodeArray = Schema.decodeEffect(Schema.Array(Record));

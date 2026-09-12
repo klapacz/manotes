@@ -9,6 +9,7 @@ export const layer = Effect.gen(function* () {
   const sessionService = yield* SessionService.Service;
 
   const layer = makeLayer(sessionService.refresh);
+
   return layer;
 })
   .pipe(Layer.unwrap)

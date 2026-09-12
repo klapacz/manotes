@@ -33,6 +33,7 @@ export function streamDebounceNoDrop<A>(
       );
 
       const scheduledFlushHandle = yield* FiberHandle.make();
+
       const scheduleFlush = Effect.gen(function* () {
         yield* Effect.sleep(duration);
         yield* flush;
@@ -54,6 +55,7 @@ export function streamDebounceNoDrop<A>(
 
             if (Option.isNone(cause)) {
               yield* offerIfNonEmpty(remaining);
+
               return yield* Queue.end(mailbox);
             }
 

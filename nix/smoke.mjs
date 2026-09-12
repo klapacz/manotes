@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 const executable = path.resolve(process.argv[2]);
+
 const directory = mkdtempSync(path.join(tmpdir(), "manotes-package-"));
 
 try {
@@ -16,8 +17,10 @@ try {
       encoding: "utf8",
       input,
     });
+
     assert.ifError(result.error);
     assert.equal(result.status, 0, `${args.join(" ")}\n${result.stdout}\n${result.stderr}`);
+
     return result.stdout;
   };
 

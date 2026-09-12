@@ -6,6 +6,7 @@ export const Destination = Schema.TaggedUnion({
   notes: { ...NoteSearch.Schema.fields, hash: Schema.optional(Schema.String) },
   studio: { hash: Schema.optional(Schema.String) },
 });
+
 export type Destination = typeof Destination.Type;
 
 export const UnlockSearch = Schema.Struct({
@@ -21,19 +22,18 @@ export function useCurrent() {
     select: ({ matches, location }): Destination | undefined => {
       for (const match of matches.toReversed()) {
         const destination = Match.value(match).pipe(
-          Match.when({ routeId: "/$graph/studio" }, (): Destination => ({
-            _tag: "studio",
-            hash: location.hash,
-          })),
-          Match.when({ routeId: "/$graph/" }, (match): Destination => ({
-            _tag: "notes",
-            panes: match.search.panes,
-            hash: location.hash,
-          })),
+          Match.when({ routeId: "/$graph/studio" }, () =>
+            Destination.cases.studio.make({ hash: location.hash }),
+          ),
+          Match.when({ routeId: "/$graph/" }, (match) =>
+            Destination.cases.notes.make({ panes: match.search.panes, hash: location.hash }),
+          ),
           Match.orElse(() => undefined),
         );
+
         if (destination) return destination;
       }
+
       return undefined;
     },
   });
@@ -43,6 +43,7 @@ export function linkOptions(graph: string, destination?: Destination) {
   if (!destination) {
     return routerLinkOptions({ to: "/$graph", params: { graph }, replace: true });
   }
+
   return Match.value(destination).pipe(
     Match.tag("notes", (destination) =>
       routerLinkOptions({

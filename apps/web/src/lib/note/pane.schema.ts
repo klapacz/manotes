@@ -15,6 +15,7 @@ const StreamFilter = Schema.Struct({
 const StreamSort = Schema.Literals(["date", "updated"]).pipe(
   Schema.withDecodingDefault(Effect.sync(() => "date" as const)),
 );
+
 export type StreamSort = typeof StreamSort.Type;
 
 const PaneId = Schema.String.pipe(Schema.withDecodingDefaultKey(Effect.sync(makeId)));
@@ -30,9 +31,13 @@ export const Pane = Schema.TaggedUnion({
     sort: StreamSort,
   },
 });
+
 export type Pane = typeof Pane.Type;
+
 export type PaneInput = typeof Pane.Encoded;
+
 export type PaneStream = typeof Pane.cases.stream.Type;
+
 export type PaneNote = typeof Pane.cases.note.Type;
 
 export function paneToQuery(pane: PaneStream): NoteRepo.StreamListQuery {

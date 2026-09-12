@@ -5,6 +5,7 @@ import * as NoteSchema from "./note.schema";
 export type NotePreview = typeof NoteSchema.Preview.Type;
 
 const ENTRY_IDLE_TTL = "5 seconds";
+
 const SEED_CACHE_CAPACITY = 10_000;
 
 export class Service extends Context.Service<Service>()("NoteCache.Service", {
@@ -24,6 +25,7 @@ export class Service extends Context.Service<Service>()("NoteCache.Service", {
     const takeSeed = Effect.fn("NoteCache.takeSeed")(function* (id: string) {
       const seed = yield* Cache.getOption(seeds, id);
       yield* Cache.invalidate(seeds, id);
+
       return seed;
     });
 
@@ -33,6 +35,7 @@ export class Service extends Context.Service<Service>()("NoteCache.Service", {
         Effect.gen(function* () {
           const source = yield* noteRepo.reactiveFindPreviewById(id);
           const seed = yield* takeSeed(id);
+
           const seeded = Option.match(seed, {
             onNone: () => source,
             onSome: (preview) => Stream.concat(Stream.succeed(Option.some(preview)), source),

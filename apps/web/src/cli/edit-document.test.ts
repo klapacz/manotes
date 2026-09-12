@@ -26,6 +26,7 @@ describe("EditDocument.apply", () => {
 
       - Keep **formatting** and [note](./note-id.md)
     `);
+
     const updated = EditDocument.apply(doc, [{ kind: "replace", text: "Hello", with: "Updated" }]);
     expect(updated.child(1)).toBe(doc.child(1));
     expect(updated.child(0).textContent).toBe("Updated.");
@@ -52,6 +53,7 @@ describe("EditDocument.apply", () => {
     expect(edit("foo foo", [{ kind: "replace", text: "foo", with: "bar", occurrence: 1 }])).toBe(
       "foo bar\n",
     );
+
     for (const occurrence of [-1, 2, 0.5]) {
       expect(() =>
         edit("foo foo", [{ kind: "replace", text: "foo", with: "bar", occurrence }]),
@@ -85,11 +87,14 @@ describe("EditDocument.apply", () => {
     const doc = EditDocument.apply(MdParse.parse("a\n\nb\n\nc"), [
       { kind: "replace", text: "b", with: "" },
     ]);
+
     expect(doc.childCount).toBe(2);
     expect(MdSerialize.serialize(doc)).toBe("a\n\nc\n");
+
     const empty = EditDocument.apply(MdParse.parse("only"), [
       { kind: "replace", text: "only", with: "" },
     ]);
+
     expect(empty.toJSON()).toEqual({ type: "doc", content: [{ type: "paragraph" }] });
   });
 
@@ -99,9 +104,11 @@ describe("EditDocument.apply", () => {
         { kind: "replace", text: "## Log", with: "## Log\n\n- new entry" },
       ]),
     ).toBe("## Log\n\n- new entry\n\n- old entry\n");
+
     const doc = EditDocument.apply(MdParse.parse("- [ ] Task one\n- [x] Task two"), [
       { kind: "replace", text: "- [ ] Task one", with: "- [x] Task one" },
     ]);
+
     expect(doc.child(0).attrs.checked).toBe(true);
     expect(doc.child(1).attrs.checked).toBe(true);
   });
@@ -139,6 +146,7 @@ describe("EditDocument.apply", () => {
         NOTE_SCHEMA.text("underlined", [NOTE_SCHEMA.mark("underline")]),
       ),
     ]);
+
     // No-op replacements need neither a matching anchor nor serializable content.
     expect(EditDocument.apply(doc, [{ kind: "replace", text: "missing", with: "missing" }])).toBe(
       doc,

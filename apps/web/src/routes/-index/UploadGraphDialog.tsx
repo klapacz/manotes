@@ -31,10 +31,14 @@ type Props<T extends ValidComponent = typeof Button> = {
 
 export function UploadGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
   const [open, setOpen] = createSignal(false);
+
   const [uploadGraphResult, uploadGraph] = useAtom(() => GraphAccessCommands.Atom.upload, {
     mode: "promise",
   });
+
+  // SAFETY: Erasing the trigger's polymorphic parameter lets Solid remove graph; remaining props are forwarded unchanged to DialogTrigger.
   const [local, triggerProps] = splitProps(props as Props, ["graph"]);
+
   const form = useAppForm(() => ({
     defaultValues: {
       password: "",
@@ -55,6 +59,7 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
       open={open()}
       onOpenChange={(open) => {
         if (uploadGraphResult().waiting) return;
+
         if (open) form.reset();
         setOpen(open);
       }}

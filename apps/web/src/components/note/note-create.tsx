@@ -6,6 +6,7 @@ import { prosemirrorJSONToYDoc } from "y-prosemirror";
 import * as Y from "yjs";
 import { MaterializedEventService, NoteSchema, bindRt } from "../../lib";
 import type { PaneSchema } from "../../lib/note/pane.schema";
+import type { UnknownNodeJSON } from "../../lib/node-json";
 import type { Hotkey } from "@tanstack/hotkeys";
 import { NOTE_SCHEMA } from "../../lib/prosemirror/app-schema";
 import { PROSEMIRROR_XML_FRAGMENT_KEY } from "../../lib/prosemirror/yjs";
@@ -48,6 +49,7 @@ export function useCreateNote() {
     toast.promise(
       createNote(input).then((note) => {
         onCreated?.(note);
+
         return note;
       }),
       {
@@ -77,7 +79,7 @@ export function pagePayload(title: string): Uint8Array<ArrayBufferLike> {
 
 /** Seeds a new note's content from the stream pane's filters. */
 export function prefilledPayload(pane: PaneSchema.PaneStream): Uint8Array<ArrayBufferLike> {
-  const content: Array<Record<string, unknown>> = [];
+  const content = new Array<UnknownNodeJSON>();
 
   if (pane.filter.type === "pages") {
     content.push({

@@ -29,6 +29,7 @@ import { acquireWebLock, tryAcquireExclusiveWebLock } from "./web-lock";
  */
 export function resolveRole(localGraphId: string) {
   const lockName = leadershipLockName(localGraphId);
+
   return Effect.map(
     tryAcquireExclusiveWebLock({ lockName }),
     Option.match({
@@ -44,6 +45,7 @@ export function resolveRole(localGraphId: string) {
  */
 export function waitForLeadership(localGraphId: string) {
   const lockName = leadershipLockName(localGraphId);
+
   return acquireWebLock({ lockName, mode: "exclusive" });
 }
 

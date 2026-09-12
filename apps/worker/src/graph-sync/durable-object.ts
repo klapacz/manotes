@@ -15,6 +15,7 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObjectName
   Effect.gen(function* () {
     return Effect.gen(function* () {
       const state = yield* Cloudflare.DurableObjectState;
+
       const layer = SqliteClient.layer({
         db: state.storage.sql.raw,
         spanAttributes: {
@@ -50,6 +51,7 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObjectName
             reason: failure.error.reason,
           });
           yield* ws.close(1002, "Protocol violation");
+
           return;
         }
 
@@ -73,6 +75,7 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObjectName
       ) {
         for (const response of result.reply)
           yield* ws.send(Codec.encodeServerMessageUnsafe(response));
+
         for (const response of result.broadcast) yield* broadcast(response, ws);
       });
 
@@ -91,6 +94,7 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObjectName
       return {
         fetch: Effect.gen(function* () {
           const [response] = yield* Cloudflare.upgrade();
+
           return response;
         }),
         webSocketMessage: Effect.fnUntraced(function* (
@@ -101,6 +105,7 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObjectName
 
           if (Exit.isFailure(messageExit)) {
             yield* handleWebSocketFailure(socket, messageExit.cause);
+
             return;
           }
 
@@ -108,12 +113,15 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObjectName
 
           if (Exit.isFailure(responsePlan)) {
             yield* handleWebSocketFailure(socket, responsePlan.cause);
+
             return;
           }
 
           yield* respondToWebSocketMessage(socket, responsePlan.value);
         }, Effect.provide(layer)),
 
+        // WebSocket errors are opaque values passed through to logging.
+        // oxlint-disable-next-line anti-slop/no-unknown-parameters
         webSocketError: Effect.fn(function* (_ws: Cloudflare.DurableWebSocket, error: unknown) {
           yield* Effect.logWarning("Graph sync websocket error", error);
         }),

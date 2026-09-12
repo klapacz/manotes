@@ -8,6 +8,7 @@ export const Record = Schema.Struct({
   createdAt: Schema.DateTimeUtcFromString,
   id: Schema.NonEmptyString,
 });
+
 export type Record = typeof Record.Type;
 
 export const Bundle = Schema.Struct({
@@ -16,12 +17,17 @@ export const Bundle = Schema.Struct({
   sourceGraphDisplayName: Schema.String,
   events: Schema.Array(Record),
 });
+
 export type Bundle = typeof Bundle.Type;
 
 export const File = Schema.fromJsonString(Bundle);
+
 export type File = typeof File.Type;
 
 export const encodeBundle = Schema.encodeEffect(Bundle);
+
 export const decodeBundle = Schema.decodeUnknownEffect(Bundle);
+
 export const encodeFile = Schema.encodeEffect(File);
+
 export const decodeFile = Schema.decodeUnknownEffect(File);

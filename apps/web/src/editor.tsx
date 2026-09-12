@@ -41,6 +41,7 @@ type BootStateSnapshot = {
 };
 
 export const BootState = Data.taggedEnum<BootState>();
+
 const EDITOR_LOAD_ERROR_MESSAGE = "Failed to load note content.";
 
 type Props = EditorSyncService.SetupInput & {
@@ -56,16 +57,19 @@ export default function Editor(props: Props): JSX.Element {
       () => props.noteId,
       (noteId) => {
         const doc = new Y.Doc();
+
         const extension = union([
           defineYjs({ doc }),
           defineAppExtension(),
           defineKeymap({
             Escape: () => {
               fnode.focusParent();
+
               return true;
             },
           }),
         ]);
+
         const editor = createEditor({ extension });
 
         return {
@@ -82,6 +86,7 @@ export default function Editor(props: Props): JSX.Element {
 
   const editorStateAtom = createSyncedAtom(() => {
     const current = state();
+
     return {
       doc: current.doc,
       noteId: current.noteId,
@@ -117,6 +122,7 @@ export default function Editor(props: Props): JSX.Element {
         }).pipe(
           Effect.catchCause((cause) => {
             if (Cause.hasInterruptsOnly(cause)) return Effect.void;
+
             return SubscriptionRef.set(bootStateRef, {
               doc,
               state: BootState.Error({ message: EDITOR_LOAD_ERROR_MESSAGE }),
@@ -131,6 +137,7 @@ export default function Editor(props: Props): JSX.Element {
   );
 
   const bootStateResult = useAtomValue(editorBootStateAtom);
+
   const bootState = createMemo(() => {
     const currentDoc = state().doc;
     const result = bootStateResult();
@@ -138,7 +145,7 @@ export default function Editor(props: Props): JSX.Element {
     // Runtime atoms keep the previous successful value while the next async read
     // is spinning up. Tagging boot state with the Y.Doc lets us ignore that stale
     // Ready/Error from the previous note and keep the new session in Loading.
-    if (result._tag === "Success") {
+    if (AsyncResult.isSuccess(result)) {
       return result.value.doc === currentDoc ? result.value.state : BootState.Loading();
     }
 
@@ -160,19 +167,22 @@ export default function Editor(props: Props): JSX.Element {
     yield* Deferred.await(ready);
 
     const { editor } = state();
-    if (bootState()._tag !== "Ready") return;
+
+    if (!BootState.$is("Ready")(bootState())) return;
 
     selection.restore();
     editor.view.focus();
   });
 
   const fid = Focus.useId();
+
   const fnode = Focus.createNode(() => ({
     id: fid.editor(props.noteId),
     onFocus: () => Effect.runPromise(focusEditor()),
     onKeyDown: (event) => {
       if (event.key !== "Escape") return;
       fnode.focusParent();
+
       return true;
     },
   }));
@@ -196,7 +206,9 @@ export default function Editor(props: Props): JSX.Element {
             style={props.style}
             onMouseDown={(event) => {
               const target = event.target;
+
               if (!(target instanceof HTMLElement)) return;
+
               if (target.closest("[data-backlink]")) {
                 suppressNextFocus = true;
                 event.stopPropagation();

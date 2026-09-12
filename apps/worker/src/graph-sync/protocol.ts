@@ -58,6 +58,7 @@ const handleConnect = Effect.fn("GraphSyncProtocol.handleConnect")(function* (
   // selected by the router / Durable Object binding. Right now the routed DO
   // chooses the graph, but this field is otherwise ignored on the server.
   const maxCommitSeq = yield* Repo.getLastCommitSeq();
+
   const events = yield* Repo.getEventsBetweenSeq({
     afterSeq: message.lastCommitSeq,
     upToCommitSeq: maxCommitSeq,
@@ -145,6 +146,8 @@ function remapCommitInsertSqlError(error: SqlError.SqlError) {
   return error;
 }
 
+// Driver causes are opaque; keep the existing message-based fallback.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 function isEventIdUniquenessSqlError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
 

@@ -37,10 +37,12 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Pr
       const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(password));
       const session = yield* SessionService.Service.use((svc) => svc.get);
       const client = yield* RemoteRegistryService.Service;
+
       const graph = yield* client("createGraph", {
         displayName,
         graphKeyEnvelope: wrapped.envelope,
       });
+
       const localGraph = yield* createCloudGraph({
         graphId: graph.graphId,
         displayName: graph.displayName,

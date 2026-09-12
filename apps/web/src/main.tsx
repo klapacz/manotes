@@ -29,6 +29,7 @@ function App() {
 }
 
 const rootElement = document.getElementById("app");
+
 if (rootElement) {
   render(() => <App />, rootElement);
 }

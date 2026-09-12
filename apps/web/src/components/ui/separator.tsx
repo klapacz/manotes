@@ -13,6 +13,7 @@ export type SeparatorProps<T extends ValidComponent = "hr"> = ComponentProps<
 >;
 
 export const Separator = <T extends ValidComponent = "hr">(props: SeparatorProps<T>) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as SeparatorProps, ["class"]);
 
   return (

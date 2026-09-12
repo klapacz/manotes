@@ -23,6 +23,7 @@ export const migrate = Effect.gen(function* () {
 
 export const getLastCommitSeq = Effect.fn("GraphSyncRepo.getLastCommitSeq")(function* () {
   const sql = yield* SqlClient.SqlClient;
+
   const rows = yield* sql<{ maxCommitSeq: number }>`
       SELECT COALESCE(MAX(commitSeq), 0) AS maxCommitSeq
       FROM events
@@ -34,6 +35,7 @@ export const getLastCommitSeq = Effect.fn("GraphSyncRepo.getLastCommitSeq")(func
 export const getEventsBetweenSeq = Effect.fn("GraphSyncRepo.getEventsBetweenSeq")(
   function* (filter: { afterSeq: number; upToCommitSeq: number }) {
     const sql = yield* SqlClient.SqlClient;
+
     const rows = yield* sql<EventSchema.RawRecord>`
     SELECT commitSeq, id, streamRef, payload, createdAt
     FROM events
@@ -50,6 +52,7 @@ export const insertEvents = Effect.fn("GraphSyncRepo.insertEvents")(function* (
 ) {
   const newEvents = yield* EventSchema.encodeCreateRecords(events);
   const sql = yield* SqlClient.SqlClient;
+
   const rows = yield* sql<EventSchema.RawRecord>`
     INSERT INTO events ${sql.insert(newEvents)}
     RETURNING commitSeq, id, streamRef, payload, createdAt

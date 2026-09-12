@@ -81,6 +81,7 @@ function RequestOtpForm(props: {
   const [checkResult, checkWaitlist] = useAtom(() => SessionAtom.checkWaitlist, {
     mode: "promise",
   });
+
   const [requestResult, requestOtp] = useAtom(() => SessionAtom.requestOtp, {
     mode: "promise",
   });
@@ -95,6 +96,7 @@ function RequestOtpForm(props: {
     validators: { onDynamic: RequestOtpFormSchema },
     async onSubmit({ value }) {
       const res = await checkWaitlist({ payload: { email: value.email } });
+
       if (res.status === "WAITLIST") return;
 
       await requestOtp({ payload: { email: value.email } });
@@ -156,6 +158,7 @@ function VerifyOtpForm(props: {
   const [verifyResult, verifyOtp] = useAtom(() => SessionAtom.verifyOtp, {
     mode: "promise",
   });
+
   const [requestResult, requestOtp] = useAtom(() => SessionAtom.requestOtp, {
     mode: "promise",
   });

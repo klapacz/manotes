@@ -13,6 +13,7 @@
 // (React/Radix/AGPL) ends up in the manotes bundle — only this glue.
 
 export interface ResultSet {
+  // eslint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Studio displays arbitrary SQL result columns.
   rows: ReadonlyArray<Record<string, unknown>>;
   /** Optional, for INSERT feedback. */
   lastInsertRowid?: number;
@@ -39,6 +40,7 @@ export function connectStudioBridge(iframe: HTMLIFrameElement, runner: StudioRun
     // Only trust messages coming from our own iframe document.
     if (event.source !== iframe.contentWindow) return;
     const msg = event.data;
+
     if (!msg || (msg.type !== "query" && msg.type !== "transaction")) return;
 
     try {
@@ -46,6 +48,7 @@ export function connectStudioBridge(iframe: HTMLIFrameElement, runner: StudioRun
         msg.type === "query"
           ? toDatabaseResultSet(await runner.query(msg.statement))
           : (await runner.transaction(msg.statements)).map(toDatabaseResultSet);
+
       reply(iframe, { type: msg.type, id: msg.id, data });
     } catch (cause) {
       reply(iframe, { type: msg.type, id: msg.id, error: errorMessage(cause) });
@@ -53,9 +56,11 @@ export function connectStudioBridge(iframe: HTMLIFrameElement, runner: StudioRun
   };
 
   window.addEventListener("message", handler);
+
   return () => window.removeEventListener("message", handler);
 }
 
+// eslint-disable-next-line anti-slop/no-unknown-parameters -- Forward the iframe protocol payload without duplicating Studio's types.
 function reply(iframe: HTMLIFrameElement, payload: unknown): void {
   iframe.contentWindow?.postMessage(payload, "*");
 }
@@ -65,6 +70,7 @@ function reply(iframe: HTMLIFrameElement, payload: unknown): void {
 // Source: .reference/studio/src/drivers/base-driver.ts + @outerbase/sdk-transform.
 function toDatabaseResultSet(result: ResultSet) {
   const headerNames = collectColumnOrder(result.rows);
+
   return {
     headers: headerNames.map((name) => ({ name, displayName: name, originalType: null })),
     rows: result.rows,
@@ -80,15 +86,20 @@ function toDatabaseResultSet(result: ResultSet) {
 
 // Preserve first-seen column order across rows so the grid columns are stable
 // even when later rows are sparse.
+// eslint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Column discovery only reads keys, not cell values.
 function collectColumnOrder(rows: ReadonlyArray<Record<string, unknown>>): Array<string> {
   const seen = new Set<string>();
+
   for (const row of rows) {
     for (const key of Object.keys(row)) seen.add(key);
   }
+
   return [...seen];
 }
 
 function errorMessage(cause: unknown): string {
   if (cause instanceof Error) return cause.message;
+
+  // eslint-disable-next-line anti-slop/no-runtime-typeof -- Rejected promises may contain strings or arbitrary thrown values.
   return typeof cause === "string" ? cause : JSON.stringify(cause);
 }

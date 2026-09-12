@@ -6,6 +6,7 @@ const ContentValue = Schema.declare<UnknownNodeJSON>((_x): _x is UnknownNodeJSON
 
 export const Content = Schema.String.pipe(
   Schema.decodeTo(ContentValue, {
+    // eslint-disable-next-line anti-slop/require-safety-comment-for-type-assertion -- Preserve the stored node JSON contract; the editor interprets node attributes.
     decode: SchemaGetter.transform((value: string) => JSON.parse(value) as UnknownNodeJSON),
     encode: SchemaGetter.transform((value: UnknownNodeJSON) => JSON.stringify(value)),
   }),
@@ -24,6 +25,7 @@ export const Record = Schema.Struct({
   updatedAt: Schema.DateTimeUtcFromString,
   lastEventLocalSeq: Schema.Number,
 });
+
 export type Record = typeof Record.Type;
 
 export const Preview = Schema.Struct({
@@ -49,6 +51,7 @@ export const Meta = Schema.Struct({
   date: Schema.String,
   updatedAt: Schema.DateTimeUtcFromString,
 });
+
 export type Meta = typeof Meta.Type;
 
 export const Create = Schema.Struct({

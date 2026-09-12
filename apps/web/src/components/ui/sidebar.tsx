@@ -12,6 +12,7 @@ import { Button } from "./button";
 import { Separator } from "./separator";
 
 const SIDEBAR_WIDTH = "16rem";
+
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 
 interface SidebarContextProps {
@@ -27,9 +28,11 @@ const SidebarContext = createContext<SidebarContextProps | null>(null);
 
 export const useSidebar = () => {
   const context = useContext(SidebarContext);
+
   if (!context) {
     throw new Error("useSidebar must be used within a SidebarProvider.");
   }
+
   return context;
 };
 
@@ -46,6 +49,7 @@ export const SidebarProvider = (props: SidebarProviderProps) => {
     "style",
     "children",
   ]);
+
   const isMobile = useIsMobile();
   const [open, setOpen] = createSignal(local.defaultOpen ?? true);
   const [openMobile, setOpenMobile] = createSignal(local.defaultOpenMobile ?? false);
@@ -53,8 +57,10 @@ export const SidebarProvider = (props: SidebarProviderProps) => {
   const toggleSidebar = () => {
     if (isMobile()) {
       setOpenMobile((prev) => !prev);
+
       return;
     }
+
     setOpen((prev) => !prev);
   };
 
@@ -351,12 +357,14 @@ export type SidebarMenuButtonProps<T extends ValidComponent = "button"> = Compon
 export const SidebarMenuButton = <T extends ValidComponent = "button">(
   props: SidebarMenuButtonProps<T>,
 ) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [local, rest] = splitProps(props as SidebarMenuButtonProps, [
     "class",
     "isActive",
     "size",
     "variant",
   ]);
+
   const { open } = useSidebar();
   const collapsed = createMemo(() => !open());
 

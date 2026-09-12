@@ -64,6 +64,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
         });
 
         yield* Effect.logInfo(`Materialized note up to event ${upToLocalSeq}`);
+
         return;
       }
 
@@ -150,6 +151,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
       );
 
       yield* Effect.logInfo(`Processed ${batch.length} events up to ${newestLocalSeq}`);
+
       return newestLocalSeq;
     });
 

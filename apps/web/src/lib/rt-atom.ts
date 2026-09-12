@@ -9,10 +9,12 @@ function createBindRt<R, ER>(getRt: () => Atom.AtomRuntime<R, ER>) {
       const rt = getRt();
 
       const cached = cache.get(rt);
+
       if (cached !== undefined) return cached;
 
       const bound = creator(rt);
       cache.set(rt, bound);
+
       return bound;
     };
   };

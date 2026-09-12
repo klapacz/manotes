@@ -30,6 +30,7 @@ export type BadgeProps<T extends ValidComponent = "span"> = ComponentProps<
   VariantProps<typeof badgeVariants>;
 
 export const Badge = <T extends ValidComponent = "span">(props: BadgeProps<T>) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as BadgeProps, ["class", "variant"]);
 
   return (

@@ -4,6 +4,7 @@ import { Schema } from "effect";
 const isValidPlainDateString = (s: string): boolean => {
   try {
     Temporal.PlainDate.from(s, { overflow: "reject" });
+
     return true;
   } catch {
     return false;

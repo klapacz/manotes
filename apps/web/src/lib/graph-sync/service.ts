@@ -1,7 +1,16 @@
 /**
  * Supervises the client graph sync session and retries after disconnects.
  */
-import { Cause, Effect, Layer, Option, Schedule, Context, SubscriptionRef } from "effect";
+import {
+  Cause,
+  Effect,
+  Layer,
+  Option,
+  Schedule,
+  Context,
+  SubscriptionRef,
+  Predicate,
+} from "effect";
 import * as EventRepo from "../event.repo";
 import * as GraphSyncEventLog from "./event-log.service";
 import * as Session from "./machine/session";
@@ -19,9 +28,13 @@ export class Service extends Context.Service<Service>()("GraphSyncService", {
             const syncState = Option.match(Cause.findErrorOption(cause), {
               onNone: () => "Disconnected" as const,
               onSome: (error) => {
-                if (error._tag === "SocketError" && error.reason._tag === "SocketOpenError") {
+                if (
+                  Predicate.isTagged(error, "SocketError") &&
+                  Predicate.isTagged(error.reason, "SocketOpenError")
+                ) {
                   return "Failed" as const;
                 }
+
                 return "Disconnected" as const;
               },
             });

@@ -69,6 +69,7 @@ export const GraphMenu = () => {
 
   const cloudGraph = () => {
     const record = graph().record;
+
     return record.mode === "cloud" ? record : null;
   };
 

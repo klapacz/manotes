@@ -86,6 +86,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
       );
 
       const iv = crypto.getRandomValues(new Uint8Array(EVENT_IV_LENGTH));
+
       const ciphertext = yield* Effect.tryPromise({
         try: () =>
           crypto.subtle.encrypt(

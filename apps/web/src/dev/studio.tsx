@@ -17,10 +17,13 @@ const RunQuery = bindRt((rt) =>
   rt.fn(
     Effect.fn("DevStudio.runQuery")(function* (statement: string) {
       const sql = yield* SqlClient.SqlClient;
+      // eslint-disable-next-line anti-slop/no-unsafe-dictionary-type -- The SQL console accepts arbitrary queries and columns.
       const rows = yield* sql.unsafe<Record<string, unknown>>(statement);
+
       const [meta] = yield* sql.unsafe<{ id: number; changes: number }>(
         "SELECT last_insert_rowid() AS id, changes() AS changes",
       );
+
       return {
         rows,
         lastInsertRowid: meta?.id,
@@ -34,9 +37,11 @@ const RunTransaction = bindRt((rt) =>
   rt.fn(
     Effect.fn("DevStudio.runTransaction")(function* (statements: ReadonlyArray<string>) {
       const sql = yield* SqlClient.SqlClient;
+
       return yield* sql
         .withTransaction(
           Effect.forEach(statements, (statement) =>
+            // eslint-disable-next-line anti-slop/no-unsafe-dictionary-type -- The SQL console accepts arbitrary queries and columns.
             Effect.map(sql.unsafe<Record<string, unknown>>(statement), (rows): ResultSet => ({
               rows,
             })),

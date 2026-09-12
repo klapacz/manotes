@@ -27,6 +27,7 @@ function createVirtualDailyHeadingPlugin({ title }: Options): Plugin {
             element.className = "virtual-daily-heading";
             element.setAttribute("contenteditable", "false");
             element.textContent = title;
+
             return element;
           },
           {

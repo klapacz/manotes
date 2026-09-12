@@ -30,6 +30,7 @@ export class SyncStatusCloud extends Schema.Class<SyncStatusCloud>("SyncStatusCl
 }) {}
 
 export const SyncStatus = Schema.Union([SyncStatusLocal, SyncStatusCloud]);
+
 export type SyncStatus = typeof SyncStatus.Type;
 
 export class DedicatedWorkerHealth extends Schema.Class<DedicatedWorkerHealth>(

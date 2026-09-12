@@ -40,6 +40,7 @@ export type DialogContentProps<T extends ValidComponent = "div"> = ComponentProp
 };
 
 export const DialogContent = <T extends ValidComponent = "div">(props: DialogContentProps<T>) => {
+  // SAFETY: The default object supplies only the wrapper-owned optional key before caller props override it.
   const mergedProps = mergeProps({ showCloseButton: true } as DialogContentProps, props);
   const [, rest] = splitProps(mergedProps, ["class", "children", "showCloseButton"]);
 
@@ -104,6 +105,7 @@ export type DialogTitleProps<T extends ValidComponent = "h2"> = ComponentProps<
 >;
 
 export const DialogTitle = <T extends ValidComponent = "h2">(props: DialogTitleProps<T>) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as DialogTitleProps, ["class"]);
 
   return (
@@ -122,6 +124,7 @@ export type DialogDescriptionProps<T extends ValidComponent = "p"> = ComponentPr
 export const DialogDescription = <T extends ValidComponent = "p">(
   props: DialogDescriptionProps<T>,
 ) => {
+  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as DialogDescriptionProps, ["class"]);
 
   return (

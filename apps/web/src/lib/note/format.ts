@@ -6,6 +6,7 @@ type NotePreview = Pick<typeof NoteSchema.Preview.Type, "title" | "text">;
 
 export function label(note: NotePreview): string {
   const label = note.title ?? note.text;
+
   return truncateLabel(label.length > 0 ? label : "Untitled note", 56);
 }
 
@@ -22,8 +23,11 @@ export function formatShortDate(dateString: string): string {
 export function formatGroupLabel(dateString: string): string {
   const date = Temporal.PlainDate.from(dateString);
   const today = Temporal.Now.plainDateISO();
+
   if (Temporal.PlainDate.compare(date, today) === 0) return "Today";
+
   if (Temporal.PlainDate.compare(date, today.subtract({ days: 1 })) === 0) return "Yesterday";
+
   if (date.year === today.year) return date.toLocaleString(undefined, groupDateFormatOptions);
 
   return date.toLocaleString(undefined, {

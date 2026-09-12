@@ -45,6 +45,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
     const applyCommittedEvents = Effect.fn("GraphSyncEventLogService.applyCommittedEvents")(
       function* (events: NonEmptyReadonlyArray<Messages.CommittedEvent>) {
         const lastCommitSeq = yield* getLastCommitSeq();
+
         const unappliedEvents = pipe(
           events,
           Array.dropWhile((event) => event.commitSeq <= lastCommitSeq),
@@ -95,6 +96,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
                     const envelope = yield* GraphSyncEncryptionSchema.decodeEnvelope(
                       new Uint8Array(event.payload),
                     );
+
                     const decrypted = yield* graphSyncEncryption.decryptEventBody({
                       id: event.id,
                       streamRef: event.streamRef,
@@ -125,13 +127,16 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
      */
     const getPendingCommit = Effect.fn("GraphSyncEventLogService.getPendingCommit")(function* () {
       const pending = yield* eventRepo.findPending(PUSH_BATCH_SIZE);
+
       if (!Array.isReadonlyArrayNonEmpty(pending)) return Option.none();
 
       const baseCommitSeq = yield* eventRepo.getLastCommitSeq();
+
       const events = yield* Effect.forEach(
         pending,
         Effect.fnUntraced(function* (event) {
           const streamRef = yield* graphSyncEncryption.deriveNoteStreamRef(event.noteId);
+
           const encryptedPayload = yield* graphSyncEncryption.encryptEventBody({
             id: event.id,
             streamRef,
@@ -140,6 +145,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
             type: event.type,
             payload: event.payload,
           });
+
           const encodedEnvelope = yield* GraphSyncEncryptionSchema.encodeEnvelope(encryptedPayload);
 
           return new Messages.PendingEvent({

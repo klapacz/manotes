@@ -1,5 +1,5 @@
 import { BrowserWorker } from "@effect/platform-browser";
-import { Duration, Effect, Exit, Layer, Schedule, Scope, Context } from "effect";
+import { Data, Duration, Effect, Exit, Layer, Schedule, Scope, Context } from "effect";
 import { RpcClient, RpcClientError, RpcGroup, RpcWorker } from "effect/unstable/rpc";
 import * as DB from "./db.service";
 import * as GraphSyncConfig from "./graph-sync/config";
@@ -42,6 +42,7 @@ const createDedicatedWorker = Effect.fn("GraphWorkerClient.createDedicatedWorker
       // We therefore wait for Effect's worker runner to announce readiness
       // before sending the RPC initial message.
       const ready = Promise.withResolvers<void>();
+
       const worker = new Worker(new URL("./graph.dedicated-worker.ts", import.meta.url), {
         type: "module",
         name: `graph-dedicated-${localGraphId}`,
@@ -53,6 +54,7 @@ const createDedicatedWorker = Effect.fn("GraphWorkerClient.createDedicatedWorker
         // handled by Effect's own worker transport after bootstrap completes.
         if (Array.isArray(event.data) && event.data[0] === 0) ready.resolve();
       };
+
       worker.addEventListener("message", onMessage);
 
       return { worker, onMessage, ready: ready.promise };
@@ -69,6 +71,7 @@ const createDedicatedWorker = Effect.fn("GraphWorkerClient.createDedicatedWorker
         // Install cleanup first, then wait for readiness. If the timeout fires,
         // the surrounding scope still owns the worker and will terminate it.
         yield* Effect.promise(() => ready).pipe(Effect.timeout("5 seconds"));
+
         return worker;
       }),
     ),
@@ -85,12 +88,11 @@ const createDedicatedWorker = Effect.fn("GraphWorkerClient.createDedicatedWorker
     ),
   );
 
+  const { InitialMessage } = Data.taggedEnum<RpcWorker.InitialMessage.Encoded>();
+
   // Send port1 to the dedicated worker via initial message.
   yield* Effect.sync(() =>
-    worker.postMessage(
-      [0, { _tag: "InitialMessage", value: initialMessage }],
-      transferables as any,
-    ),
+    worker.postMessage([0, InitialMessage({ value: initialMessage })], [...transferables]),
   );
 
   yield* Effect.logInfo("Created dedicated worker");
@@ -104,6 +106,7 @@ const SharedInitialMessageLayer = RpcWorker.layerInitialMessage(
   Effect.gen(function* () {
     const config = yield* DB.Config;
     const graphSyncConfig = yield* GraphSyncConfig.Config;
+
     return {
       localGraphId: config.localGraphId,
       graphSyncMode: graphSyncConfig.mode,

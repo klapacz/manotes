@@ -44,6 +44,7 @@ export default defineContentScript({
       );
 
       if (request === null) return;
+
       try {
         port.postMessage(request);
       } catch {

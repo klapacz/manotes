@@ -13,6 +13,7 @@ export function defineCodeBlockBackspace(): PlainExtension {
 
 const codeBlockBackspace: Command = (state, dispatch) => {
   const { selection } = state;
+
   if (!selection.empty) return false;
 
   const { $head } = selection;
@@ -25,6 +26,7 @@ const codeBlockBackspace: Command = (state, dispatch) => {
   if (parent.content.size !== 0) return false;
 
   const paragraphType = state.schema.nodes.paragraph;
+
   if (!paragraphType) return false;
 
   if (dispatch) {

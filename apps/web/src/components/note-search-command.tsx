@@ -37,12 +37,13 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
         );
       }),
     ),
-    [] as { id: string; title: string }[],
+    Array.empty<{ id: string; title: string }>(),
   );
 
   createEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== "k") return;
+
       if (!event.metaKey && !event.ctrlKey) return;
 
       event.preventDefault();

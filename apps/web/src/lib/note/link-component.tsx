@@ -15,7 +15,9 @@ const Context = createContext<NoteLinkRenderer>();
 
 export function NoteLink(props: NoteLinkProps): JSX.Element {
   const render = useContext(Context);
+
   if (!render) throw new Error("NoteLink must be used inside NoteLinkScope");
+
   return render(props);
 }
 

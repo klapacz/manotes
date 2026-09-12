@@ -24,9 +24,12 @@ type Props<T extends ValidComponent = typeof Button> = {
 
 export function DeleteGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
   const [open, setOpen] = createSignal(false);
+
   const [deleteResult, deleteLocalGraph] = useAtom(() => GraphAccessCommands.Atom.deleteLocal, {
     mode: "promise",
   });
+
+  // SAFETY: Erasing the trigger's polymorphic parameter lets Solid remove graph; remaining props are forwarded unchanged to DialogTrigger.
   const [local, triggerProps] = splitProps(props as Props, ["graph"]);
 
   async function handleDelete() {

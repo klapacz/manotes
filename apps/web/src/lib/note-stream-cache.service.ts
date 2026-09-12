@@ -9,6 +9,7 @@ const ENTRY_IDLE_TTL = "5 seconds";
 export class Service extends Context.Service<Service>()("NoteStreamCache.Service", {
   make: Effect.gen(function* () {
     const noteRepo = yield* NoteRepo.Service;
+
     const entries = yield* RcMap.make({
       idleTimeToLive: ENTRY_IDLE_TTL,
       lookup: (query: NoteRepo.StreamListQuery) =>

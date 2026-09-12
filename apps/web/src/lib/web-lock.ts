@@ -1,5 +1,6 @@
 import { Effect, Option } from "effect";
 
+// eslint-disable-next-line anti-slop/no-unknown-parameters -- Promise rejection values are unknown; this guard checks for an abort DOMException.
 function isAbortError(error: unknown) {
   return error instanceof DOMException && error.name === "AbortError";
 }
@@ -8,6 +9,7 @@ function makeLockHold() {
   // Returning a promise from the callback keeps the lock held until it resolves.
   const { promise: hold, resolve } = Promise.withResolvers<void>();
   const release = Effect.sync(() => resolve());
+
   return { hold, release };
 }
 
@@ -28,6 +30,7 @@ export const acquireWebLock = Effect.fn("WebLock.acquire")(function* ({
 
           const lockHold = makeLockHold();
           resume(Effect.succeed(lockHold.release));
+
           return lockHold.hold;
         })
         .catch((error) => {
@@ -52,6 +55,7 @@ export const tryAcquireExclusiveWebLock = Effect.fn("WebLock.tryAcquire")(functi
 
           const lockHold = makeLockHold();
           resume(Effect.succeed(Option.some(lockHold.release)));
+
           return lockHold.hold;
         })
         .catch((error) => {

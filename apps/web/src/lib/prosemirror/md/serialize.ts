@@ -1,12 +1,26 @@
+import { Schema } from "effect";
 import { defaultMarkdownSerializer, MarkdownSerializer } from "prosemirror-markdown";
 import { Fragment, type Node } from "prosekit/pm/model";
 import { numberOrderedLists } from "./number-ordered-lists";
+import { decodeBacklinkAttrs } from "../../editor/backlink/spec";
+import { decodeResolvedAppListAttrs } from "../../editor/list/extension";
 
 export type Options = {
   readonly backlinkLabel?: (id: string) => string | undefined;
 };
 
 export type BlockSpan = { readonly mdFrom: number; readonly mdTo: number };
+
+export interface WithBlockSpansResult {
+  readonly markdown: string;
+  readonly blocks: readonly BlockSpan[];
+}
+
+const CodeBlockAttrs = Schema.Struct({
+  language: Schema.String.annotate({ expected: "a code block language string" }),
+});
+
+const decodeCodeBlockAttrs = Schema.decodeUnknownSync(CodeBlockAttrs);
 
 /** Export supported content. Tables, underline, and unknown nodes/marks throw.
  * Ordered items are numbered by position from one. Markdown does not retain
@@ -17,10 +31,7 @@ export function serialize(doc: Node, options: Options = {}): string {
 }
 
 /** Contiguous top-level spans, including separators in the following block. */
-export function withBlockSpans(
-  doc: Node,
-  options: Options = {},
-): { readonly markdown: string; readonly blocks: readonly BlockSpan[] } {
+export function withBlockSpans(doc: Node, options: Options = {}): WithBlockSpansResult {
   doc.check();
   // Normalize numbering on a copy, ignoring stored order attributes without
   // mutating the input document.
@@ -34,16 +45,19 @@ export function withBlockSpans(
     // These are string offsets, not ProseMirror positions. Record the start
     // before adding the separator so every character belongs to one span.
     const mdFrom = markdown.length;
+
     if (index) markdown += "\n";
     // The library returns no final block separator; give each block a newline.
     markdown += serializer.serialize(doc.copy(Fragment.from(node))) + "\n";
     blocks.push({ mdFrom, mdTo: markdown.length });
   });
+
   return { markdown, blocks };
 }
 
 function createSerializer(options: Options): MarkdownSerializer {
   const { nodes, marks } = defaultMarkdownSerializer;
+
   return new MarkdownSerializer(
     {
       // Delegate ordinary blocks, inline formatting, and escaping to the library.
@@ -56,10 +70,12 @@ function createSerializer(options: Options): MarkdownSerializer {
       horizontalRule: requireSerializer(nodes, "horizontal_rule"),
       hardBreak: requireSerializer(nodes, "hard_break"),
       codeBlock(state, node) {
-        const language: unknown = node.attrs.language ?? "";
-        if (typeof language !== "string" || /[`\r\n]/.test(language)) {
+        const { language } = decodeCodeBlockAttrs(node.attrs);
+
+        if (/[`\r\n]/.test(language)) {
           throw new Error("Code block language must be a string without backticks or newlines");
         }
+
         // A longer fence prevents backticks in the code from closing the block.
         // Render the body literally, preserving its whitespace rather than escaping it.
         const runs = node.textContent.match(/`+/g) ?? [];
@@ -70,13 +86,12 @@ function createSerializer(options: Options): MarkdownSerializer {
         state.closeBlock(node);
       },
       list(state, node) {
-        const { kind, checked, order }: Readonly<Record<string, unknown>> = node.attrs;
-        if (kind !== "toggle" && kind !== "ordered" && kind !== "task") {
-          throw new Error(`Unsupported list kind: ${String(kind)}`);
+        const { checked, kind, order } = decodeResolvedAppListAttrs(node.attrs);
+
+        if (kind === "bullet") {
+          throw new Error("Unsupported list kind: bullet");
         }
-        if (kind === "task" && typeof checked !== "boolean") {
-          throw new Error("Task checked state must be a boolean");
-        }
+
         // Each FlatList node is one item. Its order was normalized above.
         const marker = kind === "ordered" ? `${String(order)}. ` : "- ";
         const task = kind === "task" ? `[${checked ? "x" : " "}] ` : "";
@@ -87,18 +102,18 @@ function createSerializer(options: Options): MarkdownSerializer {
         );
       },
       backlink(state, node) {
-        const id: unknown = node.attrs.id;
-        if (typeof id !== "string" || id.length === 0) {
-          throw new Error("Backlink id must be a nonempty string");
-        }
+        const { id } = decodeBacklinkAttrs(node.attrs);
+
         // Labels are display-only; the encoded note id is the link destination.
         const label = options.backlinkLabel?.(id) ?? id;
+
         // encodeURIComponent leaves these punctuation characters unescaped;
         // encode them too so ids cannot interfere with Markdown link syntax.
         const path = encodeURIComponent(id).replace(
           /[!'()*]/g,
           (char) => `%${char.charCodeAt(0).toString(16)}`,
         );
+
         // Escape the label once, then write the assembled Markdown without
         // escaping its brackets and parentheses a second time.
         state.text(`[${state.esc(label)}](./${path}.md)`, false);
@@ -120,7 +135,9 @@ function createSerializer(options: Options): MarkdownSerializer {
 // that an entry exists, so a missing mapping fails at serializer construction.
 function requireSerializer<T>(serializers: Readonly<Record<string, T>>, name: string): T {
   const serializer = serializers[name];
+
   if (serializer === undefined) throw new Error(`Missing Markdown serializer: ${name}`);
+
   return serializer;
 }
 

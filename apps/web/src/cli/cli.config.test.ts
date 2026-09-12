@@ -19,12 +19,14 @@ describe("CliConfig.write", () => {
     "initializes zk without replacing existing config %j",
     async (existing) => {
       const dir = await mkdtemp(path.join(tmpdir(), "manotes-config-"));
+
       try {
         const manotesDir = path.join(dir, ".manotes");
         const configPath = path.join(manotesDir, "config");
         const zkDir = path.join(dir, ".zk");
         const zkConfigPath = path.join(zkDir, "config.toml");
         await mkdir(manotesDir);
+
         if (existing !== undefined) {
           await mkdir(zkDir);
           await writeFile(zkConfigPath, existing);

@@ -37,6 +37,7 @@ describe("CliSync.run", () => {
       Effect.gen(function* () {
         const sessionStarted = yield* Latch.make();
         const statusRef = yield* SubscriptionRef.make(initialStatus());
+
         const session = sessionStarted.open.pipe(
           Effect.andThen(Effect.never),
           Effect.ensuring(
@@ -45,12 +46,14 @@ describe("CliSync.run", () => {
             }),
           ),
         );
+
         const fiber = yield* CliSync.run().pipe(
           Effect.provideService(GraphSyncStatus.Ref, statusRef),
           Effect.provide(Layer.mock(GraphSync.Service, { run: () => session })),
           Effect.provide(unusedSessionDependencies),
           Effect.forkChild,
         );
+
         yield* sessionStarted.await;
         yield* SubscriptionRef.set(
           statusRef,
@@ -92,6 +95,7 @@ describe("CliSync.run", () => {
         Effect.provide(unusedSessionDependencies),
       );
     });
+
     await expect(Effect.runPromise(program)).rejects.toThrow("Graph sync socket closed");
   });
 
@@ -108,6 +112,7 @@ describe("CliSync.run", () => {
         Effect.provide(unusedSessionDependencies),
       );
     });
+
     await expect(Effect.runPromise(program)).rejects.toThrow(
       "Graph sync session ended before synchronization.",
     );
@@ -117,6 +122,7 @@ describe("CliSync.run", () => {
     const program = Effect.gen(function* () {
       const sessionStarted = yield* Latch.make();
       const statusRef = yield* SubscriptionRef.make(initialStatus());
+
       const fiber = yield* CliSync.run().pipe(
         Effect.provideService(GraphSyncStatus.Ref, statusRef),
         Effect.provide(
@@ -127,11 +133,13 @@ describe("CliSync.run", () => {
         Effect.provide(unusedSessionDependencies),
         Effect.forkChild,
       );
+
       yield* sessionStarted.await;
       yield* Effect.yieldNow;
       yield* TestClock.adjust("1 hour");
       yield* Fiber.join(fiber);
     }).pipe(Effect.provide(TestClock.layer()));
+
     await expect(Effect.runPromise(program)).rejects.toThrow(
       "Graph sync timed out before synchronization.",
     );

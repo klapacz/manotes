@@ -18,7 +18,9 @@ import * as LocalRegistry from "../local-registry";
 import * as SessionService from "../session/service";
 
 export type RuntimeContext = Layer.Success<GraphRuntimeLayer.AppLayer>;
+
 export type RuntimeError = Layer.Error<GraphRuntimeLayer.AppLayer>;
+
 export type Runtime = ManagedRuntime.ManagedRuntime<RuntimeContext, RuntimeError>;
 
 export type State = Data.TaggedEnum<{
@@ -26,22 +28,26 @@ export type State = Data.TaggedEnum<{
   Locked: { record: LocalRegistry.Schema.CloudRecord };
   Ready: { record: LocalRegistry.Schema.Record; runtime: Runtime };
 }>;
+
 export const State = Data.taggedEnum<State>();
 
 export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntime.Manager", {
   make: Effect.gen(function* () {
     type Entry = { fingerprint: Fingerprint.Fingerprint; runtime: Runtime };
+
     const sessionService = yield* SessionService.Service;
     const ref = yield* SynchronizedRef.make(HashMap.empty<string, Entry>());
 
     const getCached = Effect.fn("GraphRuntimeManager.getCached")(function* (localGraphId: string) {
       const entries = yield* SynchronizedRef.get(ref);
+
       return HashMap.get(entries, localGraphId);
     });
 
     const remove = Effect.fn("GraphRuntimeManager.remove")(function* (localGraphId: string) {
       const removed = yield* SynchronizedRef.modify(ref, (entries) => {
         const existing = HashMap.get(entries, localGraphId);
+
         return [existing, HashMap.remove(entries, localGraphId)] as const;
       });
 
@@ -51,6 +57,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntim
     const clear = Effect.fn("GraphRuntimeManager.clear")(function* () {
       const entries = yield* SynchronizedRef.modify(ref, (current) => {
         const existing = globalThis.Array.from(HashMap.values(current));
+
         return [existing, HashMap.empty<string, Entry>()] as const;
       });
 
@@ -64,13 +71,15 @@ export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntim
       localGraphId: string,
       resolution: Resolution.Resolution,
     ) {
-      if (resolution._tag === "Missing") {
+      if (Resolution.Resolution.$is("Missing")(resolution)) {
         yield* remove(localGraphId);
+
         return State.Missing();
       }
 
-      if (resolution._tag === "CloudLocked") {
+      if (Resolution.Resolution.$is("CloudLocked")(resolution)) {
         yield* remove(localGraphId);
+
         return State.Locked({ record: resolution.record });
       }
 
@@ -109,6 +118,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntim
             ),
             sessionService,
           });
+
           const runtime = yield* ManagedRuntime.createScoped(runtimeLayer);
 
           return [
@@ -133,6 +143,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntim
 
     const find = Effect.fn("GraphRuntimeManager.find")(function* (localGraphId: string) {
       const resolution = yield* Resolution.find(localGraphId);
+
       return yield* makeState(localGraphId, resolution);
     });
 

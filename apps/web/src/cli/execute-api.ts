@@ -19,6 +19,7 @@ import { EditDocument } from "./edit-document";
 import { BacklinkLabels } from "./backlink-labels";
 
 export type Edit = EditDocument.Edit | { readonly kind: "date"; readonly date: string };
+
 export type CreateEdit = Extract<Edit, { readonly kind: "append" | "date" }>;
 
 export type Api = {
@@ -31,12 +32,17 @@ export const runScript = Effect.fn("ExecuteApi.runScript")(function* (scriptPath
   yield* Effect.tryPromise({
     try: async () => {
       const module = await tsImport(pathToFileURL(scriptPath).href, { parentURL: import.meta.url });
+
       // Outside a type:module package, tsx may wrap a TypeScript default export in
       // CommonJS exports. Accept that wrapper as well as a native ESM default.
+      /* eslint-disable anti-slop/no-runtime-typeof -- Trusted scripts only need a callable default export. */
       const run = typeof module.default === "function" ? module.default : module.default?.default;
+
       if (typeof run !== "function") {
         throw new Error("Execute script must export a default function receiving the Manotes API");
       }
+
+      /* eslint-enable anti-slop/no-runtime-typeof */
       await run(api);
     },
     catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
@@ -52,6 +58,7 @@ export const acquireStdinScript = Effect.fn("ExecuteApi.acquireStdinScript")(fun
       const scriptPath = path.join(paths.manotesDir, `execute-${process.pid}-${Date.now()}.ts`);
 
       yield* fs.writeFileString(scriptPath, script, { mode: 0o600 });
+
       return scriptPath;
     }),
     Effect.fnUntraced(function* (scriptPath) {
@@ -60,6 +67,7 @@ export const acquireStdinScript = Effect.fn("ExecuteApi.acquireStdinScript")(fun
     }),
   );
 });
+
 const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
   const db = yield* DB.Service;
   const noteRepo = yield* NoteRepo.Service;
@@ -77,6 +85,7 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
           upToLocalSeq: yield* eventRepo.getMaxLocalSeq(),
         });
         const note = yield* noteRepo.findByIdWithBacklinks(id);
+
         if (Option.isNone(note)) return yield* Effect.fail(new Error(`Note not found: ${id}`));
         const { record, backlinks } = note.value;
 
@@ -96,6 +105,7 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
 
         const createdAt = yield* DateTime.now;
         let upToLocalSeq = record.lastEventLocalSeq;
+
         if (bodyUpdate !== null) {
           const event = yield* eventRepo.create({
             noteId: id,
@@ -103,6 +113,7 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
             payload: bodyUpdate,
             createdAt,
           });
+
           upToLocalSeq = event.localSeq;
         }
 
@@ -113,6 +124,7 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
             payload: yield* EventSchema.encodeDatePayload({ date: date.value }),
             createdAt,
           });
+
           upToLocalSeq = event.localSeq;
         }
 
@@ -128,6 +140,7 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
     edits: readonly CreateEdit[],
   ) {
     const id = yield* Schema.decodeUnknownEffect(Schema.NonEmptyString)(requestedId ?? nanoid());
+
     // Scripts can be plain JavaScript, so enforce the narrower creation API at runtime too.
     if (edits.some((edit) => edit.kind !== "append" && edit.kind !== "date")) {
       return yield* Effect.fail(new Error("createNote only accepts append and date edits"));
@@ -141,6 +154,7 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
           upToLocalSeq: yield* eventRepo.getMaxLocalSeq(),
         });
         const existing = yield* noteRepo.findById(id);
+
         if (Option.isSome(existing)) {
           return yield* Effect.fail(new Error(`Note already exists: ${id}`));
         }
@@ -151,13 +165,16 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
         yield* eventRepo.create({ noteId: id, type: "update", payload: bodyUpdate, createdAt });
 
         const date = Option.getOrElse(resolved.date, () => toLocalDateString(createdAt));
+
         const event = yield* eventRepo.create({
           noteId: id,
           type: "date",
           payload: yield* EventSchema.encodeDatePayload({ date }),
           createdAt,
         });
+
         yield* materializer.materializeNoteUpTo({ noteId: id, upToLocalSeq: event.localSeq });
+
         return id;
       }),
     );
@@ -177,7 +194,9 @@ const resolveEdits = Effect.fn("ExecuteApi.resolveEdits")(function* (edits: read
       onSome: flow(Schema.decodeUnknownEffect(PlainDateString), Effect.asSome),
     }),
   );
+
   const bodyEdits = Array.filter(edits, (edit) => edit.kind !== "date");
+
   return { date, bodyEdits };
 });
 
@@ -190,13 +209,16 @@ const createInitialUpdate = Effect.fn("ExecuteApi.createInitialUpdate")(function
       EditDocument.apply(NOTE_SCHEMA.node("doc", null, [NOTE_SCHEMA.node("paragraph")]), edits),
     catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
   });
+
   const yDoc = yield* Effect.acquireRelease(
     Effect.sync(() => new Y.Doc()),
     (yDoc) => Effect.sync(() => yDoc.destroy()),
   );
+
   const fragment = getProsemirrorXmlFragment(yDoc);
   const { meta } = initProseMirrorDoc(fragment, NOTE_SCHEMA);
   updateYFragment(yDoc, fragment, doc, meta);
+
   return Y.encodeStateAsUpdate(yDoc);
 }, Effect.scoped);
 
@@ -213,19 +235,23 @@ const createBodyUpdate = Effect.fn("ExecuteApi.createBodyUpdate")(function* (
     Effect.sync(() => new Y.Doc()),
     (yDoc) => Effect.sync(() => yDoc.destroy()),
   );
+
   if (snapshot !== null) Y.applyUpdate(yDoc, snapshot);
   const fragment = getProsemirrorXmlFragment(yDoc);
   const { doc, meta } = initProseMirrorDoc(fragment, NOTE_SCHEMA);
+
   const updated = yield* Effect.try({
     try: () => EditDocument.apply(doc, edits, { backlinkLabel: (id) => labels.get(id) }),
     catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
   });
+
   // Empty Yjs updates still have bytes. Document equality also catches edits
   // that cancel each other out.
   if (updated.eq(doc)) return null;
 
   const stateVector = Y.encodeStateVector(yDoc);
   updateYFragment(yDoc, fragment, updated, meta);
+
   return Y.encodeStateAsUpdate(yDoc, stateVector);
 }, Effect.scoped);
 

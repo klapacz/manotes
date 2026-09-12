@@ -1,9 +1,9 @@
-import { Array as Arr, Equal, Option, pipe, Struct } from "effect";
+import { Array as Arr, Equal, Option, Predicate, pipe } from "effect";
 import { PaneMake } from "./pane.make";
 import type { PaneSchema } from "./pane.schema";
-import { LibRecord } from "../record";
 
 export type Stack = Arr.NonEmptyReadonlyArray<PaneSchema.Pane>;
+
 export type InputStack = Arr.NonEmptyReadonlyArray<PaneSchema.PaneInput>;
 
 export type Cursor = {
@@ -24,11 +24,13 @@ export const openNext =
 
 export const close: Transform = (cursor) => {
   if (cursor.index === 0) return [PaneMake.notes()];
+
   return Arr.splitAtNonEmpty(cursor.stack, cursor.index)[0];
 };
 
 export const focus: Transform = (cursor) => {
   const current = pane(cursor);
+
   return Arr.prepend(Arr.drop(cursor.stack, cursor.index + 1), current);
 };
 
@@ -58,8 +60,29 @@ export const inputMatches =
   (pane: PaneSchema.Pane): boolean =>
     Equal.equals(normalizeToInput(input), normalizeToInput(pane));
 
-export const normalizeToInput = (value: PaneSchema.PaneInput | PaneSchema.Pane) =>
-  LibRecord.omitUndefinedDeep(Struct.omit(value, ["paneId"]));
+type ComparablePane =
+  | readonly [variant: "note", id: string]
+  | readonly [
+      variant: "stream",
+      type: "notes" | "pages",
+      backlinksTo: string | null,
+      linksFrom: string | null,
+      date: string | null,
+      sort: PaneSchema.StreamSort,
+    ];
+
+function normalizeToInput(value: PaneSchema.PaneInput | PaneSchema.Pane): ComparablePane {
+  if (Predicate.isTagged(value, "note")) return ["note", value.id];
+
+  return [
+    "stream",
+    value.filter.type ?? "notes",
+    value.filter.backlinksTo ?? null,
+    value.filter.linksFrom ?? null,
+    value.filter.date ?? null,
+    value.sort ?? "date",
+  ];
+}
 
 const throughCurrent = (cursor: Cursor): InputStack =>
   Arr.splitAtNonEmpty(cursor.stack, cursor.index + 1)[0];

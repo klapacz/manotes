@@ -33,9 +33,11 @@ export function Pane(props: { ref: Ref<HTMLElement | undefined> }) {
         {...anchorProps}
         onClick={(e) => {
           if (callHandler(e, target.onClick)) return;
+
           if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
 
           const result = scroll.scrollToPane(input());
+
           if (result.found) e.preventDefault();
         }}
       >

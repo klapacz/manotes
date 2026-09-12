@@ -24,6 +24,7 @@ import { ExecuteApi } from "./execute-api";
 import { BacklinkLabels } from "./backlink-labels";
 
 const NOTE_ID = "note-1";
+
 const INITIAL_MARKDOWN = dedent`
   # Plan
 
@@ -55,6 +56,7 @@ describe("ExecuteApi.editNote", () => {
         const pending = yield* eventRepo.findPending(10);
         expect(pending).toHaveLength(1);
         const event = pending[0];
+
         if (!event) throw new Error("Expected a date event");
         expect(event.type).toBe("date");
         expect(yield* EventSchema.decodeDatePayload(Uint8Array.from(event.payload))).toEqual({
@@ -110,6 +112,7 @@ describe("ExecuteApi.editNote", () => {
         const noteRepo = yield* NoteRepo.Service;
         const eventRepo = yield* EventRepo.Service;
         const before = yield* noteRepo.getById(NOTE_ID);
+
         for (const edits of [
           [
             { kind: "replace", text: "Alpha", with: "Beta" },
@@ -126,6 +129,7 @@ describe("ExecuteApi.editNote", () => {
               await api.editNote("${NOTE_ID}", ${JSON.stringify(edits)});
             }
           `).pipe(Effect.result);
+
           expect(Result.isFailure(result)).toBe(true);
           expect(yield* eventRepo.countPending()).toBe(0);
           expect(yield* noteRepo.getById(NOTE_ID)).toEqual(before);
@@ -146,9 +150,11 @@ describe("ExecuteApi.editNote", () => {
         const noteRepo = yield* NoteRepo.Service;
         const labels = BacklinkLabels.buildCache(yield* noteRepo.findAllRecords());
         const note = yield* noteRepo.getById(NOTE_ID);
+
         const exported = MdSerialize.serialize(NOTE_SCHEMA.nodeFromJSON(note.content), {
           backlinkLabel: (id) => labels.get(id),
         });
+
         expect(exported).toBe("Sync [Manotes](./linked-note.md) and [missing](./missing.md).\n");
 
         yield* runTestScript(dedent`
@@ -191,6 +197,7 @@ describe("ExecuteApi.editNote", () => {
 
         const events = yield* eventRepo.findUpdatesForNote(NOTE_ID);
         const note = yield* noteRepo.getById(NOTE_ID);
+
         const expected = `${dedent`
           # Plan
 
@@ -307,7 +314,9 @@ describe("ExecuteApi.editNote", () => {
             ]);
           }
         `).pipe(Effect.result);
+
         expect(Result.isFailure(result)).toBe(true);
+
         if (Result.isFailure(result)) expect(String(result.failure)).toMatch(/found 0/);
 
         expect(yield* eventRepo.findUpdatesForNote(NOTE_ID)).toHaveLength(1);
@@ -324,6 +333,7 @@ describe("ExecuteApi.editNote", () => {
         const seeded = yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
         const eventRepo = yield* EventRepo.Service;
         const noteRepo = yield* NoteRepo.Service;
+
         const pendingMarkdown = dedent`
           # Plan
 
@@ -433,8 +443,10 @@ describe("ExecuteApi.createNote", () => {
           const result = yield* runTestScript(
             `export default async (api) => { await ${call}; };`,
           ).pipe(Effect.result);
+
           expect(Result.isFailure(result)).toBe(true);
         }
+
         const noteRepo = yield* NoteRepo.Service;
         const eventRepo = yield* EventRepo.Service;
         expect(yield* noteRepo.findAllRecords()).toEqual([]);
@@ -456,16 +468,20 @@ describe("ExecuteApi.createNote", () => {
           payload: fullUpdateFromMarkdown("Existing."),
           createdAt: yield* DateTime.now,
         });
+
         for (const id of [NOTE_ID, "unmaterialized"]) {
           const result = yield* runTestScript(dedent`
             export default async function (api) {
               await api.createNote("${id}", [{ kind: "append", markdown: "Never saved." }]);
             }
           `).pipe(Effect.result);
+
           expect(Result.isFailure(result)).toBe(true);
+
           if (Result.isFailure(result))
             expect(String(result.failure)).toContain(`Note already exists: ${id}`);
         }
+
         expect(yield* noteRepo.getById(NOTE_ID)).toEqual(before);
         expect(yield* eventRepo.countPending()).toBe(1);
         expect(yield* eventRepo.findUpdatesForNote("unmaterialized")).toHaveLength(1);
@@ -511,6 +527,7 @@ function runTestScript(source: string) {
         Effect.promise(() => mkdtemp(path.join(tmpdir(), "manotes-test-script-"))),
         (workspace) => Effect.promise(() => rm(workspace, { recursive: true, force: true })),
       );
+
       const scriptPath = path.join(workspace, "edit.ts");
       yield* Effect.promise(() => writeFile(scriptPath, source));
       yield* ExecuteApi.runScript(scriptPath);
@@ -524,6 +541,7 @@ function seedNote(noteId: string, markdown: string, commitSeq = 1) {
   return Effect.gen(function* () {
     const eventRepo = yield* EventRepo.Service;
     const materializer = yield* Materializer.Service;
+
     const event = yield* eventRepo.create({
       noteId,
       type: "update",
@@ -533,6 +551,7 @@ function seedNote(noteId: string, markdown: string, commitSeq = 1) {
     });
 
     yield* materializer.materializeNoteUpTo({ noteId, upToLocalSeq: event.localSeq });
+
     return { localSeq: event.localSeq, update };
   });
 }
@@ -543,6 +562,7 @@ function fullUpdateFromMarkdown(markdown: string): Uint8Array<ArrayBufferLike> {
     MdParse.parse(markdown).toJSON(),
     PROSEMIRROR_XML_FRAGMENT_KEY,
   );
+
   try {
     return Y.encodeStateAsUpdate(yDoc);
   } finally {
@@ -555,12 +575,14 @@ function deltaFromMarkdown(
   markdown: string,
 ): Uint8Array<ArrayBufferLike> {
   const yDoc = new Y.Doc();
+
   try {
     Y.applyUpdate(yDoc, baseUpdate);
     const fragment = getProsemirrorXmlFragment(yDoc);
     const { meta } = initProseMirrorDoc(fragment, NOTE_SCHEMA);
     const stateVector = Y.encodeStateVector(yDoc);
     updateYFragment(yDoc, fragment, MdParse.parse(markdown), meta);
+
     return Y.encodeStateAsUpdate(yDoc, stateVector);
   } finally {
     yDoc.destroy();
@@ -569,6 +591,7 @@ function deltaFromMarkdown(
 
 function markdownAfterReplay(updates: ReadonlyArray<Uint8Array<ArrayBufferLike>>): string {
   const yDoc = replay(updates);
+
   try {
     return MdSerialize.serialize(
       initProseMirrorDoc(getProsemirrorXmlFragment(yDoc), NOTE_SCHEMA).doc,
@@ -582,6 +605,7 @@ function stateVectorAfterReplay(
   updates: ReadonlyArray<Uint8Array<ArrayBufferLike>>,
 ): ReadonlyArray<number> {
   const yDoc = replay(updates);
+
   try {
     return Array.from(Y.encodeStateVector(yDoc));
   } finally {
@@ -591,7 +615,9 @@ function stateVectorAfterReplay(
 
 function replay(updates: ReadonlyArray<Uint8Array<ArrayBufferLike>>): Y.Doc {
   const yDoc = new Y.Doc();
+
   for (const update of updates) Y.applyUpdate(yDoc, update);
+
   return yDoc;
 }
 
@@ -601,6 +627,7 @@ function markdownFromContent(content: UnknownNodeJSON): string {
 
 function requireSnapshot(update: Uint8Array<ArrayBufferLike> | null): Uint8Array<ArrayBufferLike> {
   if (update === null) throw new Error("Expected a materialized Yjs snapshot");
+
   return update;
 }
 
@@ -630,6 +657,7 @@ async function runIntegration(
 
 async function withTempWorkspace<A>(use: (workspace: string) => Promise<A>): Promise<A> {
   const workspace = await mkdtemp(path.join(tmpdir(), "manotes-execute-api-"));
+
   try {
     return await use(workspace);
   } finally {

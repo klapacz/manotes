@@ -1,4 +1,11 @@
 /**
+ * Adapted from Effect's `packages/sql/sqlite-wasm/src/SqliteClient.ts`; the
+ * copied revision was not recorded. Local changes add worker initialization
+ * and cooperative OPFS wiring.
+ */
+/* eslint-disable anti-slop/no-known-value-widening, anti-slop/no-unknown-parameters, anti-slop/no-unsafe-dictionary-type, anti-slop/require-safety-comment-for-type-assertion -- Preserve the copied Effect client's dynamic worker protocol and casts. */
+
+/**
  * @since 1.0.0
  */
 import * as Reactivity from "effect/unstable/reactivity/Reactivity";
@@ -20,6 +27,7 @@ import * as Stream from "effect/Stream";
 import type { OpfsWorkerMessage } from "./internal/opfs-worker";
 
 const ATTR_DB_SYSTEM_NAME = "db.system.name";
+
 const classifyError = (cause: unknown, message: string, operation: string) =>
   classifySqliteError(cause, { message, operation });
 
@@ -86,9 +94,11 @@ export const make = (
   Effect.gen(function* () {
     const reactivity = yield* Reactivity.Reactivity;
     const compiler = Statement.makeCompilerSqlite(options.transformQueryNames);
+
     const transformRows = options.transformResultNames
       ? Statement.defaultTransforms(options.transformResultNames).array
       : undefined;
+
     const pending = new Map<number, (effect: Exit.Exit<any, SqlError>) => void>();
 
     const makeConnection = Effect.gen(function* () {
@@ -98,6 +108,7 @@ export const make = (
 
       const worker = yield* options.worker;
       const port = "port" in worker ? worker.port : worker;
+
       const postMessage = (message: OpfsWorkerMessage, transferables?: ReadonlyArray<any>) =>
         port.postMessage(message, transferables as any);
 
@@ -108,16 +119,21 @@ export const make = (
 
       const onMessage = (event: any) => {
         const [id, error, results] = event.data;
+
         if (id === "ready") {
           Deferred.doneUnsafe(readyDeferred, Exit.void);
+
           return;
         } else if (id === "update_hook") {
           reactivity.invalidateUnsafe({ [error]: [results] });
+
           return;
         } else {
           const resume = pending.get(id);
+
           if (!resume) return;
           pending.delete(id);
+
           if (error) {
             resume(
               Exit.fail(
@@ -131,11 +147,13 @@ export const make = (
           }
         }
       };
+
       port.addEventListener("message", onMessage);
 
       function onError() {
         Effect.runFork(ScopedRef.set(connectionRef, makeConnection));
       }
+
       if ("onerror" in worker) {
         worker.addEventListener("error", onError);
       }
@@ -171,8 +189,10 @@ export const make = (
       ): Effect.Effect<Array<any>, SqlError, never> => {
         const rows = Effect.withFiber<[Array<string>, Array<any>], SqlError>((fiber) => {
           const id = currentId++;
+
           return send(id, [id, sql, params], fiber.getRef(Transferables));
         });
+
         return rowMode === "object"
           ? Effect.map(rows, extractObject)
           : Effect.map(rows, extractRows);
@@ -196,11 +216,13 @@ export const make = (
         },
         export: Effect.suspend(() => {
           const id = currentId++;
+
           return send(id, ["export", id]);
         }),
         import(data) {
           return Effect.suspend(() => {
             const id = currentId++;
+
             return send(id, ["import", id, data], [data.buffer]);
           });
         },
@@ -211,12 +233,14 @@ export const make = (
 
     const semaphore = yield* Semaphore.make(1);
     const acquirer = semaphore.withPermits(1)(ScopedRef.get(connectionRef));
+
     const transactionAcquirer = Effect.uninterruptibleMask(
       Effect.fnUntraced(function* (restore) {
         const fiber = Fiber.getCurrent()!;
         const scope = Context.getUnsafe(fiber.context, Scope.Scope);
         yield* restore(semaphore.take(1));
         yield* Scope.addFinalizer(scope, semaphore.release(1));
+
         return yield* ScopedRef.get(connectionRef);
       }),
     );
@@ -245,13 +269,17 @@ export const make = (
 
 function rowToObject(columns: Array<string>, row: Array<any>) {
   const obj: Record<string, any> = {};
+
   for (let i = 0; i < columns.length; i++) {
     obj[columns[i]!] = row[i];
   }
+
   return obj;
 }
+
 const extractObject = (rows: [Array<string>, Array<any>]) =>
   rows[1].map((row) => rowToObject(rows[0], row));
+
 const extractRows = (rows: [Array<string>, Array<any>]) => rows[1];
 
 /**

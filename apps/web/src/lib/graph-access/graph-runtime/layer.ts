@@ -24,7 +24,7 @@ export type SetupOpts = {
   localGraphId: string;
   displayName: string;
   graphSyncConfig: GraphSyncConfig.GraphSyncConfig;
-  sessionService: Context.Service.Shape<typeof SessionService.Service>;
+  sessionService: Effect.Success<typeof SessionService.Service>;
 };
 
 // TODO: use the same log level for migration and for the app
@@ -36,6 +36,7 @@ const makeMigratedDatabaseLayer = Effect.fnUntraced(function* (opts: SetupOpts) 
       databasePath: DBResolution.getPath(opts.localGraphId),
     }),
   );
+
   const sqlLayer = Layer.provideMerge(SqlLive, configLayer);
   const dbLayer = Layer.provideMerge(DB.Service.layer, sqlLayer);
   const context = yield* Layer.build(dbLayer);
@@ -58,6 +59,7 @@ export const makeLayer = (opts: SetupOpts) =>
         GraphSyncConfig.Config,
         GraphSyncConfig.Config.of(opts.graphSyncConfig),
       );
+
       const sessionServiceLayer = Layer.succeed(SessionService.Service, opts.sessionService);
 
       return Layer.mergeAll(

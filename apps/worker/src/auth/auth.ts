@@ -8,6 +8,7 @@ import { SessionKvService } from "./session-kv.ts";
 import AccountsDurableObject from "../accounts/durable-object.ts";
 
 const SessionCookie = Schema.Struct({ session: Schema.NonEmptyString });
+
 const AuthorizationHeader = Schema.Struct({ authorization: Schema.NonEmptyString });
 
 const readSessionCookie = HttpServerRequest.schemaCookies(SessionCookie).pipe(
@@ -17,6 +18,7 @@ const readSessionCookie = HttpServerRequest.schemaCookies(SessionCookie).pipe(
 const readBearerToken = HttpServerRequest.schemaHeaders(AuthorizationHeader).pipe(
   Effect.flatMap(({ authorization }) => {
     const match = /^Bearer\s+(.+)$/i.exec(authorization);
+
     return match?.[1] ? Effect.succeed(match[1]) : Effect.fail("Missing bearer token");
   }),
 );
@@ -51,6 +53,7 @@ export class AuthService extends Context.Service<AuthService>()("Auth.AuthServic
       yield* otp.verify(email, code);
 
       const accounts = accountsNS.getByName(Accounts.NAMESPACE_KEY);
+
       const { accountId } = yield* accounts
         .ensureAccount(email)
         .pipe(
@@ -60,6 +63,7 @@ export class AuthService extends Context.Service<AuthService>()("Auth.AuthServic
         );
 
       const token = yield* session.create(email, accountId);
+
       return yield* HttpServerResponse.setCookie(
         HttpServerResponse.empty({ status: 200 }),
         "session",
@@ -76,7 +80,9 @@ export class AuthService extends Context.Service<AuthService>()("Auth.AuthServic
 
     const logout = Effect.fn("Auth.logout")(function* () {
       const token = yield* readSessionCookie.pipe(Effect.orElseSucceed(() => ""));
+
       if (token) yield* session.destroy(token);
+
       return yield* HttpServerResponse.expireCookie(
         HttpServerResponse.empty({ status: 204 }),
         "session",
@@ -90,6 +96,7 @@ export class AuthService extends Context.Service<AuthService>()("Auth.AuthServic
           (cause) => new Errors.UnauthorizedError({ reason: "Missing session token", cause }),
         ),
       );
+
       return yield* session.resolve(token).pipe(
         Effect.catchTag("Auth.SessionNotFoundError", (cause) =>
           Effect.fail(new Errors.UnauthorizedError({ reason: "Invalid session", cause })),

@@ -159,11 +159,14 @@ function buildServiceLayer(opts: {
       databasePath: GraphRuntimeDBResolution.getPath(opts.localGraphId),
     }),
   );
+
   const DBWithConfigLayer = Layer.provideMerge(SqlLive, ConfigLayer);
+
   const GraphSyncConfigLayer = Layer.succeed(
     GraphSyncConfig.Config,
     GraphSyncConfig.Config.of(opts.graphSyncConfig),
   );
+
   return Layer.mergeAll(
     DB.Service.layer,
     EventRepo.Service.layer,

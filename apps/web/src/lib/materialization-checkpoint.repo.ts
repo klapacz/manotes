@@ -46,6 +46,7 @@ export class Service extends Context.Service<Service>()("MaterializationCheckpoi
       "MaterializationCheckpointRepo.getLastAppliedLocalSeq",
     )(function* () {
       const checkpoint = yield* getOrInit();
+
       return checkpoint.lastAppliedLocalSeq;
     });
 
