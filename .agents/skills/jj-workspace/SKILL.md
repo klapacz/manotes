@@ -18,9 +18,9 @@ Create a new Jujutsu workspace with `jj workspace add`. This creates an isolated
      mkdir -p .workspace/$workspace_name
      jj workspace add .workspace/$workspace_name --name $workspace_name
      cp apps/worker/.env.local apps/worker/.env.prod ".workspace/$workspace_name/apps/worker/"
-     cd .workspace/$workspace_name
-     direnv allow
-     scripts/nix-develop -c vp install
+     (
+       cd .workspace/$workspace_name
+       direnv allow
+       scripts/nix-develop -c vp install
+     )
      ```
-3. Switch to the workspace.
-   - After the commands succeed, use `.workspace/<name>` as the working directory for all subsequent commands in the session.

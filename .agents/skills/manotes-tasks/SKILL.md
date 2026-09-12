@@ -31,6 +31,11 @@ tasks -- zk list --format '{{path}} {{title}}' --match 'title: task' \
 tasks task:ABCD
 ```
 
+## Start work
+
+- Before working on a task, append `Session: <id>, cwd: <absolute path>` to its body via `tasks -- manotes execute` and `api.editNote`. Use `pwd` in the working checkout, not the task notebook.
+- Get your OMP PID with `ps -o pid,ppid,comm -p $$`, following PPIDs if needed. Run `lsof -p <omp-pid> -Fn`, read the open `sessions/...jsonl` file's `type: "session"` header, and use its `id`.
+
 ## Create and update tasks
 
 Use `tasks -- manotes execute` for scripts.
