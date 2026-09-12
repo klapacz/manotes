@@ -7,6 +7,8 @@ description: Read and edit Manotes notes with the CLI, then sync changes.
 
 Manotes is an encrypted note-taking app with a CLI for reading and editing notes locally. Work in the current directory unless told otherwise. Read and search the `<note-id>.md` files, but never edit them or files inside `.manotes/` directly. Make changes through `manotes execute`. For first-time setup, consult `manotes init --help`.
 
+Each note file starts with read-only frontmatter: `date` is the note's date and `updated_at` is its last-update timestamp in UTC. Edits apply only to the Markdown body below it.
+
 ## Edit notes
 
 Scripts must default-export an async function receiving this API:
@@ -21,7 +23,7 @@ type Api = {
 };
 ```
 
-Use the filename without `.md` as the note ID. Edits run in order. Each awaited `editNote` call saves independently. Replacement text matches Markdown in the note file directly, not as a regex. Omit `occurrence` to require exactly one match, use a zero-based index to select a match, or `"all"` to replace every match. Set `with: ""` to delete matched text.
+Use the filename without `.md` as the note ID. Edits run in order. Each awaited `editNote` call saves independently. Replacement text matches Markdown in the note body directly, not as a regex. Omit `occurrence` to require exactly one match, use a zero-based index to select a match, or `"all"` to replace every match. Set `with: ""` to delete matched text.
 
 ```sh
 manotes execute <<'JS'

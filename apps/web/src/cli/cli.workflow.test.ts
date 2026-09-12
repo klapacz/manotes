@@ -13,6 +13,7 @@ import * as Y from "yjs";
 import * as DB from "../lib/db.service";
 import * as EventRepo from "../lib/event.repo";
 import * as Materializer from "../lib/materializer.service";
+import * as NoteRepo from "../lib/note.repo";
 import { NOTE_SCHEMA } from "../lib/prosemirror/app-schema";
 import { MdParse } from "../lib/prosemirror/md/parse";
 import { PROSEMIRROR_XML_FRAGMENT_KEY } from "../lib/prosemirror/yjs";
@@ -42,7 +43,35 @@ describe("CLI local workflow", () => {
             graphKey: Buffer.alloc(32).toString("base64"),
           }),
         );
-        await seedWorkspace(databasePath);
+        const note = await seedWorkspace(databasePath);
+        const exportResult = await runCli(
+          workspace,
+          ["execute"],
+          "export default async function () {}\n",
+        );
+        expect(exportResult.code, exportResult.stdout + exportResult.stderr).toBe(0);
+        const initialFile = await readFile(path.join(workspace, `${NOTE_ID}.md`), "utf8");
+        expect(initialFile).toBe(
+          `${dedent`
+          ---
+          date: "${note.date}"
+          updated_at: "2026-09-12T10:24:36.000Z"
+          ---
+
+          ---
+
+          # Workflow
+
+          Initial.
+        `}\n`,
+        );
+        const reexportResult = await runCli(
+          workspace,
+          ["execute"],
+          "export default async function () {}\n",
+        );
+        expect(reexportResult.code, reexportResult.stdout + reexportResult.stderr).toBe(0);
+        expect(await readFile(path.join(workspace, `${NOTE_ID}.md`), "utf8")).toBe(initialFile);
         await writeFile(
           fileScript,
           dedent`
@@ -103,10 +132,12 @@ describe("CLI local workflow", () => {
   );
 });
 
-async function seedWorkspace(databasePath: string): Promise<void> {
+async function seedWorkspace(databasePath: string) {
   const yDoc = prosemirrorJSONToYDoc(
     NOTE_SCHEMA,
     MdParse.parse(dedent`
+      ---
+
       # Workflow
 
       Initial.
@@ -120,7 +151,7 @@ async function seedWorkspace(databasePath: string): Promise<void> {
     DB.Config,
     DB.Config.of({ localGraphId: "offline-test-graph", databasePath }),
   );
-  await Effect.runPromise(
+  return Effect.runPromise(
     Effect.gen(function* () {
       const eventRepo = yield* EventRepo.Service;
       const materializer = yield* Materializer.Service;
@@ -128,10 +159,12 @@ async function seedWorkspace(databasePath: string): Promise<void> {
         noteId: NOTE_ID,
         type: "update",
         payload: update,
-        createdAt: yield* DateTime.now,
+        createdAt: DateTime.makeUnsafe("2026-09-12T10:24:36.000Z"),
         commitSeq: 1,
       });
       yield* materializer.materializeNoteUpTo({ noteId: NOTE_ID, upToLocalSeq: event.localSeq });
+      const noteRepo = yield* NoteRepo.Service;
+      return yield* noteRepo.getById(NOTE_ID);
     }).pipe(
       Effect.provide(CliRuntime.layer),
       Effect.provide(configLayer),
