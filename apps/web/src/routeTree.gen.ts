@@ -9,28 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ImportRouteImport } from './routes/import'
-import { Route as DebugRouteImport } from './routes/debug'
-import { Route as CreateRouteImport } from './routes/create'
-import { Route as GraphRouteImport } from './routes/$graph'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as GraphRouteImport } from './routes/$graph'
+import { Route as CreateRouteImport } from './routes/create'
+import { Route as DebugRouteImport } from './routes/debug'
+import { Route as ImportRouteImport } from './routes/import'
 import { Route as GraphIndexRouteImport } from './routes/$graph.index'
-import { Route as GraphUnlockRouteImport } from './routes/$graph_.unlock'
 import { Route as GraphStudioRouteImport } from './routes/$graph.studio'
+import { Route as GraphUnlockRouteImport } from './routes/$graph_.unlock'
 
-const ImportRoute = ImportRouteImport.update({
-  id: '/import',
-  path: '/import',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DebugRoute = DebugRouteImport.update({
-  id: '/debug',
-  path: '/debug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CreateRoute = CreateRouteImport.update({
-  id: '/create',
-  path: '/create',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GraphRoute = GraphRouteImport.update({
@@ -38,9 +28,19 @@ const GraphRoute = GraphRouteImport.update({
   path: '/$graph',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const CreateRoute = CreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DebugRoute = DebugRouteImport.update({
+  id: '/debug',
+  path: '/debug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImportRoute = ImportRouteImport.update({
+  id: '/import',
+  path: '/import',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GraphIndexRoute = GraphIndexRouteImport.update({
@@ -48,15 +48,15 @@ const GraphIndexRoute = GraphIndexRouteImport.update({
   path: '/',
   getParentRoute: () => GraphRoute,
 } as any)
-const GraphUnlockRoute = GraphUnlockRouteImport.update({
-  id: '/$graph_/unlock',
-  path: '/$graph/unlock',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const GraphStudioRoute = GraphStudioRouteImport.update({
   id: '/studio',
   path: '/studio',
   getParentRoute: () => GraphRoute,
+} as any)
+const GraphUnlockRoute = GraphUnlockRouteImport.update({
+  id: '/$graph_/unlock',
+  path: '/$graph/unlock',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -132,25 +132,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/solid-router' {
   interface FileRoutesByPath {
-    '/import': {
-      id: '/import'
-      path: '/import'
-      fullPath: '/import'
-      preLoaderRoute: typeof ImportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/debug': {
-      id: '/debug'
-      path: '/debug'
-      fullPath: '/debug'
-      preLoaderRoute: typeof DebugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/create': {
-      id: '/create'
-      path: '/create'
-      fullPath: '/create'
-      preLoaderRoute: typeof CreateRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$graph': {
@@ -160,11 +146,25 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof GraphRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/create': {
+      id: '/create'
+      path: '/create'
+      fullPath: '/create'
+      preLoaderRoute: typeof CreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/debug': {
+      id: '/debug'
+      path: '/debug'
+      fullPath: '/debug'
+      preLoaderRoute: typeof DebugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/import': {
+      id: '/import'
+      path: '/import'
+      fullPath: '/import'
+      preLoaderRoute: typeof ImportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$graph/': {
@@ -174,19 +174,19 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof GraphIndexRouteImport
       parentRoute: typeof GraphRoute
     }
-    '/$graph_/unlock': {
-      id: '/$graph_/unlock'
-      path: '/$graph/unlock'
-      fullPath: '/$graph/unlock'
-      preLoaderRoute: typeof GraphUnlockRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/$graph/studio': {
       id: '/$graph/studio'
       path: '/studio'
       fullPath: '/$graph/studio'
       preLoaderRoute: typeof GraphStudioRouteImport
       parentRoute: typeof GraphRoute
+    }
+    '/$graph_/unlock': {
+      id: '/$graph_/unlock'
+      path: '/$graph/unlock'
+      fullPath: '/$graph/unlock'
+      preLoaderRoute: typeof GraphUnlockRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }

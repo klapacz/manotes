@@ -253,12 +253,10 @@ export function createNode(registration: (ctx: ContextValue) => NodeAutoRegistra
   const shortcutSets = new Set<ReadonlyArray<ShortcutBinding>>();
 
   const registerShortcuts = (inputs: ReadonlyArray<ShortcutBindingInput>) => {
-    const shortcuts = inputs.map(
-      (input): ShortcutBinding => ({
-        ...input,
-        matchers: input.key.map((steps) => createSequenceMatcher([...steps])),
-      }),
-    );
+    const shortcuts = inputs.map((input): ShortcutBinding => ({
+      ...input,
+      matchers: input.key.map((steps) => createSequenceMatcher([...steps])),
+    }));
     shortcutSets.add(shortcuts);
     onCleanup(() => shortcutSets.delete(shortcuts));
   };

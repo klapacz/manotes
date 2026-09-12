@@ -8,5 +8,6 @@
 - Generate Drizzle migrations with `drizzle-kit generate`; never handwrite migration SQL.
 - After dependency or pnpm changes, use [nix-deps](.agents/skills/nix-deps/SKILL.md).
 - After making changes, run exactly `vp check --fix` with no additional arguments. When changing a Jujutsu stack, run it on every revision whose contents changed. Get explicit permission before running any other typechecking, linting, or testing command.
+- Anti-slop is vendored in `tools/oxlint/anti-slop`; `upstream.json` records its source. While task:WOUY migrates existing findings, run the strict audit with `MANOTES_ANTI_SLOP=1 scripts/nix-develop -c vp check --fix`. All generic and Effect rules remain errors in that profile. The audit autofixes spacing, so review those changes separately from semantic fixes. The default check does not yet enforce anti-slop.
 
 IMPORTANT: Explicit user requests take precedence over the rules above.

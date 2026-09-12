@@ -23,7 +23,8 @@
     "effect": "4.0.0-beta.74"
   },
   "devDependencies": {
-    "@typescript/native-preview": "7.0.0-dev.20260327.2",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
+    "vite": "catalog:",
     "vite-plus": "catalog:"
   }
 }

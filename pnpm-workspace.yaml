@@ -2,9 +2,9 @@ packages:
   - "apps/*"
   - "packages/*"
 catalog:
-  vite: npm:@voidzero-dev/vite-plus-core@^0.1.16
-  vite-plus: ^0.1.16
-  vitest: npm:@voidzero-dev/vite-plus-test@latest
+  vite: npm:@voidzero-dev/vite-plus-core@0.3.1
+  vite-plus: 0.3.1
+  vitest: 4.1.11
 
 ignoredBuiltDependencies:
   - esbuild
@@ -17,12 +17,6 @@ onlyBuiltDependencies:
 overrides:
   vite: "catalog:"
   vitest: "catalog:"
-
-# vite-plus-core's bundled tsdown requires picomatch but declares it only as a dev dependency.
-packageExtensions:
-  "@voidzero-dev/vite-plus-core@0.1.16":
-    dependencies:
-      picomatch: "^4.0.3"
 
 patchedDependencies:
   alchemy: patches/alchemy.patch

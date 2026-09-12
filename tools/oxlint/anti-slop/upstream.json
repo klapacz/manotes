@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/dmmulroy/anti-slop",
+  "commit": "c44ef22ca116d0ba62a3ff663a0bd13a3f3fa40b",
+  "version": "0.1.2",
+  "sourcePath": "skills/install-anti-slop/assets/anti-slop",
+  "licenseSourcePath": "LICENSE",
+  "reason": "Repository-owned Oxlint rules for task:WOUY, loaded by Vite+.",
+  "modifications": "None. Upstream plugin assets and nested eslint-stylistic license and provenance are preserved verbatim. This provenance file and the root license were added."
+}

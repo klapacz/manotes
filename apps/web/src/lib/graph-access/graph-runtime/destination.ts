@@ -21,18 +21,15 @@ export function useCurrent() {
     select: ({ matches, location }): Destination | undefined => {
       for (const match of matches.toReversed()) {
         const destination = Match.value(match).pipe(
-          Match.when(
-            { routeId: "/$graph/studio" },
-            (): Destination => ({ _tag: "studio", hash: location.hash }),
-          ),
-          Match.when(
-            { routeId: "/$graph/" },
-            (match): Destination => ({
-              _tag: "notes",
-              panes: match.search.panes,
-              hash: location.hash,
-            }),
-          ),
+          Match.when({ routeId: "/$graph/studio" }, (): Destination => ({
+            _tag: "studio",
+            hash: location.hash,
+          })),
+          Match.when({ routeId: "/$graph/" }, (match): Destination => ({
+            _tag: "notes",
+            panes: match.search.panes,
+            hash: location.hash,
+          })),
           Match.orElse(() => undefined),
         );
         if (destination) return destination;

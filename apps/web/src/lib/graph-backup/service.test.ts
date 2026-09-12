@@ -6,7 +6,7 @@ import { createBackup, getSuggestedGraphName } from "./service";
 describe("graph backup service", () => {
   const decodeDateTime = Schema.decodeUnknownSync(Schema.DateTimeUtcFromString);
 
-  it("round-trips backup data and omits commitSeq", async () => {
+  it("round-trips backup data and omits localSeq and commitSeq", async () => {
     const firstCreatedAt = decodeDateTime("2026-04-01T10:00:00.000Z");
     const secondCreatedAt = decodeDateTime("2026-04-01T11:00:00.000Z");
     const exportedAt = decodeDateTime("2026-04-01T12:00:00.000Z");
@@ -38,7 +38,6 @@ describe("graph backup service", () => {
 
     const encoded = await Effect.runPromise(BackupSchema.encodeBundle(backup));
     const decoded = await Effect.runPromise(BackupSchema.decodeBundle(encoded));
-    const imported = decoded;
 
     expect(encoded.events).toEqual([
       {
@@ -57,19 +56,20 @@ describe("graph backup service", () => {
       },
     ]);
 
-    expect(imported).toEqual([
+    expect(decoded).toEqual(backup);
+    expect(decoded.events).toEqual([
       {
         noteId: "note-a",
         type: "update",
         payload: new Uint8Array([0, 1, 2, 255]),
-        createdAt: "2026-04-01T10:00:00.000Z",
+        createdAt: firstCreatedAt,
         id: "event-a",
       },
       {
         noteId: "note-b",
         type: "update",
         payload: new Uint8Array([9, 8, 7]),
-        createdAt: "2026-04-01T11:00:00.000Z",
+        createdAt: secondCreatedAt,
         id: "event-b",
       },
     ]);

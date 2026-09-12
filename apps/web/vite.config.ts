@@ -8,6 +8,8 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Match Alchemy's client output so standalone builds also populate the SW precache.
+  build: { outDir: "dist/client" },
   server: {
     proxy: {
       "/api": {

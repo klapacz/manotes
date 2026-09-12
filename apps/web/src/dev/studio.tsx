@@ -37,10 +37,9 @@ const RunTransaction = bindRt((rt) =>
       return yield* sql
         .withTransaction(
           Effect.forEach(statements, (statement) =>
-            Effect.map(
-              sql.unsafe<Record<string, unknown>>(statement),
-              (rows): ResultSet => ({ rows }),
-            ),
+            Effect.map(sql.unsafe<Record<string, unknown>>(statement), (rows): ResultSet => ({
+              rows,
+            })),
           ),
         )
         .pipe(Effect.orDie);
