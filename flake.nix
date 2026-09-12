@@ -29,6 +29,9 @@
               pnpm
               bun
               process-compose
+              jq
+              # Use the installed zk fork rather than overriding it with nixpkgs' zk.
+              (writeShellScriptBin "tasks" (builtins.readFile ./scripts/tasks))
             ];
 
             shellHook = ''

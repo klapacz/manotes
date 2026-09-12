@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)/.tasks"
+
+if [[ "${1:-}" == -- ]]; then
+  shift
+  exec "$@"
+fi
+
+if (( $# )); then
+  exec cat -- "$1.md"
+fi
+
+zk list --match 'title: task' \
+  --no-link-to state:done.md --no-link-to state:backlog.md \
+  --quiet --format json |
+  jq -rs '
+    # Read state and priority links from the first paragraph.
+    def linked($kind):
+      .lead | capture("\\]\\(\\./" + $kind + "(?:%3[Aa]|:)(?<value>[^)]+)\\.md\\)").value;
+
+    (.[0] // [])
+    | map(. + {state: linked("state"), priority: linked("priority")}) as $tasks
+    | ["in-progress", "todo"][] as $state
+    | [$tasks[] | select(.state == $state)]
+    | sort_by((.priority as $p | ["urgent", "high", "mid", "low"] | index($p)), .title)
+    | "\(if $state == "in-progress" then "In progress" else "Todo" end) (\(length))\n",
+      (.[] | "\u001b[1m\(.title)\u001b[0m \(.path) (\(.created[:10]))\n\n  ‣ \(.snippets | join("\n\n") | gsub("\n"; "\n    "))\n")
+  '

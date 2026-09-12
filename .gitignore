@@ -17,3 +17,4 @@ sandbox
 
 .wrangler
 .dev.vars*
+.tasks
