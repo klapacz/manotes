@@ -35,10 +35,10 @@ export const OtpVerify = Schema.Struct({
 
 const AuthOtpRequestError = HttpApiError.InternalServerErrorNoContent;
 
-const AuthOtpVerifyError = Schema.Union([
+const AuthOtpVerifyError = [
   HttpApiError.UnauthorizedNoContent,
   HttpApiError.InternalServerErrorNoContent,
-]);
+] as const;
 
 const LogoutError = HttpApiError.InternalServerErrorNoContent;
 

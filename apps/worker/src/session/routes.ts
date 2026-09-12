@@ -66,19 +66,12 @@ export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
           )
           .handle("verifyOtp", ({ payload }) =>
             auth.login(payload.email, payload.otp).pipe(
-              Effect.catchTag("Auth.OtpVerificationError", () =>
-                Effect.fail(new HttpApiError.Unauthorized({})),
+              // A later catch-all would turn the mapped Unauthorized into a 500 too.
+              Effect.catchTag(
+                "Auth.OtpVerificationError",
+                () => Effect.fail(new HttpApiError.Unauthorized({})),
+                () => Effect.fail(new HttpApiError.InternalServerError({})),
               ),
-              Effect.catchTag("Auth.OtpStoreError", () =>
-                Effect.fail(new HttpApiError.InternalServerError({})),
-              ),
-              Effect.catchTag("Auth.AccountResolutionError", () =>
-                Effect.fail(new HttpApiError.InternalServerError({})),
-              ),
-              Effect.catchTag("Auth.SessionStoreError", () =>
-                Effect.fail(new HttpApiError.InternalServerError({})),
-              ),
-              Effect.catch(() => Effect.fail(new HttpApiError.InternalServerError({}))),
             ),
           )
           .handle("logout", () =>

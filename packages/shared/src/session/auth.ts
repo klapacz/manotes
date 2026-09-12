@@ -1,5 +1,5 @@
 import type * as Alchemy from "alchemy";
-import { Context, Schema } from "effect";
+import { Context } from "effect";
 import { HttpApiError, HttpApiMiddleware } from "effect/unstable/httpapi";
 
 export interface CurrentSession {
@@ -18,7 +18,8 @@ export const UnauthorizedError = HttpApiError.UnauthorizedNoContent;
 
 export const InternalServerError = HttpApiError.InternalServerErrorNoContent;
 
-export const AuthMiddlewareError = Schema.Union([UnauthorizedError, InternalServerError]);
+// Separate response schemas preserve each error's HTTP status and empty body.
+export const AuthMiddlewareError = [UnauthorizedError, InternalServerError] as const;
 
 export class Middleware extends HttpApiMiddleware.Service<
   Middleware,
