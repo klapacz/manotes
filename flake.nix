@@ -1,5 +1,5 @@
 {
-  description = "manotes-rewrite development shell";
+  description = "Manotes CLI and development shell";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -8,6 +8,7 @@
     let
       systems = [
         "x86_64-linux"
+        "aarch64-linux"
         "aarch64-darwin"
       ];
       forEachSystem =
@@ -20,6 +21,30 @@
         );
     in
     {
+      packages = forEachSystem (
+        { pkgs }:
+        rec {
+          manotes = pkgs.callPackage ./nix/package.nix { };
+          default = manotes;
+        }
+      );
+
+      apps = forEachSystem (
+        { pkgs }:
+        let
+          package = self.packages.${pkgs.stdenv.hostPlatform.system}.manotes;
+          app = {
+            type = "app";
+            program = pkgs.lib.getExe package;
+            meta.description = package.meta.description;
+          };
+        in
+        {
+          manotes = app;
+          default = app;
+        }
+      );
+
       devShells = forEachSystem (
         { pkgs }:
         {
