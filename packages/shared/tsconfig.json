@@ -3,5 +3,5 @@
   "compilerOptions": {
     "lib": ["ES2024", "DOM"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts"]
 }

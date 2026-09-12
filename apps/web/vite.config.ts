@@ -1,3 +1,5 @@
+import { DevEnv } from "@manotes/shared/dev-env";
+import { PortSchema } from "@manotes/shared/schema/port";
 import { defineConfig } from "vite-plus";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
@@ -8,9 +10,10 @@ import { VitePWA } from "vite-plugin-pwa";
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
+    origin: process.env[DevEnv.names.url],
     proxy: {
       "/api": {
-        target: "http://localhost:3000",
+        target: `http://127.0.0.1:${PortSchema.decode(process.env[DevEnv.names.apiPort]) ?? 3000}`,
         changeOrigin: true,
         ws: true,
       },

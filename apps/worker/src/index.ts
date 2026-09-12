@@ -1,3 +1,5 @@
+import { DevEnv } from "@manotes/shared/dev-env";
+import { PortSchema } from "@manotes/shared/schema/port";
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Output from "alchemy/Output";
@@ -45,7 +47,11 @@ export default class Api extends Cloudflare.Worker<Api>()(
   "Api",
   {
     main: import.meta.filename,
-    dev: { port: 3000 },
+    dev: {
+      host: "127.0.0.1",
+      port: PortSchema.decode(process.env[DevEnv.names.apiPort]) ?? 3000,
+      strictPort: true,
+    },
     routes: Output.fromEffect(
       Alchemy.Stage.useSync((stage) =>
         stage === "prod"
