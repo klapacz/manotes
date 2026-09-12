@@ -6,7 +6,7 @@ import { PaneMake } from "../lib/note/pane.make";
 import type { CliConfig } from "./cli.config";
 
 export function make(config: Pick<CliConfig.Config, "origin" | "graphId">, id?: string): string {
-  const url = new URL(`/${encodeURIComponent(config.graphId)}`, config.origin);
+  const url = new URL(`/open/${encodeURIComponent(config.graphId)}`, config.origin);
 
   if (id === undefined) return url.href;
 
