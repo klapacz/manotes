@@ -12,6 +12,7 @@ import * as DB from "../lib/db.service";
 import * as EventRepo from "../lib/event.repo";
 import * as Materializer from "../lib/materializer.service";
 import type { UnknownNodeJSON } from "../lib/node-json";
+import * as EventSchema from "../lib/event.schema";
 import * as NoteRepo from "../lib/note.repo";
 import { NOTE_SCHEMA } from "../lib/prosemirror/app-schema";
 import { MdParse } from "../lib/prosemirror/md/parse";
@@ -31,6 +32,107 @@ const INITIAL_MARKDOWN = dedent`
 type RuntimeServices = DB.Service | EventRepo.Service | Materializer.Service | NoteRepo.Service;
 
 describe("ExecuteApi.editNote", () => {
+  it("saves a date event without changing content, and skips unchanged or cancelling dates", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
+        const noteRepo = yield* NoteRepo.Service;
+        const eventRepo = yield* EventRepo.Service;
+        const before = yield* noteRepo.getById(NOTE_ID);
+
+        yield* runTestScript(dedent`
+          export default async function (api) {
+            await api.editNote("${NOTE_ID}", [{ kind: "date", date: "2024-02-29" }]);
+          }
+        `);
+
+        const after = yield* noteRepo.getById(NOTE_ID);
+        expect(after.date).toBe("2024-02-29");
+        expect(after.content).toEqual(before.content);
+        expect(after.materializedYUpdate).toEqual(before.materializedYUpdate);
+        expect(after.createdAt).toEqual(before.createdAt);
+        const pending = yield* eventRepo.findPending(10);
+        expect(pending).toHaveLength(1);
+        const event = pending[0];
+        if (!event) throw new Error("Expected a date event");
+        expect(event.type).toBe("date");
+        expect(yield* EventSchema.decodeDatePayload(Uint8Array.from(event.payload))).toEqual({
+          date: "2024-02-29",
+        });
+        expect(after.updatedAt).toEqual(event.createdAt);
+
+        yield* runTestScript(dedent`
+          export default async function (api) {
+            await api.editNote("${NOTE_ID}", [{ kind: "date", date: "2024-02-29" }]);
+            await api.editNote("${NOTE_ID}", [
+              { kind: "date", date: "2025-01-01" },
+              { kind: "date", date: "2024-02-29" },
+            ]);
+          }
+        `);
+        expect(yield* eventRepo.countPending()).toBe(1);
+        expect(yield* noteRepo.getById(NOTE_ID)).toEqual(after);
+      }),
+    );
+  });
+
+  it("saves mixed edits using only the last date, ignoring an invalid earlier date", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
+        yield* runTestScript(dedent`
+          export default async function (api) {
+            await api.editNote("${NOTE_ID}", [
+              { kind: "date", date: "2025-02-29" },
+              { kind: "replace", text: "Alpha", with: "Beta" },
+              { kind: "date", date: "2024-02-29" },
+            ]);
+          }
+        `);
+        const noteRepo = yield* NoteRepo.Service;
+        const eventRepo = yield* EventRepo.Service;
+        const note = yield* noteRepo.getById(NOTE_ID);
+        expect(note.date).toBe("2024-02-29");
+        expect(markdownFromContent(note.content)).toBe("# Plan\n\nBeta.\n");
+        expect((yield* eventRepo.findPending(10)).map((event) => event.type)).toEqual([
+          "update",
+          "date",
+        ]);
+      }),
+    );
+  });
+
+  it("rejects an invalid final date, and rolls back dates when body edits fail", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
+        const noteRepo = yield* NoteRepo.Service;
+        const eventRepo = yield* EventRepo.Service;
+        const before = yield* noteRepo.getById(NOTE_ID);
+        for (const edits of [
+          [
+            { kind: "replace", text: "Alpha", with: "Beta" },
+            { kind: "date", date: "2024-02-29" },
+            { kind: "date", date: "2025-02-29" },
+          ],
+          [
+            { kind: "date", date: "2024-02-29" },
+            { kind: "replace", text: "missing", with: "never saved" },
+          ],
+        ]) {
+          const result = yield* runTestScript(dedent`
+            export default async function (api) {
+              await api.editNote("${NOTE_ID}", ${JSON.stringify(edits)});
+            }
+          `).pipe(Effect.result);
+          expect(Result.isFailure(result)).toBe(true);
+          expect(yield* eventRepo.countPending()).toBe(0);
+          expect(yield* noteRepo.getById(NOTE_ID)).toEqual(before);
+        }
+      }),
+    );
+  });
+
   it("matches exported backlink labels and preserves their destination IDs", async () => {
     await runIntegration(
       Effect.gen(function* () {

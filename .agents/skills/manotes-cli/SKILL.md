@@ -7,7 +7,7 @@ description: Read and edit Manotes notes with the CLI, then sync changes.
 
 Manotes is an encrypted note-taking app with a CLI for reading and editing notes locally. Work in the current directory unless told otherwise. Read and search the `<note-id>.md` files, but never edit them or files inside `.manotes/` directly. Make changes through `manotes execute`. For first-time setup, consult `manotes init --help`.
 
-Each note file starts with read-only frontmatter: `date` is the note's date and `updated_at` is its last-update timestamp in UTC. Edits apply only to the Markdown body below it.
+Each note file starts with read-only frontmatter: `date` is the note's date and `updated_at` is its last-update timestamp in UTC. Body edits apply below it; use a `date` action to change the note's date.
 
 ## Edit notes
 
@@ -16,7 +16,8 @@ Scripts must default-export an async function receiving this API:
 ```ts
 type Edit =
   | { kind: "replace"; text: string; with: string; occurrence?: number | "all" }
-  | { kind: "append"; markdown: string };
+  | { kind: "append"; markdown: string }
+  | { kind: "date"; date: string }; // YYYY-MM-DD
 
 type Api = {
   editNote(noteId: string, edits: readonly Edit[]): Promise<void>;
@@ -33,6 +34,7 @@ export default async (api) => {
     { kind: "replace", text: "TODO", with: "Done", occurrence: 0 },
     { kind: "replace", text: "(obsolete)", with: "", occurrence: "all" },
     { kind: "append", markdown: "\n## Next steps\n\n- Review the plan." },
+    { kind: "date", date: "2026-09-12" },
   ]);
 };
 JS
