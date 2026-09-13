@@ -1,5 +1,7 @@
 import { CliRenderEvents, RGBA, SyntaxStyle, type TerminalColors } from "@opentui/core";
 import { useRenderer } from "@opentui/solid";
+import { colord, extend } from "colord";
+import mixPlugin from "colord/plugins/mix";
 import {
   createContext,
   createEffect,
@@ -11,12 +13,12 @@ import {
 
 /*
  * Adapted from anomalyco/opencode, @opencode-ai/tui 1.18.30:
- * packages/tui/src/theme/index.ts (generateSystem, generateGrayScale,
- * generateMutedTextColor) and context/theme.tsx (idle syntax-style cleanup).
+ * packages/tui/src/theme/index.ts (system color assignments) and
+ * context/theme.tsx (idle syntax-style cleanup).
  * https://github.com/anomalyco/opencode/tree/dev/packages/tui/src
- * Copied to follow the terminal palette without a color library or contrast engine.
- * Changes: only task UI roles, calculate the needed gray steps, use OpenTUI's
- * ANSI fallback, and use black/white defaults until the terminal replies.
+ * Copied to keep OpenCode's system color roles and native style lifetime.
+ * Changes: task UI roles only, colord RGB mixing instead of custom gray/muted
+ * formulas, OpenTUI ANSI fallback, and black/white defaults until OSC replies.
  * Theme selection, custom themes, diff colors, and mode locking are omitted.
  *
  * MIT License
@@ -40,6 +42,7 @@ import {
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+extend([mixPlugin]);
 
 const ThemeContext = createContext<Theme>();
 
@@ -113,7 +116,7 @@ export function use(): Theme {
 export type Theme = ReturnType<typeof create>;
 
 export function create(colors?: TerminalColors, mode: "dark" | "light" = "dark") {
-  const background = RGBA.fromHex(
+  const base = colord(
     colors?.defaultBackground ?? colors?.palette[0] ?? (mode === "dark" ? "#000000" : "#ffffff"),
   );
 
@@ -121,8 +124,9 @@ export function create(colors?: TerminalColors, mode: "dark" | "light" = "dark")
     colors?.defaultForeground ?? colors?.palette[7] ?? (mode === "dark" ? "#ffffff" : "#000000"),
   );
 
-  const luminance = (0.299 * background.r + 0.587 * background.g + 0.114 * background.b) * 255;
-  const dark = colors?.defaultBackground ? luminance <= 127.5 : mode === "dark";
+  const background = RGBA.fromHex(base.toHex());
+  const dark = colors?.defaultBackground ? base.isDark() : mode === "dark";
+  const neutral = dark ? "#ffffff" : "#000000";
 
   const color = (index: number) => {
     const value = colors?.palette[index];
@@ -136,10 +140,11 @@ export function create(colors?: TerminalColors, mode: "dark" | "light" = "dark")
   const blue = color(4);
   const magenta = color(5);
   const cyan = color(6);
-  const panel = gray(background, luminance, dark, 2);
-  const element = gray(background, luminance, dark, 3);
-  const border = gray(background, luminance, dark, 7);
-  const muted = mutedText(luminance, dark);
+  // OpenCode's role spacing, using library interpolation instead of its RGB scaling.
+  const panel = RGBA.fromHex(base.mix(neutral, 2 / 30, "rgb").toHex());
+  const element = RGBA.fromHex(base.mix(neutral, 3 / 30, "rgb").toHex());
+  const border = RGBA.fromHex(base.mix(neutral, 7 / 30, "rgb").toHex());
+  const muted = RGBA.fromHex(base.grayscale().mix(neutral, 0.7, "rgb").toHex());
 
   const syntaxStyle = SyntaxStyle.fromStyles({
     default: { fg: foreground },
@@ -169,7 +174,7 @@ export function create(colors?: TerminalColors, mode: "dark" | "light" = "dark")
 
   return {
     surface: {
-      default: RGBA.fromValues(background.r, background.g, background.b, 0),
+      default: RGBA.fromHex(base.alpha(0).toHex()),
       backdrop: background,
       panel,
       element,
@@ -190,43 +195,6 @@ export function create(colors?: TerminalColors, mode: "dark" | "light" = "dark")
     scrollbar: { thumb: border, track: element },
     syntaxStyle,
   };
-}
-
-function gray(background: RGBA, luminance: number, dark: boolean, step: number) {
-  const factor = step / 12;
-
-  if (dark && luminance < 10) {
-    const value = Math.floor(factor * 0.4 * 255);
-
-    return RGBA.fromInts(value, value, value);
-  }
-
-  if (!dark && luminance > 245) {
-    const value = Math.floor(255 - factor * 0.4 * 255);
-
-    return RGBA.fromInts(value, value, value);
-  }
-
-  const next = dark ? luminance + (255 - luminance) * factor * 0.4 : luminance * (1 - factor * 0.4);
-  const ratio = next / luminance;
-
-  return RGBA.fromInts(
-    Math.floor(Math.min(background.r * 255 * ratio, 255)),
-    Math.floor(Math.min(background.g * 255 * ratio, 255)),
-    Math.floor(Math.min(background.b * 255 * ratio, 255)),
-  );
-}
-
-function mutedText(luminance: number, dark: boolean) {
-  const value = dark
-    ? luminance < 10
-      ? 180
-      : Math.min(Math.floor(160 + luminance * 0.3), 200)
-    : luminance > 245
-      ? 75
-      : Math.max(Math.floor(100 - (255 - luminance) * 0.2), 60);
-
-  return RGBA.fromInts(value, value, value);
 }
 
 export * as Theme from "./theme";
