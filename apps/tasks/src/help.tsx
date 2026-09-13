@@ -15,14 +15,14 @@ export function HelpDialog() {
       zIndex={20}
       alignItems="center"
       justifyContent="center"
-      backgroundColor={theme.surface.default}
+      backgroundColor={theme.surface.backdrop}
     >
       <box
         width="90%"
         height="90%"
         border
         borderColor={theme.border.default}
-        backgroundColor={theme.surface.default}
+        backgroundColor={theme.surface.element}
         paddingX={1}
         flexDirection="column"
       >
@@ -43,7 +43,7 @@ export function HelpDialog() {
         >
           <text fg={theme.text.default}>{shortcuts}</text>
         </scrollbox>
-        <text height={1} flexShrink={0} fg={theme.text.default} attributes={TextAttributes.DIM}>
+        <text height={1} flexShrink={0} fg={theme.text.muted}>
           ? / Space / Escape / q close help
         </text>
       </box>
