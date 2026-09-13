@@ -9,6 +9,7 @@ import { AuthService } from "./auth/auth.ts";
 import { EmailService } from "./auth/email.ts";
 import { OtpService } from "./auth/otp.ts";
 import { SessionKvService } from "./auth/session-kv.ts";
+import { DevSeed } from "./dev-seed.ts";
 import * as Routes from "./routes.ts";
 
 const layerCloudflareBindings = Layer.mergeAll(
@@ -66,7 +67,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
     // The router layers only register handler closures and provide pure services, so no
     // scoped resources escape initialization. Alchemy still supplies each request's Scope.
     return {
-      fetch: yield* Routes.layer.pipe(
+      fetch: yield* Layer.mergeAll(Routes.layer, DevSeed.layer).pipe(
         Layer.provide(corsLayer),
         Layer.provide(HttpServer.layerServices),
         HttpRouter.toHttpEffect,
