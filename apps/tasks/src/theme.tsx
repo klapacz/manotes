@@ -1,101 +1,18 @@
-import { CliRenderEvents, SyntaxStyle, type TerminalColors } from "@opentui/core";
+import { RGBA, SyntaxStyle } from "@opentui/core";
 import { useRenderer } from "@opentui/solid";
-import { createContext, createSignal, onCleanup, useContext, type ParentProps } from "solid-js";
-import { fromPalette, type Palette } from "./theme-colors";
+import { createContext, onCleanup, useContext, type ParentProps } from "solid-js";
 
 const ThemeContext = createContext<Theme>();
 
 export function Provider(props: ParentProps) {
   const renderer = useRenderer();
-  const [current, setCurrent] = createSignal(create());
-  // Markdown propagates styles to child renderables during a later frame.
-  // Cache each palette for this renderer's lifetime rather than freeing a
-  // handle that a hidden/deferred Markdown block may still reference.
-  const themes = new Map<string, Theme>([["native", current()]]);
-  let disposed = false;
-  let generation = 0;
-
-  const update = (palette: TerminalColors) => {
-    if (disposed) return;
-    generation++;
-
-    const key = JSON.stringify([
-      palette.defaultForeground,
-      palette.defaultBackground,
-      palette.palette.slice(0, 16),
-    ]);
-
-    let theme = themes.get(key);
-
-    if (!theme) {
-      theme = create(palette);
-      themes.set(key, theme);
-    }
-
-    setCurrent(theme);
-  };
-
-  const query = () => {
-    const started = generation;
-    void renderer
-      .getPalette({ size: 16, timeout: 200 })
-      .then((palette) => {
-        // A PALETTE event may already have published this query, or a newer one.
-        if (!disposed && generation === started) update(palette);
-      })
-      .catch(() => {
-        // Keep native colors at startup, or the last known palette on failure.
-      });
-  };
-
-  const refresh = () => {
-    renderer.clearPaletteCache();
-    query();
-  };
-
-  renderer.on(CliRenderEvents.PALETTE, update);
-  renderer.on(CliRenderEvents.FOCUS, refresh);
-  query();
+  const theme = create();
 
   onCleanup(() => {
-    disposed = true;
-    renderer.off(CliRenderEvents.PALETTE, update);
-    renderer.off(CliRenderEvents.FOCUS, refresh);
-    // Native renderables must be gone before their syntax styles are released.
+    // Native renderables must be gone before their syntax style is released.
     renderer.destroy();
-
-    for (const theme of themes.values()) theme.syntaxStyle.destroy();
-    themes.clear();
+    theme.syntaxStyle.destroy();
   });
-
-  // Keep Theme.use() stable while each property tracks palette changes. This
-  // avoids remounting the app and losing selection or preview scroll position.
-  const theme: Theme = {
-    get surface() {
-      return current().surface;
-    },
-    get text() {
-      return current().text;
-    },
-    get selection() {
-      return current().selection;
-    },
-    get tab() {
-      return current().tab;
-    },
-    get priority() {
-      return current().priority;
-    },
-    get border() {
-      return current().border;
-    },
-    get scrollbar() {
-      return current().scrollbar;
-    },
-    get syntaxStyle() {
-      return current().syntaxStyle;
-    },
-  };
 
   return <ThemeContext.Provider value={theme}>{props.children}</ThemeContext.Provider>;
 }
@@ -110,37 +27,58 @@ export function use(): Theme {
 
 export type Theme = ReturnType<typeof create>;
 
-export function create(palette?: Palette) {
-  const roles = fromPalette(palette);
-  const { text } = roles;
+export function create() {
+  const foreground = RGBA.defaultForeground();
+  const background = RGBA.defaultBackground();
+  const red = RGBA.fromIndex(1);
+  const green = RGBA.fromIndex(2);
+  const yellow = RGBA.fromIndex(3);
+  const blue = RGBA.fromIndex(4);
+  const magenta = RGBA.fromIndex(5);
+  const cyan = RGBA.fromIndex(6);
 
   const syntaxStyle = SyntaxStyle.fromStyles({
-    default: { fg: text.default },
-    comment: { fg: text.muted, italic: true },
-    string: { fg: text.success },
-    number: { fg: text.secondary },
-    boolean: { fg: text.secondary },
-    keyword: { fg: text.secondary, italic: true },
-    type: { fg: text.warning },
-    function: { fg: text.accent },
-    operator: { fg: text.info },
-    variable: { fg: text.default },
-    punctuation: { fg: text.muted },
-    "punctuation.special": { fg: text.info },
-    "markup.heading.1": { fg: text.accent, bold: true },
-    "markup.heading.2": { fg: text.warning, bold: true },
-    "markup.heading.3": { fg: text.warning },
-    "markup.bold": { fg: text.warning, bold: true },
-    "markup.strong": { fg: text.warning, bold: true },
-    "markup.italic": { fg: text.secondary, italic: true },
-    "markup.list": { fg: text.default, bold: true },
-    "markup.quote": { fg: text.muted, italic: true },
-    "markup.raw": { fg: text.success },
-    "markup.link": { fg: text.info, underline: true },
-    "markup.link.label": { fg: text.info, underline: true },
+    default: { fg: foreground },
+    comment: { fg: foreground, dim: true, italic: true },
+    string: { fg: green },
+    number: { fg: yellow },
+    boolean: { fg: yellow },
+    keyword: { fg: magenta },
+    type: { fg: cyan },
+    function: { fg: blue },
+    operator: { fg: cyan },
+    variable: { fg: foreground },
+    punctuation: { fg: foreground },
+    "punctuation.special": { fg: cyan },
+    "markup.heading.1": { fg: foreground, bold: true },
+    "markup.heading.2": { fg: foreground, bold: true },
+    "markup.heading.3": { fg: foreground, bold: true },
+    "markup.bold": { fg: foreground, bold: true },
+    "markup.strong": { fg: foreground, bold: true },
+    "markup.italic": { fg: foreground, italic: true },
+    "markup.list": { fg: cyan },
+    "markup.quote": { fg: foreground, dim: true, italic: true },
+    "markup.raw": { fg: green },
+    "markup.link": { fg: cyan, underline: true },
+    "markup.link.label": { fg: cyan, underline: true },
   });
 
-  return { ...roles, syntaxStyle };
+  return {
+    surface: { default: background },
+    text: {
+      default: foreground,
+      success: green,
+      warning: yellow,
+      error: red,
+      info: cyan,
+      accent: cyan,
+      secondary: magenta,
+    },
+    priority: { urgent: red, high: yellow, mid: magenta, low: foreground },
+    border: { default: foreground },
+    scrollbar: { thumb: foreground, track: background },
+    syntaxStyle,
+  };
 }
 
 export * as Theme from "./theme";

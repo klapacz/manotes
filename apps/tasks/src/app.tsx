@@ -159,19 +159,9 @@ export function TaskApp() {
           <For each={filters}>
             {(filter, i) => (
               <text
-                fg={
-                  filterIndex() === i()
-                    ? theme.tab.active.foreground
-                    : theme.tab.inactive.foreground
-                }
-                bg={
-                  filterIndex() === i()
-                    ? theme.tab.active.background
-                    : theme.tab.inactive.background
-                }
-                attributes={
-                  filterIndex() === i() ? theme.tab.active.attributes : TextAttributes.NONE
-                }
+                fg={theme.text.default}
+                bg={theme.surface.default}
+                attributes={filterIndex() === i() ? TextAttributes.INVERSE : TextAttributes.DIM}
               >
                 {` ${filter.label} ${filterTasks(tasks(), filter.state).length} `}
               </text>
@@ -182,11 +172,19 @@ export function TaskApp() {
       <box flexGrow={1} flexDirection="column" minHeight={1}>
         <Show
           when={!AsyncResult.isInitial(taskResult())}
-          fallback={<text fg={theme.text.muted}>Loading tasks from the database...</text>}
+          fallback={
+            <text fg={theme.text.default} attributes={TextAttributes.DIM}>
+              Loading tasks from the database...
+            </text>
+          }
         >
           <Show
             when={visible().length > 0}
-            fallback={<text fg={theme.text.muted}>No tasks in this tab.</text>}
+            fallback={
+              <text fg={theme.text.default} attributes={TextAttributes.DIM}>
+                No tasks in this tab.
+              </text>
+            }
           >
             <For each={page()}>
               {(row) => {
@@ -200,12 +198,14 @@ export function TaskApp() {
                     flexDirection="row"
                     justifyContent="space-between"
                     gap={1}
-                    backgroundColor={theme.surface.elevated}
+                    backgroundColor={theme.surface.default}
                   >
                     <text fg={theme.text.default} attributes={TextAttributes.BOLD}>
                       {row.label}
                     </text>
-                    <text fg={theme.text.muted}>{row.count}</text>
+                    <text fg={theme.text.default} attributes={TextAttributes.DIM}>
+                      {row.count}
+                    </text>
                   </box>
                 ) : (
                   <TaskItem task={row.task} selected={selected()?.id === row.task.id} />
@@ -224,12 +224,25 @@ export function TaskApp() {
         justifyContent="space-between"
       >
         <box flexShrink={1}>
-          <text height={1} width="100%" flexShrink={0} fg={theme.text.muted} truncate>
+          <text
+            height={1}
+            width="100%"
+            flexShrink={0}
+            fg={theme.text.default}
+            attributes={TextAttributes.DIM}
+            truncate
+          >
             {message() || "? help"}
           </text>
         </box>
         <box>
-          <text height={1} width="100%" flexShrink={0} fg={theme.text.muted}>
+          <text
+            height={1}
+            width="100%"
+            flexShrink={0}
+            fg={theme.text.default}
+            attributes={TextAttributes.DIM}
+          >
             {`${visible().length ? index() + 1 : 0}/${visible().length}`}
           </text>
         </box>
@@ -262,19 +275,23 @@ function TaskItem(props: { task: Task; selected: boolean }) {
       flexDirection="row"
       paddingX={1}
       gap={2}
-      backgroundColor={props.selected ? theme.selection.background : theme.surface.default}
+      backgroundColor={theme.surface.default}
     >
       <text
         height={1}
         width={4}
         fg={
-          props.selected && theme.selection.attributes === TextAttributes.INVERSE
+          props.selected || props.task.state === "done"
             ? theme.text.default
-            : props.task.state === "done"
-              ? theme.text.muted
-              : priorityColor(theme, props.task.priority)
+            : priorityColor(theme, props.task.priority)
         }
-        attributes={props.selected ? theme.selection.attributes : TextAttributes.NONE}
+        attributes={
+          props.selected
+            ? TextAttributes.INVERSE
+            : props.task.state === "done"
+              ? TextAttributes.DIM
+              : TextAttributes.NONE
+        }
         truncate
       >
         {String.takeRight(props.task.id, 4)}
@@ -284,7 +301,7 @@ function TaskItem(props: { task: Task; selected: boolean }) {
         flexGrow={1}
         flexShrink={1}
         fg={theme.text.default}
-        attributes={props.selected ? theme.selection.attributes : TextAttributes.NONE}
+        attributes={props.selected ? TextAttributes.INVERSE : TextAttributes.NONE}
         truncate
       >
         {props.task.title || props.task.id}
@@ -292,8 +309,8 @@ function TaskItem(props: { task: Task; selected: boolean }) {
       <text
         height={1}
         width={3}
-        fg={theme.text.muted}
-        attributes={props.selected ? theme.selection.attributes : TextAttributes.NONE}
+        fg={theme.text.default}
+        attributes={props.selected ? TextAttributes.INVERSE : TextAttributes.DIM}
         truncate
       >
         {props.task.project ?? "none"}

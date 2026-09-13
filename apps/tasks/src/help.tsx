@@ -22,11 +22,11 @@ export function HelpDialog() {
         height="90%"
         border
         borderColor={theme.border.default}
-        backgroundColor={theme.surface.elevated}
+        backgroundColor={theme.surface.default}
         paddingX={1}
         flexDirection="column"
       >
-        <text height={2} flexShrink={0} fg={theme.text.accent} attributes={TextAttributes.BOLD}>
+        <text height={2} flexShrink={0} fg={theme.text.default} attributes={TextAttributes.BOLD}>
           Keyboard shortcuts
         </text>
         <scrollbox
@@ -43,7 +43,7 @@ export function HelpDialog() {
         >
           <text fg={theme.text.default}>{shortcuts}</text>
         </scrollbox>
-        <text height={1} flexShrink={0} fg={theme.text.muted}>
+        <text height={1} flexShrink={0} fg={theme.text.default} attributes={TextAttributes.DIM}>
           ? / Space / Escape / q close help
         </text>
       </box>

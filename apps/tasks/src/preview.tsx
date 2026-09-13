@@ -88,7 +88,7 @@ export function TaskPreview(props: {
         flexDirection="column"
         border
         borderColor={theme.border.default}
-        backgroundColor={theme.surface.elevated}
+        backgroundColor={theme.surface.default}
         paddingX={1}
       >
         <box flexDirection="row" justifyContent="space-between" gap={2} height={2}>
@@ -149,7 +149,14 @@ export function TaskPreview(props: {
         </scrollbox>
 
         <box height={1} flexShrink={0} border={["top"]} borderColor={theme.border.default}>
-          <text height={1} width="100%" flexShrink={0} fg={theme.text.muted} truncate>
+          <text
+            height={1}
+            width="100%"
+            flexShrink={0}
+            fg={theme.text.default}
+            attributes={TextAttributes.DIM}
+            truncate
+          >
             {`? help  Space/Esc`}
           </text>
         </box>
