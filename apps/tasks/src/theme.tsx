@@ -1,24 +1,26 @@
-import { CliRenderEvents, RGBA, SyntaxStyle, type TerminalColors } from "@opentui/core";
+import { useAtomValue } from "@effect/atom-solid";
+import {
+  buildTerminalPaletteSignature,
+  CliRenderEvents,
+  RGBA,
+  SyntaxStyle,
+  type CliRenderer,
+  type TerminalColors,
+} from "@opentui/core";
 import { useRenderer } from "@opentui/solid";
 import { colord, extend } from "colord";
 import mixPlugin from "colord/plugins/mix";
-import {
-  createContext,
-  createEffect,
-  createSignal,
-  onCleanup,
-  useContext,
-  type ParentProps,
-} from "solid-js";
+import { Effect, Queue, Stream } from "effect";
+import { AsyncResult, Atom } from "effect/unstable/reactivity";
+import { createContext, Show, useContext, type Accessor, type ParentProps } from "solid-js";
 
 /*
  * Adapted from anomalyco/opencode, @opencode-ai/tui 1.18.30:
- * packages/tui/src/theme/index.ts (system color assignments) and
- * context/theme.tsx (idle syntax-style cleanup).
+ * packages/tui/src/theme/index.ts (system color assignments).
  * https://github.com/anomalyco/opencode/tree/dev/packages/tui/src
- * Copied to keep OpenCode's system color roles and native style lifetime.
+ * Copied to keep OpenCode's system color roles.
  * Changes: task UI roles only, colord RGB mixing instead of custom gray/muted
- * formulas, OpenTUI ANSI fallback, and black/white defaults until OSC replies.
+ * formulas, OpenTUI ANSI fallback, and Effect-owned theme resources.
  * Theme selection, custom themes, diff colors, and mode locking are omitted.
  *
  * MIT License
@@ -44,65 +46,21 @@ import {
  */
 extend([mixPlugin]);
 
-const ThemeContext = createContext<Theme>();
+const ThemeContext = createContext<Accessor<Theme>>();
 
 export function Provider(props: ParentProps) {
-  const renderer = useRenderer();
-  const [current, setCurrent] = createSignal(create(undefined, renderer.themeMode ?? "dark"));
-  const styles = new Set([current().syntaxStyle]);
-  let disposed = false;
-  let received = false;
+  const atom = create(useRenderer());
 
-  const update = (colors: TerminalColors) => {
-    if (disposed) return;
-    received = true;
-    const previous = current();
-    const next = create(colors, renderer.themeMode ?? "dark");
-    styles.add(next.syntaxStyle);
-    setCurrent(next);
-    // Markdown updates child styles during rendering, not in its prop setter.
-    void renderer
-      .idle()
-      .catch(() => {})
-      .finally(() => {
-        if (styles.delete(previous.syntaxStyle)) previous.syntaxStyle.destroy();
-      });
-  };
+  const theme = useAtomValue(
+    () => atom,
+    (result) => AsyncResult.getOrElse(result, () => undefined),
+  );
 
-  const refresh = () => {
-    renderer.clearPaletteCache();
-    void renderer.getPalette({ size: 16 }).catch(() => {});
-  };
-
-  renderer.on(CliRenderEvents.PALETTE, update);
-  renderer.on(CliRenderEvents.FOCUS, refresh);
-  void renderer
-    .getPalette({ size: 16 })
-    .then((colors) => {
-      // getPalette can return a cached palette without emitting an event.
-      if (!received) update(colors);
-    })
-    .catch(() => {});
-
-  createEffect(() => renderer.setBackgroundColor(current().surface.default));
-
-  onCleanup(() => {
-    disposed = true;
-    renderer.off(CliRenderEvents.PALETTE, update);
-    renderer.off(CliRenderEvents.FOCUS, refresh);
-    renderer.destroy();
-
-    for (const style of styles) style.destroy();
-    styles.clear();
-  });
-
-  const theme = new Proxy(current(), {
-    get(_target, key: keyof Theme) {
-      return current()[key];
-    },
-  });
-
-  return <ThemeContext.Provider value={theme}>{props.children}</ThemeContext.Provider>;
+  return (
+    <Show when={theme()}>
+      {(current) => <ThemeContext.Provider value={current}>{props.children}</ThemeContext.Provider>}
+    </Show>
+  );
 }
 
 export function use(): Theme {
@@ -110,26 +68,46 @@ export function use(): Theme {
 
   if (!theme) throw new Error("Theme.use must be used within Theme.Provider");
 
-  return theme;
+  return new Proxy(theme(), {
+    get(_target, key: keyof Theme) {
+      return theme()[key];
+    },
+  });
 }
 
-export type Theme = ReturnType<typeof create>;
+export type Theme = ReturnType<typeof fromPalette>;
 
-export function create(colors?: TerminalColors, mode: "dark" | "light" = "dark") {
-  const base = colord(
-    colors?.defaultBackground ?? colors?.palette[0] ?? (mode === "dark" ? "#000000" : "#ffffff"),
+export function create(renderer: CliRenderer) {
+  return Atom.make(
+    paletteUpdates(renderer).pipe(
+      Stream.mapEffect((colors) =>
+        Effect.acquireRelease(
+          Effect.sync(() => {
+            const theme = fromPalette(colors);
+            renderer.setBackgroundColor(theme.surface.default);
+
+            return theme;
+          }),
+          // Keep native styles alive while Markdown can still reference them.
+          (theme) =>
+            Effect.promise(() => renderer.idle()).pipe(
+              Effect.andThen(Effect.sync(() => theme.syntaxStyle.destroy())),
+            ),
+        ),
+      ),
+      Stream.scoped,
+    ),
   );
+}
 
-  const foreground = RGBA.fromHex(
-    colors?.defaultForeground ?? colors?.palette[7] ?? (mode === "dark" ? "#ffffff" : "#000000"),
-  );
-
+function fromPalette(colors: TerminalColors) {
+  const base = colord(colors.defaultBackground ?? colors.palette[0] ?? "#000000");
+  const foreground = RGBA.fromHex(colors.defaultForeground ?? colors.palette[7] ?? "#ffffff");
   const background = RGBA.fromHex(base.toHex());
-  const dark = colors?.defaultBackground ? base.isDark() : mode === "dark";
-  const neutral = dark ? "#ffffff" : "#000000";
+  const neutral = base.isDark() ? "#ffffff" : "#000000";
 
   const color = (index: number) => {
-    const value = colors?.palette[index];
+    const value = colors.palette[index];
 
     return value ? RGBA.fromHex(value) : RGBA.fromIndex(index);
   };
@@ -195,6 +173,47 @@ export function create(colors?: TerminalColors, mode: "dark" | "light" = "dark")
     scrollbar: { thumb: border, track: element },
     syntaxStyle,
   };
+}
+
+function paletteUpdates(renderer: CliRenderer) {
+  return Stream.callback<TerminalColors>((queue) =>
+    Effect.gen(function* () {
+      const update = (colors: TerminalColors) => {
+        Queue.offerUnsafe(queue, colors);
+      };
+
+      const refresh = () => {
+        renderer.clearPaletteCache();
+        void renderer
+          .getPalette({ size: 16 })
+          .then(update)
+          .catch(() => {});
+      };
+
+      yield* Effect.acquireRelease(
+        Effect.sync(() => {
+          renderer.on(CliRenderEvents.PALETTE, update);
+          renderer.on(CliRenderEvents.FOCUS, refresh);
+        }),
+        () =>
+          Effect.sync(() => {
+            renderer.off(CliRenderEvents.PALETTE, update);
+            renderer.off(CliRenderEvents.FOCUS, refresh);
+          }),
+      );
+
+      // A cached palette may not emit PALETTE.
+      yield* Effect.tryPromise(() => renderer.getPalette({ size: 16 })).pipe(
+        Effect.tap((colors) => Effect.sync(() => update(colors))),
+        Effect.catch(() => Effect.void),
+      );
+    }),
+  ).pipe(
+    Stream.changesWith(
+      (previous, next) =>
+        buildTerminalPaletteSignature(previous) === buildTerminalPaletteSignature(next),
+    ),
+  );
 }
 
 export * as Theme from "./theme";

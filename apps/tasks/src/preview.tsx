@@ -2,8 +2,8 @@ import { useAtom } from "@effect/atom-solid";
 import { TasksAtoms } from "./atoms";
 import { TextAttributes } from "@opentui/core";
 import type { ScrollBoxRenderable } from "@opentui/core";
-import { useKeyboard, useRenderer } from "@opentui/solid";
-import { createEffect, createMemo, on, Show } from "solid-js";
+import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid";
+import { createEffect, createMemo, createSignal, on, Show } from "solid-js";
 import { NOTE_SCHEMA } from "../../web/src/lib/prosemirror/app-schema";
 import { MdSerialize } from "../../web/src/lib/prosemirror/md/serialize";
 import { activeSections, priorityColor, type Task } from "./tasks";
@@ -17,9 +17,11 @@ export function TaskPreview(props: {
   inactive: boolean;
 }) {
   const renderer = useRenderer();
+  const dimensions = useTerminalDimensions();
   const theme = Theme.use();
   const [opened, open] = useAtom(TasksAtoms.open);
   let scroll: ScrollBoxRenderable | undefined;
+  const [viewportWidth, setViewportWidth] = createSignal<number>();
 
   createEffect(
     on(
@@ -82,33 +84,28 @@ export function TaskPreview(props: {
       backgroundColor={theme.surface.backdrop}
     >
       <box
-        width="90%"
-        maxWidth={100}
+        // Fractional percentage widths can make the scrollbar overlap the viewport.
+        width={Math.min(100, Math.floor(dimensions().width * 0.9))}
         height="90%"
         flexDirection="column"
         border
         borderColor={theme.border.default}
         backgroundColor={theme.surface.element}
-        paddingX={1}
       >
-        <box flexDirection="row" justifyContent="space-between" gap={2} height={2}>
+        <box flexDirection="row" justifyContent="space-between" gap={2} height={2} paddingX={1}>
           <text
             height={1}
-            flexShrink={0}
+            flexGrow={1}
+            flexShrink={1}
             fg={priorityColor(theme, props.task.priority)}
             attributes={TextAttributes.BOLD}
+            wrapMode="none"
             truncate
           >
             {props.task.title}
           </text>
 
-          <text
-            height={1}
-            flexShrink={0}
-            fg={theme.text.default}
-            attributes={TextAttributes.BOLD}
-            truncate
-          >
+          <text height={1} flexShrink={0} fg={theme.text.default} attributes={TextAttributes.BOLD}>
             {activeSections.find(({ state }) => state === props.task.state)?.label ?? "none"}
           </text>
         </box>
@@ -116,11 +113,11 @@ export function TaskPreview(props: {
         <scrollbox
           ref={(value) => {
             scroll = value;
+            value.viewport.on("resize", () => setViewportWidth(value.viewport.width));
           }}
           flexGrow={1}
           scrollX={false}
           viewportCulling={false}
-          paddingRight={scroll?.verticalScrollBar.visible ? 10 : 0}
           scrollbarOptions={{
             trackOptions: {
               foregroundColor: theme.scrollbar.thumb,
@@ -138,17 +135,25 @@ export function TaskPreview(props: {
             }
           >
             <markdown
+              // OpenTUI 0.5.11 can size percentage-width text blocks one column too wide.
+              width={(viewportWidth() ?? 0) - 2}
+              marginX={1}
               content={preview().markdown}
               syntaxStyle={theme.syntaxStyle}
               fg={theme.text.default}
-              // conceal
-              // internalBlockMode="top-level"
+              conceal
               streaming={false}
             />
           </Show>
         </scrollbox>
 
-        <box height={1} flexShrink={0} border={["top"]} borderColor={theme.border.default}>
+        <box
+          height={1}
+          paddingX={1}
+          flexShrink={0}
+          border={["top"]}
+          borderColor={theme.border.default}
+        >
           <text height={1} width="100%" flexShrink={0} fg={theme.text.muted} truncate>
             {`? help  Space/Esc`}
           </text>
