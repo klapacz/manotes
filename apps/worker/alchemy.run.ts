@@ -1,15 +1,17 @@
 import { DevEnv } from "@manotes/shared/dev-env";
+import { fileURLToPath } from "node:url";
 import { PortSchema } from "@manotes/shared/schema/port";
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
+import * as Command from "alchemy/Command";
 import * as Effect from "effect/Effect";
 import Worker from "./src/index.ts";
-import { Config } from "effect";
+import { Config, Layer } from "effect";
 
 export default Alchemy.Stack(
   "Manotes",
   {
-    providers: Cloudflare.providers(),
+    providers: Layer.mergeAll(Cloudflare.providers(), Command.providers()),
     state: Cloudflare.state(),
   },
   Effect.gen(function* () {
@@ -26,6 +28,24 @@ export default Alchemy.Stack(
       workersDev: false,
       domain: stage === "prod" ? "sand.manotes.dev" : undefined,
     });
+
+    const dev = yield* Alchemy.ALCHEMY_DEV;
+    const seedType = yield* Config.string(DevEnv.names.seedType).pipe(Config.withDefault(""));
+
+    if (dev && seedType === "demo") {
+      yield* Command.Exec("SeedDemo", {
+        command: "node --import tsx scripts/seed.ts",
+        cwd: fileURLToPath(new URL("../web/", import.meta.url)),
+        memo: false,
+        timeout: "2 minutes",
+        env: {
+          [DevEnv.names.seedId]: yield* Config.nonEmptyString(DevEnv.names.seedId),
+          [DevEnv.names.seedSecret]: yield* Config.redacted(DevEnv.names.seedSecret),
+          [DevEnv.names.seedApiUrl]: worker.url,
+          [DevEnv.names.url]: yield* Config.nonEmptyString(DevEnv.names.url),
+        },
+      });
+    }
 
     return yield* getUrls({
       app: web.url,

@@ -17,13 +17,6 @@ import { toLocalDateString } from "../src/lib/temporal/utils";
 import { ENTRIES, PAGES, SOURCE_GRAPH_DISPLAY_NAME } from "./demo-content";
 import type { Block, Inline } from "./demo-content";
 
-const outputPath = process.argv[2];
-
-if (process.argv.length !== 3 || !outputPath) {
-  console.error("Usage: tsx scripts/generate-demo-graph.ts <output-path>");
-  process.exit(1);
-}
-
 const pageIds = Record.map(PAGES, () => nanoid());
 
 function inlineToJSON(inline: Inline) {
@@ -82,17 +75,23 @@ for (const entry of ENTRIES) {
 
 events.sort((a, b) => DateTime.toEpochMillis(a.createdAt) - DateTime.toEpochMillis(b.createdAt));
 
-const bundle: BackupSchema.Bundle = {
+export const bundle: BackupSchema.Bundle = {
   version: 1,
   exportedAt: now,
   sourceGraphDisplayName: SOURCE_GRAPH_DISPLAY_NAME,
   events,
 };
 
-const json = Effect.runSync(BackupSchema.encodeFile(bundle));
+if (import.meta.main) {
+  const outputPath = process.argv[2];
 
-writeFileSync(outputPath, json);
+  if (process.argv.length !== 3 || !outputPath) {
+    console.error("Usage: tsx scripts/generate-demo-graph.ts <output-path>");
+    process.exit(1);
+  }
 
-console.log(
-  `Wrote ${events.length} events (${Object.keys(PAGES).length} pages, ${ENTRIES.length} entries) to ${outputPath}`,
-);
+  writeFileSync(outputPath, Effect.runSync(BackupSchema.encodeFile(bundle)));
+  console.log(
+    `Wrote ${events.length} events (${Object.keys(PAGES).length} pages, ${ENTRIES.length} entries) to ${outputPath}`,
+  );
+}

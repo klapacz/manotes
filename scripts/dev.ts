@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
+import { randomBytes, randomUUID } from "node:crypto";
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
-import { Effect } from "effect";
+import { Effect, Option } from "effect";
 import { Command, Flag } from "effect/unstable/cli";
 // Bootstrap must load before the shared package has been built.
 import { DevEnv } from "../packages/shared/src/dev-env.ts";
@@ -17,13 +18,17 @@ export const cli = Command.make(
       Flag.withDefault(false),
       Flag.withDescription("Also run the browser extension dev server."),
     ),
+    seedType: Flag.choice("seed-type", ["demo"]).pipe(Flag.optional),
   },
-  ({ extension }) => launch(extension),
+  ({ extension, seedType }) => launch(extension, seedType),
 ).pipe(Command.withDescription("Run Manotes in the current Jujutsu workspace through Portless."));
 
 // Stage selection and builds must happen before Alchemy imports the stack.
 // A resource inside that stack cannot bootstrap its own stage or build inputs.
-const launch = Effect.fn("Dev.launch")(function* (extension: boolean) {
+const launch = Effect.fn("Dev.launch")(function* (
+  extension: boolean,
+  seedType: Option.Option<"demo">,
+) {
   const { workspace, stage } = yield* DevStage.get(root);
 
   for (const task of ["@manotes/shared#build", "@manotes/sql-sqlite-wasm#build"]) {
@@ -38,6 +43,9 @@ const launch = Effect.fn("Dev.launch")(function* (extension: boolean) {
     [DevEnv.names.webPort]: String(ports.web),
     [DevEnv.names.apiPort]: String(ports.api),
     [DevEnv.names.extensionPort]: String(ports.extension),
+    [DevEnv.names.seedType]: Option.getOrElse(seedType, () => ""),
+    [DevEnv.names.seedId]: randomUUID(),
+    [DevEnv.names.seedSecret]: Option.isSome(seedType) ? randomBytes(32).toString("base64url") : "",
   };
 
   const packages = ["@manotes/shared", "@manotes/sql-sqlite-wasm", "@manotes/worker"];
