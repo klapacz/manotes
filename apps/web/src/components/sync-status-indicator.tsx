@@ -20,14 +20,14 @@ const SyncStatus = bindRt((rt) =>
 export function SyncStatusIndicator() {
   const status = createAtomStore(SyncStatus, initialStatus);
 
+  // Keep the element mounted when Ready: scripts/enter.ts reads its sync attributes.
   return (
-    <Show
-      when={
-        status.value.mode === "cloud" && status.value.syncState !== "Ready" ? status.value : null
-      }
-    >
+    <Show when={status.value.mode === "cloud" ? status.value : null}>
       {(cloud) => (
         <div
+          hidden={cloud().syncState === "Ready"}
+          data-sync-state={cloud().syncState}
+          data-sync-pending={String(cloud().hasPending)}
           class={cx(
             "rounded-md border px-3 py-2 text-xs",
             Match.value(cloud().syncState).pipe(
