@@ -1,6 +1,7 @@
 import type { ComponentProps } from "solid-js";
 import { splitProps } from "solid-js";
 import { Command as CommandPrimitive } from "cmdk-solid";
+import { Dialog as DialogPrimitive } from "@kobalte/core";
 
 import { cx } from "../../lib/cva";
 import { SearchIcon } from "../icons";
@@ -37,25 +38,54 @@ export const Command = (props: CommandProps) => {
 export type CommandDialogProps = ComponentProps<typeof CommandPrimitive.Dialog> & {
   title?: string;
   description?: string;
+  onCloseAutoFocus?: (event: Event) => void;
 };
 
 export const CommandDialog = (props: CommandDialogProps) => {
-  const [, rest] = splitProps(props, ["contentClassName", "overlayClassName", "class"]);
+  const [, dialogProps, rest] = splitProps(
+    props,
+    ["contentClassName", "overlayClassName", "class", "container", "onCloseAutoFocus"],
+    [
+      "open",
+      "defaultOpen",
+      "onOpenChange",
+      "id",
+      "modal",
+      "preventScroll",
+      "forceMount",
+      "translations",
+    ],
+  );
 
+  // Composition from cmdk-solid@1.1.2 dist/index.jsx (Dialog), using the app's
+  // Kobalte version to expose close autofocus. Keep our existing markup and styles.
   return (
-    <CommandPrimitive.Dialog
-      data-slot="command-dialog"
-      contentClassName={cx(
-        "bg-bg data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 data-[closed]:zoom-out-95 data-[expanded]:zoom-in-95 fixed left-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-hidden rounded-lg shadow-lg duration-200 sm:max-w-lg",
-        props.contentClassName,
-      )}
-      overlayClassName={cx(
-        "data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 bg-overlay fixed inset-0 z-50",
-        props.overlayClassName,
-      )}
-      class={cx(commandDialogClass, props.class)}
-      {...rest}
-    />
+    <DialogPrimitive.Root {...dialogProps}>
+      <DialogPrimitive.Portal mount={props.container}>
+        <DialogPrimitive.Overlay
+          cmdk-overlay=""
+          class={cx(
+            "data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 bg-overlay fixed inset-0 z-50",
+            props.overlayClassName,
+          )}
+        />
+        <DialogPrimitive.Content
+          aria-label={props.label}
+          cmdk-dialog=""
+          onCloseAutoFocus={props.onCloseAutoFocus}
+          class={cx(
+            "bg-bg data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 data-[closed]:zoom-out-95 data-[expanded]:zoom-in-95 fixed left-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-hidden rounded-lg shadow-lg duration-200 sm:max-w-lg",
+            props.contentClassName,
+          )}
+        >
+          <CommandPrimitive
+            data-slot="command-dialog"
+            class={cx(commandDialogClass, props.class)}
+            {...rest}
+          />
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 };
 

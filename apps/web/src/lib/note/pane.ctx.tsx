@@ -81,6 +81,9 @@ export function paneLinkOptions(ctx: Ctx, transform: PaneCursor.Transform) {
     to: "/$graph",
     search: { panes: transform(toCursor(ctx)) },
     viewTransition: false,
+    // PaneScroll and the virtual lists own scrolling. Router restoration would
+    // reapply the previous scrollLeft after render, cancelling pane scrolls.
+    resetScroll: false,
   });
 }
 

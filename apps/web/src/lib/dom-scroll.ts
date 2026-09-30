@@ -1,4 +1,14 @@
-export function isCenteredInScrollParent(el: HTMLElement, tolerance = 1): boolean {
+/** Center `el` in its scroll parent; resolves once a smooth scroll settles there. */
+export function center(el: HTMLElement, behavior: ScrollBehavior = "smooth"): Promise<void> {
+  if (isCenteredInScrollParent(el)) return Promise.resolve();
+
+  const centered = behavior === "smooth" ? waitForCenter(el) : Promise.resolve();
+  el.scrollIntoView({ block: "nearest", inline: "center", behavior });
+
+  return centered;
+}
+
+function isCenteredInScrollParent(el: HTMLElement, tolerance = 1): boolean {
   const container = getScrollParent(el);
 
   if (!container) return true;
@@ -12,7 +22,7 @@ export function isCenteredInScrollParent(el: HTMLElement, tolerance = 1): boolea
   return Math.abs(elCenter - containerCenter) <= tolerance;
 }
 
-export function getScrollParent(el: HTMLElement): HTMLElement | null {
+function getScrollParent(el: HTMLElement): HTMLElement | null {
   let node = el.parentElement;
 
   while (node) {
@@ -25,44 +35,25 @@ export function getScrollParent(el: HTMLElement): HTMLElement | null {
   return null;
 }
 
-export function scrollIntoNearestY(el: HTMLElement, behavior: ScrollBehavior = "auto"): void {
-  const container = getVerticalScrollParent(el);
-
-  if (!container) return;
-
-  const elRect = el.getBoundingClientRect();
-  const containerRect = container.getBoundingClientRect();
-  const above = elRect.top - containerRect.top;
-  const below = elRect.bottom - containerRect.bottom;
-
-  if (above < 0) container.scrollBy({ top: above, behavior });
-  else if (below > 0) container.scrollBy({ top: below, behavior });
-}
-
-function getVerticalScrollParent(el: HTMLElement): HTMLElement | null {
-  let node = el.parentElement;
-
-  while (node) {
-    if (/(auto|scroll|overlay)/.test(getComputedStyle(node).overflowY)) return node;
-    node = node.parentElement;
-  }
-
-  return null;
-}
-
-export function waitForScroll(el: HTMLElement, timeout = 600): Promise<void> {
+/** Resolve once `el` settles centered in its scroll parent, or after `timeout`. */
+function waitForCenter(el: HTMLElement, timeout = 1000): Promise<void> {
   const container = getScrollParent(el);
 
   return new Promise((resolve) => {
     let timer: number;
 
+    // An interrupted earlier scroll can end first; keep waiting for this one.
+    const check = () => {
+      if (isCenteredInScrollParent(el)) done();
+    };
+
     const done = () => {
-      container?.removeEventListener("scrollend", done);
+      container?.removeEventListener("scrollend", check);
       clearTimeout(timer);
       resolve();
     };
 
-    container?.addEventListener("scrollend", done, { once: true });
+    container?.addEventListener("scrollend", check);
     timer = window.setTimeout(done, timeout);
   });
 }

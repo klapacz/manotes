@@ -15,6 +15,7 @@ import { Array as Arr, pipe, Option, Number } from "effect";
 import { DOMScroll } from "../dom-scroll";
 import { animate } from "motion";
 import { Focus } from "../../components/note/focus";
+import { PaneGrid } from "../../components/note/pane";
 
 type Props = {
   panes: Accessor<PaneCursor.Stack>;
@@ -152,33 +153,22 @@ export function Root(props: Props): JSX.Element {
     });
   }
 
-  async function scrollTo(item: Item) {
-    focus.focusNode(Focus.id(item.value().paneId).pane());
+  async function scrollTo(item: Item, behavior?: ScrollBehavior) {
+    // Focus may wait for the pane to load or be superseded; scrolling must not.
+    focus.request(Focus.id(item.value().paneId).pane());
 
-    if (!item.ref) return;
-
-    if (DOMScroll.isCenteredInScrollParent(item.ref)) return;
-
-    await DOMScroll.waitForScroll(item.ref);
+    if (item.ref) await DOMScroll.center(item.ref, behavior);
   }
 
   onMount(() => {
     const last = rendered()?.at(-1);
 
-    if (!last) return;
-
-    last.ref?.scrollIntoView({
-      block: "nearest",
-      inline: "center",
-    });
-
-    focus.focusWhenAvailable(Focus.id(last.value().paneId).pane());
+    if (last) void scrollTo(last, "instant");
   });
 
-  function move(ctx: Focus.ContextValue, delta: number) {
-    // eslint-disable-next-line anti-slop-effect/no-manual-tag-comparison -- The inline comparison lets TypeScript infer the find predicate.
-    const focusedPane = ctx.focusedStack().find((e) => e._tag === "PaneFocusId");
-    const actual = rendered();
+  function move(delta: number) {
+    const focusedPane = focus.targetId();
+    const actual = current();
 
     const index = pipe(
       Arr.findFirstIndex(actual, (value) => value.value().paneId === focusedPane?.paneId),
@@ -194,34 +184,34 @@ export function Root(props: Props): JSX.Element {
 
     if (!pane) return false;
 
-    focus.focusWhenAvailable(Focus.id(pane.value().paneId).pane());
+    void scrollTo(pane);
 
     return true;
   }
 
-  const fnode = Focus.createNode(() => ({
-    id: new Focus.PaneGridFocusId(),
-  }));
+  const fnode = Focus.createNode(() => ({}));
 
   fnode.registerShortcuts([
     {
       key: [["L"], ["ArrowRight"]],
       allowRepeat: true,
-      handler: () => move(fnode, 1),
+      handler: () => move(1),
     },
     {
       key: [["H"], ["ArrowLeft"]],
       allowRepeat: true,
-      handler: () => move(fnode, -1),
+      handler: () => move(-1),
     },
   ]);
 
   return (
     <Focus.NodeProvider node={fnode}>
       <Context.Provider value={{ scrollToPane }}>
-        <For each={rendered()}>
-          {(item) => props.children(item.value, item.index, (el) => (item.ref = el))}
-        </For>
+        <Focus.Element as={PaneGrid}>
+          <For each={rendered()}>
+            {(item) => props.children(item.value, item.index, (el) => (item.ref = el))}
+          </For>
+        </Focus.Element>
       </Context.Provider>
     </Focus.NodeProvider>
   );

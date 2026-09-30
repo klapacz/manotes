@@ -3,12 +3,16 @@ import { describe, expect, it } from "vite-plus/test";
 import { PaneCursor } from "./pane.cursor";
 import { PaneMake } from "./pane.make";
 import { PaneSchema } from "./pane.schema";
+import { NoteSchema } from "../note.schema";
 
 const decodePane = Schema.decodeUnknownSync(PaneSchema.Pane);
 
 describe("PaneCursor.inputMatches", () => {
   it("matches note inputs by note ID and ignores pane ID", () => {
-    const pane = PaneSchema.Pane.cases.note.make({ paneId: "pane-a", id: "note-a" });
+    const pane = PaneSchema.Pane.cases.note.make({
+      paneId: PaneSchema.Id.make("pane-a"),
+      id: NoteSchema.Id.make("note-a"),
+    });
 
     expect(PaneCursor.inputMatches(PaneMake.note("note-a"))(pane)).toBe(true);
     expect(PaneCursor.inputMatches(PaneMake.note("note-b"))(pane)).toBe(false);
@@ -16,7 +20,7 @@ describe("PaneCursor.inputMatches", () => {
 
   it("matches stream inputs with omitted defaults or explicit undefined fields", () => {
     const pane = PaneSchema.Pane.cases.stream.make({
-      paneId: "pane-a",
+      paneId: PaneSchema.Id.make("pane-a"),
       filter: { type: "notes" },
       sort: "date",
     });
@@ -43,13 +47,13 @@ describe("PaneCursor.inputMatches", () => {
 
   it("distinguishes stream filters and sort order", () => {
     const pane = PaneSchema.Pane.cases.stream.make({
-      paneId: "pane-a",
+      paneId: PaneSchema.Id.make("pane-a"),
       filter: { type: "notes", backlinksTo: "note-a" },
       sort: "date",
     });
 
     const differentSort = PaneSchema.Pane.cases.stream.make({
-      paneId: "pane-b",
+      paneId: PaneSchema.Id.make("pane-b"),
       filter: { type: "notes", backlinksTo: "note-a" },
       sort: "updated",
     });

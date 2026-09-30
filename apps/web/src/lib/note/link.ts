@@ -10,5 +10,7 @@ export function getOptions(opts: GetOptonsOpts): LinkOptions {
     from: "/$graph/",
     to: "/$graph",
     search: { panes: [PaneMake.note(opts.id)] },
+    // Panes own their scrolling; see PaneCtx.linkOptions.
+    resetScroll: false,
   });
 }

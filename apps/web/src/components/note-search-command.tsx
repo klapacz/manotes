@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/solid-router";
 import { Stream, Array, flow } from "effect";
 import type { JSX } from "solid-js";
 import { Index, createEffect, createSignal, onCleanup } from "solid-js";
-import { NoteRepo, bindRt, createAtomState, createAtomStore } from "../lib";
+import { NoteRepo, type NoteSchema, bindRt, createAtomState, createAtomStore } from "../lib";
 import { NoteFormat } from "../lib/note";
 import {
   CommandDialog,
@@ -18,6 +18,15 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
   const navigate = useNavigate();
   const [noteFilter, setNoteFilter, noteFilterAtom] = createAtomState("");
   const [isCommandOpen, setIsCommandOpen] = createSignal(false);
+  let opener: HTMLElement | undefined;
+
+  const setOpen = (open: boolean) => {
+    if (open && !isCommandOpen()) {
+      opener = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
+    }
+
+    setIsCommandOpen(open);
+  };
 
   const notes = createAtomStore(
     bindRt((rt) =>
@@ -37,7 +46,7 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
         );
       }),
     ),
-    Array.empty<{ id: string; title: string }>(),
+    Array.empty<{ id: NoteSchema.Id; title: string }>(),
   );
 
   createEffect(() => {
@@ -47,7 +56,7 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
       if (!event.metaKey && !event.ctrlKey) return;
 
       event.preventDefault();
-      setIsCommandOpen((open) => !open);
+      setOpen(!isCommandOpen());
     };
 
     document.addEventListener("keydown", onKeyDown);
@@ -59,8 +68,18 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
 
   return (
     <>
-      {props.children?.(() => setIsCommandOpen(true))}
-      <CommandDialog open={isCommandOpen()} onOpenChange={setIsCommandOpen} shouldFilter={false}>
+      {props.children?.(() => setOpen(true))}
+      <CommandDialog
+        open={isCommandOpen()}
+        onOpenChange={setOpen}
+        shouldFilter={false}
+        onCloseAutoFocus={(event) => {
+          // The keyboard palette has no Dialog.Trigger. Restore its actual opener
+          // at normal teardown; ProseMirror keeps its live mapped selection.
+          event.preventDefault();
+          opener?.focus({ preventScroll: true });
+        }}
+      >
         <CommandInput
           value={noteFilter()}
           onValueChange={(next) => {
@@ -76,6 +95,8 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
                 <CommandItem
                   value={note().id}
                   onSelect={() => {
+                    // Selecting a result hands focus to the destination, not the opener.
+                    opener = undefined;
                     setIsCommandOpen(false);
                     // HACK: clear filter after close animation to prevent flickering
                     setTimeout(() => setNoteFilter(""), 200);

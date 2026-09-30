@@ -1,6 +1,7 @@
 import { Effect, Schema } from "effect";
 import { nanoid } from "nanoid";
 import type * as NoteRepo from "../note.repo";
+import { NoteSchema } from "../note.schema";
 import * as TemporalSchema from "../temporal.schema";
 
 const StreamFilterType = Schema.Literals(["notes", "pages"]);
@@ -18,12 +19,16 @@ const StreamSort = Schema.Literals(["date", "updated"]).pipe(
 
 export type StreamSort = typeof StreamSort.Type;
 
-const PaneId = Schema.String.pipe(Schema.withDecodingDefaultKey(Effect.sync(makeId)));
+export const Id = Schema.NonEmptyString.pipe(Schema.brand("PaneId"));
+
+export type Id = typeof Id.Type;
+
+const PaneId = Id.pipe(Schema.withDecodingDefaultKey(Effect.sync(makeId)));
 
 export const Pane = Schema.TaggedUnion({
   note: {
     paneId: PaneId,
-    id: Schema.String,
+    id: NoteSchema.Id,
   },
   stream: {
     paneId: PaneId,
@@ -50,8 +55,8 @@ export function paneToQuery(pane: PaneStream): NoteRepo.StreamListQuery {
   };
 }
 
-function makeId(): string {
-  return nanoid();
+function makeId(): Id {
+  return Id.make(nanoid());
 }
 
 export * as PaneSchema from "./pane.schema";

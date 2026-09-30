@@ -2,6 +2,10 @@ import { Schema, SchemaGetter } from "effect";
 import type { UnknownNodeJSON } from "./node-json";
 import * as TemporalSchema from "./temporal.schema";
 
+export const Id = Schema.NonEmptyString.pipe(Schema.brand("NoteId"));
+
+export type Id = typeof Id.Type;
+
 const ContentValue = Schema.declare<UnknownNodeJSON>((_x): _x is UnknownNodeJSON => true);
 
 export const Content = Schema.String.pipe(
@@ -15,7 +19,7 @@ export const Content = Schema.String.pipe(
 export const MaterializedYUpdate = Schema.Union([Schema.Null, Schema.Uint8Array]);
 
 export const Record = Schema.Struct({
-  id: Schema.String,
+  id: Id,
   title: Schema.Union([Schema.String, Schema.Null]),
   content: Content,
   text: Schema.String,
@@ -29,7 +33,7 @@ export const Record = Schema.Struct({
 export type Record = typeof Record.Type;
 
 export const Preview = Schema.Struct({
-  id: Schema.String,
+  id: Id,
   title: Schema.Union([Schema.String, Schema.Null]),
   text: Schema.String,
   date: TemporalSchema.PlainDateString,
@@ -47,7 +51,7 @@ export type BootRecord = typeof BootRecord.Type;
 
 /** Ordering/grouping metadata for stream lists; content stays out of list queries. */
 export const Meta = Schema.Struct({
-  id: Schema.String,
+  id: Id,
   date: Schema.String,
   updatedAt: Schema.DateTimeUtcFromString,
 });

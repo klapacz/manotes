@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/solid-router";
-import { splitProps, type ParentProps, type Ref } from "solid-js";
+import { splitProps, type ComponentProps, type Ref } from "solid-js";
 import { MatchTag } from "../../lib";
 import { callHandler } from "../../lib/call-handler";
 import { PaneCursor } from "../../lib/note/pane.cursor";
@@ -10,11 +10,12 @@ import { NoteLinkScope, type NoteLinkRenderer } from "../../lib/note/link-compon
 import { PaneNote } from "./pane-note";
 import { PaneStream } from "./pane-stream";
 
-export function PaneGrid(props: ParentProps) {
+export function PaneGrid(props: ComponentProps<"main">) {
   return (
-    <main class="flex h-full min-h-0 snap-x snap-mandatory overflow-x-auto overflow-y-hidden px-[calc((100vw-min(44rem,100vw))/2)]">
-      {props.children}
-    </main>
+    <main
+      {...props}
+      class="flex h-full min-h-0 snap-x snap-mandatory overflow-x-auto overflow-y-hidden px-[calc((100vw-min(44rem,100vw))/2)]"
+    />
   );
 }
 

@@ -1,4 +1,4 @@
-import { Option, Effect, Stream, Array as Arr, Equal, Number, Predicate } from "effect";
+import { Effect, Stream, Predicate } from "effect";
 import {
   Show,
   createEffect,
@@ -6,9 +6,11 @@ import {
   createSignal,
   getOwner,
   onMount,
+  on,
   type ComponentProps,
 } from "solid-js";
-import { VList } from "virtua/solid";
+import { VirtualList } from "../../lib/virtual-list";
+import type { NoteSchema } from "../../lib/note.schema";
 import {
   MatchTag,
   NoteStreamCache,
@@ -25,12 +27,13 @@ import { PaneStreamFilter } from "./pane-stream-filter";
 import { Focus } from "./focus";
 import { PaneStreamRow } from "./pane-stream-row";
 import { PaneActions, PaneEmptyState, PaneShell } from "./shared";
-import { DOMScroll } from "../../lib/dom-scroll";
 
 const PRELOAD_EDITOR_COUNT = 12;
 
 export function PaneStream(props: ComponentProps<"section">) {
   const pane = PaneCtx.useStream();
+  const focus = Focus.use();
+  const fid = Focus.useId();
   const [refreshToken, setRefreshToken] = createSignal(0);
   const queryAtom = createSyncedAtom(() => PaneSchema.paneToQuery(pane()));
   const refreshTokenAtom = createSyncedAtom(refreshToken);
@@ -78,76 +81,65 @@ export function PaneStream(props: ComponentProps<"section">) {
 
   const createNote = NoteCreate.useCreateNote();
 
-  const handleCreate = () => {
+  const createNoteOn = (date: string | undefined) => {
     if (!Predicate.isTagged(state, "Success")) return;
     createNote(
-      {
-        date: pane().filter.date,
-        pool: state.value.pool,
-        payload: NoteCreate.prefilledPayload(pane()),
-      },
+      { date, pool: state.value.pool, payload: NoteCreate.prefilledPayload(pane()) },
       (note) => {
         refresh();
-        fnode.focusWhenAvailable(fid.editor(note.id));
+        focus.request(fid.editor(note.id), { reveal: "always" });
       },
     );
   };
 
-  const fid = Focus.useId();
+  const handleCreate = () => createNoteOn(pane().filter.date);
 
-  const listOrder = createMemo(() => {
-    if (!Predicate.isTagged(state, "Success")) return [];
+  // From a note, create beside it on its date; otherwise use the pane's date.
+  const createNearFocus = () => {
+    const noteId = Focus.noteIn(pane().paneId, focus.activeId());
+    const rows = Predicate.isTagged(state, "Success") ? state.value.rows : [];
+    const row = rows.find((row) => row.note.id === noteId);
 
-    return noteIdsFromRows(state.value.rows).map(fid.note);
-  });
+    createNoteOn(row ? row.note.date : pane().filter.date);
+  };
 
-  const [lastFocused, setLastFocused] = createSignal<Focus.FocusId>();
-  createEffect(() => {
-    const ids = listOrder();
+  // Rendering, keyboard order and retention all derive from these same rows.
+  const listOrder = createMemo(() =>
+    Predicate.isTagged(state, "Success") ? noteIdsFromRows(state.value.rows) : [],
+  );
 
-    if (fnode.focused() && Arr.isArrayNonEmpty(ids)) {
-      const last = lastFocused();
+  const [lastFocused, setLastFocused] = createSignal<NoteSchema.Id>();
 
-      if (last && Arr.contains(ids, last)) {
-        return fnode.focusWhenAvailable(last);
-      }
+  const pendingNote = () => Focus.noteIn(pane().paneId, focus.pendingId());
 
-      fnode.focusWhenAvailable(Arr.headNonEmpty(ids));
-    }
-  });
+  const retained = () => [lastFocused(), pendingNote()].filter((id) => id !== undefined);
 
   const move = (delta: number) => {
     const ids = listOrder();
 
-    if (!Arr.isArrayNonEmpty(ids)) return false;
+    if (ids.length === 0) return false;
 
-    const at = Arr.findFirstIndex(ids, (id) => {
-      const focusedId = fnode.focusedId();
+    const noteId = Focus.noteIn(pane().paneId, focus.targetId());
+    const at = noteId ? ids.indexOf(noteId) : -1;
 
-      return focusedId !== null && Equal.equals(id, focusedId);
-    });
+    const nextIndex = Math.max(0, Math.min(ids.length - 1, at < 0 ? 0 : at + delta));
 
-    const nextIndex = at.pipe(
-      Option.map((idx) => idx + delta),
-      Option.map(Number.clamp({ minimum: 0, maximum: ids.length - 1 })),
-      Option.getOrElse(() => 0),
-    );
-
-    fnode.focusNode(ids[nextIndex]!);
+    focus.request(fid.note(ids[nextIndex]!), { reveal: "always" });
 
     return true;
   };
 
   const fnode = Focus.createNode(() => ({
     id: fid.pane(),
-    syncFocusWithin: (element) => {
-      if (DOMScroll.isCenteredInScrollParent(element)) return;
+    enabled: !Predicate.isTagged(state, "Loading"),
+    focus: (element) => {
+      element.focus({ preventScroll: true });
+      const ids = listOrder();
+      const previous = lastFocused();
+      const target = previous && ids.includes(previous) ? previous : ids[0];
 
-      element.scrollIntoView({
-        block: "nearest",
-        inline: "center",
-        behavior: "smooth",
-      });
+      // A remembered note still in view keeps its reading position.
+      if (target) focus.request(fid.note(target), { reveal: "if-hidden" });
     },
   }));
 
@@ -166,19 +158,23 @@ export function PaneStream(props: ComponentProps<"section">) {
       key: NoteCreate.shortcut,
       enabled: () => Predicate.isTagged(state, "Success"),
       handler: () => {
-        handleCreate();
+        createNearFocus();
 
         return true;
       },
     },
   ]);
 
-  // TODO: get from stack not single id
-  fnode.createChangeListener((id) => {
-    if (Predicate.isTagged(id, "NoteFocusId") && id.paneId === pane().paneId) {
-      setLastFocused(id);
-    }
-  });
+  createEffect(
+    on(
+      () => focus.activeId(),
+      (id) => {
+        const noteId = Focus.noteIn(pane().paneId, id);
+
+        if (noteId) setLastFocused(noteId);
+      },
+    ),
+  );
 
   return (
     <Focus.NodeProvider node={fnode}>
@@ -200,7 +196,7 @@ export function PaneStream(props: ComponentProps<"section">) {
                   when={state().value.rows.length > 0}
                   fallback={<PaneEmptyState>No notes in this pane.</PaneEmptyState>}
                 >
-                  <RevealedRows rows={state().value.rows} onRefresh={refresh} />
+                  <RevealedRows rows={state().value.rows} retained={retained()} />
                 </Show>
               </EditorPool.Provider>
             ),
@@ -211,7 +207,10 @@ export function PaneStream(props: ComponentProps<"section">) {
   );
 }
 
-function RevealedRows(props: { rows: ReadonlyArray<NoteStream.ListItem>; onRefresh: () => void }) {
+function RevealedRows(props: {
+  rows: ReadonlyArray<NoteStream.ListItem>;
+  retained: ReadonlyArray<NoteSchema.Id>;
+}) {
   const [revealed, setRevealed] = createSignal(false);
 
   onMount(() => {
@@ -228,17 +227,17 @@ function RevealedRows(props: { rows: ReadonlyArray<NoteStream.ListItem>; onRefre
         "opacity-0": !revealed(),
       }}
     >
-      <VList data={props.rows} bufferSize={1200} style={{ height: "100%" }}>
-        {(item) => <PaneStreamRow row={item} onRefresh={props.onRefresh} />}
-      </VList>
+      <VirtualList.Root data={props.rows} key={(row) => row.note.id} retained={props.retained}>
+        {(item) => <PaneStreamRow row={item} />}
+      </VirtualList.Root>
     </div>
   );
 }
 
-function preloadNoteIds(rows: ReadonlyArray<NoteStream.ListItem>): ReadonlyArray<string> {
+function preloadNoteIds(rows: ReadonlyArray<NoteStream.ListItem>): ReadonlyArray<NoteSchema.Id> {
   return noteIdsFromRows(rows).slice(0, PRELOAD_EDITOR_COUNT);
 }
 
-function noteIdsFromRows(rows: ReadonlyArray<NoteStream.ListItem>): ReadonlyArray<string> {
+function noteIdsFromRows(rows: ReadonlyArray<NoteStream.ListItem>): ReadonlyArray<NoteSchema.Id> {
   return rows.map((row) => row.note.id);
 }

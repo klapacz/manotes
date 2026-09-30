@@ -9,7 +9,9 @@ import { PaneSchema } from "../../lib/note/pane.schema";
 import { PaneScroll } from "../../lib/note/pane.scroll";
 import { ArrowsOutIcon, ArrowUpRightIcon, LinkIcon, PlusIcon, RebaseIcon, XIcon } from "../icons";
 import { Button } from "../ui/button";
+import { callHandler } from "../../lib/call-handler";
 import { cx } from "../../lib/cva";
+import { DOMScroll } from "../../lib/dom-scroll";
 import { DatePicker } from "./date-picker";
 import { splitProps, type ComponentProps, type ParentProps } from "solid-js";
 import type { NoteSchema } from "../../lib";
@@ -18,9 +20,24 @@ import { Focus } from "./focus";
 const route = getRouteApi("/$graph/");
 
 export function PaneShell(props: ComponentProps<"section">) {
+  const [local, rest] = splitProps(props, ["children", "onFocusIn"]);
+
   return (
-    <section class="h-full w-[min(44rem,100vw)] shrink-0 snap-center outline-none" {...props}>
-      <div class="flex flex-col gap-4 h-full min-h-0 px-6 py-4">{props.children}</div>
+    <section
+      class="h-full w-[min(44rem,100vw)] shrink-0 snap-center outline-none"
+      {...rest}
+      onFocusIn={(event) => {
+        callHandler(event, local.onFocusIn);
+
+        // Entering a pane smoothly centers it horizontally. Moves within the pane
+        // must not, or they would undo an explicit scroll to another pane.
+        const element = event.currentTarget;
+        const from = event.relatedTarget;
+
+        if (!(from instanceof Node && element.contains(from))) void DOMScroll.center(element);
+      }}
+    >
+      <div class="flex flex-col gap-4 h-full min-h-0 px-6 py-4">{local.children}</div>
     </section>
   );
 }
@@ -193,9 +210,8 @@ function NoteActionButton(props: ParentProps<{ label: string; onClick: () => voi
   );
 }
 
-// A focusable note row. The left accent bar marks the active note instead of a
-// full background fill: subtle while editing (focusWithin), solid once the row
-// itself is the focus target (j/k navigation).
+// The background marks the active note; the top border marks browse mode.
+// Keep this highlight while a local control or portal temporarily takes focus.
 export function NoteShell(props: ComponentProps<"article">) {
   const fnode = Focus.useNode();
   const [local, rest] = splitProps(props, ["class", "classList", "children"]);
@@ -206,8 +222,8 @@ export function NoteShell(props: ComponentProps<"article">) {
       class={cx("transition-colors relative border-t border-t-border-subtle", local.class)}
       classList={{
         ...local.classList,
-        "bg-bg-subtle": fnode.focusWithin(),
-        "border-t-primary-border": fnode.focused(),
+        "bg-bg-subtle": fnode.highlightWithin(),
+        "border-t-primary-border": fnode.highlighted(),
       }}
     >
       {local.children}

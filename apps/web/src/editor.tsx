@@ -1,14 +1,6 @@
 import "./editor.css";
 
-import {
-  createEditor,
-  defineKeymap,
-  Priority,
-  union,
-  withPriority,
-  type Editor as ProsekitEditor,
-} from "prosekit/core";
-import { Selection } from "prosekit/pm/state";
+import { createEditor, Priority, union, withPriority } from "prosekit/core";
 import { ProseKit } from "prosekit/solid";
 import { createEffect, createMemo, on, Show, type JSX } from "solid-js";
 import * as Y from "yjs";
@@ -28,6 +20,8 @@ import { AsyncResult, type Atom } from "effect/unstable/reactivity";
 import BacklinkMenu, { TabMenu } from "./lib/editor/backlink/menu";
 import { useAtomValue } from "@effect/atom-solid";
 import { Focus } from "./components/note/focus";
+import type { NoteSchema } from "./lib/note.schema";
+import { EditorFocus } from "./lib/editor/focus.extension";
 
 export type BootState = Data.TaggedEnum<{
   Loading: {};
@@ -44,12 +38,16 @@ export const BootState = Data.taggedEnum<BootState>();
 
 const EDITOR_LOAD_ERROR_MESSAGE = "Failed to load note content.";
 
-type Props = EditorSyncService.SetupInput & {
+type Props = {
+  noteId: NoteSchema.Id;
+  attached?: boolean;
   onBootStateChange?: (state: BootState) => void;
   style?: JSX.CSSProperties;
 };
 
 export default function Editor(props: Props): JSX.Element {
+  const focus = Focus.use();
+
   // The editor stack is recreated per note-id boundary so future route/view
   // changes can swap notes in-place without leaking Y.Doc/editor state.
   const state = createMemo(
@@ -61,13 +59,7 @@ export default function Editor(props: Props): JSX.Element {
         const extension = union([
           defineYjs({ doc }),
           defineAppExtension(),
-          defineKeymap({
-            Escape: () => {
-              fnode.focusParent();
-
-              return true;
-            },
-          }),
+          EditorFocus.define(() => focus.requestParent()),
         ]);
 
         const editor = createEditor({ extension });
@@ -161,34 +153,19 @@ export default function Editor(props: Props): JSX.Element {
     props.onBootStateChange?.(bootState());
   });
 
-  const selection = createSelectionRestoration(() => state().editor);
-
-  const focusEditor = Effect.fn("Editor.focusEditor")(function* () {
-    yield* Deferred.await(ready);
-
-    const { editor } = state();
-
-    if (!BootState.$is("Ready")(bootState())) return;
-
-    selection.restore();
-    editor.view.focus();
-  });
-
   const fid = Focus.useId();
 
   const fnode = Focus.createNode(() => ({
     id: fid.editor(props.noteId),
-    onFocus: () => Effect.runPromise(focusEditor()),
-    onKeyDown: (event) => {
-      if (event.key !== "Escape") return;
-      fnode.focusParent();
+    enabled: (props.attached ?? true) && BootState.$is("Ready")(bootState()),
+    focus: (_element, options) => {
+      // The pooled view already has a live, transaction-mapped selection.
+      const view = state().editor.view;
+      view.focus();
 
-      return true;
+      if (options?.reveal) view.dispatch(view.state.tr.scrollIntoView());
     },
   }));
-
-  let suppressNextFocus = false;
-  fnode.createChangeListener(() => (suppressNextFocus = false));
 
   return (
     <Show when={state()} keyed>
@@ -201,26 +178,12 @@ export default function Editor(props: Props): JSX.Element {
             }}
           />
           <div
-            ref={current.editor.mount}
+            ref={(element) => {
+              current.editor.mount(element);
+              fnode.setElement(element);
+            }}
             class="outline-none p-6 pt-0"
             style={props.style}
-            onMouseDown={(event) => {
-              const target = event.target;
-
-              if (!(target instanceof HTMLElement)) return;
-
-              if (target.closest("[data-backlink]")) {
-                suppressNextFocus = true;
-                event.stopPropagation();
-              }
-            }}
-            onFocusIn={() => {
-              if (suppressNextFocus) return;
-              fnode.focusSelf?.();
-            }}
-            onFocusOut={() => {
-              selection.save();
-            }}
           />
           <BacklinkMenu currentNoteId={props.noteId} />
           <TabMenu />
@@ -228,37 +191,6 @@ export default function Editor(props: Props): JSX.Element {
       )}
     </Show>
   );
-}
-
-function createSelectionRestoration(editor: () => ProsekitEditor) {
-  let savedSelection: unknown;
-
-  function parse(): Selection {
-    const doc = editor().view.state.doc;
-
-    if (savedSelection) {
-      try {
-        return Selection.fromJSON(doc, savedSelection);
-      } catch {
-        // Fall back to the previous behavior when the document changed enough that
-        // the saved selection can no longer be resolved.
-      }
-    }
-
-    return Selection.atEnd(doc);
-  }
-
-  function restore() {
-    const view = editor().view;
-    const selection = parse();
-    view.dispatch(view.state.tr.setSelection(selection));
-  }
-
-  function save() {
-    savedSelection = editor().view.state.selection.toJSON();
-  }
-
-  return { save, restore };
 }
 
 export interface YjsOptions {

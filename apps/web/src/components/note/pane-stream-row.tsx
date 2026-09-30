@@ -1,4 +1,6 @@
 import { useAtomValue } from "@effect/atom-solid";
+import { AsyncResult } from "effect/unstable/reactivity";
+import { BootState } from "../../editor";
 import { Option, Stream } from "effect";
 import { createEffect, createMemo, onCleanup, Show } from "solid-js";
 import {
@@ -13,12 +15,10 @@ import { EditorPool } from "./editor-pool";
 import { Focus } from "./focus";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { NoteStream } from "../../lib/note/stream";
-import { DOMScroll } from "../../lib/dom-scroll";
-import { NoteCreate } from "./note-create";
 import { NoteActions, NoteDivider, NoteShell } from "./shared";
+import { VirtualList } from "../../lib/virtual-list";
 
-export function PaneStreamRow(props: { row: NoteStream.ListItem; onRefresh: () => void }) {
-  const createNote = NoteCreate.useCreateNote();
+export function PaneStreamRow(props: { row: NoteStream.ListItem }) {
   // The stream stops refreshing a note once it leaves the query (it is only
   // retained); the shared per-note cache keeps its metadata live regardless.
   const noteIdAtom = createSyncedAtom(() => props.row.note.id);
@@ -46,51 +46,32 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem; onRefresh: () =
   const slotAtom = bindRt((rt) => rt.atom((get) => pool.get(get(noteIdAtom))));
   const slotResult = useAtomValue(slotAtom);
 
-  const fid = Focus.useId();
+  const listRow = VirtualList.useRow();
 
-  const fnode = Focus.createNode(() => ({
-    id: fid.note(props.row.note.id),
-    syncFocus: (element) => {
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          // Keep scrolling owned by the app focus/scroll code; native focus scrolling
-          // can otherwise race horizontal pane centering and virtual-list autoscroll.
-          element.focus({ preventScroll: true });
-          // Keep horizontal pane scrolling owned by the pane focus node; native focus
-          // scrolling can otherwise race it and leave the target pane off-center.
-          // Scroll to the row wrapper, not the card: the wrapper includes the group
-          // divider that sits in the gutter above the card, so autoscroll keeps it
-          // visible instead of pinning the card top and clipping the label.
-          DOMScroll.scrollIntoNearestY(element);
-        }),
-      );
-    },
-  }));
+  const editorReady = () => {
+    const slot = slotResult();
 
-  fnode.registerShortcuts([
-    {
-      key: NoteCreate.shortcut,
-      handler: () => {
-        createNote(
-          { date: props.row.note.date, pool, payload: NoteCreate.prefilledPayload(pane()) },
-          (note) => {
-            props.onRefresh();
-            fnode.focusWhenAvailable(fid.editor(note.id));
-          },
-        );
+    return AsyncResult.isSuccess(slot) && BootState.$is("Ready")(slot.value.bootState());
+  };
 
-        return true;
+  const fnode = Focus.createNoteNode(
+    () => props.row.note.id,
+    () => ({
+      // Reveal only a booted row: its editor supplies Virtua with the real height.
+      enabled: listRow.ready() && editorReady(),
+      focus: (element, options) => {
+        element.focus({ preventScroll: true });
+
+        // Virtua owns vertical scrolling; the request decides whether to use it.
+        if (
+          options?.reveal === "always" ||
+          (options?.reveal === "if-hidden" && !listRow.visible())
+        ) {
+          listRow.reveal();
+        }
       },
-    },
-    {
-      key: [["Enter"]],
-      handler: () => {
-        fnode.focusNode(fid.editor(props.row.note.id));
-
-        return true;
-      },
-    },
-  ]);
+    }),
+  );
 
   return (
     <Focus.NodeProvider node={fnode}>
@@ -110,8 +91,8 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem; onRefresh: () =
             when={slotResult()}
             onSuccess={(slot) => {
               createEffect(() => {
-                slot().setFocusParent(fnode);
-                onCleanup(() => slot().setFocusParent(undefined));
+                slot().setAttached(listRow.ready());
+                onCleanup(() => slot().setAttached(false));
               });
 
               return slot().container;

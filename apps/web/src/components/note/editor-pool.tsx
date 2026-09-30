@@ -11,7 +11,7 @@ import {
   type ParentProps,
 } from "solid-js";
 import Editor, { BootState } from "../../editor";
-import { Focus } from "./focus";
+import type { NoteSchema } from "../../lib/note.schema";
 
 // Pool of persistent editors (corvu createPersistent-style: render once into a
 // detached root that outlives row unmounts, reattach the resolved DOM on
@@ -27,7 +27,7 @@ const SLOT_IDLE_TTL = "7 seconds";
 const PRELOAD_CONCURRENCY = 10;
 
 export class EditorBootError extends Data.TaggedError("EditorBootError")<{
-  readonly noteId: string;
+  readonly noteId: NoteSchema.Id;
   readonly message: string;
 }> {}
 
@@ -35,13 +35,13 @@ export type Slot = {
   readonly container: HTMLDivElement;
   readonly bootState: Accessor<BootState>;
   readonly ready: Effect.Effect<void, EditorBootError>;
-  readonly setFocusParent: (node: Focus.Node | undefined) => void;
+  readonly setAttached: (attached: boolean) => void;
 };
 
 export type Pool = {
-  readonly get: (noteId: string) => Effect.Effect<Slot, never, Scope.Scope>;
+  readonly get: (noteId: NoteSchema.Id) => Effect.Effect<Slot, never, Scope.Scope>;
   readonly preload: (
-    noteIds: ReadonlyArray<string>,
+    noteIds: ReadonlyArray<NoteSchema.Id>,
   ) => Effect.Effect<void, EditorBootError, Scope.Scope>;
 };
 
@@ -50,7 +50,7 @@ export const make = Effect.fn("EditorPool.make")(function* (owner: Owner | null)
   // (graph runtime, atom registry, NoteLinkScope, router).
   const slots = yield* RcMap.make({
     idleTimeToLive: SLOT_IDLE_TTL,
-    lookup: (noteId: string) =>
+    lookup: (noteId: NoteSchema.Id) =>
       Effect.acquireRelease(
         Effect.sync(() => {
           if (!owner) throw new Error("EditorPool requires a Solid owner");
@@ -61,9 +61,12 @@ export const make = Effect.fn("EditorPool.make")(function* (owner: Owner | null)
       ),
   });
 
-  const get = (noteId: string): Effect.Effect<Slot, never, Scope.Scope> => RcMap.get(slots, noteId);
+  const get = (noteId: NoteSchema.Id): Effect.Effect<Slot, never, Scope.Scope> =>
+    RcMap.get(slots, noteId);
 
-  const preload = Effect.fn("EditorPool.preload")(function* (noteIds: ReadonlyArray<string>) {
+  const preload = Effect.fn("EditorPool.preload")(function* (
+    noteIds: ReadonlyArray<NoteSchema.Id>,
+  ) {
     yield* Effect.forEach(noteIds, (noteId) => Effect.flatMap(get(noteId), (slot) => slot.ready), {
       concurrency: PRELOAD_CONCURRENCY,
       discard: true,
@@ -91,7 +94,7 @@ type PooledSlot = Slot & {
   readonly dispose: () => void;
 };
 
-function createSlot(noteId: string): PooledSlot {
+function createSlot(noteId: NoteSchema.Id): PooledSlot {
   const ready = Deferred.makeUnsafe<void, EditorBootError>();
 
   return createRoot((dispose) => {
@@ -108,16 +111,13 @@ function createSlot(noteId: string): PooledSlot {
       });
     };
 
-    const fnode = Focus.useNode();
-    const [focusParent, setFocusParent] = createSignal<Focus.Node>();
+    const [attached, setAttached] = createSignal(false);
 
     // SAFETY: Solid's DOM JSX transform returns the intrinsic `div` element synchronously;
     // its public JSX.Element type is broader than the generated runtime value.
     const container = (
       <div>
-        <Focus.NodeProvider node={focusParent() ?? fnode}>
-          <Editor noteId={noteId} onBootStateChange={setBootStateReady} />
-        </Focus.NodeProvider>
+        <Editor noteId={noteId} attached={attached()} onBootStateChange={setBootStateReady} />
       </div>
     ) as HTMLDivElement;
 
@@ -125,7 +125,7 @@ function createSlot(noteId: string): PooledSlot {
       container,
       bootState,
       ready: Deferred.await(ready),
-      setFocusParent,
+      setAttached,
       dispose,
     } satisfies PooledSlot;
   });

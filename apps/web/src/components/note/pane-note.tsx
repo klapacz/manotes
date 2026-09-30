@@ -22,12 +22,12 @@ import {
   PaneShell,
 } from "./shared";
 import { Focus } from "./focus";
-import { DOMScroll } from "../../lib/dom-scroll";
 
 const route = getRouteApi("/$graph/");
 
 export function PaneNote(props: ComponentProps<"section">) {
   const navigate = route.useNavigate();
+  const focus = Focus.use();
   const createNote = NoteCreate.useCreateNote();
 
   const handleCreate = () =>
@@ -49,31 +49,16 @@ export function PaneNote(props: ComponentProps<"section">) {
 
   const fid = Focus.useId();
 
+  // Entering the pane enters its only note, like a stream entering a row.
   const fnode = Focus.createNode(() => ({
     id: fid.pane(),
-    syncFocusWithin: (element) => {
-      if (DOMScroll.isCenteredInScrollParent(element)) return;
-
-      element.scrollIntoView({
-        block: "nearest",
-        inline: "center",
-        behavior: "smooth",
-      });
-    },
-    syncFocus(element) {
+    focus: (element) => {
       element.focus({ preventScroll: true });
+      focus.request(fid.note(pane().id));
     },
   }));
 
   fnode.registerShortcuts([
-    {
-      key: [["Enter"]],
-      handler: () => {
-        fnode.focusNode(fid.editor(pane().id));
-
-        return true;
-      },
-    },
     {
       key: NoteCreate.shortcut,
       handler: () => {
@@ -86,7 +71,7 @@ export function PaneNote(props: ComponentProps<"section">) {
 
   return (
     <Focus.NodeProvider node={fnode}>
-      <PaneShell {...props}>
+      <Focus.Element as={PaneShell} {...props}>
         <div class="flex justify-end">
           <PaneActions onCreate={handleCreate} />
         </div>
@@ -107,19 +92,23 @@ export function PaneNote(props: ComponentProps<"section">) {
             ),
           }}
         />
-      </PaneShell>
+      </Focus.Element>
     </Focus.NodeProvider>
   );
 }
 
 function PaneNoteInner(props: { note: NoteSchema.Meta }) {
+  const fnode = Focus.createNoteNode(() => props.note.id);
+
   return (
-    <Focus.Element class="overflow-y-auto outline-none group">
-      <NoteDivider date={props.note.date} />
-      <NoteShell>
-        <NoteActions note={props.note} sort="date" />
-        <Editor noteId={props.note.id} style={{ "min-height": "30svh" }} />
-      </NoteShell>
-    </Focus.Element>
+    <Focus.NodeProvider node={fnode}>
+      <Focus.Element class="overflow-y-auto outline-none group">
+        <NoteDivider date={props.note.date} />
+        <NoteShell>
+          <NoteActions note={props.note} sort="date" />
+          <Editor noteId={props.note.id} style={{ "min-height": "30svh" }} />
+        </NoteShell>
+      </Focus.Element>
+    </Focus.NodeProvider>
   );
 }
