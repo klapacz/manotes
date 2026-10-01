@@ -96,10 +96,15 @@ export function Root(props: Props): JSX.Element {
   function prepareScrollTransition(opts: Parameters<OnListChange<Item>>[0]) {
     const finish = () => opts.finishRemoved(opts.removed);
 
-    // Previously rendered stack, excluding panes added by this transition.
-    const prev = opts.list.filter((item) => !opts.added.includes(item));
-    // Next stack, excluding panes waiting for exit completion.
-    const next = opts.list.filter((item) => !opts.removed.includes(item));
+    // The list also keeps panes still exiting from an earlier transition, e.g.
+    // when closing twice quickly. They belong to neither stack.
+    const prev = opts.list.filter(
+      (item) => opts.unchanged.includes(item) || opts.removed.includes(item),
+    );
+
+    const next = opts.list.filter(
+      (item) => opts.unchanged.includes(item) || opts.added.includes(item),
+    );
 
     // Shared leading panes: A B C -> A B D has prefix A B.
     const prefix = Arr.takeWhile(next, (item, i) => item === prev[i]);
