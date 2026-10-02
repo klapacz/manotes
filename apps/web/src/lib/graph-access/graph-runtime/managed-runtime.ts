@@ -1,10 +1,8 @@
 import { Effect, Exit, Fiber, Layer, Scope } from "effect";
-import { Atom } from "effect/unstable/reactivity";
 
 export interface ManagedRuntime<R, ER> {
   readonly scope: Scope.Closeable;
   readonly memoMap: Layer.MemoMap;
-  readonly atom: Atom.AtomRuntime<R, ER>;
   readonly runFork: <A, E>(
     effect: Effect.Effect<A, E, R>,
     options?: Effect.RunOptions,
@@ -27,7 +25,6 @@ export const createScoped = Effect.fn("GraphAccessGraphRuntimeManagedRuntime.cre
     const scope = yield* Scope.make();
     const memoMap = yield* Layer.makeMemoMap;
     const services = yield* Layer.buildWithMemoMap(layer, memoMap, scope);
-    const atom = Atom.context({ memoMap })(layer);
 
     const provide = <A, E>(effect: Effect.Effect<A, E, R>) =>
       Effect.provideContext(effect, services);
@@ -35,7 +32,6 @@ export const createScoped = Effect.fn("GraphAccessGraphRuntimeManagedRuntime.cre
     const runtime: ManagedRuntime<R, ER> = {
       scope,
       memoMap,
-      atom,
       runFork: (effect, options) => Effect.runFork(provide(effect), options),
       runSyncExit: (effect) => Effect.runSyncExit(provide(effect)),
       runSync: (effect) => Effect.runSync(provide(effect)),

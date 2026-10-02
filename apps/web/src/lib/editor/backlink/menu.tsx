@@ -6,7 +6,7 @@ import {
   AutocompleteList,
   AutocompletePopover,
 } from "../prosekit-solid-autocomplete";
-import { For, Show, onSettled } from "solid-js";
+import { For, Show, createMemo, createSignal, onSettled } from "solid-js";
 import {
   commandEmptyClass,
   commandItemBaseClass,
@@ -14,14 +14,14 @@ import {
   commandSurfaceClass,
 } from "../../../components/ui/command";
 import { NoteCreate } from "../../../components/note/note-create";
-import { NoteRepo, bindRt, createAtomState, createAtomStore, createSyncedAtom } from "../..";
+import { NoteRepo } from "../..";
+import { createEffectCommand, runStream } from "../../solid-effect";
 import { cx } from "../../cva";
 import { NoteFormat } from "../../note";
 import type { AppExtension } from "../../../editor.extension";
 import * as BrowserExtensionClient from "../../browser-extension/client";
 import * as BrowserExtensionTabNoteService from "../../browser-extension/tab-note/service";
 import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
-import { useAtom } from "../../atom-solid";
 
 const BACKLINK_REGEX = /\[\[([^\]\n]*)$/u;
 
@@ -36,25 +36,20 @@ const EMPTY_BACKLINK_NOTES: BacklinkNote[] = [];
 
 const EMPTY_TAB_CANDIDATES: BrowserExtension.TabCandidate[] = [];
 
-const CreateTabNote = bindRt((rt) =>
-  rt.fn(
-    Effect.fn("LibEditorBacklinkMenu.createTabNote")(function* (
-      tab: BrowserExtension.TabCandidate,
-    ) {
-      const service = yield* BrowserExtensionTabNoteService.Service;
+const createTabNoteEffect = Effect.fn("LibEditorBacklinkMenu.createTabNote")(function* (
+  tab: BrowserExtension.TabCandidate,
+) {
+  const service = yield* BrowserExtensionTabNoteService.Service;
 
-      return yield* service.createFromTab(tab);
-    }),
-  ),
-);
+  return yield* service.createFromTab(tab);
+});
 
 export default function BacklinkMenu(props: { currentNoteId: string }) {
   const editor = useEditor<AppExtension>();
   const onSelect = createBacklinkInsertion(editor);
 
-  const [query, setRawQuery, rawQueryAtom] = createAtomState("");
-  const currentNoteIdAtom = createSyncedAtom(() => props.currentNoteId);
-  const [isOpen, setOpen, openAtom] = createAtomState(false);
+  const [query, setRawQuery] = createSignal("");
+  const [isOpen, setOpen] = createSignal(false);
   useArrowKeyAliases(editor, isOpen);
 
   const createNote = NoteCreate.useCreateNote();
@@ -64,15 +59,14 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
       onSelect({ id: note.id, title: NoteFormat.label(note) }),
     );
 
-  const notes = createAtomStore(
-    bindRt((rt) =>
-      rt.atom((get) => {
-        const query = get(rawQueryAtom);
-        const currentNoteId = get(currentNoteIdAtom);
+  const notes = createMemo(
+    () => {
+      if (!isOpen()) return EMPTY_BACKLINK_NOTES;
 
-        if (!get(openAtom)) return Stream.succeed(EMPTY_BACKLINK_NOTES);
+      const currentNoteId = props.currentNoteId;
 
-        return NoteRepo.Service.use((repo) => repo.reactiveSearchPreview(query)).pipe(
+      return runStream(
+        NoteRepo.Service.use((repo) => repo.reactiveSearchPreview(query())).pipe(
           Stream.unwrap,
           Stream.map(
             flow(
@@ -84,10 +78,10 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
               Array.map(Struct.pick(["id", "title"])),
             ),
           ),
-        );
-      }),
-    ),
-    EMPTY_BACKLINK_NOTES,
+        ),
+      );
+    },
+    { loadingValue: EMPTY_BACKLINK_NOTES },
   );
 
   return (
@@ -100,14 +94,14 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
       <AutocompleteList filter={() => true}>
         <AutocompleteEmpty class={commandEmptyClass}>No matching notes</AutocompleteEmpty>
 
-        <For each={notes.value}>
+        <For each={notes()} keyed={(note) => note.id}>
           {(note) => (
             <AutocompleteItem
               class={cx(commandItemBaseClass, "data-focused:bg-control-hover data-focused:text-fg")}
-              onSelect={() => onSelect(note)}
-              value={note.id}
+              onSelect={() => onSelect(note())}
+              value={note().id}
             >
-              {note.title}
+              {note().title}
             </AutocompleteItem>
           )}
         </For>
@@ -133,24 +127,20 @@ export function TabMenu() {
   const editor = useEditor<AppExtension>();
   const onSelect = createBacklinkInsertion(editor);
 
-  const [, setRawQuery, rawQueryAtom] = createAtomState("");
-  const [isOpen, setOpen, openAtom] = createAtomState(false);
+  const [query, setRawQuery] = createSignal("");
+  const [isOpen, setOpen] = createSignal(false);
   useArrowKeyAliases(editor, isOpen);
 
-  const tabs = createAtomStore(
-    bindRt((rt) =>
-      rt.atom((get) => {
-        const query = get(rawQueryAtom);
+  const tabs = createMemo(
+    () => {
+      if (!isOpen()) return EMPTY_TAB_CANDIDATES;
 
-        if (!get(openAtom)) return Stream.succeed(EMPTY_TAB_CANDIDATES);
-
-        return BrowserExtensionClient.watchTabs.pipe(Stream.map(filterTabs(query)));
-      }),
-    ),
-    EMPTY_TAB_CANDIDATES,
+      return runStream(BrowserExtensionClient.watchTabs.pipe(Stream.map(filterTabs(query()))));
+    },
+    { loadingValue: EMPTY_TAB_CANDIDATES },
   );
 
-  const [, createTabNote] = useAtom(CreateTabNote, { mode: "promise" });
+  const createTabNote = createEffectCommand(createTabNoteEffect);
 
   const onTabSelect = async (tab: BrowserExtension.TabCandidate) => {
     try {
@@ -169,16 +159,16 @@ export function TabMenu() {
       <AutocompleteList filter={() => true}>
         <AutocompleteEmpty class={commandEmptyClass}>No matching tabs</AutocompleteEmpty>
 
-        <For each={tabs.value}>
+        <For each={tabs()} keyed={(tab) => tab.id}>
           {(tab) => (
             <AutocompleteItem
               class={cx(commandItemBaseClass, "data-focused:bg-control-hover data-focused:text-fg")}
-              onSelect={() => onTabSelect(tab)}
-              value={tab.id.toString()}
+              onSelect={() => onTabSelect(tab())}
+              value={tab().id.toString()}
             >
               <div class="min-w-0">
-                <div class="truncate">{tab.title}</div>
-                <div class="truncate text-xs text-fg-subtle">{tab.url}</div>
+                <div class="truncate">{tab().title}</div>
+                <div class="truncate text-xs text-fg-subtle">{tab().url}</div>
               </div>
             </AutocompleteItem>
           )}

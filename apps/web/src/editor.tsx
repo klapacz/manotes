@@ -2,7 +2,7 @@ import "./editor.css";
 
 import { createEditor, Priority, union, withPriority } from "prosekit/core";
 import { ProseKit } from "./lib/editor/prosekit-solid";
-import { createEffect, createMemo, Show, untrack } from "solid-js";
+import { createMemo, Show, untrack, type Accessor } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import * as Y from "yjs";
 import {
@@ -14,12 +14,11 @@ import {
   type YjsUndoPluginOptions,
 } from "prosekit/extensions/yjs";
 import { defineAppExtension } from "./editor.extension";
-import { EditorSyncService, MatchTag, bindRt, createSyncedAtom } from "./lib";
+import { EditorSyncService, MatchTag } from "./lib";
+import { runStream } from "./lib/solid-effect";
 import { getProsemirrorXmlFragment } from "./lib/prosemirror/yjs";
-import { Cause, Data, Deferred, Effect, SubscriptionRef } from "effect";
-import { AsyncResult, type Atom } from "effect/unstable/reactivity";
+import { Cause, Data, Deferred, Effect, Queue, Stream } from "effect";
 import BacklinkMenu, { TabMenu } from "./lib/editor/backlink/menu";
-import { useAtomValue } from "./lib/atom-solid";
 import { Focus } from "./components/note/focus";
 import type { NoteSchema } from "./lib/note.schema";
 import { EditorFocus } from "./lib/editor/focus.extension";
@@ -42,7 +41,8 @@ const EDITOR_LOAD_ERROR_MESSAGE = "Failed to load note content.";
 type Props = {
   noteId: NoteSchema.Id;
   attached?: boolean;
-  onBootStateChange?: (state: BootState) => void;
+  /** Receives the editor's boot state accessor once, during setup. */
+  onBootState?: (bootState: Accessor<BootState>) => void;
   style?: JSX.CSSProperties;
 };
 
@@ -73,82 +73,25 @@ export default function Editor(props: Props): JSX.Element {
     });
   });
 
-  const editorStateAtom = createSyncedAtom(() => {
-    const current = state();
+  // The boot stream owns the doc's sync session; superseding or disposing the
+  // memo interrupts it and destroys the doc.
+  const boot = createMemo<BootStateSnapshot | undefined>(
+    () => {
+      const { doc, noteId } = state();
 
-    return {
-      doc: current.doc,
-      noteId: current.noteId,
-    };
-  });
-
-  const ready = Deferred.makeUnsafe<void>();
-
-  const editorBootStateAtom = bindRt((rt) =>
-    rt.subscriptionRef(
-      Effect.fn("Editor.bootState")(function* (get: Atom.AtomContext) {
-        const { doc, noteId } = get(editorStateAtom);
-        yield* Effect.addFinalizer(() => Effect.sync(() => doc.destroy()));
-
-        const bootStateRef = yield* SubscriptionRef.make<BootStateSnapshot>({
-          doc,
-          state: BootState.Loading(),
-        });
-
-        yield* Effect.gen(function* () {
-          const service = yield* EditorSyncService.Service;
-
-          yield* Effect.all(
-            [
-              Effect.scoped(service.setupDoc(doc, { noteId }, ready)),
-              Effect.gen(function* () {
-                yield* Deferred.await(ready);
-                yield* SubscriptionRef.set(bootStateRef, { doc, state: BootState.Ready() });
-              }),
-            ],
-            { concurrency: "unbounded" },
-          );
-        }).pipe(
-          Effect.catchCause((cause) => {
-            if (Cause.hasInterruptsOnly(cause)) return Effect.void;
-
-            return SubscriptionRef.set(bootStateRef, {
-              doc,
-              state: BootState.Error({ message: EDITOR_LOAD_ERROR_MESSAGE }),
-            });
-          }),
-          Effect.forkScoped,
-        );
-
-        return bootStateRef;
-      }),
-    ),
+      return runStream(bootStates(doc, noteId));
+    },
+    { loadingValue: undefined },
   );
 
-  const bootStateResult = useAtomValue(editorBootStateAtom);
+  // A stale snapshot from the previous note reads as Loading for the new doc.
+  const bootState = createMemo((): BootState => {
+    const snapshot = boot();
 
-  const bootState = createMemo(() => {
-    const currentDoc = state().doc;
-    const result = bootStateResult();
-
-    // Runtime atoms keep the previous successful value while the next async read
-    // is spinning up. Tagging boot state with the Y.Doc lets us ignore that stale
-    // Ready/Error from the previous note and keep the new session in Loading.
-    if (AsyncResult.isSuccess(result)) {
-      return result.value.doc === currentDoc ? result.value.state : BootState.Loading();
-    }
-
-    return AsyncResult.matchWithError(result, {
-      onInitial: () => BootState.Loading(),
-      onSuccess: () => BootState.Loading(),
-      onError: () => BootState.Error({ message: EDITOR_LOAD_ERROR_MESSAGE }),
-      onDefect: () => BootState.Error({ message: EDITOR_LOAD_ERROR_MESSAGE }),
-    });
+    return snapshot?.doc === state().doc ? snapshot.state : BootState.Loading();
   });
 
-  createEffect(bootState, (state) => {
-    props.onBootStateChange?.(state);
-  });
+  untrack(() => props.onBootState?.(bootState));
 
   const fid = Focus.useId();
 
@@ -212,5 +155,41 @@ export function defineYjs(options: YjsOptions) {
       defineYjsSyncPlugin({ ...sync, fragment }),
     ]),
     Priority.high,
+  );
+}
+
+function bootStates(doc: Y.Doc, noteId: NoteSchema.Id) {
+  return Stream.callback((queue: Queue.Queue<BootStateSnapshot, Cause.Done>) =>
+    Effect.gen(function* () {
+      yield* Effect.addFinalizer(() => Effect.sync(() => doc.destroy()));
+      Queue.offerUnsafe(queue, { doc, state: BootState.Loading() });
+
+      const ready = yield* Deferred.make<void>();
+      const service = yield* EditorSyncService.Service;
+
+      yield* Effect.all(
+        [
+          Effect.scoped(service.setupDoc(doc, { noteId }, ready)),
+          Deferred.await(ready).pipe(
+            Effect.andThen(
+              Effect.sync(() => Queue.offerUnsafe(queue, { doc, state: BootState.Ready() })),
+            ),
+          ),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(
+        Effect.catchCause((cause) =>
+          Cause.hasInterruptsOnly(cause)
+            ? Effect.void
+            : Effect.sync(() =>
+                Queue.offerUnsafe(queue, {
+                  doc,
+                  state: BootState.Error({ message: EDITOR_LOAD_ERROR_MESSAGE }),
+                }),
+              ),
+        ),
+        Effect.forkScoped,
+      );
+    }),
   );
 }

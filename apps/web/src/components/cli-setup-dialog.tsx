@@ -1,10 +1,8 @@
-import { useAtom } from "../lib/atom-solid";
-import { Effect } from "effect";
+import { Effect, Exit } from "effect";
 import { FetchHttpClient } from "effect/unstable/http";
-import { Atom } from "effect/unstable/reactivity";
-import { omit } from "solid-js";
+import { Show, omit } from "solid-js";
 import type { ValidComponent } from "@solidjs/web";
-import { MatchAsyncResult } from "../lib";
+import { createEffectCommand } from "../lib/solid-effect";
 import { CliSetup } from "../lib/graph-access/commands/cli-setup";
 import type * as LocalRegistry from "../lib/graph-access/local-registry/schema";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
@@ -45,16 +43,16 @@ export function CliSetupDialog<T extends ValidComponent = typeof Button>(props: 
 }
 
 function CliSetupContent(props: { readonly graph: LocalRegistry.CloudRecord }) {
-  // Each opening owns fresh mutation state; creating the atom does not issue a token.
-  const prepareAtom = GraphAccessRuntime.atom.fn((graph: LocalRegistry.CloudRecord) =>
-    CliSetup.prepare({ graph, origin: window.location.origin }).pipe(
-      Effect.provide(FetchHttpClient.layer),
-    ),
+  // Each opening owns fresh command state; creating it does not issue a token.
+  const prepare = createEffectCommand(
+    (graph: LocalRegistry.CloudRecord) =>
+      CliSetup.prepare({ graph, origin: window.location.origin }).pipe(
+        Effect.provide(FetchHttpClient.layer),
+      ),
+    GraphAccessRuntime.rt,
   );
 
-  const [prepared, prepare] = useAtom(() => prepareAtom);
-  const copyAtom = Atom.fn(CliSetup.copy);
-  const [copied, copy] = useAtom(() => copyAtom);
+  const copy = createEffectCommand(CliSetup.copy);
 
   return (
     <DialogContent>
@@ -73,12 +71,11 @@ function CliSetupContent(props: { readonly graph: LocalRegistry.CloudRecord }) {
           copied graph key.
         </AlertDescription>
       </Alert>
-      <MatchAsyncResult
-        when={prepared()}
-        onFailure={() => (
-          <p role="alert">Could not prepare the command. Check your connection and sign-in.</p>
-        )}
-        onSuccess={(command) => (
+      <Show when={prepare.error()}>
+        <p role="alert">Could not prepare the command. Check your connection and sign-in.</p>
+      </Show>
+      <Show when={prepare.value()}>
+        {(command) => (
           <Input
             aria-label="CLI init command"
             readonly
@@ -87,33 +84,38 @@ function CliSetupContent(props: { readonly graph: LocalRegistry.CloudRecord }) {
             onFocus={(event) => event.currentTarget.select()}
           />
         )}
-      />
-      <MatchAsyncResult
-        when={copied()}
-        onSuccess={() => (
-          <Alert variant="success">
-            <AlertDescription>Copied</AlertDescription>
-          </Alert>
+      </Show>
+      <Show when={copy.exit()}>
+        {(exit) => (
+          <Show
+            when={Exit.isSuccess(exit())}
+            fallback={<p role="alert">Could not copy. Try again or copy the command manually.</p>}
+          >
+            <Alert variant="success">
+              <AlertDescription>Copied</AlertDescription>
+            </Alert>
+          </Show>
         )}
-        onFailure={() => (
-          <p role="alert">Could not copy. Try again or copy the command manually.</p>
-        )}
-      />
+      </Show>
       <DialogFooter>
-        <MatchAsyncResult
-          when={prepared()}
+        <Show
+          when={prepare.value()}
           fallback={
-            <Button disabled={prepared().waiting} onClick={() => prepare(props.graph)}>
-              {prepared().waiting ? "Preparing..." : "Prepare init command"}
+            <Button
+              disabled={prepare.pending()}
+              onClick={() => void prepare(props.graph).catch(() => {})}
+            >
+              {prepare.pending() ? "Preparing..." : "Prepare init command"}
             </Button>
           }
-          onSuccess={(command) => (
+        >
+          {(command) => (
             // A separate click keeps clipboard access within a fresh user gesture.
-            <Button disabled={copied().waiting} onClick={() => copy(command())}>
-              {copied().waiting ? "Copying..." : "Copy init command"}
+            <Button disabled={copy.pending()} onClick={() => void copy(command()).catch(() => {})}>
+              {copy.pending() ? "Copying..." : "Copy init command"}
             </Button>
           )}
-        />
+        </Show>
       </DialogFooter>
     </DialogContent>
   );

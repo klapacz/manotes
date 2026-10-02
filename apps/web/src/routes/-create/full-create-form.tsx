@@ -1,4 +1,5 @@
-import { useAtom } from "../../lib/atom-solid";
+import { Show } from "solid-js";
+import { createEffectCommand } from "../../lib/solid-effect";
 import { Link, Navigate } from "@tanstack/solid-router";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import * as GraphRegistryContract from "@manotes/shared/graph-registry/contract";
@@ -6,7 +7,7 @@ import { Effect, Schema } from "effect";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button, buttonVariants } from "../../components/ui/button";
 import { AppForm, useAppForm } from "../../components/ui/form";
-import { MatchAsyncResult, MatchTag } from "../../lib";
+import { MatchFailure, MatchTag } from "../../lib";
 import * as GraphAccessRuntime from "../../lib/graph-access/runtime";
 import * as GraphAccessCommandsProvision from "../../lib/graph-access/commands/provision";
 
@@ -19,28 +20,26 @@ type CreateGraphSubmitMeta = {
   mode: "local" | "cloud";
 };
 
-const createGraphAtom = GraphAccessRuntime.atom.fn(
-  Effect.fn("RoutesCreate.createGraph")(function* ({
-    mode,
-    displayName,
-    password,
-  }: {
-    mode: "local" | "cloud";
-    displayName: string;
-    password: string;
-  }) {
-    const provision = yield* GraphAccessCommandsProvision.Service;
+const createGraphEffect = Effect.fn("RoutesCreate.createGraph")(function* ({
+  mode,
+  displayName,
+  password,
+}: {
+  mode: "local" | "cloud";
+  displayName: string;
+  password: string;
+}) {
+  const provision = yield* GraphAccessCommandsProvision.Service;
 
-    if (mode === "local") {
-      return yield* provision.createLocal({ displayName });
-    }
+  if (mode === "local") {
+    return yield* provision.createLocal({ displayName });
+  }
 
-    return yield* provision.createSynced({ displayName, password });
-  }),
-);
+  return yield* provision.createSynced({ displayName, password });
+});
 
 export function FullCreateForm() {
-  const [createResult, createGraph] = useAtom(() => createGraphAtom, { mode: "promise" });
+  const createGraph = createEffectCommand(createGraphEffect, GraphAccessRuntime.rt);
   const initialSubmitMeta: CreateGraphSubmitMeta = { mode: "local" };
 
   const form = useAppForm(() => ({
@@ -63,9 +62,11 @@ export function FullCreateForm() {
 
   return (
     <AppForm form={form} AppForm={form.AppForm}>
-      <MatchAsyncResult
-        when={createResult()}
-        onSuccess={(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
+      <Show when={createGraph.value()}>
+        {(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
+      </Show>
+      <MatchFailure
+        exit={createGraph.exit()}
         onError={(error) => (
           <Alert variant="destructive">
             <AlertDescription>

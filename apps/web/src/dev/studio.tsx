@@ -1,8 +1,7 @@
-import { useAtom } from "../lib/atom-solid";
 import { Effect } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { onSettled } from "solid-js";
-import { bindRt } from "../lib";
+import { createEffectCommand } from "../lib/solid-effect";
 import { connectStudioBridge, type ResultSet, type StudioRunner } from "./studio-bridge";
 
 // Default embed: Outerbase's hosted SQLite embed build. Talking to the hosted
@@ -13,44 +12,38 @@ const DEFAULT_EMBED_URL = "https://studio.outerbase.com/embed/sqlite";
 // Run a single statement and grab write metadata in the same serialized
 // connection turn. wa-sqlite runs one statement per call, so changes() /
 // last_insert_rowid() observed right after refer to that statement.
-const RunQuery = bindRt((rt) =>
-  rt.fn(
-    Effect.fn("DevStudio.runQuery")(function* (statement: string) {
-      const sql = yield* SqlClient.SqlClient;
-      // eslint-disable-next-line anti-slop/no-unsafe-dictionary-type -- The SQL console accepts arbitrary queries and columns.
-      const rows = yield* sql.unsafe<Record<string, unknown>>(statement);
+const runQueryEffect = Effect.fn("DevStudio.runQuery")(function* (statement: string) {
+  const sql = yield* SqlClient.SqlClient;
+  // eslint-disable-next-line anti-slop/no-unsafe-dictionary-type -- The SQL console accepts arbitrary queries and columns.
+  const rows = yield* sql.unsafe<Record<string, unknown>>(statement);
 
-      const [meta] = yield* sql.unsafe<{ id: number; changes: number }>(
-        "SELECT last_insert_rowid() AS id, changes() AS changes",
-      );
+  const [meta] = yield* sql.unsafe<{ id: number; changes: number }>(
+    "SELECT last_insert_rowid() AS id, changes() AS changes",
+  );
 
-      return {
-        rows,
-        lastInsertRowid: meta?.id,
-        rowsAffected: meta?.changes ?? 0,
-      } satisfies ResultSet;
-    }),
-  ),
-);
+  return {
+    rows,
+    lastInsertRowid: meta?.id,
+    rowsAffected: meta?.changes ?? 0,
+  } satisfies ResultSet;
+});
 
-const RunTransaction = bindRt((rt) =>
-  rt.fn(
-    Effect.fn("DevStudio.runTransaction")(function* (statements: ReadonlyArray<string>) {
-      const sql = yield* SqlClient.SqlClient;
+const runTransactionEffect = Effect.fn("DevStudio.runTransaction")(function* (
+  statements: ReadonlyArray<string>,
+) {
+  const sql = yield* SqlClient.SqlClient;
 
-      return yield* sql
-        .withTransaction(
-          Effect.forEach(statements, (statement) =>
-            // eslint-disable-next-line anti-slop/no-unsafe-dictionary-type -- The SQL console accepts arbitrary queries and columns.
-            Effect.map(sql.unsafe<Record<string, unknown>>(statement), (rows): ResultSet => ({
-              rows,
-            })),
-          ),
-        )
-        .pipe(Effect.orDie);
-    }),
-  ),
-);
+  return yield* sql
+    .withTransaction(
+      Effect.forEach(statements, (statement) =>
+        // eslint-disable-next-line anti-slop/no-unsafe-dictionary-type -- The SQL console accepts arbitrary queries and columns.
+        Effect.map(sql.unsafe<Record<string, unknown>>(statement), (rows): ResultSet => ({
+          rows,
+        })),
+      ),
+    )
+    .pipe(Effect.orDie);
+});
 
 export interface SqliteStudioProps {
   /** Override the embed URL (e.g. a self-hosted Studio build). */
@@ -62,11 +55,11 @@ export interface SqliteStudioProps {
 /**
  * Dev-only: embeds Outerbase Studio as a SQL console over the active graph's
  * wa-sqlite database. Must render under a `$graph` route so the graph runtime
- * (and its `SqlClient`) is in context via `bindRt`.
+ * (and its `SqlClient`) is the subtree's Effect runtime.
  */
 export function SqliteStudio(props: SqliteStudioProps) {
-  const [, runQuery] = useAtom(RunQuery, { mode: "promise" });
-  const [, runTransaction] = useAtom(RunTransaction, { mode: "promise" });
+  const runQuery = createEffectCommand(runQueryEffect);
+  const runTransaction = createEffectCommand(runTransactionEffect);
 
   const runner: StudioRunner = {
     query: (statement) => runQuery(statement),

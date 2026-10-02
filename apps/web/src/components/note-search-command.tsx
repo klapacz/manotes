@@ -1,8 +1,9 @@
 import { useNavigate } from "@tanstack/solid-router";
 import { Stream, Array, flow } from "effect";
-import { For, createSignal, onSettled } from "solid-js";
+import { For, createMemo, createSignal, onSettled } from "solid-js";
 import type { JSX } from "@solidjs/web";
-import { NoteRepo, type NoteSchema, bindRt, createAtomState, createAtomStore } from "../lib";
+import { NoteRepo, type NoteSchema } from "../lib";
+import { runStream } from "../lib/solid-effect";
 import { NoteFormat } from "../lib/note";
 import {
   CommandDialog,
@@ -16,7 +17,7 @@ import * as NoteLink from "../lib/note/link";
 
 export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.Element }) => {
   const navigate = useNavigate();
-  const [noteFilter, setNoteFilter, noteFilterAtom] = createAtomState("");
+  const [noteFilter, setNoteFilter] = createSignal("");
   const [isCommandOpen, setIsCommandOpen] = createSignal(false);
   let opener: HTMLElement | undefined;
 
@@ -28,12 +29,11 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
     setIsCommandOpen(open);
   };
 
-  const notes = createAtomStore(
-    bindRt((rt) =>
-      rt.atom((get) => {
-        const filter = get(noteFilterAtom);
-
-        return NoteRepo.Service.use((repo) => repo.reactiveSearchPreview(filter)).pipe(
+  // Each keystroke supersedes the previous query; its fiber is interrupted.
+  const notes = createMemo(
+    () =>
+      runStream(
+        NoteRepo.Service.use((repo) => repo.reactiveSearchPreview(noteFilter())).pipe(
           Stream.unwrap,
           Stream.map(
             flow(
@@ -43,10 +43,9 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
               })),
             ),
           ),
-        );
-      }),
-    ),
-    Array.empty<{ id: NoteSchema.Id; title: string }>(),
+        ),
+      ),
+    { loadingValue: Array.empty<{ id: NoteSchema.Id; title: string }>() },
   );
 
   onSettled(() => {
@@ -88,7 +87,7 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
         <CommandList>
           <CommandEmpty>No matching notes.</CommandEmpty>
           <CommandGroup heading="Notes">
-            <For each={notes.value} keyed={false}>
+            <For each={notes()} keyed={false}>
               {(note) => (
                 <CommandItem
                   value={note().id}

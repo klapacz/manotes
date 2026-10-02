@@ -2,7 +2,9 @@ import { Data, Deferred, Effect, RcMap, Scope } from "effect";
 import {
   createContext,
   createRoot,
+  createEffect,
   createSignal,
+  untrack,
   runWithOwner,
   useContext,
   type Accessor,
@@ -79,7 +81,8 @@ export const make = Effect.fn("EditorPool.make")(function* (owner: Owner | null)
 const Context = createContext<Pool | null>(null);
 
 export function Provider(props: ParentProps<{ pool: Pool }>): JSX.Element {
-  return <Context value={props.pool}>{props.children}</Context>;
+  // A pane's pool lives as long as the pane.
+  return <Context value={untrack(() => props.pool)}>{props.children}</Context>;
 }
 
 export function use(): Pool {
@@ -98,28 +101,32 @@ function createSlot(noteId: NoteSchema.Id): PooledSlot {
   const ready = Deferred.makeUnsafe<void, EditorBootError>();
 
   return createRoot((dispose) => {
-    const [bootState, setBootState] = createSignal<BootState>(BootState.Loading());
+    let editorBootState: Accessor<BootState> = () => BootState.Loading();
+    const bootState = () => editorBootState();
 
-    const setBootStateReady = (state: BootState) => {
-      setBootState(state);
+    // Rows detach from their cleanup on unmount, which runs in an owned scope.
+    const [attached, setAttached] = createSignal(false, { ownedWrite: true });
 
+    // SAFETY: Solid's DOM JSX transform returns the intrinsic `div` element synchronously;
+    // its public JSX.Element type is broader than the generated runtime value.
+    const container = (
+      <div>
+        <Editor
+          noteId={noteId}
+          attached={attached()}
+          onBootState={(state) => (editorBootState = state)}
+        />
+      </div>
+    ) as HTMLDivElement;
+
+    createEffect(bootState, (state) => {
       BootState.$match(state, {
         Loading: () => undefined,
         Ready: () => Effect.runSync(Deferred.succeed(ready, undefined)),
         Error: ({ message }) =>
           Effect.runSync(Deferred.fail(ready, new EditorBootError({ noteId, message }))),
       });
-    };
-
-    const [attached, setAttached] = createSignal(false);
-
-    // SAFETY: Solid's DOM JSX transform returns the intrinsic `div` element synchronously;
-    // its public JSX.Element type is broader than the generated runtime value.
-    const container = (
-      <div>
-        <Editor noteId={noteId} attached={attached()} onBootStateChange={setBootStateReady} />
-      </div>
-    ) as HTMLDivElement;
+    });
 
     return {
       container,

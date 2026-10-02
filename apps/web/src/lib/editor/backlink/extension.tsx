@@ -10,7 +10,7 @@ import {
 import { createEffect, createMemo } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import * as NoteCache from "../../note-cache.service";
-import { bindRt, createAtomStore, createSyncedAtom } from "../..";
+import { runStream } from "../../solid-effect";
 import { decodeBacklinkAttrs, type BacklinkAttrs } from "./spec";
 import { NoteFormat } from "../../note";
 import { NoteLink } from "../../note/link-component";
@@ -33,14 +33,11 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
   return function BacklinkView(props: SolidNodeViewProps): JSX.Element {
     const attrs = createMemo(() => decodeBacklinkAttrs(props.node.attrs));
     const noteId = () => attrs().id;
-    const noteIdAtom = createSyncedAtom(noteId);
 
-    const state = createAtomStore(
-      bindRt((rt) =>
-        rt.atom((get) => {
-          const noteId = get(noteIdAtom);
-
-          return NoteCache.Service.use((cache) => cache.changes(noteId)).pipe(
+    const state = createMemo(
+      () =>
+        runStream(
+          NoteCache.Service.use((cache) => cache.changes(noteId())).pipe(
             Stream.unwrap,
             Stream.map(
               Option.match({
@@ -49,14 +46,13 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
                 onNone: BacklinkLabelEntry.Missing,
               }),
             ),
-          );
-        }),
-      ),
-      BacklinkLabelEntry.Loading(),
+          ),
+        ),
+      { loadingValue: BacklinkLabelEntry.Loading() },
     );
 
     createEffect(
-      () => ({ id: noteId(), entry: state.value }),
+      () => ({ id: noteId(), entry: state() }),
       ({ id, entry }) => {
         BacklinkLabelEntry.$match(entry, {
           Loading: () => labelSnapshot.delete(id),
@@ -76,11 +72,11 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
       <NoteLink
         id={noteId()}
         data-backlink=""
-        data-backlink-state={state.value._tag}
+        data-backlink-state={state()._tag}
         data-backlink-id={noteId()}
         contenteditable="false"
       >
-        {label(state.value)}
+        {label(state())}
       </NoteLink>
     );
   } satisfies SolidNodeViewComponent;

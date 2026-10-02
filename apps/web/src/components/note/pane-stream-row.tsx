@@ -1,16 +1,8 @@
-import { useAtomValue } from "../../lib/atom-solid";
-import { AsyncResult } from "effect/unstable/reactivity";
 import { BootState } from "../../editor";
 import { Option, Stream } from "effect";
 import { createEffect, createMemo, Show } from "solid-js";
-import {
-  MatchAsyncResult,
-  NoteCache,
-  NoteSchema,
-  bindRt,
-  createAtomStore,
-  createSyncedAtom,
-} from "../../lib";
+import { NoteCache, NoteSchema } from "../../lib";
+import { runScoped, runStream } from "../../lib/solid-effect";
 import { EditorPool } from "./editor-pool";
 import { Focus } from "./focus";
 import { PaneCtx } from "../../lib/note/pane.ctx";
@@ -21,37 +13,47 @@ import { VirtualList } from "../../lib/virtual-list";
 export function PaneStreamRow(props: { row: NoteStream.ListItem }) {
   // The stream stops refreshing a note once it leaves the query (it is only
   // retained); the shared per-note cache keeps its metadata live regardless.
-  const noteIdAtom = createSyncedAtom(() => props.row.note.id);
-
-  const live = createAtomStore(
-    bindRt((rt) =>
-      rt.atom((get) =>
-        NoteCache.Service.use((cache) => cache.changes(get(noteIdAtom))).pipe(
+  const live = createMemo(
+    () =>
+      runStream(
+        NoteCache.Service.use((cache) => cache.changes(props.row.note.id)).pipe(
           Stream.unwrap,
           Stream.map(Option.getOrNull),
         ),
       ),
-    ),
-    null,
+    { loadingValue: null },
   );
 
-  const meta = createMemo((): NoteSchema.Meta => live.value ?? props.row.note);
+  const meta = createMemo((): NoteSchema.Meta => live() ?? props.row.note);
   const pane = PaneCtx.useStream();
 
   // Rows attach a pooled persistent editor instead of mounting their own;
   // scroll-back revisits reattach the same ProseMirror DOM instantly. The slot
-  // is acquired through an atom so its scope holds the pool's RcMap reference —
+  // is acquired in the memo's scope, which holds the pool's RcMap reference —
   // unmount releases it, and the pool's idle TTL decides eviction.
   const pool = EditorPool.use();
-  const slotAtom = bindRt((rt) => rt.atom((get) => pool.get(get(noteIdAtom))));
-  const slotResult = useAtomValue(slotAtom);
-
   const listRow = VirtualList.useRow();
 
-  const editorReady = () => {
-    const slot = slotResult();
+  const slot = createMemo<EditorPool.Slot | undefined>(
+    () => runScoped(pool.get(props.row.note.id)),
+    { loadingValue: undefined },
+  );
 
-    return AsyncResult.isSuccess(slot) && BootState.$is("Ready")(slot.value.bootState());
+  createEffect(
+    () => ({ slot: slot(), ready: listRow.ready() }),
+    ({ slot, ready }) => {
+      if (!slot) return;
+
+      slot.setAttached(ready);
+
+      return () => slot.setAttached(false);
+    },
+  );
+
+  const editorReady = () => {
+    const current = slot();
+
+    return current !== undefined && BootState.$is("Ready")(current.bootState());
   };
 
   const fnode = Focus.createNoteNode(
@@ -87,21 +89,7 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem }) {
             dirty={props.row.dirty}
             sort={pane().sort}
           />
-          <MatchAsyncResult
-            when={slotResult()}
-            onSuccess={(slot) => {
-              createEffect(
-                () => ({ slot: slot(), ready: listRow.ready() }),
-                ({ slot, ready }) => {
-                  slot.setAttached(ready);
-
-                  return () => slot.setAttached(false);
-                },
-              );
-
-              return slot().container;
-            }}
-          />
+          <Show when={slot()}>{(slot) => slot().container}</Show>
         </NoteShell>
       </Focus.Element>
     </Focus.NodeProvider>

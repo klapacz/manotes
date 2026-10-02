@@ -1,4 +1,4 @@
-export * as Atom from "./atom";
+export * as Actions from "./actions";
 
 export * as Delete from "./delete";
 

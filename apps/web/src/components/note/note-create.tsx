@@ -1,10 +1,10 @@
-import { useAtom } from "../../lib/atom-solid";
 import { DateTime, Effect } from "effect";
 import { nanoid } from "nanoid";
 import { toast } from "../ui/toast";
 import { prosemirrorJSONToYDoc } from "y-prosemirror";
 import * as Y from "yjs";
-import { MaterializedEventService, NoteSchema, bindRt } from "../../lib";
+import { MaterializedEventService, NoteSchema } from "../../lib";
+import { createEffectCommand } from "../../lib/solid-effect";
 import type { PaneSchema } from "../../lib/note/pane.schema";
 import type { UnknownNodeJSON } from "../../lib/node-json";
 import type { Hotkey } from "@tanstack/hotkeys";
@@ -22,32 +22,28 @@ export type CreateInput = {
   pool?: EditorPool.Pool;
 };
 
-const CreateNote = bindRt((rt) =>
-  rt.fn(
-    Effect.fn("ComponentsNoteCreate.createNote")(function* (input: CreateInput) {
-      const service = yield* MaterializedEventService.Service;
+const createNote = Effect.fn("ComponentsNoteCreate.createNote")(function* (input: CreateInput) {
+  const service = yield* MaterializedEventService.Service;
 
-      const note = yield* service.create({
-        noteId: nanoid(),
-        payload: input.payload ?? EMPTY_YJS_UPDATE,
-        createdAt: yield* DateTime.now,
-        date: input.date,
-      });
+  const note = yield* service.create({
+    noteId: nanoid(),
+    payload: input.payload ?? EMPTY_YJS_UPDATE,
+    createdAt: yield* DateTime.now,
+    date: input.date,
+  });
 
-      if (input.pool) yield* input.pool.preload([note.id]);
+  if (input.pool) yield* input.pool.preload([note.id]);
 
-      return note;
-    }),
-  ),
-);
+  return note;
+});
 
 /** Creates a note, surfacing progress through a toast and running `onCreated`. */
 export function useCreateNote() {
-  const [, createNote] = useAtom(CreateNote, { mode: "promise" });
+  const create = createEffectCommand(createNote);
 
   return (input: CreateInput, onCreated?: (note: NoteSchema.Record) => void) =>
     toast.promise(
-      createNote(input).then((note) => {
+      create(input).then((note) => {
         onCreated?.(note);
 
         return note;

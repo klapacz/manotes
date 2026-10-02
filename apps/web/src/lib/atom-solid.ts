@@ -2,10 +2,11 @@
 // dist/RegistryContext.js) for effect 4.0.0-rc.112.
 // Copied because @effect/atom-solid requires Solid 1: it relies on
 // `createComputed` and `createResource`, both removed in Solid 2.
-// Modifications: only RegistryContext, useAtomValue, useAtomSet and useAtom
-// are kept. Subscriptions live in memos with `onCleanup` instead of
-// `createComputed`, and reads go through `registry.get` keyed by a version
-// signal so the first value is available synchronously.
+// Modifications: only RegistryContext, useAtomValue and useAtom are kept, for
+// the session and graph registry HTTP/RPC atoms. Subscriptions live in memos
+// with `onCleanup` instead of `createComputed`, and reads go through
+// `registry.get` keyed by a version signal so the first value is available
+// synchronously.
 /* eslint-disable anti-slop/require-safety-comment-for-type-assertion, anti-slop/no-runtime-typeof -- Ported setter overloads; values follow the Atom's own write type. */
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
@@ -33,17 +34,6 @@ export function useAtomValue<A, B>(atom: () => Atom.Atom<A>, f?: (_: A) => B) {
     ? createAtomAccessor(registry, () => Atom.map(atom(), f))
     : createAtomAccessor(registry, atom);
 }
-
-export const useAtomSet = <R, W, Mode extends "value" | "promise" | "promiseExit" = never>(
-  atom: () => Atom.Writable<R, W>,
-  options?: {
-    readonly mode?: ([R] extends [AsyncResult.AsyncResult<any, any>] ? Mode : "value") | undefined;
-  },
-): AtomSetter<R, W, Mode> => {
-  const registry = useContext(RegistryContext);
-
-  return setAtom(registry, mountAtom(registry, atom), options);
-};
 
 export const useAtom = <R, W, const Mode extends "value" | "promise" | "promiseExit" = never>(
   atom: () => Atom.Writable<R, W>,
@@ -84,15 +74,6 @@ function createAtomAccessor<A>(
     version();
 
     return registry.get(current());
-  });
-}
-
-function mountAtom<A extends Atom.Atom<any>>(registry: AtomRegistry.AtomRegistry, atom: () => A) {
-  return createMemo(() => {
-    const value = atom();
-    onCleanup(registry.mount(value));
-
-    return value;
   });
 }
 

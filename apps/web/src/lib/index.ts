@@ -26,8 +26,6 @@ export * as BrowserExtensionClient from "./browser-extension/client";
 
 export * as GraphRuntime from "./graph-access/graph-runtime";
 
-export * from "./rt-atom";
-
 export * from "./primitives";
 
 export * as EditorSyncService from "./editor-sync.service";

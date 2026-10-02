@@ -1,4 +1,4 @@
-import { useAtom } from "../../lib/atom-solid";
+import { createEffectCommand } from "../../lib/solid-effect";
 import { createSignal, omit } from "solid-js";
 import type { ValidComponent } from "@solidjs/web";
 import { toast } from "../../components/ui/toast";
@@ -15,7 +15,8 @@ import {
   DialogTrigger,
   type DialogTriggerProps,
 } from "../../components/ui/dialog";
-import { MatchAsyncResult, MatchTag } from "../../lib";
+import { MatchFailure, MatchTag } from "../../lib";
+import * as GraphAccessRuntime from "../../lib/graph-access/runtime";
 import * as GraphAccessCommands from "../../lib/graph-access/commands";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
 
@@ -26,9 +27,10 @@ type Props<T extends ValidComponent = typeof Button> = {
 export function DeleteGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
   const [open, setOpen] = createSignal(false);
 
-  const [deleteResult, deleteLocalGraph] = useAtom(() => GraphAccessCommands.Atom.deleteLocal, {
-    mode: "promise",
-  });
+  const deleteLocalGraph = createEffectCommand(
+    GraphAccessCommands.Actions.deleteLocal,
+    GraphAccessRuntime.rt,
+  );
 
   // SAFETY: Erasing the trigger's polymorphic parameter lets Solid remove graph; remaining props are forwarded unchanged to DialogTrigger.
   const local = props as Props;
@@ -48,14 +50,14 @@ export function DeleteGraphDialog<T extends ValidComponent = typeof Button>(prop
     <Dialog
       open={open()}
       onOpenChange={(nextOpen) => {
-        if (deleteResult().waiting) return;
+        if (deleteLocalGraph.pending()) return;
         setOpen(nextOpen);
       }}
     >
       <DialogTrigger {...triggerProps} />
 
       <DialogPortal>
-        <DialogContent showCloseButton={!deleteResult().waiting}>
+        <DialogContent showCloseButton={!deleteLocalGraph.pending()}>
           <DialogHeader>
             <DialogTitle>Delete graph</DialogTitle>
             <DialogDescription>
@@ -63,8 +65,8 @@ export function DeleteGraphDialog<T extends ValidComponent = typeof Button>(prop
             </DialogDescription>
           </DialogHeader>
 
-          <MatchAsyncResult
-            when={deleteResult()}
+          <MatchFailure
+            exit={deleteLocalGraph.exit()}
             onError={(error) => (
               <Alert variant="destructive">
                 <AlertDescription>
@@ -91,7 +93,7 @@ export function DeleteGraphDialog<T extends ValidComponent = typeof Button>(prop
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              disabled={deleteResult().waiting}
+              disabled={deleteLocalGraph.pending()}
             >
               Cancel
             </Button>
@@ -99,7 +101,7 @@ export function DeleteGraphDialog<T extends ValidComponent = typeof Button>(prop
               type="button"
               variant="destructive"
               onClick={() => void handleDelete()}
-              disabled={deleteResult().waiting}
+              disabled={deleteLocalGraph.pending()}
             >
               Delete
             </Button>

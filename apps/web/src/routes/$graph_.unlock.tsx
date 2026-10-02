@@ -1,9 +1,9 @@
-import { useAtom } from "../lib/atom-solid";
+import { createEffectCommand } from "../lib/solid-effect";
 import { createFileRoute, redirect, useRouter } from "@tanstack/solid-router";
 import { Match, Schema } from "effect";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { AppForm, useAppForm } from "../components/ui/form";
-import { MatchAsyncResult } from "../lib";
+import { MatchFailure } from "../lib";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import * as GraphAccessCommands from "../lib/graph-access/commands";
 import * as Resolution from "../lib/graph-access/resolution/service";
@@ -37,11 +37,9 @@ function RouteComponent() {
   const data = Route.useRouteContext();
   const router = useRouter();
 
-  const [unlockGraphResult, unlockGraph] = useAtom(
-    () => GraphAccessCommands.Atom.unlockCloudGraph,
-    {
-      mode: "promise",
-    },
+  const unlockGraph = createEffectCommand(
+    GraphAccessCommands.Actions.unlockCloudGraph,
+    GraphAccessRuntime.rt,
   );
 
   const form = useAppForm(() => ({
@@ -70,8 +68,8 @@ function RouteComponent() {
       </header>
 
       <AppForm form={form} AppForm={form.AppForm}>
-        <MatchAsyncResult
-          when={unlockGraphResult()}
+        <MatchFailure
+          exit={unlockGraph.exit()}
           onError={(error) => (
             <Alert variant="destructive">
               <AlertDescription>

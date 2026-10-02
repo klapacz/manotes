@@ -3,7 +3,6 @@ import { Effect } from "effect";
 import { Show } from "solid-js";
 import { toast } from "./ui/toast";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import { bindRt } from "../lib";
 import { useGraph } from "../lib/graph-access/graph-runtime/context";
 import * as KeyStoreService from "../lib/graph-access/key-store/service";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
@@ -22,7 +21,7 @@ import {
 } from "./ui/dropdown-menu";
 import { ChevronLeftIcon, ChevronsUpDownIcon, DownloadIcon, LockIcon, TerminalIcon } from "./icons";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
-import { useAtom } from "../lib/atom-solid";
+import { createEffectCommand } from "../lib/solid-effect";
 import { Button } from "./ui/button";
 import { CliSetupDialog } from "./cli-setup-dialog";
 
@@ -30,26 +29,22 @@ import { CliSetupDialog } from "./cli-setup-dialog";
 // Source: .reference/shadcn-solid/apps/docs/src/registry/blocks/sidebar-01/components/nav-user.tsx
 // Why: the current-graph control should own graph identity and graph actions.
 // Modifications: removed avatar visuals, replaced user identity with graph identity, and wired the export backup action with Manotes backup services and toast feedback.
-const ExportBackup = bindRt((rt) =>
-  rt.fn(
-    Effect.fn("ComponentsGraphMenu.exportBackup")(function* (sourceGraphDisplayName: string) {
-      const backup = yield* GraphBackupService.exportBackup({
-        sourceGraphDisplayName,
-      });
+const exportBackupEffect = Effect.fn("ComponentsGraphMenu.exportBackup")(function* (
+  sourceGraphDisplayName: string,
+) {
+  const backup = yield* GraphBackupService.exportBackup({
+    sourceGraphDisplayName,
+  });
 
-      yield* GraphBackupFile.downloadBackupFile(backup);
-    }),
-  ),
-);
+  yield* GraphBackupFile.downloadBackupFile(backup);
+});
 
-const LockGraph = GraphAccessRuntime.atom.fn(
-  Effect.fn("ComponentsGraphMenu.lockGraph")(function* (
-    envelope: GraphEncryption.GraphKeyEnvelope,
-  ) {
-    const keyStore = yield* KeyStoreService.Service;
-    yield* keyStore.remove(envelope);
-  }),
-);
+const lockGraphEffect = Effect.fn("ComponentsGraphMenu.lockGraph")(function* (
+  envelope: GraphEncryption.GraphKeyEnvelope,
+) {
+  const keyStore = yield* KeyStoreService.Service;
+  yield* keyStore.remove(envelope);
+});
 
 const GraphMenuIdentity = (props: { graph: LocalRegistry.Schema.Record }) => {
   return (
@@ -64,8 +59,9 @@ const GraphMenuIdentity = (props: { graph: LocalRegistry.Schema.Record }) => {
 
 export const GraphMenu = () => {
   const graph = useGraph();
-  const [exportBackupResult, exportBackup] = useAtom(ExportBackup, { mode: "promise" });
-  const [lockGraphResult, lockGraph] = useAtom(() => LockGraph, { mode: "promise" });
+  const exportBackup = createEffectCommand(exportBackupEffect);
+  // The key store belongs to graph access, not the open graph's runtime.
+  const lockGraph = createEffectCommand(lockGraphEffect, GraphAccessRuntime.rt);
 
   const cloudGraph = () => {
     const record = graph().record;
@@ -117,7 +113,7 @@ export const GraphMenu = () => {
           <DropdownMenuGroup>
             <DropdownMenuItem
               onSelect={() => void handleExportBackup(graph().record.displayName)}
-              disabled={exportBackupResult().waiting}
+              disabled={exportBackup.pending()}
             >
               <DownloadIcon class="size-4" />
               Export backup
@@ -136,7 +132,7 @@ export const GraphMenu = () => {
                   </CliSetupDialog>
                   <DropdownMenuItem
                     onSelect={() => void handleLockGraph(cloudGraph().graphKeyEnvelope)}
-                    disabled={lockGraphResult().waiting}
+                    disabled={lockGraph.pending()}
                   >
                     <LockIcon class="size-4" />
                     Lock graph

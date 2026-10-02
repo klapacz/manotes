@@ -1,6 +1,6 @@
 import { Match, Stream } from "effect";
-import { Show } from "solid-js";
-import { bindRt, createAtomStore } from "../lib";
+import { Show, createMemo } from "solid-js";
+import { runStream } from "../lib/solid-effect";
 import { sampleLatest } from "../lib/primitives/stream/sample-latest";
 import * as GraphWorkerClient from "../lib/graph-worker.client";
 import { DedicatedWorkerHealth } from "../lib/graph.worker-rpc";
@@ -12,24 +12,20 @@ const initialHealth = new DedicatedWorkerHealth({
   lastFailure: "",
 });
 
-const WorkerHealth = bindRt((rt) =>
-  rt.atom(
-    GraphWorkerClient.Service.useSync((svc) => svc.client.healthStream({})).pipe(
-      Stream.unwrap,
-      sampleLatest("1 second"),
-    ),
-  ),
+const workerHealth = GraphWorkerClient.Service.useSync((svc) => svc.client.healthStream({})).pipe(
+  Stream.unwrap,
+  sampleLatest("1 second"),
 );
 
 export function WorkerHealthBanner() {
-  const health = createAtomStore(WorkerHealth, initialHealth);
+  const health = createMemo(() => runStream(workerHealth), { loadingValue: initialHealth });
 
   return (
-    <Show when={health.value.status !== "healthy"}>
+    <Show when={health().status !== "healthy"}>
       <div
         class={cx(
           "rounded-md border px-3 py-2 text-xs",
-          Match.value(health.value.status).pipe(
+          Match.value(health().status).pipe(
             Match.when(
               "healthy",
               () => "bg-success-bg-subtle border-success-border text-success-fg-subtle",
@@ -43,8 +39,8 @@ export function WorkerHealthBanner() {
           ),
         )}
       >
-        Worker {health.value.status}
-        <Show when={health.value.lastFailure}>{`: ${health.value.lastFailure}`}</Show>
+        Worker {health().status}
+        <Show when={health().lastFailure}>{`: ${health().lastFailure}`}</Show>
       </div>
     </Show>
   );

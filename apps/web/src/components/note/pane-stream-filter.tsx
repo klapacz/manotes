@@ -2,7 +2,8 @@ import { getRouteApi } from "@tanstack/solid-router";
 import { Option, Stream } from "effect";
 import { Show, createMemo } from "solid-js";
 import type { JSX } from "@solidjs/web";
-import { NoteRepo, bindRt, createAtomStore, createSyncedAtom } from "../../lib";
+import { NoteRepo } from "../../lib";
+import { runStream } from "../../lib/solid-effect";
 import { NoteFormat } from "../../lib/note";
 import { PaneCursor } from "../../lib/note/pane.cursor";
 import { PaneCtx } from "../../lib/note/pane.ctx";
@@ -136,23 +137,22 @@ function FilterChipButton(props: {
 }
 
 function NotePreviewTarget(props: { noteId: string }) {
-  const targetIdAtom = createSyncedAtom(() => props.noteId);
-
-  const target = createAtomStore(
-    bindRt((rt) =>
-      rt.atom((get) =>
-        NoteRepo.Service.use((repo) => repo.reactiveFindPreviewById(get(targetIdAtom))).pipe(
+  const note = createMemo(
+    () =>
+      runStream(
+        NoteRepo.Service.use((repo) => repo.reactiveFindPreviewById(props.noteId)).pipe(
           Stream.unwrap,
-          Stream.map((note) => ({ note: Option.getOrNull(note) })),
+          Stream.map(Option.getOrNull),
         ),
       ),
-    ),
-    { note: null },
+    { loadingValue: null },
   );
 
-  const label = createMemo(() =>
-    target.value.note === null ? "Unknown" : NoteFormat.label(target.value.note),
-  );
+  const label = createMemo(() => {
+    const current = note();
+
+    return current === null ? "Unknown" : NoteFormat.label(current);
+  });
 
   return (
     <span class="max-w-[11rem] truncate text-fg" title={label()}>

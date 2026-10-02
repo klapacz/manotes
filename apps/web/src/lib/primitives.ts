@@ -1,7 +1,7 @@
 /* eslint-disable anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- Solid accepts reactive accessors as JSX; generic tag dispatch needs type bridges. */
 /* eslint-disable anti-slop-effect/no-manual-tag-comparison, anti-slop-effect/no-manual-tagged-construction -- Keep direct dispatch and plain tagged states in these reactive rendering helpers. */
-import { useAtom, useAtomSet, RegistryContext } from "./atom-solid";
-import { Types } from "effect";
+import { RegistryContext } from "./atom-solid";
+import { Cause, Exit, Option, Types } from "effect";
 import { AsyncResult, Atom } from "effect/unstable/reactivity";
 import {
   createEffect,
@@ -169,6 +169,39 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
   ) as unknown as JSX.Element;
 }
 
+export interface MatchFailureProps<E> {
+  readonly exit: Exit.Exit<unknown, E> | undefined;
+  readonly onError?: ((error: Accessor<E>) => JSX.Element) | undefined;
+  readonly onDefect?: ((defect: Accessor<unknown>) => JSX.Element) | undefined;
+}
+
+/** Renders a settled command's failure: typed errors, then defects. */
+export function MatchFailure<E>(props: MatchFailureProps<E>): JSX.Element {
+  const state = createMemo(() => {
+    const exit = props.exit;
+
+    if (!exit || Exit.isSuccess(exit) || Cause.hasInterruptsOnly(exit.cause)) {
+      return { _tag: "None" as const };
+    }
+
+    const error = Cause.findErrorOption(exit.cause);
+
+    return Option.isSome(error)
+      ? { _tag: "Error" as const, error: error.value }
+      : { _tag: "Defect" as const, defect: Cause.squash(exit.cause) };
+  });
+
+  return MatchTag({
+    get when() {
+      return state();
+    },
+    cases: {
+      Error: (state) => props.onError?.(() => state().error) ?? null,
+      Defect: (state) => props.onDefect?.(() => state().defect) ?? null,
+    },
+  });
+}
+
 export function createAtomStore<A, E>(
   atom: () => Atom.Atom<AsyncResult.AsyncResult<A, E>>,
   staticInitialValue: NoInfer<A>,
@@ -208,56 +241,3 @@ export type AtomResultStore<A> =
   | { readonly _tag: "Loading" }
   | { readonly _tag: "Success"; readonly value: A }
   | { readonly _tag: "Error" };
-
-export function createAtomResultStore<A, E>(atom: () => Atom.Atom<AsyncResult.AsyncResult<A, E>>) {
-  const registry = useContext(RegistryContext);
-  const [store, setStore] = createStore<AtomResultStore<A>>({ _tag: "Loading" });
-  createEffect(atom, (currentAtom) =>
-    registry.subscribe(
-      currentAtom,
-      (result) => {
-        switch (result._tag) {
-          case "Initial": {
-            setStore(reconcile({ _tag: "Loading" }));
-            break;
-          }
-
-          case "Success": {
-            setStore(reconcile({ _tag: "Success", value: result.value }));
-            break;
-          }
-
-          case "Failure": {
-            setStore(reconcile({ _tag: "Error" }));
-            break;
-          }
-        }
-      },
-      { immediate: true },
-    ),
-  );
-
-  return store;
-}
-
-export function createAtomState<A>(initialValue: A) {
-  const atom = Atom.make(initialValue);
-  const [value, setValue] = useAtom(() => atom);
-
-  return [value, setValue, atom] as const;
-}
-
-export function createSyncedAtom<A>(source: Accessor<A>) {
-  const atom = Atom.make(untrack(source));
-  const setAtom = useAtomSet(() => atom);
-
-  createEffect(
-    source,
-    (value) => {
-      setAtom(value);
-    },
-    { defer: true },
-  );
-
-  return atom;
-}

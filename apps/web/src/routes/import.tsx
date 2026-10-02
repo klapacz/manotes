@@ -1,14 +1,13 @@
-import { useAtom, useAtomSet, useAtomValue } from "../lib/atom-solid";
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
 import { Effect, Schema } from "effect";
-import { AsyncResult, Atom } from "effect/unstable/reactivity";
-import { Show, createMemo } from "solid-js";
+import { Show, createSignal } from "solid-js";
 import * as GraphRegistryContract from "@manotes/shared/graph-registry/contract";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button, buttonVariants } from "../components/ui/button";
 import { AppForm, useAppForm } from "../components/ui/form";
 import { List, ListItem } from "../components/ui/list";
-import { MatchAsyncResult, MatchTag } from "../lib";
+import { MatchFailure, MatchTag } from "../lib";
+import { createEffectCommand } from "../lib/solid-effect";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as GraphBackupFile from "../lib/graph-backup/file";
 import * as GraphBackupService from "../lib/graph-backup/service";
@@ -23,28 +22,20 @@ type DecodedBackup = {
   displayName: string;
 };
 
-const decodeBackupAtom = GraphAccessRuntime.atom.fn(
-  Effect.fnUntraced(function* (file: File) {
-    const backup = yield* GraphBackupFile.readBackupFile(file);
+const decodeBackupEffect = Effect.fnUntraced(function* (file: File) {
+  const backup = yield* GraphBackupFile.readBackupFile(file);
 
-    return {
+  return {
+    backup,
+    displayName: GraphBackupService.getSuggestedGraphName({
       backup,
-      displayName: GraphBackupService.getSuggestedGraphName({
-        backup,
-        fileName: file.name,
-      }),
-    } satisfies DecodedBackup;
-  }),
-);
+      fileName: file.name,
+    }),
+  } satisfies DecodedBackup;
+});
 
 function RouteComponent() {
-  const decodeBackupResult = useAtomValue(() => decodeBackupAtom);
-
-  const decodedBackup = createMemo(() => {
-    const result = decodeBackupResult();
-
-    return AsyncResult.isSuccess(result) ? result.value : null;
-  });
+  const [decodedBackup, setDecodedBackup] = createSignal<DecodedBackup | null>(null);
 
   return (
     <main class="mx-auto flex w-full max-w-2xl flex-col gap-12 px-6 py-12">
@@ -53,8 +44,17 @@ function RouteComponent() {
         <p class="text-fg-subtle">Create a new local graph from an exported event backup.</p>
       </header>
 
-      <Show when={decodedBackup()} fallback={<SelectBackupFileForm />} keyed>
-        {(decodedBackup) => <ImportBackupForm decodedBackup={decodedBackup} />}
+      <Show
+        when={decodedBackup()}
+        fallback={<SelectBackupFileForm onDecoded={setDecodedBackup} />}
+        keyed
+      >
+        {(decodedBackup) => (
+          <ImportBackupForm
+            decodedBackup={decodedBackup}
+            onChooseAnother={() => setDecodedBackup(null)}
+          />
+        )}
       </Show>
     </main>
   );
@@ -68,8 +68,8 @@ type SelectBackupFileFormValues = {
   file: File | null;
 };
 
-function SelectBackupFileForm() {
-  const [decodeBackupResult, decodeBackup] = useAtom(() => decodeBackupAtom, { mode: "promise" });
+function SelectBackupFileForm(props: { onDecoded: (decoded: DecodedBackup) => void }) {
+  const decodeBackup = createEffectCommand(decodeBackupEffect, GraphAccessRuntime.rt);
   const defaultValues: SelectBackupFileFormValues = { file: null };
 
   const form = useAppForm(() => ({
@@ -79,14 +79,14 @@ function SelectBackupFileForm() {
     },
     async onSubmit({ value }) {
       const decoded = Schema.decodeUnknownSync(SelectBackupFileFormSchema)(value);
-      await decodeBackup(decoded.file);
+      props.onDecoded(await decodeBackup(decoded.file));
     },
   }));
 
   return (
     <AppForm form={form} AppForm={form.AppForm}>
-      <MatchAsyncResult
-        when={decodeBackupResult()}
+      <MatchFailure
+        exit={decodeBackup.exit()}
         onError={() => (
           <Alert variant="destructive">
             <AlertDescription>Invalid backup file.</AlertDescription>
@@ -119,23 +119,19 @@ function SelectBackupFileForm() {
   );
 }
 
-const importBackupAtom = GraphAccessRuntime.atom.fn(
-  Effect.fnUntraced(function* (decodedBackup: DecodedBackup) {
-    return yield* GraphBackupService.importBackupToNewGraph({
-      backup: decodedBackup.backup,
-      displayName: decodedBackup.displayName,
-    });
-  }),
-);
+const importBackupEffect = Effect.fnUntraced(function* (decodedBackup: DecodedBackup) {
+  return yield* GraphBackupService.importBackupToNewGraph({
+    backup: decodedBackup.backup,
+    displayName: decodedBackup.displayName,
+  });
+});
 
 const ImportBackupFormSchema = Schema.Struct({
   displayName: GraphRegistryContract.DisplayNameSchema,
 }).pipe(Schema.toStandardSchemaV1);
 
-function ImportBackupForm(props: { decodedBackup: DecodedBackup }) {
-  const [importBackupResult, importBackup] = useAtom(() => importBackupAtom, { mode: "promise" });
-
-  const setDecodedBackup = useAtomSet(() => decodeBackupAtom);
+function ImportBackupForm(props: { decodedBackup: DecodedBackup; onChooseAnother: () => void }) {
+  const importBackup = createEffectCommand(importBackupEffect, GraphAccessRuntime.rt);
 
   const form = useAppForm(() => ({
     defaultValues: {
@@ -154,9 +150,11 @@ function ImportBackupForm(props: { decodedBackup: DecodedBackup }) {
 
   return (
     <AppForm form={form} AppForm={form.AppForm}>
-      <MatchAsyncResult
-        when={importBackupResult()}
-        onSuccess={(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
+      <Show when={importBackup.value()}>
+        {(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
+      </Show>
+      <MatchFailure
+        exit={importBackup.exit()}
         onError={(error) => (
           <Alert variant="destructive">
             <AlertDescription>
@@ -199,7 +197,7 @@ function ImportBackupForm(props: { decodedBackup: DecodedBackup }) {
 
       <div class="flex flex-wrap gap-3">
         <form.SubmitButton>Import backup</form.SubmitButton>
-        <Button variant="outline" type="button" onClick={() => setDecodedBackup(Atom.Reset)}>
+        <Button variant="outline" type="button" onClick={() => props.onChooseAnother()}>
           Choose another file
         </Button>
       </div>

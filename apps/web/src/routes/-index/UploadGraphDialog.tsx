@@ -1,7 +1,7 @@
-import { useAtom } from "../../lib/atom-solid";
+import { createEffectCommand } from "../../lib/solid-effect";
 import { Navigate } from "@tanstack/solid-router";
 import { Schema } from "effect";
-import { createSignal, omit } from "solid-js";
+import { Show, createSignal, omit } from "solid-js";
 import type { ValidComponent } from "@solidjs/web";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import { Alert, AlertDescription } from "../../components/ui/alert";
@@ -18,7 +18,8 @@ import {
   type DialogTriggerProps,
 } from "../../components/ui/dialog";
 import { AppForm, useAppForm } from "../../components/ui/form";
-import { MatchAsyncResult, MatchTag } from "../../lib";
+import { MatchFailure, MatchTag } from "../../lib";
+import * as GraphAccessRuntime from "../../lib/graph-access/runtime";
 import * as GraphAccessCommands from "../../lib/graph-access/commands";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
 
@@ -33,9 +34,10 @@ type Props<T extends ValidComponent = typeof Button> = {
 export function UploadGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
   const [open, setOpen] = createSignal(false);
 
-  const [uploadGraphResult, uploadGraph] = useAtom(() => GraphAccessCommands.Atom.upload, {
-    mode: "promise",
-  });
+  const uploadGraph = createEffectCommand(
+    GraphAccessCommands.Actions.upload,
+    GraphAccessRuntime.rt,
+  );
 
   // SAFETY: Erasing the trigger's polymorphic parameter lets Solid remove graph; remaining props are forwarded unchanged to DialogTrigger.
   const local = props as Props;
@@ -60,7 +62,7 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
     <Dialog
       open={open()}
       onOpenChange={(open) => {
-        if (uploadGraphResult().waiting) return;
+        if (uploadGraph.pending()) return;
 
         if (open) form.reset();
         setOpen(open);
@@ -69,7 +71,7 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
       <DialogTrigger {...triggerProps} />
 
       <DialogPortal>
-        <DialogContent showCloseButton={!uploadGraphResult().waiting}>
+        <DialogContent showCloseButton={!uploadGraph.pending()}>
           <AppForm form={form} AppForm={form.AppForm} spacing="compact">
             <DialogHeader>
               <DialogTitle>Upload graph</DialogTitle>
@@ -78,11 +80,12 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
               </DialogDescription>
             </DialogHeader>
 
-            <MatchAsyncResult
-              when={uploadGraphResult()}
-              onSuccess={(graph) => (
-                <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />
-              )}
+            <Show when={uploadGraph.value()}>
+              {(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
+            </Show>
+
+            <MatchFailure
+              exit={uploadGraph.exit()}
               onError={(error) => (
                 <Alert variant="destructive">
                   <AlertDescription>
@@ -124,7 +127,7 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
                 type="button"
                 variant="outline"
                 onClick={() => setOpen(false)}
-                disabled={uploadGraphResult().waiting}
+                disabled={uploadGraph.pending()}
               >
                 Cancel
               </Button>

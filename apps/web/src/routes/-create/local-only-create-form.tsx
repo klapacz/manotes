@@ -1,11 +1,12 @@
-import { useAtom } from "../../lib/atom-solid";
+import { Show } from "solid-js";
+import { createEffectCommand } from "../../lib/solid-effect";
 import { Link, Navigate } from "@tanstack/solid-router";
 import * as GraphRegistryContract from "@manotes/shared/graph-registry/contract";
 import { Effect, Schema } from "effect";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button, buttonVariants } from "../../components/ui/button";
 import { AppForm, useAppForm } from "../../components/ui/form";
-import { MatchAsyncResult, MatchTag } from "../../lib";
+import { MatchFailure, MatchTag } from "../../lib";
 import * as GraphAccessRuntime from "../../lib/graph-access/runtime";
 import * as GraphAccessCommandsProvision from "../../lib/graph-access/commands/provision";
 
@@ -13,16 +14,18 @@ const CreateLocalGraphFormSchema = Schema.Struct({
   displayName: GraphRegistryContract.DisplayNameSchema,
 }).pipe(Schema.toStandardSchemaV1);
 
-const createLocalGraphAtom = GraphAccessRuntime.atom.fn(
-  Effect.fn("RoutesCreate.createLocalGraph")(function* ({ displayName }: { displayName: string }) {
-    const provision = yield* GraphAccessCommandsProvision.Service;
+const createLocalGraph = Effect.fn("RoutesCreate.createLocalGraph")(function* ({
+  displayName,
+}: {
+  displayName: string;
+}) {
+  const provision = yield* GraphAccessCommandsProvision.Service;
 
-    return yield* provision.createLocal({ displayName });
-  }),
-);
+  return yield* provision.createLocal({ displayName });
+});
 
 export function LocalOnlyCreateForm() {
-  const [createResult, createGraph] = useAtom(() => createLocalGraphAtom, { mode: "promise" });
+  const createGraph = createEffectCommand(createLocalGraph, GraphAccessRuntime.rt);
 
   const form = useAppForm(() => ({
     defaultValues: { displayName: "" },
@@ -34,9 +37,11 @@ export function LocalOnlyCreateForm() {
 
   return (
     <AppForm form={form} AppForm={form.AppForm}>
-      <MatchAsyncResult
-        when={createResult()}
-        onSuccess={(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
+      <Show when={createGraph.value()}>
+        {(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
+      </Show>
+      <MatchFailure
+        exit={createGraph.exit()}
         onError={(error) => (
           <Alert variant="destructive">
             <AlertDescription>

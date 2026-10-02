@@ -1,15 +1,11 @@
+/* eslint-disable anti-slop-effect/no-manual-tagged-construction -- Solid stores only reconcile plain objects, not Data values. */
 import { Effect, Stream, Predicate } from "effect";
 import { Show, createEffect, createMemo, createSignal, getOwner, onSettled } from "solid-js";
 import type { ComponentProps } from "@solidjs/web";
 import { VirtualList } from "../../lib/virtual-list";
 import type { NoteSchema } from "../../lib/note.schema";
-import {
-  MatchTag,
-  NoteStreamCache,
-  bindRt,
-  createAtomResultStore,
-  createSyncedAtom,
-} from "../../lib";
+import { MatchTag, NoteStreamCache } from "../../lib";
+import { createStreamStore, runScoped } from "../../lib/solid-effect";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneSchema } from "../../lib/note/pane.schema";
 import { NoteStream } from "../../lib/note/stream";
@@ -27,26 +23,26 @@ export function PaneStream(props: ComponentProps<"section">) {
   const focus = Focus.use();
   const fid = Focus.useId();
   const [refreshToken, setRefreshToken] = createSignal(0);
-  const queryAtom = createSyncedAtom(() => PaneSchema.paneToQuery(pane()));
-  const refreshTokenAtom = createSyncedAtom(refreshToken);
 
-  // Pooled editors persist across row unmounts. The pool is an Effect resource
-  // owned by its atom's scope, captured under the pane owner so pooled editor
-  // roots inherit the pane's contexts.
-  const owner = getOwner();
-  const poolAtom = bindRt((rt) => rt.atom(EditorPool.make(owner)));
+  // Pooled editors persist across row unmounts. The pool is a scoped Effect
+  // resource released with the pane, created under the pane owner so pooled
+  // editor roots inherit the pane's contexts.
+  const pool = runScoped(EditorPool.make(getOwner()));
 
   // The DB query owns filtering and sorting; the stream only layers the
   // refresh-gated pinned snapshot on top of the matching rows. Each successful
   // emission has already preloaded and booted the first editor slots.
-  const stateAtom = bindRt((rt) =>
-    rt.atom((get) => {
-      const query = get(queryAtom);
-      get(refreshTokenAtom);
+  // Reconciliation keys row nodes by ListItem.id, keeping row references
+  // stable across emissions — virtua reuses rows by identity, so mounted
+  // editors survive while their content stays reactive.
+  const state = createStreamStore(
+    () => {
+      const query = PaneSchema.paneToQuery(pane());
+      refreshToken();
 
       return Stream.unwrap(
         Effect.gen(function* () {
-          const pool = yield* get.result(poolAtom(), { suspendOnWaiting: true });
+          const editorPool = yield* Effect.promise(() => pool);
           const changes = yield* NoteStreamCache.Service.use((cache) => cache.changes(query));
 
           return changes.pipe(
@@ -54,20 +50,23 @@ export function PaneStream(props: ComponentProps<"section">) {
             // `scan` emits its initial accumulator before the first SQL result;
             // keep Success tied to real rows, after the first result is preloaded.
             Stream.drop(1),
-            Stream.map(({ dirty, items }) => ({ dirty, rows: NoteStream.list(items), pool })),
-            Stream.mapEffect((state) =>
-              Effect.scoped(pool.preload(preloadNoteIds(state.rows))).pipe(Effect.as(state)),
+            Stream.map(({ dirty, items }) => ({
+              dirty,
+              rows: NoteStream.list(items),
+              pool: editorPool,
+            })),
+            Stream.mapEffect((value) =>
+              Effect.scoped(editorPool.preload(preloadNoteIds(value.rows))).pipe(Effect.as(value)),
             ),
           );
         }),
+      ).pipe(
+        Stream.map((value): PaneStreamState => ({ _tag: "Success", value })),
+        Stream.catchCause(() => Stream.succeed<PaneStreamState>({ _tag: "Error" })),
       );
-    }),
+    },
+    { _tag: "Loading" },
   );
-
-  // Reconciliation keys row nodes by ListItem.id, keeping row references
-  // stable across emissions — virtua reuses rows by identity, so mounted
-  // editors survive while their content stays reactive.
-  const state = createAtomResultStore(stateAtom);
 
   const refresh = () => setRefreshToken((token) => token + 1);
 
@@ -158,10 +157,8 @@ export function PaneStream(props: ComponentProps<"section">) {
   ]);
 
   createEffect(
-    () => focus.activeId(),
-    (id) => {
-      const noteId = Focus.noteIn(pane().paneId, id);
-
+    () => Focus.noteIn(pane().paneId, focus.activeId()),
+    (noteId) => {
       if (noteId) setLastFocused(noteId);
     },
   );
@@ -231,3 +228,16 @@ function preloadNoteIds(rows: ReadonlyArray<NoteStream.ListItem>): ReadonlyArray
 function noteIdsFromRows(rows: ReadonlyArray<NoteStream.ListItem>): ReadonlyArray<NoteSchema.Id> {
   return rows.map((row) => row.note.id);
 }
+
+// Plain tagged objects: Solid stores only wrap and reconcile plain objects.
+type PaneStreamState =
+  | { readonly _tag: "Loading" }
+  | {
+      readonly _tag: "Success";
+      readonly value: {
+        readonly dirty: boolean;
+        readonly rows: ReadonlyArray<NoteStream.ListItem>;
+        readonly pool: EditorPool.Pool;
+      };
+    }
+  | { readonly _tag: "Error" };

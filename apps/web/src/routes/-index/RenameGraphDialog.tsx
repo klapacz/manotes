@@ -1,4 +1,4 @@
-import { useAtom } from "../../lib/atom-solid";
+import { createEffectCommand } from "../../lib/solid-effect";
 import * as GraphRegistryContract from "@manotes/shared/graph-registry/contract";
 import { Schema } from "effect";
 import { createSignal, omit } from "solid-js";
@@ -17,7 +17,8 @@ import {
   type DialogTriggerProps,
 } from "../../components/ui/dialog";
 import { AppForm, useAppForm } from "../../components/ui/form";
-import { MatchAsyncResult, MatchTag } from "../../lib";
+import { MatchFailure, MatchTag } from "../../lib";
+import * as GraphAccessRuntime from "../../lib/graph-access/runtime";
 import * as GraphAccessCommands from "../../lib/graph-access/commands";
 import * as LocalRegistry from "../../lib/graph-access/local-registry";
 
@@ -32,9 +33,10 @@ type Props<T extends ValidComponent = typeof Button> = {
 export function RenameGraphDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
   const [open, setOpen] = createSignal(false);
 
-  const [renameGraphResult, renameGraph] = useAtom(() => GraphAccessCommands.Atom.renameGraph, {
-    mode: "promise",
-  });
+  const renameGraph = createEffectCommand(
+    GraphAccessCommands.Actions.renameGraph,
+    GraphAccessRuntime.rt,
+  );
 
   // SAFETY: Erasing the trigger's polymorphic parameter lets Solid remove graph; remaining props are forwarded unchanged to DialogTrigger.
   const local = props as Props;
@@ -63,7 +65,7 @@ export function RenameGraphDialog<T extends ValidComponent = typeof Button>(prop
     <Dialog
       open={open()}
       onOpenChange={(nextOpen) => {
-        if (renameGraphResult().waiting) return;
+        if (renameGraph.pending()) return;
 
         if (nextOpen) form.reset();
         setOpen(nextOpen);
@@ -72,7 +74,7 @@ export function RenameGraphDialog<T extends ValidComponent = typeof Button>(prop
       <DialogTrigger {...triggerProps} />
 
       <DialogPortal>
-        <DialogContent showCloseButton={!renameGraphResult().waiting}>
+        <DialogContent showCloseButton={!renameGraph.pending()}>
           <AppForm form={form} AppForm={form.AppForm} spacing="compact">
             <DialogHeader>
               <DialogTitle>Rename graph</DialogTitle>
@@ -81,8 +83,8 @@ export function RenameGraphDialog<T extends ValidComponent = typeof Button>(prop
               </DialogDescription>
             </DialogHeader>
 
-            <MatchAsyncResult
-              when={renameGraphResult()}
+            <MatchFailure
+              exit={renameGraph.exit()}
               onError={(error) => (
                 <Alert variant="destructive">
                   <AlertDescription>
@@ -113,7 +115,7 @@ export function RenameGraphDialog<T extends ValidComponent = typeof Button>(prop
                 type="button"
                 variant="outline"
                 onClick={() => setOpen(false)}
-                disabled={renameGraphResult().waiting}
+                disabled={renameGraph.pending()}
               >
                 Cancel
               </Button>

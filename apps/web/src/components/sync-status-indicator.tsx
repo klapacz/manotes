@@ -1,6 +1,6 @@
 import { Match, Stream } from "effect";
-import { Show } from "solid-js";
-import { bindRt, createAtomStore } from "../lib";
+import { Show, createMemo } from "solid-js";
+import { runStream } from "../lib/solid-effect";
 import { sampleLatest } from "../lib/primitives/stream/sample-latest";
 import * as GraphWorkerClient from "../lib/graph-worker.client";
 import { SyncStatusLocal } from "../lib/graph.worker-rpc";
@@ -8,21 +8,23 @@ import { cx } from "../lib/cva";
 
 const initialStatus = new SyncStatusLocal({ mode: "local" });
 
-const SyncStatus = bindRt((rt) =>
-  rt.atom(
-    GraphWorkerClient.Service.useSync((svc) => svc.client.syncStatusStream({})).pipe(
-      Stream.unwrap,
-      sampleLatest("1 second"),
-    ),
-  ),
+const syncStatus = GraphWorkerClient.Service.useSync((svc) => svc.client.syncStatusStream({})).pipe(
+  Stream.unwrap,
+  sampleLatest("1 second"),
 );
 
 export function SyncStatusIndicator() {
-  const status = createAtomStore(SyncStatus, initialStatus);
+  const status = createMemo(() => runStream(syncStatus), { loadingValue: initialStatus });
+
+  const cloud = createMemo(() => {
+    const current = status();
+
+    return current.mode === "cloud" ? current : null;
+  });
 
   // Keep the element mounted when Ready: scripts/enter.ts reads its sync attributes.
   return (
-    <Show when={status.value.mode === "cloud" ? status.value : null}>
+    <Show when={cloud()}>
       {(cloud) => (
         <div
           hidden={cloud().syncState === "Ready"}

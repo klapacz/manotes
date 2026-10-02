@@ -1,13 +1,14 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
-import { createEffect, For } from "solid-js";
+import { createEffect, For, Show } from "solid-js";
 import { Effect, Array, pipe, Option, Stream } from "effect";
-import { useAtomValue, useAtom } from "../lib/atom-solid";
+import { useAtomValue } from "../lib/atom-solid";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Badge } from "../components/ui/badge";
 import { Button, buttonVariants } from "../components/ui/button";
 import { CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { List, ListItem } from "../components/ui/list";
-import { MatchAsyncResult, MatchTag, createAtomStore } from "../lib";
+import { MatchAsyncResult, MatchFailure, MatchTag, createAtomStore } from "../lib";
+import { createEffectCommand } from "../lib/solid-effect";
 import * as GraphAccessCommands from "../lib/graph-access/commands";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as LocalRegistry from "../lib/graph-access/local-registry";
@@ -154,8 +155,9 @@ function RouteComponent() {
 function CloudGraphsSection() {
   const cloudGraphsNotOnDevice = useAtomValue(() => cloudGraphsNotOnDeviceAtom);
 
-  const [openCloudGraphResult, openCloudGraph] = useAtom(
-    () => GraphAccessCommands.Atom.openCloudOnDevice,
+  const openCloudGraph = createEffectCommand(
+    GraphAccessCommands.Actions.openCloudOnDevice,
+    GraphAccessRuntime.rt,
   );
 
   return (
@@ -167,9 +169,11 @@ function CloudGraphsSection() {
         </CardDescription>
       </CardHeader>
 
-      <MatchAsyncResult
-        when={openCloudGraphResult()}
-        onSuccess={(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
+      <Show when={openCloudGraph.value()}>
+        {(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
+      </Show>
+      <MatchFailure
+        exit={openCloudGraph.exit()}
         onError={(error) => (
           <Alert variant="destructive">
             <AlertDescription>
@@ -209,8 +213,8 @@ function CloudGraphsSection() {
                     type="button"
                     variant="plain"
                     class="h-auto w-full justify-between rounded-xl px-4 py-3 text-left"
-                    onClick={() => openCloudGraph({ graph })}
-                    disabled={openCloudGraphResult().waiting}
+                    onClick={() => void openCloudGraph({ graph }).catch(() => {})}
+                    disabled={openCloudGraph.pending()}
                   >
                     <span class="min-w-0">
                       <span class="block truncate font-medium">{graph.displayName}</span>

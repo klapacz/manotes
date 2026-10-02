@@ -36,34 +36,37 @@ export function Root<Item, Key>(props: {
     () => new Map(props.data.map((item, index) => [props.key(item), index])),
   );
 
-  const retained = createMemo(() => {
-    const centers = [
-      scrollIndex(),
-      ...props.retained.flatMap((key) => {
-        const index = indexes().get(key);
+  const retained = createMemo(
+    () => {
+      const centers = [
+        scrollIndex(),
+        ...props.retained.flatMap((key) => {
+          const index = indexes().get(key);
 
-        return index === undefined ? [] : [index];
-      }),
-    ];
+          return index === undefined ? [] : [index];
+        }),
+      ];
 
-    const mounted = new Set<number>();
+      const mounted = new Set<number>();
 
-    // Policy from team-reflect/reflect-open, apps/desktop/src/components/
-    // daily-stream.tsx, master fetched 2026-10-01 (Virtua ^0.51.0).
-    // Adapted to our Virtua 0.48.8/Solid list: resolve keys from current data,
-    // preserve the 1200px buffer, and omit shift for arbitrary list mutations.
-    for (const center of centers) {
-      for (
-        let index = Math.max(0, center - 3);
-        index <= Math.min(props.data.length - 1, center + 3);
-        index++
-      ) {
-        mounted.add(index);
+      // Policy from team-reflect/reflect-open, apps/desktop/src/components/
+      // daily-stream.tsx, master fetched 2026-10-01 (Virtua ^0.51.0).
+      // Adapted to our Virtua 0.48.8/Solid list: resolve keys from current data,
+      // preserve the 1200px buffer, and omit shift for arbitrary list mutations.
+      for (const center of centers) {
+        for (
+          let index = Math.max(0, center - 3);
+          index <= Math.min(props.data.length - 1, center + 3);
+          index++
+        ) {
+          mounted.add(index);
+        }
       }
-    }
 
-    return [...mounted].sort((a, b) => a - b);
-  });
+      return [...mounted].sort((a, b) => a - b);
+    },
+    { equals: sameIndexes },
+  );
 
   const Row = (item: ItemProps) => {
     // Virtua keys this component by the data item; its index may change later.
@@ -134,5 +137,9 @@ type ItemProps = {
   style: JSX.CSSProperties;
   ref: (element: HTMLDivElement) => void;
 };
+
+function sameIndexes(a: readonly number[], b: readonly number[]) {
+  return a.length === b.length && a.every((index, i) => index === b[i]);
+}
 
 export * as VirtualList from "./virtual-list";

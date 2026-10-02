@@ -1,8 +1,8 @@
-import { useAtom } from "../../lib/atom-solid";
 import { DateTime, Effect } from "effect";
 import { createSignal, untrack } from "solid-js";
 import { Temporal } from "temporal-polyfill";
-import { MaterializedEventService, bindRt } from "../../lib";
+import { MaterializedEventService } from "../../lib";
+import { createEffectCommand } from "../../lib/solid-effect";
 import { JSDateToPlainDate, plainDateToJSDate } from "../../lib/temporal/utils";
 import { CalendarIcon } from "../icons";
 import {
@@ -18,11 +18,11 @@ import { Popover, PopoverContent, PopoverPortal, PopoverTrigger } from "../ui/po
 /** Calendar button opening a date picker that rewrites the note's date. */
 export function DatePicker(props: { noteId: string; date: string }) {
   const [open, setOpen] = createSignal(false);
-  const [setDateResult, setDate] = useAtom(SetDate, { mode: "promise" });
+  const setDate = createEffectCommand(setNoteDate);
   const selectedDate = () => plainDateToJSDate(Temporal.PlainDate.from(props.date));
 
   async function handleSelect(value: Date | null) {
-    if (!value || setDateResult().waiting) return;
+    if (!value || setDate.pending()) return;
 
     try {
       await setDate({
@@ -63,19 +63,15 @@ export function DatePicker(props: { noteId: string; date: string }) {
   );
 }
 
-const SetDate = bindRt((rt) =>
-  rt.fn(
-    Effect.fn("ComponentsNoteDatePicker.setDate")(function* (input: {
-      readonly noteId: string;
-      readonly date: string;
-    }) {
-      const service = yield* MaterializedEventService.Service;
+const setNoteDate = Effect.fn("ComponentsNoteDatePicker.setDate")(function* (input: {
+  readonly noteId: string;
+  readonly date: string;
+}) {
+  const service = yield* MaterializedEventService.Service;
 
-      return yield* service.setDate({
-        noteId: input.noteId,
-        date: input.date,
-        createdAt: yield* DateTime.now,
-      });
-    }),
-  ),
-);
+  return yield* service.setDate({
+    noteId: input.noteId,
+    date: input.date,
+    createdAt: yield* DateTime.now,
+  });
+});

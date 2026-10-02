@@ -1,16 +1,10 @@
 import { getRouteApi } from "@tanstack/solid-router";
 import { Option, Stream } from "effect";
-import { Show } from "solid-js";
+import { Errored, Loading, Show, createMemo } from "solid-js";
 import type { ComponentProps } from "@solidjs/web";
 import Editor from "../../editor";
-import {
-  MatchTag,
-  NoteCache,
-  NoteSchema,
-  bindRt,
-  createAtomResultStore,
-  createSyncedAtom,
-} from "../../lib";
+import { NoteCache, NoteSchema } from "../../lib";
+import { runStream } from "../../lib/solid-effect";
 import * as NoteLink from "../../lib/note/link";
 import { NoteCreate } from "./note-create";
 import { PaneCtx } from "../../lib/note/pane.ctx";
@@ -35,18 +29,15 @@ export function PaneNote(props: ComponentProps<"section">) {
     createNote({}, (note) => void navigate(NoteLink.getOptions({ id: note.id })));
 
   const pane = PaneCtx.useNote();
-  const noteIdAtom = createSyncedAtom(() => pane().id);
 
-  const notesAtom = bindRt((rt) =>
-    rt.atom((get) =>
-      NoteCache.Service.use((cache) => cache.changes(get(noteIdAtom))).pipe(
+  const note = createMemo(() =>
+    runStream(
+      NoteCache.Service.use((cache) => cache.changes(pane().id)).pipe(
         Stream.unwrap,
         Stream.map(Option.getOrNull),
       ),
     ),
   );
-
-  const note = createAtomResultStore(notesAtom);
 
   const fid = Focus.useId();
 
@@ -76,23 +67,18 @@ export function PaneNote(props: ComponentProps<"section">) {
         <div class="flex justify-end">
           <PaneActions onCreate={handleCreate} />
         </div>
-        <MatchTag
-          when={note}
-          cases={{
-            Loading: () => null,
-            Error: () => <PaneEmptyState>Failed to load note.</PaneEmptyState>,
-            Success: (state) => (
-              <Show
-                when={state().value}
-                // Only claim the note is missing once the query has answered;
-                // rendering the fallback while loading flashes it on every pane open.
-                fallback={<PaneEmptyState>Note not found.</PaneEmptyState>}
-              >
-                {(note) => <PaneNoteInner note={note()} />}
-              </Show>
-            ),
-          }}
-        />
+        <Errored fallback={<PaneEmptyState>Failed to load note.</PaneEmptyState>}>
+          <Loading>
+            <Show
+              when={note()}
+              // Loading holds this until the query answers, so a missing note
+              // never flashes on pane open.
+              fallback={<PaneEmptyState>Note not found.</PaneEmptyState>}
+            >
+              {(note) => <PaneNoteInner note={note()} />}
+            </Show>
+          </Loading>
+        </Errored>
       </Focus.Element>
     </Focus.NodeProvider>
   );
