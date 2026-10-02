@@ -2,7 +2,7 @@
 // https://github.com/kobaltedev/kobalte/blob/main/packages/utils/src/events.ts
 
 import { Predicate } from "effect";
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 export { isFunction } from "effect/Predicate";
 

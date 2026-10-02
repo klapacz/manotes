@@ -1,7 +1,7 @@
 import { Badge as BadgePrimitive } from "@kobalte/core/badge";
 import type { VariantProps } from "cva";
-import type { ComponentProps, ValidComponent } from "solid-js";
-import { splitProps } from "solid-js";
+import { omit } from "solid-js";
+import type { ComponentProps, ValidComponent } from "@solidjs/web";
 
 import { cva } from "../../lib/cva";
 
@@ -31,7 +31,7 @@ export type BadgeProps<T extends ValidComponent = "span"> = ComponentProps<
 
 export const Badge = <T extends ValidComponent = "span">(props: BadgeProps<T>) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as BadgeProps, ["class", "variant"]);
+  const rest = omit(props as BadgeProps, "class", "variant");
 
   return (
     <BadgePrimitive

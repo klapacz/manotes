@@ -6,10 +6,10 @@ import {
   runWithOwner,
   useContext,
   type Accessor,
-  type JSX,
   type Owner,
   type ParentProps,
 } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import Editor, { BootState } from "../../editor";
 import type { NoteSchema } from "../../lib/note.schema";
 
@@ -79,7 +79,7 @@ export const make = Effect.fn("EditorPool.make")(function* (owner: Owner | null)
 const Context = createContext<Pool | null>(null);
 
 export function Provider(props: ParentProps<{ pool: Pool }>): JSX.Element {
-  return <Context.Provider value={props.pool}>{props.children}</Context.Provider>;
+  return <Context value={props.pool}>{props.children}</Context>;
 }
 
 export function use(): Pool {

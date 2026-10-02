@@ -1,6 +1,6 @@
 import { TextField as TextFieldPrimitive } from "@kobalte/core/text-field";
-import { For, Match, Switch, splitProps } from "solid-js";
-import type { ComponentProps, ValidComponent } from "solid-js";
+import { For, Match, Switch, omit } from "solid-js";
+import type { ComponentProps, ValidComponent } from "@solidjs/web";
 
 import { cx } from "../../lib/cva";
 
@@ -14,7 +14,7 @@ export type TextFieldProps<T extends ValidComponent = "div"> = ComponentProps<
 
 export const TextField = <T extends ValidComponent = "div">(props: TextFieldProps<T>) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as TextFieldProps, ["class"]);
+  const rest = omit(props as TextFieldProps, "class");
 
   return (
     <TextFieldPrimitive
@@ -33,7 +33,7 @@ export const TextFieldInput = <T extends ValidComponent = "input">(
   props: TextFieldInputProps<T>,
 ) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as TextFieldInputProps, ["class"]);
+  const rest = omit(props as TextFieldInputProps, "class");
 
   return (
     <TextFieldPrimitive.Input
@@ -55,7 +55,7 @@ export const TextFieldTextArea = <T extends ValidComponent = "textarea">(
   props: TextFieldTextAreaProps<T>,
 ) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as TextFieldTextAreaProps, ["class"]);
+  const rest = omit(props as TextFieldTextAreaProps, "class");
 
   return (
     <TextFieldPrimitive.TextArea
@@ -77,7 +77,7 @@ export const TextFieldLabel = <T extends ValidComponent = "label">(
   props: TextFieldLabelProps<T>,
 ) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as TextFieldLabelProps, ["class"]);
+  const rest = omit(props as TextFieldLabelProps, "class");
 
   return (
     <TextFieldPrimitive.Label
@@ -101,7 +101,7 @@ export const TextFieldErrorMessage = <T extends ValidComponent = "div">(
   props: TextFieldErrorMessageProps<T>,
 ) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as TextFieldErrorMessageProps, ["class", "errors", "children"]);
+  const rest = omit(props as TextFieldErrorMessageProps, "class", "errors", "children");
 
   const uniqueErrors = () => [
     ...new Map(props.errors?.map((error) => [error?.message, error])).values(),
@@ -136,7 +136,7 @@ export const TextFieldDescription = <T extends ValidComponent = "div">(
   props: TextFieldDescriptionProps<T>,
 ) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as TextFieldDescriptionProps, ["class"]);
+  const rest = omit(props as TextFieldDescriptionProps, "class");
 
   return (
     <TextFieldPrimitive.Description

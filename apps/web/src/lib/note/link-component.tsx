@@ -1,4 +1,5 @@
-import { createContext, useContext, type JSX, type ParentProps } from "solid-js";
+import { createContext, useContext, type ParentProps } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 export type NoteLinkTarget = {
   id: string;
@@ -22,5 +23,5 @@ export function NoteLink(props: NoteLinkProps): JSX.Element {
 }
 
 export function NoteLinkScope(props: ParentProps<{ render: NoteLinkRenderer }>): JSX.Element {
-  return <Context.Provider value={props.render}>{props.children}</Context.Provider>;
+  return <Context value={props.render}>{props.children}</Context>;
 }

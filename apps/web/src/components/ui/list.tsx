@@ -1,13 +1,13 @@
 import type { VariantProps } from "cva";
-import type { ComponentProps } from "solid-js";
-import { splitProps } from "solid-js";
+import { omit } from "solid-js";
+import type { ComponentProps } from "@solidjs/web";
 
 import { cva, cx } from "../../lib/cva";
 
 export type ListProps = ComponentProps<"ul">;
 
 export const List = (props: ListProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return <ul data-slot="list" class={cx("flex flex-col gap-3", props.class)} {...rest} />;
 };
@@ -33,7 +33,7 @@ export const listItemVariants = cva({
 export type ListItemProps = ComponentProps<"li"> & VariantProps<typeof listItemVariants>;
 
 export const ListItem = (props: ListItemProps) => {
-  const [, rest] = splitProps(props, ["class", "interactive", "dashed"]);
+  const rest = omit(props, "class", "interactive", "dashed");
 
   return (
     <li

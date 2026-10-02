@@ -1,8 +1,9 @@
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../../lib/atom-solid";
 import * as EmailSchema from "@manotes/shared/schema/email";
 import { Schema } from "effect";
 import { Atom } from "effect/unstable/reactivity";
-import { createSignal, onMount, Show, type ValidComponent } from "solid-js";
+import { createSignal, onSettled, Show } from "solid-js";
+import type { ValidComponent } from "@solidjs/web";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import {
@@ -86,7 +87,7 @@ function RequestOtpForm(props: {
     mode: "promise",
   });
 
-  onMount(() => {
+  onSettled(() => {
     void checkWaitlist(Atom.Reset);
     void requestOtp(Atom.Reset);
   });
@@ -163,7 +164,7 @@ function VerifyOtpForm(props: {
     mode: "promise",
   });
 
-  onMount(() => {
+  onSettled(() => {
     void verifyOtp(Atom.Reset);
     void requestOtp(Atom.Reset);
   });

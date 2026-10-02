@@ -1,7 +1,8 @@
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../../lib/atom-solid";
 import * as GraphRegistryContract from "@manotes/shared/graph-registry/contract";
 import { Schema } from "effect";
-import { createSignal, splitProps, type ValidComponent } from "solid-js";
+import { createSignal, omit } from "solid-js";
+import type { ValidComponent } from "@solidjs/web";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import {
@@ -36,7 +37,8 @@ export function RenameGraphDialog<T extends ValidComponent = typeof Button>(prop
   });
 
   // SAFETY: Erasing the trigger's polymorphic parameter lets Solid remove graph; remaining props are forwarded unchanged to DialogTrigger.
-  const [local, triggerProps] = splitProps(props as Props, ["graph"]);
+  const local = props as Props;
+  const triggerProps = omit(local, "graph");
 
   const form = useAppForm(() => ({
     defaultValues: {

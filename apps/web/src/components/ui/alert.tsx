@@ -1,7 +1,7 @@
 import { Alert as AlertPrimitive } from "@kobalte/core/alert";
 import type { VariantProps } from "cva";
-import type { ComponentProps, ValidComponent } from "solid-js";
-import { splitProps } from "solid-js";
+import { omit } from "solid-js";
+import type { ComponentProps, ValidComponent } from "@solidjs/web";
 
 import { cva, cx } from "../../lib/cva";
 
@@ -31,7 +31,7 @@ export type AlertProps<T extends ValidComponent = "div"> = ComponentProps<
 
 export const Alert = <T extends ValidComponent = "div">(props: AlertProps<T>) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as AlertProps, ["class", "variant"]);
+  const rest = omit(props as AlertProps, "class", "variant");
 
   return (
     <AlertPrimitive
@@ -48,7 +48,7 @@ export const Alert = <T extends ValidComponent = "div">(props: AlertProps<T>) =>
 export type AlertTitleProps = ComponentProps<"div">;
 
 export const AlertTitle = (props: AlertTitleProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <div data-slot="alert-title" class={cx("font-medium tracking-tight", props.class)} {...rest} />
@@ -58,7 +58,7 @@ export const AlertTitle = (props: AlertTitleProps) => {
 export type AlertDescriptionProps = ComponentProps<"div">;
 
 export const AlertDescription = (props: AlertDescriptionProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <div

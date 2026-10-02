@@ -1,4 +1,4 @@
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../../lib/atom-solid";
 import { Link, Navigate } from "@tanstack/solid-router";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import * as GraphRegistryContract from "@manotes/shared/graph-registry/contract";

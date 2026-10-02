@@ -1,5 +1,5 @@
-import type { ComponentProps, ValidComponent } from "solid-js";
-import { splitProps } from "solid-js";
+import { omit } from "solid-js";
+import type { ComponentProps, ValidComponent } from "@solidjs/web";
 import { Root as ButtonPrimitive } from "@kobalte/core/button";
 import type { VariantProps } from "cva";
 
@@ -59,7 +59,7 @@ export type ButtonProps<T extends ValidComponent = "button"> = ComponentProps<
 
 export const Button = <T extends ValidComponent = "button">(props: ButtonProps<T>) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as ButtonProps, ["class", "variant", "size", "rounded"]);
+  const rest = omit(props as ButtonProps, "class", "variant", "size", "rounded");
 
   return (
     <ButtonPrimitive

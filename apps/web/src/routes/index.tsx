@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
 import { createEffect, For } from "solid-js";
 import { Effect, Array, pipe, Option, Stream } from "effect";
-import { useAtomValue, useAtom } from "@effect/atom-solid";
+import { useAtomValue, useAtom } from "../lib/atom-solid";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Badge } from "../components/ui/badge";
 import { Button, buttonVariants } from "../components/ui/button";
@@ -97,7 +97,7 @@ function RouteComponent() {
           )}
           onInitial={() => <p class="text-sm text-fg-subtle">Checking sign-in status...</p>}
           onFailure={(error) => {
-            createEffect(() => console.log(error()));
+            createEffect(error, (error) => console.log(error));
 
             return <p class="text-sm text-fg-subtle">Failed to load sign-in status.</p>;
           }}

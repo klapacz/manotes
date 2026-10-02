@@ -1,7 +1,7 @@
-import type { ComponentProps } from "solid-js";
-import { splitProps } from "solid-js";
+import { omit } from "solid-js";
+import type { ComponentProps } from "@solidjs/web";
 import { Command as CommandPrimitive } from "cmdk-solid";
-import { Dialog as DialogPrimitive } from "@kobalte/core";
+import * as DialogPrimitive from "@kobalte/core/dialog";
 
 import { cx } from "../../lib/cva";
 import { SearchIcon } from "../icons";
@@ -28,7 +28,7 @@ export const commandItemSelectedClass =
   "data-[selected=true]:bg-control-hover data-[selected=true]:text-fg";
 
 export const Command = (props: CommandProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <CommandPrimitive data-slot="command" class={cx(commandRootClass, props.class)} {...rest} />
@@ -42,25 +42,36 @@ export type CommandDialogProps = ComponentProps<typeof CommandPrimitive.Dialog> 
 };
 
 export const CommandDialog = (props: CommandDialogProps) => {
-  const [, dialogProps, rest] = splitProps(
+  const rest = omit(
     props,
-    ["contentClassName", "overlayClassName", "class", "container", "onCloseAutoFocus"],
-    [
-      "open",
-      "defaultOpen",
-      "onOpenChange",
-      "id",
-      "modal",
-      "preventScroll",
-      "forceMount",
-      "translations",
-    ],
+    "contentClassName",
+    "overlayClassName",
+    "class",
+    "container",
+    "onCloseAutoFocus",
+    "open",
+    "defaultOpen",
+    "onOpenChange",
+    "id",
+    "modal",
+    "preventScroll",
+    "forceMount",
+    "translations",
   );
 
-  // Composition from cmdk-solid@1.1.2 dist/index.jsx (Dialog), using the app's
+  // Composition from cmdk-solid@2.0.0-rc.0 dist/index.jsx (Dialog), using the app's
   // Kobalte version to expose close autofocus. Keep our existing markup and styles.
   return (
-    <DialogPrimitive.Root {...dialogProps}>
+    <DialogPrimitive.Root
+      open={props.open}
+      defaultOpen={props.defaultOpen}
+      onOpenChange={props.onOpenChange}
+      id={props.id}
+      modal={props.modal}
+      preventScroll={props.preventScroll}
+      forceMount={props.forceMount}
+      translations={props.translations}
+    >
       <DialogPrimitive.Portal mount={props.container}>
         <DialogPrimitive.Overlay
           cmdk-overlay=""
@@ -92,7 +103,7 @@ export const CommandDialog = (props: CommandDialogProps) => {
 export type CommandInputProps = ComponentProps<typeof CommandPrimitive.Input>;
 
 export const CommandInput = (props: CommandInputProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <div
@@ -115,7 +126,7 @@ export const CommandInput = (props: CommandInputProps) => {
 export type CommandListProps = ComponentProps<typeof CommandPrimitive.List>;
 
 export const CommandList = (props: CommandListProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <CommandPrimitive.List
@@ -129,7 +140,7 @@ export const CommandList = (props: CommandListProps) => {
 export type CommandEmptyProps = ComponentProps<typeof CommandPrimitive.Empty>;
 
 export const CommandEmpty = (props: CommandEmptyProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <CommandPrimitive.Empty
@@ -143,7 +154,7 @@ export const CommandEmpty = (props: CommandEmptyProps) => {
 export type CommandLabelProps = ComponentProps<"div">;
 
 export const CommandLabel = (props: CommandLabelProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <div data-slot="command-label" class={cx(commandGroupHeadingClass, props.class)} {...rest} />
@@ -153,7 +164,7 @@ export const CommandLabel = (props: CommandLabelProps) => {
 export type CommandGroupProps = ComponentProps<typeof CommandPrimitive.Group>;
 
 export const CommandGroup = (props: CommandGroupProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <CommandPrimitive.Group
@@ -170,7 +181,7 @@ export const CommandGroup = (props: CommandGroupProps) => {
 export type CommandSeparatorProps = ComponentProps<typeof CommandPrimitive.Separator>;
 
 export const CommandSeparator = (props: CommandSeparatorProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <CommandPrimitive.Separator
@@ -184,7 +195,7 @@ export const CommandSeparator = (props: CommandSeparatorProps) => {
 export type CommandItemProps = ComponentProps<typeof CommandPrimitive.Item>;
 
 export const CommandItem = (props: CommandItemProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <CommandPrimitive.Item
@@ -198,7 +209,7 @@ export const CommandItem = (props: CommandItemProps) => {
 export type CommandShortcutProps = ComponentProps<"span">;
 
 export const CommandShortcut = (props: CommandShortcutProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <span

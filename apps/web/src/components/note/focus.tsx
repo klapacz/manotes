@@ -6,17 +6,14 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  onCleanup,
-  onMount,
-  splitProps,
+  onSettled,
+  omit,
   useContext,
   type Accessor,
-  type ComponentProps,
   type ParentProps,
   type Setter,
-  type ValidComponent,
 } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { type ComponentProps, type ValidComponent, Dynamic } from "@solidjs/web";
 import { FocusDOM } from "../../lib/focus-dom";
 import { Shortcuts } from "../../lib/shortcuts";
 import type { NoteSchema } from "../../lib/note.schema";
@@ -83,11 +80,11 @@ export function Provider(props: ParentProps) {
 
   // Keep the canvas target highlighted while a button or portal owns native
   // focus. This is presentation memory only; commands always use actual focus.
-  const highlightedElement = createMemo<Element | null>((previous) => {
+  const highlightedElement = createMemo<Element | null>((previous = null) => {
     const element = dom.activeElement();
 
     return element && scopes.get(element)?.id() ? element : previous;
-  }, null);
+  });
 
   const isTarget = (target: EventTarget | null) =>
     target instanceof HTMLElement && !!scopes.get(target)?.id();
@@ -167,7 +164,7 @@ export function Provider(props: ParentProps) {
     dom.cancel();
   });
 
-  return <Context.Provider value={value}>{props.children}</Context.Provider>;
+  return <Context value={value}>{props.children}</Context>;
 }
 
 export function use(): ContextValue {
@@ -192,24 +189,30 @@ export function createNode(options: () => Options): Node {
     handleKeyDown: shortcuts.handle,
   };
 
-  onMount(() => setMounted(true));
-  createEffect(() => {
-    const current = element();
-    const options = resolved();
-
-    if (!mounted() || !current) return;
-    context.scopes.set(current, node);
-    onCleanup(() => context.scopes.delete(current));
-
-    if (!options.id || options.enabled === false) return;
-    onCleanup(
-      context.dom.register({
-        id: options.id,
-        element: current,
-        focus: options.focus ? (request) => options.focus!(current, request) : undefined,
-      }),
-    );
+  onSettled(() => {
+    setMounted(true);
   });
+  createEffect(
+    () => ({ current: element(), options: resolved(), mounted: mounted() }),
+    ({ current, options, mounted }) => {
+      if (!mounted || !current) return;
+      context.scopes.set(current, node);
+
+      const unregister =
+        options.id && options.enabled !== false
+          ? context.dom.register({
+              id: options.id,
+              element: current,
+              focus: options.focus ? (request) => options.focus!(current, request) : undefined,
+            })
+          : undefined;
+
+      return () => {
+        context.scopes.delete(current);
+        unregister?.();
+      };
+    },
+  );
 
   return node;
 }
@@ -238,7 +241,7 @@ export function createNoteNode(
 }
 
 export function NodeProvider(props: ParentProps<{ node: Node }>) {
-  return <NodeContext.Provider value={props.node}>{props.children}</NodeContext.Provider>;
+  return <NodeContext value={props.node}>{props.children}</NodeContext>;
 }
 
 export function useNode(): Node {
@@ -251,13 +254,14 @@ export function useNode(): Node {
 
 export function Element<T extends ValidComponent = "div">(props: ComponentProps<T> & { as?: T }) {
   const node = useNode();
-  const [local, rest] = splitProps(props, ["as", "ref", "tabIndex"]);
+  const local = props;
+  const rest = omit(props, "as", "ref", "tabindex");
 
   return (
     <Dynamic
       component={local.as ?? "div"}
       ref={mergeRefs(node.setElement, local.ref)}
-      tabIndex={local.tabIndex ?? -1}
+      tabindex={local.tabindex ?? -1}
       {...rest}
     />
   );

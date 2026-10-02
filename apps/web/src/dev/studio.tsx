@@ -1,7 +1,7 @@
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../lib/atom-solid";
 import { Effect } from "effect";
 import { SqlClient } from "effect/unstable/sql";
-import { onCleanup, onMount } from "solid-js";
+import { onSettled } from "solid-js";
 import { bindRt } from "../lib";
 import { connectStudioBridge, type ResultSet, type StudioRunner } from "./studio-bridge";
 
@@ -81,9 +81,7 @@ export function SqliteStudio(props: SqliteStudioProps) {
 
   // Attach before the iframe boots so Studio's initial schema query can't race
   // ahead of our listener.
-  onMount(() => {
-    if (iframe) onCleanup(connectStudioBridge(iframe, runner));
-  });
+  onSettled(() => (iframe ? connectStudioBridge(iframe, runner) : undefined));
 
   return (
     <iframe

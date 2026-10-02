@@ -1,4 +1,4 @@
-import { RegistryContext } from "@effect/atom-solid";
+import { RegistryContext } from "../lib/atom-solid";
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/solid-router";
 import { TanStackRouterDevtools } from "@tanstack/solid-router-devtools";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
@@ -17,9 +17,9 @@ function RootComponent() {
     <>
       <HeadContent />
 
-      <RegistryContext.Provider value={GraphAccessRuntime.registry}>
+      <RegistryContext value={GraphAccessRuntime.registry}>
         <Outlet />
-      </RegistryContext.Provider>
+      </RegistryContext>
       <TanStackRouterDevtools position="bottom-right" />
 
       <Scripts />

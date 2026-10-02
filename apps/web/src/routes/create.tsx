@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/solid-router";
-import { useAtomValue } from "@effect/atom-solid";
+import { useAtomValue } from "../lib/atom-solid";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { MatchAsyncResult, MatchTag } from "../lib";
 import * as SessionAtom from "../lib/graph-access/session/atom";

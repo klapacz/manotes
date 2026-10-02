@@ -1,19 +1,19 @@
 /* eslint-disable anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- Solid accepts reactive accessors as JSX; generic tag dispatch needs type bridges. */
 /* eslint-disable anti-slop-effect/no-manual-tag-comparison, anti-slop-effect/no-manual-tagged-construction -- Keep direct dispatch and plain tagged states in these reactive rendering helpers. */
-import { useAtom, useAtomSet, RegistryContext } from "@effect/atom-solid";
+import { useAtom, useAtomSet, RegistryContext } from "./atom-solid";
 import { Types } from "effect";
 import { AsyncResult, Atom } from "effect/unstable/reactivity";
 import {
   createEffect,
   createMemo,
-  on,
-  onCleanup,
   untrack,
   useContext,
   type Accessor,
-  type JSX,
+  createStore,
+  reconcile,
+  isWrappable,
 } from "solid-js";
-import { createStore, reconcile } from "solid-js/store";
+import type { JSX } from "@solidjs/web";
 
 export interface MatchTagProps<E extends { readonly _tag: string }> {
   readonly when: E;
@@ -29,7 +29,7 @@ export interface MatchTagProps<E extends { readonly _tag: string }> {
 export function MatchTag<E extends { readonly _tag: string }>(
   props: MatchTagProps<E>,
 ): JSX.Element {
-  const stateValue = createMemo(() => props.when, undefined, { name: "tagged value" });
+  const stateValue = createMemo(() => props.when, { name: "tagged value" });
 
   function expectState<TTag extends Types.Tags<E>>(tag: TTag): Types.ExtractTag<E, TTag> {
     const current = stateValue();
@@ -41,7 +41,7 @@ export function MatchTag<E extends { readonly _tag: string }>(
 
   const state = props.keyed
     ? stateValue
-    : createMemo(stateValue, undefined, {
+    : createMemo(stateValue, {
         equals: (a, b) => a._tag === b._tag,
         name: "tagged branch",
       });
@@ -58,7 +58,6 @@ export function MatchTag<E extends { readonly _tag: string }>(
         ? untrack(() => render(() => expectState(current._tag as Types.Tags<E>)))
         : (props.fallback ?? null);
     },
-    undefined,
     { name: "value" },
   ) as unknown as JSX.Element;
 }
@@ -89,7 +88,6 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
         onError: (error, result) => ({ _tag: "Error" as const, error, result }),
         onDefect: (defect, result) => ({ _tag: "Defect" as const, defect, result }),
       }),
-    undefined,
     { name: "async result value" },
   );
 
@@ -105,7 +103,7 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
 
   const state = props.keyed
     ? stateValue
-    : createMemo(stateValue, undefined, {
+    : createMemo(stateValue, {
         equals: (a, b) => a._tag === b._tag,
         name: "async result branch",
       });
@@ -167,7 +165,6 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
         }
       }
     },
-    undefined,
     { name: "value" },
   ) as unknown as JSX.Element;
 }
@@ -182,21 +179,27 @@ export function createAtomStore<A, E>(
   // `value` property replaces the whole variant and avoids stale fields while
   // still allowing `reconcile` to preserve nested plain-object/array structure.
   const [store, setStore] = createStore<{ value: A }>({ value: staticInitialValue });
-
-  createEffect(() => {
-    const currentAtom = atom();
-
-    const unsubscribe = registry.subscribe(
+  createEffect(atom, (currentAtom) =>
+    registry.subscribe(
       currentAtom,
       (result) => {
         if (result._tag !== "Success") return;
-        setStore("value", reconcile(result.value));
+        setStore((draft) => {
+          // Solid 2's reconcile diffs into an existing object in place.
+          if (
+            isWrappable(draft.value) &&
+            isWrappable(result.value) &&
+            Array.isArray(draft.value) === Array.isArray(result.value)
+          ) {
+            reconcile(result.value)(draft.value);
+          } else {
+            draft.value = result.value;
+          }
+        });
       },
       { immediate: true },
-    );
-
-    onCleanup(unsubscribe);
-  });
+    ),
+  );
 
   return store;
 }
@@ -209,11 +212,8 @@ export type AtomResultStore<A> =
 export function createAtomResultStore<A, E>(atom: () => Atom.Atom<AsyncResult.AsyncResult<A, E>>) {
   const registry = useContext(RegistryContext);
   const [store, setStore] = createStore<AtomResultStore<A>>({ _tag: "Loading" });
-
-  createEffect(() => {
-    const currentAtom = atom();
-
-    const unsubscribe = registry.subscribe(
+  createEffect(atom, (currentAtom) =>
+    registry.subscribe(
       currentAtom,
       (result) => {
         switch (result._tag) {
@@ -234,10 +234,8 @@ export function createAtomResultStore<A, E>(atom: () => Atom.Atom<AsyncResult.As
         }
       },
       { immediate: true },
-    );
-
-    onCleanup(unsubscribe);
-  });
+    ),
+  );
 
   return store;
 }
@@ -250,17 +248,15 @@ export function createAtomState<A>(initialValue: A) {
 }
 
 export function createSyncedAtom<A>(source: Accessor<A>) {
-  const atom = Atom.make(source());
+  const atom = Atom.make(untrack(source));
   const setAtom = useAtomSet(() => atom);
 
   createEffect(
-    on(
-      source,
-      (value) => {
-        setAtom(value);
-      },
-      { defer: true },
-    ),
+    source,
+    (value) => {
+      setAtom(value);
+    },
+    { defer: true },
   );
 
   return atom;

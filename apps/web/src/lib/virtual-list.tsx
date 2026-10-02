@@ -5,8 +5,8 @@ import {
   untrack,
   useContext,
   type Accessor,
-  type JSX,
 } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { VList, type VListHandle } from "virtua/solid";
 
 /** The enclosing row's state and actions. */
@@ -95,7 +95,7 @@ export function Root<Item, Key>(props: {
 
     return (
       <div ref={item.ref} style={item.style}>
-        <RowContext.Provider value={context}>{props.children(row)}</RowContext.Provider>
+        <RowContext value={context}>{props.children(row)}</RowContext>
       </div>
     );
   };

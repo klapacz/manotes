@@ -1,6 +1,7 @@
 import { getRouteApi } from "@tanstack/solid-router";
 import { Option, Stream } from "effect";
-import { Show, createMemo, type JSX } from "solid-js";
+import { Show, createMemo } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { NoteRepo, bindRt, createAtomStore, createSyncedAtom } from "../../lib";
 import { NoteFormat } from "../../lib/note";
 import { PaneCursor } from "../../lib/note/pane.cursor";

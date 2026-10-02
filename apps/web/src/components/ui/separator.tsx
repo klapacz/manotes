@@ -1,6 +1,6 @@
 import { Root as SeparatorPrimitive } from "@kobalte/core/separator";
-import type { ComponentProps, ValidComponent } from "solid-js";
-import { splitProps } from "solid-js";
+import { omit } from "solid-js";
+import type { ComponentProps, ValidComponent } from "@solidjs/web";
 
 import { cx } from "../../lib/cva";
 
@@ -14,7 +14,7 @@ export type SeparatorProps<T extends ValidComponent = "hr"> = ComponentProps<
 
 export const Separator = <T extends ValidComponent = "hr">(props: SeparatorProps<T>) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as SeparatorProps, ["class"]);
+  const rest = omit(props as SeparatorProps, "class");
 
   return (
     <SeparatorPrimitive

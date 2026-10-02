@@ -1,12 +1,6 @@
 import { linkOptions } from "@tanstack/solid-router";
-import {
-  createContext,
-  createMemo,
-  useContext,
-  type Accessor,
-  type JSX,
-  type ParentProps,
-} from "solid-js";
+import { createContext, createMemo, useContext, type Accessor, type ParentProps } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { PaneCursor } from "./pane.cursor";
 import { PaneSchema } from "./pane.schema";
 
@@ -20,7 +14,7 @@ const Context = createContext<Ctx | null>(null);
 
 export function Provider(props: ParentProps<Ctx>): JSX.Element {
   return (
-    <Context.Provider
+    <Context
       value={{
         stack: props.stack,
         index: props.index,
@@ -28,7 +22,7 @@ export function Provider(props: ParentProps<Ctx>): JSX.Element {
       }}
     >
       {props.children}
-    </Context.Provider>
+    </Context>
   );
 }
 

@@ -5,8 +5,8 @@ import {
   revalidateLogic,
   type AnyFormApi,
 } from "@tanstack/solid-form";
-import type { Component, ComponentProps, ParentProps, JSX } from "solid-js";
-import { splitProps, Show } from "solid-js";
+import { type Component, type ParentProps, omit, Show } from "solid-js";
+import type { ComponentProps, JSX } from "@solidjs/web";
 
 import { Predicate } from "effect";
 import { cva } from "../../lib/cva";
@@ -38,7 +38,7 @@ export const formVariants = cva({
 export type FormProps = ComponentProps<"form"> & VariantProps<typeof formVariants>;
 
 export const Form = (props: FormProps) => {
-  const [, rest] = splitProps(props, ["class", "spacing"]);
+  const rest = omit(props, "class", "spacing");
 
   return (
     <form
@@ -67,7 +67,7 @@ function AppTextField(props: AppTextFieldProps) {
   const field = useFieldContext<string>();
   const messages = () => getErrorMessages(field().state.meta.errors);
   const hasErrors = () => !field().state.meta.isValid;
-  const [, inputProps] = splitProps(props, ["label", "description", "id"]);
+  const inputProps = omit(props, "label", "description", "id");
 
   return (
     <TextFieldRoot validationState={hasErrors() ? "invalid" : "valid"}>
@@ -98,7 +98,7 @@ function AppFileField(props: AppFileFieldProps) {
   const messages = () => getErrorMessages(field().state.meta.errors);
   const hasErrors = () => !field().state.meta.isValid;
   const inputId = () => props.id ?? getFieldId(field().name);
-  const [, inputProps] = splitProps(props, ["label", "description", "id"]);
+  const inputProps = omit(props, "label", "description", "id");
 
   return (
     <div class="grid w-full gap-2" data-invalid={hasErrors() ? "" : undefined}>
@@ -111,7 +111,7 @@ function AppFileField(props: AppFileFieldProps) {
         name={field().name}
         onChange={(event) => field().handleChange(event.currentTarget.files?.[0] ?? null)}
         onBlur={() => field().handleBlur()}
-        aria-invalid={hasErrors() || undefined}
+        aria-invalid={hasErrors() ? "true" : undefined}
         {...inputProps}
       />
       <Show when={props.description}>
@@ -128,7 +128,8 @@ type SubmitButtonProps = ButtonProps;
 
 function SubmitButton(props: SubmitButtonProps) {
   const form = useFormContext();
-  const [local, rest] = splitProps(props, ["children", "disabled"]);
+  const local = props;
+  const rest = omit(props, "children", "disabled");
 
   return (
     <form.Subscribe
@@ -177,7 +178,8 @@ export type AppFormProps = FormProps & {
 };
 
 export function AppForm(props: AppFormProps) {
-  const [local, rest] = splitProps(props, ["AppForm", "children", "form"]);
+  const local = props;
+  const rest = omit(props, "AppForm", "children", "form");
 
   return (
     <Form

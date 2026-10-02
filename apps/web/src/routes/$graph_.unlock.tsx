@@ -1,4 +1,4 @@
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../lib/atom-solid";
 import { createFileRoute, redirect, useRouter } from "@tanstack/solid-router";
 import { Match, Schema } from "effect";
 import { Alert, AlertDescription } from "../components/ui/alert";

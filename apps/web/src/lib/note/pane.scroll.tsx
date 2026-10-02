@@ -1,14 +1,7 @@
 import { keyArray } from "@solid-primitives/keyed";
 import { createListTransition, type OnListChange } from "@solid-primitives/transition-group";
-import {
-  For,
-  createContext,
-  onMount,
-  useContext,
-  type Accessor,
-  type JSX,
-  type Ref,
-} from "solid-js";
+import { For, createContext, onSettled, useContext, type Accessor, type Ref } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { PaneCursor } from "./pane.cursor";
 import type { PaneSchema } from "./pane.schema";
 import { Array as Arr, pipe, Option, Number } from "effect";
@@ -165,7 +158,7 @@ export function Root(props: Props): JSX.Element {
     if (item.ref) await DOMScroll.center(item.ref, behavior);
   }
 
-  onMount(() => {
+  onSettled(() => {
     const last = rendered()?.at(-1);
 
     if (last) void scrollTo(last, "instant");
@@ -211,13 +204,13 @@ export function Root(props: Props): JSX.Element {
 
   return (
     <Focus.NodeProvider node={fnode}>
-      <Context.Provider value={{ scrollToPane }}>
+      <Context value={{ scrollToPane }}>
         <Focus.Element as={PaneGrid}>
           <For each={rendered()}>
             {(item) => props.children(item.value, item.index, (el) => (item.ref = el))}
           </For>
         </Focus.Element>
-      </Context.Provider>
+      </Context>
     </Focus.NodeProvider>
   );
 }

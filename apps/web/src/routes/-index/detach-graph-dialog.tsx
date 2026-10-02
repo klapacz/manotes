@@ -1,6 +1,7 @@
-import { useAtom } from "@effect/atom-solid";
-import { createSignal, splitProps, type ValidComponent } from "solid-js";
-import { toast } from "somoto";
+import { useAtom } from "../../lib/atom-solid";
+import { createSignal, omit } from "solid-js";
+import type { ValidComponent } from "@solidjs/web";
+import { toast } from "../../components/ui/toast";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import {
@@ -30,7 +31,8 @@ export function DetachGraphDialog<T extends ValidComponent = typeof Button>(prop
   });
 
   // SAFETY: Erasing the trigger's polymorphic parameter lets Solid remove graph; remaining props are forwarded unchanged to DialogTrigger.
-  const [local, triggerProps] = splitProps(props as Props, ["graph"]);
+  const local = props as Props;
+  const triggerProps = omit(local, "graph");
 
   async function handleDetach() {
     try {

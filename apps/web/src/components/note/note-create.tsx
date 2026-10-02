@@ -1,7 +1,7 @@
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../../lib/atom-solid";
 import { DateTime, Effect } from "effect";
 import { nanoid } from "nanoid";
-import { toast } from "somoto";
+import { toast } from "../ui/toast";
 import { prosemirrorJSONToYDoc } from "y-prosemirror";
 import * as Y from "yjs";
 import { MaterializedEventService, NoteSchema, bindRt } from "../../lib";

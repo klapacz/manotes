@@ -1,5 +1,5 @@
-import type { ComponentProps } from "solid-js";
-import { splitProps } from "solid-js";
+import { omit } from "solid-js";
+import type { ComponentProps } from "@solidjs/web";
 
 import { cx } from "../../lib/cva";
 
@@ -11,7 +11,7 @@ import { cx } from "../../lib/cva";
 export type LabelProps = ComponentProps<"label">;
 
 export const Label = (props: LabelProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <label

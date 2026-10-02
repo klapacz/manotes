@@ -1,5 +1,5 @@
-import type { ComponentProps, ValidComponent } from "solid-js";
-import { mergeProps, splitProps } from "solid-js";
+import { merge, omit } from "solid-js";
+import type { ComponentProps, ValidComponent } from "@solidjs/web";
 import { Popover as PopoverPrimitive } from "@kobalte/core/popover";
 
 import { cx } from "../../lib/cva";
@@ -13,7 +13,7 @@ export const PopoverPortal = PopoverPrimitive.Portal;
 export type PopoverProps = ComponentProps<typeof PopoverPrimitive>;
 
 export const Popover = (props: PopoverProps) => {
-  const mergedProps = mergeProps<PopoverProps[]>(
+  const mergedProps = merge(
     {
       gutter: 4,
     },
@@ -39,7 +39,7 @@ export type PopoverContentProps<T extends ValidComponent = "div"> = ComponentPro
 
 export const PopoverContent = <T extends ValidComponent = "div">(props: PopoverContentProps<T>) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as PopoverContentProps, ["class"]);
+  const rest = omit(props as PopoverContentProps, "class");
 
   return (
     <PopoverPrimitive.Content

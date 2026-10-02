@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/solid-router";
-import { splitProps, type ComponentProps, type Ref } from "solid-js";
+import { omit, type Ref } from "solid-js";
+import type { ComponentProps } from "@solidjs/web";
 import { MatchTag } from "../../lib";
 import { callHandler } from "../../lib/call-handler";
 import { PaneCursor } from "../../lib/note/pane.cursor";
@@ -25,7 +26,10 @@ export function Pane(props: { ref: Ref<HTMLElement | undefined> }) {
   const scroll = PaneScroll.use();
 
   const renderNoteLink: NoteLinkRenderer = (linkProps) => {
-    const [target, anchorProps] = splitProps(linkProps, ["id", "children", "onClick"]);
+    const target = linkProps;
+    // SAFETY: NoteLinkProps are anchor attributes that Link forwards to its `<a>`;
+    // TanStack Router's Solid 2 RC types reject spreading any Solid 2 anchor props.
+    const anchorProps = omit(linkProps, "id", "children", "onClick") as {};
     const input = () => PaneMake.note(target.id);
 
     return (

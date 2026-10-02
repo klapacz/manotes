@@ -1,8 +1,9 @@
 import "./editor.css";
 
 import { createEditor, Priority, union, withPriority } from "prosekit/core";
-import { ProseKit } from "prosekit/solid";
-import { createEffect, createMemo, on, Show, type JSX } from "solid-js";
+import { ProseKit } from "./lib/editor/prosekit-solid";
+import { createEffect, createMemo, Show, untrack } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import * as Y from "yjs";
 import {
   defineYjsCommands,
@@ -18,7 +19,7 @@ import { getProsemirrorXmlFragment } from "./lib/prosemirror/yjs";
 import { Cause, Data, Deferred, Effect, SubscriptionRef } from "effect";
 import { AsyncResult, type Atom } from "effect/unstable/reactivity";
 import BacklinkMenu, { TabMenu } from "./lib/editor/backlink/menu";
-import { useAtomValue } from "@effect/atom-solid";
+import { useAtomValue } from "./lib/atom-solid";
 import { Focus } from "./components/note/focus";
 import type { NoteSchema } from "./lib/note.schema";
 import { EditorFocus } from "./lib/editor/focus.extension";
@@ -50,31 +51,27 @@ export default function Editor(props: Props): JSX.Element {
 
   // The editor stack is recreated per note-id boundary so future route/view
   // changes can swap notes in-place without leaking Y.Doc/editor state.
-  const state = createMemo(
-    on(
-      () => props.noteId,
-      (noteId) => {
-        const doc = new Y.Doc();
+  const state = createMemo(() => {
+    const noteId = props.noteId;
 
-        const extension = union([
-          defineYjs({ doc }),
-          defineAppExtension(),
-          EditorFocus.define(() => focus.requestParent()),
-        ]);
+    return untrack(() => {
+      const doc = new Y.Doc();
 
-        const editor = createEditor({ extension });
+      const extension = union([
+        defineYjs({ doc }),
+        defineAppExtension(),
+        EditorFocus.define(() => focus.requestParent()),
+      ]);
 
-        return {
-          doc,
-          editor,
-          noteId,
-        };
-      },
-      // Build the first editor state immediately so render/effect can consume it
-      // on initial mount without waiting for the first dependency change.
-      { defer: false },
-    ),
-  );
+      const editor = createEditor({ extension });
+
+      return {
+        doc,
+        editor,
+        noteId,
+      };
+    });
+  });
 
   const editorStateAtom = createSyncedAtom(() => {
     const current = state();
@@ -149,8 +146,8 @@ export default function Editor(props: Props): JSX.Element {
     });
   });
 
-  createEffect(() => {
-    props.onBootStateChange?.(bootState());
+  createEffect(bootState, (state) => {
+    props.onBootStateChange?.(state);
   });
 
   const fid = Focus.useId();

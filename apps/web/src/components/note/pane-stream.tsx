@@ -1,14 +1,6 @@
 import { Effect, Stream, Predicate } from "effect";
-import {
-  Show,
-  createEffect,
-  createMemo,
-  createSignal,
-  getOwner,
-  onMount,
-  on,
-  type ComponentProps,
-} from "solid-js";
+import { Show, createEffect, createMemo, createSignal, getOwner, onSettled } from "solid-js";
+import type { ComponentProps } from "@solidjs/web";
 import { VirtualList } from "../../lib/virtual-list";
 import type { NoteSchema } from "../../lib/note.schema";
 import {
@@ -166,14 +158,12 @@ export function PaneStream(props: ComponentProps<"section">) {
   ]);
 
   createEffect(
-    on(
-      () => focus.activeId(),
-      (id) => {
-        const noteId = Focus.noteIn(pane().paneId, id);
+    () => focus.activeId(),
+    (id) => {
+      const noteId = Focus.noteIn(pane().paneId, id);
 
-        if (noteId) setLastFocused(noteId);
-      },
-    ),
+      if (noteId) setLastFocused(noteId);
+    },
   );
 
   return (
@@ -213,7 +203,7 @@ function RevealedRows(props: {
 }) {
   const [revealed, setRevealed] = createSignal(false);
 
-  onMount(() => {
+  onSettled(() => {
     // Double rAF: the first frame commits opacity:0 (and the booted editors'
     // layout) to pixels, the second flips to opacity:1 so the CSS fade-in
     // actually animates.
@@ -222,10 +212,10 @@ function RevealedRows(props: {
 
   return (
     <div
-      class="min-h-0 flex-1 transition-opacity duration-150 ease-out"
-      classList={{
-        "opacity-0": !revealed(),
-      }}
+      class={[
+        "min-h-0 flex-1 transition-opacity duration-150 ease-out",
+        { "opacity-0": !revealed() },
+      ]}
     >
       <VirtualList.Root data={props.rows} key={(row) => row.note.id} retained={props.retained}>
         {(item) => <PaneStreamRow row={item} />}

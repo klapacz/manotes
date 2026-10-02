@@ -1,0 +1,213 @@
+diff --git a/lib/solid/VList.d.ts b/lib/solid/VList.d.ts
+index 48d552861d86a78b722fb014863031f8a58479bd..20a3279a9974b332bb8ade70ff4dcd37853890f7 100644
+--- a/lib/solid/VList.d.ts
++++ b/lib/solid/VList.d.ts
+@@ -1,7 +1,7 @@
+ /**
+- * @jsxImportSource solid-js
++ * @jsxImportSource @solidjs/web
+  */
+-import { type JSX } from "solid-js";
++import { type JSX } from "@solidjs/web";
+ import { type ViewportComponentAttributes } from "./types.js";
+ import { type VirtualizerHandle, type VirtualizerProps } from "./Virtualizer.js";
+ /**
+diff --git a/lib/solid/Virtualizer.d.ts b/lib/solid/Virtualizer.d.ts
+index 144dd7fba894d440069a8dc0415f4b778a98793d..33a2f44ac00b64e77f43fa1e34097bb02d319463 100644
+--- a/lib/solid/Virtualizer.d.ts
++++ b/lib/solid/Virtualizer.d.ts
+@@ -1,7 +1,8 @@
+ /**
+- * @jsxImportSource solid-js
++ * @jsxImportSource @solidjs/web
+  */
+-import { type JSX, type ValidComponent, type Accessor } from "solid-js";
++import { type Accessor } from "solid-js";
++import { type JSX, type ValidComponent } from "@solidjs/web";
+ import { type ScrollToIndexOpts, type CacheSnapshot } from "../core/index.js";
+ /**
+  * Methods of {@link Virtualizer}.
+diff --git a/lib/solid/WindowVirtualizer.d.ts b/lib/solid/WindowVirtualizer.d.ts
+index 65a80867dbb11e1e971d65105bcddd817af82b42..13cf68cdf1d8245ab9490c13b4f838ebe9402442 100644
+--- a/lib/solid/WindowVirtualizer.d.ts
++++ b/lib/solid/WindowVirtualizer.d.ts
+@@ -1,7 +1,8 @@
+ /**
+- * @jsxImportSource solid-js
++ * @jsxImportSource @solidjs/web
+  */
+-import { type JSX, type Accessor } from "solid-js";
++import { type Accessor } from "solid-js";
++import { type JSX } from "@solidjs/web";
+ import { type ScrollToIndexOpts, type CacheSnapshot } from "../core/index.js";
+ /**
+  * Methods of {@link WindowVirtualizer}.
+diff --git a/lib/solid/index.jsx b/lib/solid/index.jsx
+index 029201a2c88fe71645242b3f6f11493a7f91fa86..932dc6033530b2454278983ff74c1b69bc89ecca 100644
+--- a/lib/solid/index.jsx
++++ b/lib/solid/index.jsx
+@@ -1,5 +1,5 @@
+-import { mergeProps, createEffect, onCleanup, createMemo, createSignal, onMount, createComputed, on, untrack, For, splitProps } from 'solid-js';
+-import { Dynamic } from 'solid-js/web';
++import { merge, createEffect, createMemo, createSignal, onSettled, untrack, For, omit } from 'solid-js';
++import { Dynamic } from '@solidjs/web';
+ 
+ /** @internal */
+ const NULL = null;
+@@ -1294,12 +1294,12 @@ const createGridResizer = (rowStore, colStore) => {
+  */
+ const ListItem = (props) => {
+     let elementRef;
+-    props = mergeProps({ _as: "div" }, props);
++    props = merge({ _as: "div" }, props);
+     // The index may be changed if elements are inserted to or removed from the start of props.children
+-    createEffect(() => {
++    createEffect(() => [props._resizer, props._index], ([resizer, index]) => {
+         if (!elementRef)
+             return;
+-        onCleanup(props._resizer(elementRef, props._index));
++        return resizer(elementRef, index);
+     });
+     const style = createMemo(() => {
+         const isHorizontal = props._isHorizontal;
+@@ -1336,12 +1336,13 @@ const isSameRange = (prev, next) => {
+  */
+ const Virtualizer = (props) => {
+     let containerRef;
+-    const { itemSize, horizontal = false, cache } = props;
+-    props = mergeProps({ as: "div" }, props);
+-    const store = createVirtualStore(props.data.length, itemSize, undefined, cache, !itemSize);
++    const { itemSize, horizontal = false, cache } = untrack(() => ({ itemSize: props.itemSize, horizontal: props.horizontal, cache: props.cache }));
++    props = merge({ as: "div" }, props);
++    const store = createVirtualStore(untrack(() => props.data.length), itemSize, undefined, cache, !itemSize);
+     const resizer = createResizer(store, horizontal);
+     const scroller = createScroller(store, horizontal);
+-    const [stateVersion, setRerender] = createSignal(store.$getStateVersion());
++    // The store also updates while memos sync the item count.
++    const [stateVersion, setRerender] = createSignal(store.$getStateVersion(), { ownedWrite: true });
+     store.$subscribe(UPDATE_VIRTUAL_STATE, () => {
+         setRerender(store.$getStateVersion());
+     });
+@@ -1362,7 +1363,7 @@ const Virtualizer = (props) => {
+     const isScrolling = createMemo(() => stateVersion() && store.$isScrolling());
+     const totalSize = createMemo(() => stateVersion() && store.$getTotalSize());
+     const isNegative = createMemo(() => stateVersion() && scroller.$isNegative());
+-    onMount(() => {
++    onSettled(() => {
+         if (props.ref) {
+             props.ref({
+                 get cache() {
+@@ -1389,23 +1390,23 @@ const Virtualizer = (props) => {
+         const scrollable = props.scrollRef || container.parentElement;
+         resizer.$observeRoot(scrollable);
+         scroller.$observe(container, scrollable);
+-        onCleanup(() => {
++        return () => {
+             if (props.ref) {
+                 props.ref();
+             }
+             store.$dispose();
+             resizer.$dispose();
+             scroller.$dispose();
+-        });
++        };
+     });
+-    createComputed(on(() => props.startMargin || 0, (value) => {
++    createEffect(() => props.startMargin || 0, (value) => {
+         if (value !== store.$getStartSpacerSize()) {
+             store.$update(ACTION_START_OFFSET_CHANGE, value);
+         }
+-    }));
+-    createEffect(on(stateVersion, () => {
++    });
++    createEffect(stateVersion, () => {
+         scroller.$fixScrollJump();
+-    }));
++    });
+     const dataSlice = createMemo(() => {
+         const count = props.data.length;
+         untrack(() => {
+@@ -1473,21 +1474,8 @@ const Virtualizer = (props) => {
+  * Virtualized list component. See {@link VListProps} and {@link VListHandle}.
+  */
+ const VList = (props) => {
+-    const [local, others] = splitProps(props, [
+-        "ref",
+-        "data",
+-        "children",
+-        "bufferSize",
+-        "itemSize",
+-        "shift",
+-        "horizontal",
+-        "keepMounted",
+-        "cache",
+-        "item",
+-        "onScroll",
+-        "onScrollEnd",
+-        "style",
+-    ]);
++    const local = props;
++    const others = omit(props, "ref", "data", "children", "bufferSize", "itemSize", "shift", "horizontal", "keepMounted", "cache", "item", "onScroll", "onScrollEnd", "style");
+     return (<div {...others} style={{
+             display: local.horizontal ? "inline-block" : "block",
+             [local.horizontal ? "overflow-x" : "overflow-y"]: "auto",
+@@ -1510,11 +1498,11 @@ const VList = (props) => {
+  */
+ const WindowVirtualizer = (props) => {
+     let containerRef;
+-    const { ref: _ref, data: _data, children: _children, itemSize, shift: _shift, horizontal = false, cache, onScrollEnd: _onScrollEnd, } = props;
+-    const store = createVirtualStore(props.data.length, itemSize, undefined, cache, !itemSize);
++    const { itemSize, horizontal = false, cache } = untrack(() => ({ itemSize: props.itemSize, horizontal: props.horizontal, cache: props.cache }));
++    const store = createVirtualStore(untrack(() => props.data.length), itemSize, undefined, cache, !itemSize);
+     const resizer = createWindowResizer(store, horizontal);
+     const scroller = createWindowScroller(store, horizontal);
+-    const [stateVersion, setRerender] = createSignal(store.$getStateVersion());
++    const [stateVersion, setRerender] = createSignal(store.$getStateVersion(), { ownedWrite: true });
+     store.$subscribe(UPDATE_VIRTUAL_STATE, () => {
+         setRerender(store.$getStateVersion());
+     });
+@@ -1536,7 +1524,7 @@ const WindowVirtualizer = (props) => {
+     const isScrolling = createMemo(() => stateVersion() && store.$isScrolling());
+     const totalSize = createMemo(() => stateVersion() && store.$getTotalSize());
+     const isNegative = createMemo(() => stateVersion() && scroller.$isNegative());
+-    onMount(() => {
++    onSettled(() => {
+         if (props.ref) {
+             props.ref({
+                 get cache() {
+@@ -1556,18 +1544,18 @@ const WindowVirtualizer = (props) => {
+         }
+         resizer.$observeRoot(containerRef);
+         scroller.$observe(containerRef);
+-        onCleanup(() => {
++        return () => {
+             if (props.ref) {
+                 props.ref();
+             }
+             store.$dispose();
+             resizer.$dispose();
+             scroller.$dispose();
+-        });
++        };
+     });
+-    createEffect(on(stateVersion, () => {
++    createEffect(stateVersion, () => {
+         scroller.$fixScrollJump();
+-    }));
++    });
+     const dataSlice = createMemo(() => {
+         const count = props.data.length;
+         untrack(() => {
+diff --git a/lib/solid/types.d.ts b/lib/solid/types.d.ts
+index 9eaf0c1b597c7bfacb8e7b62f9cbfdcb0166e192..08c5ad210cd5976aa5978b781c8292ec3ac4eae5 100644
+--- a/lib/solid/types.d.ts
++++ b/lib/solid/types.d.ts
+@@ -1,5 +1,6 @@
+-import type { JSX, ParentComponent } from "solid-js";
+-export type ViewportComponentAttributes = Pick<JSX.HTMLAttributes<HTMLElement>, "class" | "id" | "role" | "tabIndex" | "onKeyDown" | "onWheel"> & JSX.AriaAttributes & {
++import type { ParentComponent } from "solid-js";
++import type { JSX } from "@solidjs/web";
++export type ViewportComponentAttributes = Pick<JSX.HTMLAttributes<HTMLElement>, "class" | "id" | "role" | "tabindex" | "onKeyDown" | "onWheel"> & JSX.AriaAttributes & {
+     style?: JSX.CSSProperties;
+ };
+ export interface CustomContainerComponentProps {

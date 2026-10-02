@@ -6,8 +6,9 @@ import {
   defineSolidNodeView,
   type SolidNodeViewComponent,
   type SolidNodeViewProps,
-} from "prosekit/solid";
-import { createEffect, createMemo, type JSX } from "solid-js";
+} from "../prosekit-solid";
+import { createEffect, createMemo } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import * as NoteCache from "../../note-cache.service";
 import { bindRt, createAtomStore, createSyncedAtom } from "../..";
 import { decodeBacklinkAttrs, type BacklinkAttrs } from "./spec";
@@ -54,13 +55,16 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
       BacklinkLabelEntry.Loading(),
     );
 
-    createEffect(() => {
-      BacklinkLabelEntry.$match({
-        Loading: () => labelSnapshot.delete(noteId()),
-        Resolved: ({ title }) => labelSnapshot.set(noteId(), title),
-        Missing: () => labelSnapshot.delete(noteId()),
-      })(state.value);
-    });
+    createEffect(
+      () => ({ id: noteId(), entry: state.value }),
+      ({ id, entry }) => {
+        BacklinkLabelEntry.$match(entry, {
+          Loading: () => labelSnapshot.delete(id),
+          Resolved: ({ title }) => labelSnapshot.set(id, title),
+          Missing: () => labelSnapshot.delete(id),
+        });
+      },
+    );
 
     const label = BacklinkLabelEntry.$match({
       Resolved: ({ title }) => title,
@@ -74,7 +78,7 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
         data-backlink=""
         data-backlink-state={state.value._tag}
         data-backlink-id={noteId()}
-        contentEditable={false}
+        contenteditable="false"
       >
         {label(state.value)}
       </NoteLink>

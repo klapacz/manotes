@@ -1,8 +1,8 @@
-import { useAtomValue } from "@effect/atom-solid";
+import { useAtomValue } from "../../lib/atom-solid";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { BootState } from "../../editor";
 import { Option, Stream } from "effect";
-import { createEffect, createMemo, onCleanup, Show } from "solid-js";
+import { createEffect, createMemo, Show } from "solid-js";
 import {
   MatchAsyncResult,
   NoteCache,
@@ -90,10 +90,14 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem }) {
           <MatchAsyncResult
             when={slotResult()}
             onSuccess={(slot) => {
-              createEffect(() => {
-                slot().setAttached(listRow.ready());
-                onCleanup(() => slot().setAttached(false));
-              });
+              createEffect(
+                () => ({ slot: slot(), ready: listRow.ready() }),
+                ({ slot, ready }) => {
+                  slot.setAttached(ready);
+
+                  return () => slot.setAttached(false);
+                },
+              );
 
               return slot().container;
             }}

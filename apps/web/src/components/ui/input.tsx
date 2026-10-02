@@ -1,5 +1,5 @@
-import type { ComponentProps } from "solid-js";
-import { splitProps } from "solid-js";
+import { omit } from "solid-js";
+import type { ComponentProps } from "@solidjs/web";
 
 import { cx } from "../../lib/cva";
 
@@ -14,7 +14,7 @@ export const inputClass =
 export type InputProps = ComponentProps<"input">;
 
 export const Input = (props: InputProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return <input data-slot="input" class={cx(inputClass, props.class)} {...rest} />;
 };

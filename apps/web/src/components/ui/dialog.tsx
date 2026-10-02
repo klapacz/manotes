@@ -1,5 +1,5 @@
-import type { ComponentProps, ValidComponent } from "solid-js";
-import { Show, mergeProps, splitProps } from "solid-js";
+import { Show, merge, omit } from "solid-js";
+import type { ComponentProps, ValidComponent } from "@solidjs/web";
 import { Dialog as DialogPrimitive } from "@kobalte/core/dialog";
 
 import { cx } from "../../lib/cva";
@@ -41,8 +41,8 @@ export type DialogContentProps<T extends ValidComponent = "div"> = ComponentProp
 
 export const DialogContent = <T extends ValidComponent = "div">(props: DialogContentProps<T>) => {
   // SAFETY: The default object supplies only the wrapper-owned optional key before caller props override it.
-  const mergedProps = mergeProps({ showCloseButton: true } as DialogContentProps, props);
-  const [, rest] = splitProps(mergedProps, ["class", "children", "showCloseButton"]);
+  const mergedProps = merge({ showCloseButton: true } as DialogContentProps, props);
+  const rest = omit(mergedProps, "class", "children", "showCloseButton");
 
   return (
     <>
@@ -75,7 +75,7 @@ export const DialogContent = <T extends ValidComponent = "div">(props: DialogCon
 export type DialogHeaderProps = ComponentProps<"div">;
 
 export const DialogHeader = (props: DialogHeaderProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <div
@@ -89,7 +89,7 @@ export const DialogHeader = (props: DialogHeaderProps) => {
 export type DialogFooterProps = ComponentProps<"div">;
 
 export const DialogFooter = (props: DialogFooterProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <div
@@ -106,7 +106,7 @@ export type DialogTitleProps<T extends ValidComponent = "h2"> = ComponentProps<
 
 export const DialogTitle = <T extends ValidComponent = "h2">(props: DialogTitleProps<T>) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as DialogTitleProps, ["class"]);
+  const rest = omit(props as DialogTitleProps, "class");
 
   return (
     <DialogPrimitive.Title
@@ -125,7 +125,7 @@ export const DialogDescription = <T extends ValidComponent = "p">(
   props: DialogDescriptionProps<T>,
 ) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as DialogDescriptionProps, ["class"]);
+  const rest = omit(props as DialogDescriptionProps, "class");
 
   return (
     <DialogPrimitive.Description

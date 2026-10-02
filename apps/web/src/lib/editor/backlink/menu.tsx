@@ -1,12 +1,12 @@
 import { Effect, flow, Stream, Array, Struct, Match } from "effect";
-import { useEditor } from "prosekit/solid";
+import { useEditor } from "../prosekit-solid";
 import {
   AutocompleteEmpty,
   AutocompleteItem,
   AutocompleteList,
   AutocompletePopover,
-} from "prosekit/solid/autocomplete";
-import { For, Show, onCleanup, onMount } from "solid-js";
+} from "../prosekit-solid-autocomplete";
+import { For, Show, onSettled } from "solid-js";
 import {
   commandEmptyClass,
   commandItemBaseClass,
@@ -21,7 +21,7 @@ import type { AppExtension } from "../../../editor.extension";
 import * as BrowserExtensionClient from "../../browser-extension/client";
 import * as BrowserExtensionTabNoteService from "../../browser-extension/tab-note/service";
 import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../../atom-solid";
 
 const BACKLINK_REGEX = /\[\[([^\]\n]*)$/u;
 
@@ -112,9 +112,7 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
           )}
         </For>
 
-        {/* Keyed so the item is recreated on each query change: the prosekit
-            solid wrapper renders children via solid-js/h and does not track
-            dynamic text children reactively after first render. */}
+        {/* Keyed so the item, and its autocomplete value, is recreated on each query change. */}
         <Show when={query().trim()} keyed>
           {(title) => (
             <AutocompleteItem
@@ -215,7 +213,7 @@ function createBacklinkInsertion(editor: AppEditor) {
 // The listbox navigates on ArrowDown/ArrowUp keydown events forwarded through
 // ProseMirror. Alias Ctrl-N / Ctrl-P to those keys while the popover is open.
 function useArrowKeyAliases(editor: AppEditor, isOpen: () => boolean) {
-  onMount(() => {
+  onSettled(() => {
     const dom = editor().view.dom;
 
     const handler = (event: KeyboardEvent) => {
@@ -236,7 +234,8 @@ function useArrowKeyAliases(editor: AppEditor, isOpen: () => boolean) {
     };
 
     dom.addEventListener("keydown", handler, { capture: true });
-    onCleanup(() => dom.removeEventListener("keydown", handler, { capture: true }));
+
+    return () => dom.removeEventListener("keydown", handler, { capture: true });
   });
 }
 

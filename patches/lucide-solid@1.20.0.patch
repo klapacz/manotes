@@ -1,0 +1,119 @@
+diff --git a/dist/source/Icon.jsx b/dist/source/Icon.jsx
+index 52c660b0e16ac38bd545159d02c69ef7df83b3ec..c0991acd048446b30b07894871c0f1d52550a8d3 100644
+--- a/dist/source/Icon.jsx
++++ b/dist/source/Icon.jsx
+@@ -6,8 +6,8 @@
+ */
+ 
+ // src/Icon.tsx
+-import { For, splitProps, useContext } from "solid-js";
+-import { Dynamic } from "solid-js/web";
++import { For, omit, useContext } from "solid-js";
++import { Dynamic } from "@solidjs/web";
+ import defaultAttributes from "./defaultAttributes";
+ import { LucideContext } from "./context";
+ 
+@@ -43,7 +43,9 @@ var toPascalCase = (string) => {
+ 
+ // src/Icon.tsx
+ var Icon = (props) => {
+-  const [localProps, rest] = splitProps(props, [
++  const localProps = props;
++  const rest = omit(
++    props,
+     "color",
+     "size",
+     "strokeWidth",
+@@ -52,7 +54,7 @@ var Icon = (props) => {
+     "name",
+     "iconNode",
+     "absoluteStrokeWidth"
+-  ]);
++  );
+   const globalProps = useContext(LucideContext);
+   return <svg
+     {...defaultAttributes}
+diff --git a/dist/source/context.jsx b/dist/source/context.jsx
+index 1e04767de5d4a8d72c6f056e682cf89e4ce4a122..874476a1f6344675724a590f285a798768d8c4a7 100644
+--- a/dist/source/context.jsx
++++ b/dist/source/context.jsx
+@@ -6,7 +6,7 @@
+ */
+ 
+ // src/context.tsx
+-import { createContext, splitProps } from "solid-js";
++import { createContext } from "solid-js";
+ var LucideContext = createContext({
+   size: 24,
+   color: "currentColor",
+@@ -15,14 +15,24 @@ var LucideContext = createContext({
+   class: ""
+ });
+ function LucideProvider(props) {
+-  const [value, rest] = splitProps(props, [
+-    "size",
+-    "color",
+-    "strokeWidth",
+-    "absoluteStrokeWidth",
+-    "class"
+-  ]);
+-  return <LucideContext.Provider value={value}>{rest.children}</LucideContext.Provider>;
++  const value = {
++    get size() {
++      return props.size;
++    },
++    get color() {
++      return props.color;
++    },
++    get strokeWidth() {
++      return props.strokeWidth;
++    },
++    get absoluteStrokeWidth() {
++      return props.absoluteStrokeWidth;
++    },
++    get class() {
++      return props.class;
++    }
++  };
++  return <LucideContext value={value}>{props.children}</LucideContext>;
+ }
+ export {
+   LucideContext,
+diff --git a/dist/types/Icon.d.ts b/dist/types/Icon.d.ts
+index c9156ee36bc62738814d493d282811807b125567..e21dee6fbf8d3ff1020255dddd36757ab87389c6 100644
+--- a/dist/types/Icon.d.ts
++++ b/dist/types/Icon.d.ts
+@@ -3,5 +3,5 @@ interface IconProps {
+     name?: string;
+     iconNode: IconNode;
+ }
+-declare const Icon: (props: LucideProps & IconProps) => import("solid-js").JSX.Element;
++declare const Icon: (props: LucideProps & IconProps) => import("@solidjs/web").JSX.Element;
+ export default Icon;
+diff --git a/dist/types/context.d.ts b/dist/types/context.d.ts
+index 26c9190791b34969a359bf0f6e75bc67da7aa497..8e7ba9d0219a3a1298da2b757fba02c1ead1e2ec 100644
+--- a/dist/types/context.d.ts
++++ b/dist/types/context.d.ts
+@@ -1,4 +1,4 @@
+-import { type JSXElement } from 'solid-js';
++import { type Element as JSXElement } from 'solid-js';
+ export declare const LucideContext: import("solid-js").Context<{
+     size?: number;
+     color?: string;
+@@ -14,5 +14,5 @@ interface LucideProviderProps {
+     absoluteStrokeWidth?: boolean;
+     class?: string;
+ }
+-export declare function LucideProvider(props: LucideProviderProps): import("solid-js").JSX.Element;
++export declare function LucideProvider(props: LucideProviderProps): import("@solidjs/web").JSX.Element;
+ export {};
+diff --git a/dist/types/types.d.ts b/dist/types/types.d.ts
+index 0753bd8790f96c6525c0dd88f90d515811696446..c194a984ffa9f2de813b59443c673db6b23a1a65 100644
+--- a/dist/types/types.d.ts
++++ b/dist/types/types.d.ts
+@@ -1,4 +1,4 @@
+-import { JSX } from 'solid-js/jsx-runtime';
++import type { JSX } from '@solidjs/web';
+ export type IconNode = [elementName: keyof JSX.IntrinsicElements, attrs: Record<string, string>][];
+ export type SVGAttributes = Partial<JSX.SvgSVGAttributes<SVGSVGElement>>;
+ export interface LucideProps extends SVGAttributes {

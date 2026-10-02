@@ -1,5 +1,6 @@
 import { getRouteApi } from "@tanstack/solid-router";
-import { Show } from "solid-js";
+import { Show, omit, type ParentProps } from "solid-js";
+import type { ComponentProps } from "@solidjs/web";
 import { LinkButton } from "../ui/link-button";
 import { NoteFormat } from "../../lib/note";
 import { PaneCursor } from "../../lib/note/pane.cursor";
@@ -13,14 +14,14 @@ import { callHandler } from "../../lib/call-handler";
 import { cx } from "../../lib/cva";
 import { DOMScroll } from "../../lib/dom-scroll";
 import { DatePicker } from "./date-picker";
-import { splitProps, type ComponentProps, type ParentProps } from "solid-js";
 import type { NoteSchema } from "../../lib";
 import { Focus } from "./focus";
 
 const route = getRouteApi("/$graph/");
 
 export function PaneShell(props: ComponentProps<"section">) {
-  const [local, rest] = splitProps(props, ["children", "onFocusIn"]);
+  const local = props;
+  const rest = omit(props, "children", "onFocusIn");
 
   return (
     <section
@@ -214,17 +215,19 @@ function NoteActionButton(props: ParentProps<{ label: string; onClick: () => voi
 // Keep this highlight while a local control or portal temporarily takes focus.
 export function NoteShell(props: ComponentProps<"article">) {
   const fnode = Focus.useNode();
-  const [local, rest] = splitProps(props, ["class", "classList", "children"]);
+  const local = props;
+  const rest = omit(props, "class", "children");
 
   return (
     <article
       {...rest}
-      class={cx("transition-colors relative border-t border-t-border-subtle", local.class)}
-      classList={{
-        ...local.classList,
-        "bg-bg-subtle": fnode.highlightWithin(),
-        "border-t-primary-border": fnode.highlighted(),
-      }}
+      class={[
+        cx("transition-colors relative border-t border-t-border-subtle", local.class),
+        {
+          "bg-bg-subtle": fnode.highlightWithin(),
+          "border-t-primary-border": fnode.highlighted(),
+        },
+      ]}
     >
       {local.children}
     </article>
@@ -237,7 +240,7 @@ export function NoteShell(props: ComponentProps<"article">) {
 // visible. Notes continuing a run render nothing.
 export function NoteDivider(props: { date: string }) {
   return (
-    <time dateTime={props.date} class="block font-serif font-medium my-3 text-center">
+    <time datetime={props.date} class="block font-serif font-medium my-3 text-center">
       {NoteFormat.formatGroupLabel(props.date)}
     </time>
   );

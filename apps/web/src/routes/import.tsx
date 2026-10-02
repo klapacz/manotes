@@ -1,4 +1,4 @@
-import { useAtom, useAtomSet, useAtomValue } from "@effect/atom-solid";
+import { useAtom, useAtomSet, useAtomValue } from "../lib/atom-solid";
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
 import { Effect, Schema } from "effect";
 import { AsyncResult, Atom } from "effect/unstable/reactivity";

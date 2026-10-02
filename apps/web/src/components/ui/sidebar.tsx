@@ -1,6 +1,15 @@
 import { Root as ButtonPrimitive } from "@kobalte/core/button";
-import type { Accessor, ComponentProps, JSX, ValidComponent } from "solid-js";
-import { Show, createContext, createMemo, createSignal, splitProps, useContext } from "solid-js";
+import {
+  type Accessor,
+  Show,
+  createContext,
+  createMemo,
+  createSignal,
+  omit,
+  untrack,
+  useContext,
+} from "solid-js";
+import type { ComponentProps, JSX, ValidComponent } from "@solidjs/web";
 import type { VariantProps } from "cva";
 
 import { callHandler } from "../../lib/call-handler";
@@ -42,26 +51,24 @@ export type SidebarProviderProps = ComponentProps<"div"> & {
 };
 
 export const SidebarProvider = (props: SidebarProviderProps) => {
-  const [local, rest] = splitProps(props, [
-    "defaultOpen",
-    "defaultOpenMobile",
-    "class",
-    "style",
-    "children",
-  ]);
+  const local = props;
+  const rest = omit(props, "defaultOpen", "defaultOpenMobile", "class", "style", "children");
 
   const isMobile = useIsMobile();
-  const [open, setOpen] = createSignal(local.defaultOpen ?? true);
-  const [openMobile, setOpenMobile] = createSignal(local.defaultOpenMobile ?? false);
+  const [open, setOpen] = createSignal<boolean>(untrack(() => local.defaultOpen ?? true));
+
+  const [openMobile, setOpenMobile] = createSignal<boolean>(
+    untrack(() => local.defaultOpenMobile ?? false),
+  );
 
   const toggleSidebar = () => {
     if (isMobile()) {
-      setOpenMobile((prev) => !prev);
+      setOpenMobile((prev: boolean) => !prev);
 
       return;
     }
 
-    setOpen((prev) => !prev);
+    setOpen((prev: boolean) => !prev);
   };
 
   const contextValue: SidebarContextProps = {
@@ -74,23 +81,24 @@ export const SidebarProvider = (props: SidebarProviderProps) => {
   };
 
   return (
-    <SidebarContext.Provider value={contextValue}>
+    <SidebarContext value={contextValue}>
       <div
         data-slot="sidebar-wrapper"
-        style={combineStyle({ "--sidebar-width": SIDEBAR_WIDTH }, local.style)}
+        style={combineStyle({ "--sidebar-width": SIDEBAR_WIDTH }, local.style || undefined)}
         class={cx("group/sidebar-wrapper flex min-h-svh w-full", local.class)}
         {...rest}
       >
         {local.children}
       </div>
-    </SidebarContext.Provider>
+    </SidebarContext>
   );
 };
 
 export type SidebarProps = ComponentProps<"aside">;
 
 export const Sidebar = (props: SidebarProps) => {
-  const [local, rest] = splitProps(props, ["class", "children"]);
+  const local = props;
+  const rest = omit(props, "class", "children");
   const { isMobile, open, openMobile, setOpenMobile } = useSidebar();
 
   return (
@@ -131,7 +139,8 @@ export const Sidebar = (props: SidebarProps) => {
 export type SidebarInsetProps = ComponentProps<"main">;
 
 export const SidebarInset = (props: SidebarInsetProps) => {
-  const [local, rest] = splitProps(props, ["class"]);
+  const local = props;
+  const rest = omit(props, "class");
 
   return (
     <main
@@ -145,7 +154,8 @@ export const SidebarInset = (props: SidebarInsetProps) => {
 export type SidebarTriggerProps = ComponentProps<typeof Button>;
 
 export const SidebarTrigger = (props: SidebarTriggerProps) => {
-  const [local, rest] = splitProps(props, ["class", "onClick"]);
+  const local = props;
+  const rest = omit(props, "class", "onClick");
   const { open, toggleSidebar } = useSidebar();
 
   const onClick: JSX.EventHandlerUnion<HTMLButtonElement, MouseEvent> = (event) => {
@@ -177,7 +187,8 @@ export const SidebarTrigger = (props: SidebarTriggerProps) => {
 export type SidebarRailProps = ComponentProps<"button">;
 
 export const SidebarRail = (props: SidebarRailProps) => {
-  const [local, rest] = splitProps(props, ["class", "onClick"]);
+  const local = props;
+  const rest = omit(props, "class", "onClick");
   const { toggleSidebar } = useSidebar();
 
   const onClick: JSX.EventHandlerUnion<HTMLButtonElement, MouseEvent> = (event) => {
@@ -190,7 +201,7 @@ export const SidebarRail = (props: SidebarRailProps) => {
       data-slot="sidebar-rail"
       aria-label="Toggle Sidebar"
       title="Toggle Sidebar"
-      tabIndex={-1}
+      tabindex={-1}
       onClick={onClick}
       class={cx(
         "hover:after:bg-border-subtle absolute inset-y-0 right-0 z-20 hidden w-4 translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-px md:flex",
@@ -206,7 +217,8 @@ export const SidebarRail = (props: SidebarRailProps) => {
 export type SidebarHeaderProps = ComponentProps<"div">;
 
 export const SidebarHeader = (props: SidebarHeaderProps) => {
-  const [local, rest] = splitProps(props, ["class"]);
+  const local = props;
+  const rest = omit(props, "class");
 
   return (
     <div data-slot="sidebar-header" class={cx("flex flex-col gap-2 p-2", local.class)} {...rest} />
@@ -216,7 +228,8 @@ export const SidebarHeader = (props: SidebarHeaderProps) => {
 export type SidebarFooterProps = ComponentProps<"div">;
 
 export const SidebarFooter = (props: SidebarFooterProps) => {
-  const [local, rest] = splitProps(props, ["class"]);
+  const local = props;
+  const rest = omit(props, "class");
 
   return (
     <div data-slot="sidebar-footer" class={cx("flex flex-col gap-2 p-2", local.class)} {...rest} />
@@ -226,7 +239,8 @@ export const SidebarFooter = (props: SidebarFooterProps) => {
 export type SidebarSeparatorProps = ComponentProps<typeof Separator>;
 
 export const SidebarSeparator = (props: SidebarSeparatorProps) => {
-  const [local, rest] = splitProps(props, ["class"]);
+  const local = props;
+  const rest = omit(props, "class");
 
   return <Separator data-slot="sidebar-separator" class={cx("mx-2", local.class)} {...rest} />;
 };
@@ -234,7 +248,8 @@ export const SidebarSeparator = (props: SidebarSeparatorProps) => {
 export type SidebarContentProps = ComponentProps<"div">;
 
 export const SidebarContent = (props: SidebarContentProps) => {
-  const [local, rest] = splitProps(props, ["class"]);
+  const local = props;
+  const rest = omit(props, "class");
 
   return (
     <div
@@ -248,7 +263,8 @@ export const SidebarContent = (props: SidebarContentProps) => {
 export type SidebarGroupProps = ComponentProps<"div">;
 
 export const SidebarGroup = (props: SidebarGroupProps) => {
-  const [local, rest] = splitProps(props, ["class"]);
+  const local = props;
+  const rest = omit(props, "class");
 
   return (
     <div
@@ -262,7 +278,8 @@ export const SidebarGroup = (props: SidebarGroupProps) => {
 export type SidebarGroupLabelProps = ComponentProps<"div">;
 
 export const SidebarGroupLabel = (props: SidebarGroupLabelProps) => {
-  const [local, rest] = splitProps(props, ["class"]);
+  const local = props;
+  const rest = omit(props, "class");
 
   return (
     <div
@@ -276,7 +293,8 @@ export const SidebarGroupLabel = (props: SidebarGroupLabelProps) => {
 export type SidebarGroupActionProps = ComponentProps<"button">;
 
 export const SidebarGroupAction = (props: SidebarGroupActionProps) => {
-  const [local, rest] = splitProps(props, ["class"]);
+  const local = props;
+  const rest = omit(props, "class");
 
   return (
     <button
@@ -293,7 +311,8 @@ export const SidebarGroupAction = (props: SidebarGroupActionProps) => {
 export type SidebarGroupContentProps = ComponentProps<"div">;
 
 export const SidebarGroupContent = (props: SidebarGroupContentProps) => {
-  const [local, rest] = splitProps(props, ["class"]);
+  const local = props;
+  const rest = omit(props, "class");
 
   return (
     <div data-slot="sidebar-group-content" class={cx("w-full text-sm", local.class)} {...rest} />
@@ -303,7 +322,8 @@ export const SidebarGroupContent = (props: SidebarGroupContentProps) => {
 export type SidebarMenuProps = ComponentProps<"ul">;
 
 export const SidebarMenu = (props: SidebarMenuProps) => {
-  const [local, rest] = splitProps(props, ["class"]);
+  const local = props;
+  const rest = omit(props, "class");
 
   return (
     <ul
@@ -317,7 +337,8 @@ export const SidebarMenu = (props: SidebarMenuProps) => {
 export type SidebarMenuItemProps = ComponentProps<"li">;
 
 export const SidebarMenuItem = (props: SidebarMenuItemProps) => {
-  const [local, rest] = splitProps(props, ["class"]);
+  const local = props;
+  const rest = omit(props, "class");
 
   return (
     <li
@@ -358,12 +379,8 @@ export const SidebarMenuButton = <T extends ValidComponent = "button">(
   props: SidebarMenuButtonProps<T>,
 ) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [local, rest] = splitProps(props as SidebarMenuButtonProps, [
-    "class",
-    "isActive",
-    "size",
-    "variant",
-  ]);
+  const local = props as SidebarMenuButtonProps;
+  const rest = omit(local, "class", "isActive", "size", "variant");
 
   const { open } = useSidebar();
   const collapsed = createMemo(() => !open());
@@ -388,7 +405,8 @@ export type SidebarMenuActionProps = ComponentProps<"button"> & {
 };
 
 export const SidebarMenuAction = (props: SidebarMenuActionProps) => {
-  const [local, rest] = splitProps(props, ["class", "showOnHover"]);
+  const local = props;
+  const rest = omit(props, "class", "showOnHover");
 
   return (
     <button
@@ -407,7 +425,8 @@ export const SidebarMenuAction = (props: SidebarMenuActionProps) => {
 export type SidebarMenuSubProps = ComponentProps<"ul">;
 
 export const SidebarMenuSub = (props: SidebarMenuSubProps) => {
-  const [local, rest] = splitProps(props, ["class"]);
+  const local = props;
+  const rest = omit(props, "class");
   const { open } = useSidebar();
 
   return (
@@ -426,7 +445,8 @@ export const SidebarMenuSub = (props: SidebarMenuSubProps) => {
 export type SidebarMenuSubItemProps = ComponentProps<"li">;
 
 export const SidebarMenuSubItem = (props: SidebarMenuSubItemProps) => {
-  const [local, rest] = splitProps(props, ["class"]);
+  const local = props;
+  const rest = omit(props, "class");
 
   return (
     <li
@@ -443,7 +463,8 @@ export type SidebarMenuSubButtonProps = ComponentProps<"a"> & {
 };
 
 export const SidebarMenuSubButton = (props: SidebarMenuSubButtonProps) => {
-  const [local, rest] = splitProps(props, ["class", "isActive", "size"]);
+  const local = props;
+  const rest = omit(props, "class", "isActive", "size");
   const { open } = useSidebar();
 
   return (

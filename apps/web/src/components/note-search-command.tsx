@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/solid-router";
 import { Stream, Array, flow } from "effect";
-import type { JSX } from "solid-js";
-import { Index, createEffect, createSignal, onCleanup } from "solid-js";
+import { For, createSignal, onSettled } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { NoteRepo, type NoteSchema, bindRt, createAtomState, createAtomStore } from "../lib";
 import { NoteFormat } from "../lib/note";
 import {
@@ -49,7 +49,7 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
     Array.empty<{ id: NoteSchema.Id; title: string }>(),
   );
 
-  createEffect(() => {
+  onSettled(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== "k") return;
 
@@ -61,9 +61,7 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
 
     document.addEventListener("keydown", onKeyDown);
 
-    onCleanup(() => {
-      document.removeEventListener("keydown", onKeyDown);
-    });
+    return () => document.removeEventListener("keydown", onKeyDown);
   });
 
   return (
@@ -90,7 +88,7 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
         <CommandList>
           <CommandEmpty>No matching notes.</CommandEmpty>
           <CommandGroup heading="Notes">
-            <Index each={notes.value}>
+            <For each={notes.value} keyed={false}>
               {(note) => (
                 <CommandItem
                   value={note().id}
@@ -107,7 +105,7 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
                   {note().title}
                 </CommandItem>
               )}
-            </Index>
+            </For>
           </CommandGroup>
         </CommandList>
       </CommandDialog>

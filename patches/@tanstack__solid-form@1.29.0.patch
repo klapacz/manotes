@@ -1,0 +1,278 @@
+diff --git a/dist/esm/createField.d.ts b/dist/esm/createField.d.ts
+index cf3f74dfa027e02596ad964062f0a164cf6524e3..62e1af316e3da3ca063386f28fc6f34d8980afef 100644
+--- a/dist/esm/createField.d.ts
++++ b/dist/esm/createField.d.ts
+@@ -1,5 +1,6 @@
+ import { FieldApi, DeepKeys, DeepValue, FieldAsyncValidateOrFn, FieldValidateOrFn, FieldValidators, FormAsyncValidateOrFn, FormValidateOrFn, Narrow } from '@tanstack/form-core';
+-import { Accessor, JSX, JSXElement } from 'solid-js';
++import { Accessor, Element as JSXElement } from "solid-js";
++import { JSX } from "@solidjs/web";
+ import { CreateFieldOptions, CreateFieldOptionsBound } from './types.js';
+ interface SolidFieldApi<TParentData, TFormOnMount extends undefined | FormValidateOrFn<TParentData>, TFormOnChange extends undefined | FormValidateOrFn<TParentData>, TFormOnChangeAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnBlur extends undefined | FormValidateOrFn<TParentData>, TFormOnBlurAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnSubmit extends undefined | FormValidateOrFn<TParentData>, TFormOnSubmitAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnDynamic extends undefined | FormValidateOrFn<TParentData>, TFormOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnServer extends undefined | FormAsyncValidateOrFn<TParentData>, TParentSubmitMeta> {
+     Field: FieldComponent<TParentData, TFormOnMount, TFormOnChange, TFormOnChangeAsync, TFormOnBlur, TFormOnBlurAsync, TFormOnSubmit, TFormOnSubmitAsync, TFormOnDynamic, TFormOnDynamicAsync, TFormOnServer, TParentSubmitMeta>;
+diff --git a/dist/esm/createFieldGroup.d.ts b/dist/esm/createFieldGroup.d.ts
+index 0bb3547ff3b0c547eb7f79c9049355f75b5db4aa..7fb488f59a5d64c653b858e0e8d01310e624d54e 100644
+--- a/dist/esm/createFieldGroup.d.ts
++++ b/dist/esm/createFieldGroup.d.ts
+@@ -1,5 +1,6 @@
+ import { FieldGroupApi, DeepKeysOfType, FieldGroupState, FieldsMap, FormAsyncValidateOrFn, FormValidateOrFn } from '@tanstack/form-core';
+-import { Component, JSX, ParentProps } from 'solid-js';
++import { Component, ParentProps } from "solid-js";
++import { JSX } from "@solidjs/web";
+ import { LensFieldComponent } from './createField.js';
+ import { AppFieldExtendedSolidFormApi } from './createFormHook.js';
+ /**
+diff --git a/dist/esm/createForm.d.ts b/dist/esm/createForm.d.ts
+index 886e5d9f39715dece3e9b2b02cdc1badd1b5b682..6dbe5753ff61683f3b3988976e18c8913f8379cc 100644
+--- a/dist/esm/createForm.d.ts
++++ b/dist/esm/createForm.d.ts
+@@ -1,5 +1,5 @@
+ import { FormApi, FormAsyncValidateOrFn, FormOptions, FormState, FormValidateOrFn } from '@tanstack/form-core';
+-import { JSXElement } from 'solid-js';
++import { Element as JSXElement } from "solid-js";
+ import { CreateField, FieldComponent } from './createField.js';
+ export interface SolidFormApi<TParentData, TFormOnMount extends undefined | FormValidateOrFn<TParentData>, TFormOnChange extends undefined | FormValidateOrFn<TParentData>, TFormOnChangeAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnBlur extends undefined | FormValidateOrFn<TParentData>, TFormOnBlurAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnSubmit extends undefined | FormValidateOrFn<TParentData>, TFormOnSubmitAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnDynamic extends undefined | FormValidateOrFn<TParentData>, TFormOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnServer extends undefined | FormAsyncValidateOrFn<TParentData>, TSubmitMeta> {
+     Field: FieldComponent<TParentData, TFormOnMount, TFormOnChange, TFormOnChangeAsync, TFormOnBlur, TFormOnBlurAsync, TFormOnSubmit, TFormOnSubmitAsync, TFormOnDynamic, TFormOnDynamicAsync, TFormOnServer, TSubmitMeta>;
+diff --git a/dist/esm/createFormHook.d.ts b/dist/esm/createFormHook.d.ts
+index 10a62456a98edabde7f8238767d701cc9682e210..fd5b8a1bfcf7d9ddccde6729eb6e7d653f07fc9a 100644
+--- a/dist/esm/createFormHook.d.ts
++++ b/dist/esm/createFormHook.d.ts
+@@ -1,5 +1,5 @@
+ import { AnyFieldApi, AnyFormApi, BaseFormOptions, DeepKeysOfType, FieldApi, FieldsMap, FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@tanstack/form-core';
+-import { Accessor, Component, Context, JSXElement, ParentProps } from 'solid-js';
++import { Accessor, Component, Context, Element as JSXElement, ParentProps } from "solid-js";
+ import { FieldComponent } from './createField.js';
+ import { AppFieldExtendedSolidFieldGroupApi } from './createFieldGroup.js';
+ import { SolidFormExtendedApi } from './createForm.js';
+diff --git a/dist/source/createField.d.ts b/dist/source/createField.d.ts
+index 11cd8eaf9d931a2d91721d7cf997bf42ee80463b..c56784b6a420447fb81754737704c85863ec2c8b 100644
+--- a/dist/source/createField.d.ts
++++ b/dist/source/createField.d.ts
+@@ -1,6 +1,7 @@
+ import { FieldApi } from '@tanstack/form-core';
+ import type { DeepKeys, DeepValue, FieldAsyncValidateOrFn, FieldValidateOrFn, FieldValidators, FormAsyncValidateOrFn, FormValidateOrFn, Narrow } from '@tanstack/form-core';
+-import type { Accessor, JSX, JSXElement } from 'solid-js';
++import type { Accessor, Element as JSXElement } from "solid-js";
++import type { JSX } from "@solidjs/web";
+ import type { CreateFieldOptions, CreateFieldOptionsBound } from './types';
+ interface SolidFieldApi<TParentData, TFormOnMount extends undefined | FormValidateOrFn<TParentData>, TFormOnChange extends undefined | FormValidateOrFn<TParentData>, TFormOnChangeAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnBlur extends undefined | FormValidateOrFn<TParentData>, TFormOnBlurAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnSubmit extends undefined | FormValidateOrFn<TParentData>, TFormOnSubmitAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnDynamic extends undefined | FormValidateOrFn<TParentData>, TFormOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnServer extends undefined | FormAsyncValidateOrFn<TParentData>, TParentSubmitMeta> {
+     Field: FieldComponent<TParentData, TFormOnMount, TFormOnChange, TFormOnChangeAsync, TFormOnBlur, TFormOnBlurAsync, TFormOnSubmit, TFormOnSubmitAsync, TFormOnDynamic, TFormOnDynamicAsync, TFormOnServer, TParentSubmitMeta>;
+diff --git a/dist/source/createField.jsx b/dist/source/createField.jsx
+index 7adff3a48dbbb4ab5a2dc3585986b102830f8b21..a5ad666982c85c9fa09d7607a06735cecc0eac30 100644
+--- a/dist/source/createField.jsx
++++ b/dist/source/createField.jsx
+@@ -1,45 +1,24 @@
+ import { FieldApi } from '@tanstack/form-core';
+-import { createComponent, createComputed, createSignal, onCleanup, onMount, } from 'solid-js';
++import { createComponent, createMemo, onSettled, untrack } from 'solid-js';
+ import { useStore } from '@tanstack/solid-store';
+ // ugly way to trick solid into triggering updates for changes on the fieldApi
+ function makeFieldReactive(fieldApi) {
+-    const [field, setField] = createSignal(fieldApi, { equals: false });
+-    // Handle shallow comparison to make sure that Derived doesn't create a new setField call every time
+     const store = useStore(fieldApi.store, (store) => store);
+-    // Run before initial render
+-    createComputed(() => {
++    return createMemo(() => {
+         // Use the store to track dependencies
+         store();
+-        setField(fieldApi);
+-    });
+-    return field;
++        return fieldApi;
++    }, { equals: false });
+ }
+ export function createField(opts) {
+-    const options = opts();
++    const options = untrack(opts);
+     const api = new FieldApi(options);
+     const extendedApi = api;
+     extendedApi.Field = Field;
+-    let mounted = false;
+     // Instantiates field meta and removes it when unrendered
+-    onMount(() => {
+-        const cleanupFn = api.mount();
+-        mounted = true;
+-        onCleanup(() => {
+-            cleanupFn();
+-            mounted = false;
+-        });
+-    });
+-    /**
+-     * fieldApi.update should not have any side effects. Think of it like a `useRef`
+-     * that we need to keep updated every render with the most up-to-date information.
+-     *
+-     * createComputed to make sure this effect runs before render effects
+-     */
+-    createComputed(() => {
+-        if (!mounted)
+-            return;
+-        api.update(opts());
+-    });
++    onSettled(() => api.mount());
++    // Solid 1 ran fieldApi.update from a createComputed gated on `mounted`,
++    // which never re-ran after the initial unmounted pass.
+     return makeFieldReactive(extendedApi);
+ }
+ export function Field(props) {
+@@ -49,4 +28,3 @@ export function Field(props) {
+     });
+     return <>{createComponent(() => props.children(fieldApi), {})}</>;
+ }
+-//# sourceMappingURL=createField.jsx.map
+\ No newline at end of file
+diff --git a/dist/source/createFieldGroup.d.ts b/dist/source/createFieldGroup.d.ts
+index b20db65b162f851a61ca5a976cb1e3c1f744e5cb..4dcda3e057558e67c744b5fc7c6761e5ed696e8e 100644
+--- a/dist/source/createFieldGroup.d.ts
++++ b/dist/source/createFieldGroup.d.ts
+@@ -1,5 +1,6 @@
+ import { FieldGroupApi } from '@tanstack/form-core';
+-import type { Component, JSX, ParentProps } from 'solid-js';
++import type { Component, ParentProps } from "solid-js";
++import type { JSX } from "@solidjs/web";
+ import type { DeepKeysOfType, FieldGroupState, FieldsMap, FormAsyncValidateOrFn, FormValidateOrFn } from '@tanstack/form-core';
+ import type { LensFieldComponent } from './createField';
+ import type { AppFieldExtendedSolidFormApi } from './createFormHook';
+diff --git a/dist/source/createFieldGroup.jsx b/dist/source/createFieldGroup.jsx
+index cde0a887d6d965bd3672b1ecb82b863c1e8625d1..aca6c757b186616bb460324de9b39ad740cea257 100644
+--- a/dist/source/createFieldGroup.jsx
++++ b/dist/source/createFieldGroup.jsx
+@@ -1,8 +1,8 @@
+ import { FieldGroupApi, functionalUpdate } from '@tanstack/form-core';
+ import { useStore } from '@tanstack/solid-store';
+-import { onCleanup, onMount } from 'solid-js';
++import { onSettled, untrack } from 'solid-js';
+ export function createFieldGroup(opts) {
+-    const options = opts();
++    const options = untrack(opts);
+     const api = new FieldGroupApi(options);
+     const form = options.form instanceof FieldGroupApi
+         ? options.form.form
+@@ -15,17 +15,8 @@ export function createFieldGroup(opts) {
+         const data = useStore(api.store, props.selector);
+         return functionalUpdate(props.children, data());
+     };
+-    let mounted = false;
+-    onMount(() => {
+-        const cleanupFn = api.mount();
+-        mounted = true;
+-        onCleanup(() => {
+-            cleanupFn();
+-            mounted = false;
+-        });
+-    });
++    onSettled(() => api.mount());
+     return Object.assign(extendedApi, {
+         ...options.formComponents,
+     });
+ }
+-//# sourceMappingURL=createFieldGroup.jsx.map
+\ No newline at end of file
+diff --git a/dist/source/createForm.d.ts b/dist/source/createForm.d.ts
+index a0ac0a38d39c812646b7fd13737000050e2673f2..907502b103673a2e59ed3079aecefeb949283379 100644
+--- a/dist/source/createForm.d.ts
++++ b/dist/source/createForm.d.ts
+@@ -1,6 +1,6 @@
+ import { FormApi } from '@tanstack/form-core';
+ import type { FormAsyncValidateOrFn, FormOptions, FormState, FormValidateOrFn } from '@tanstack/form-core';
+-import type { JSXElement } from 'solid-js';
++import type { Element as JSXElement } from "solid-js";
+ import type { CreateField, FieldComponent } from './createField';
+ export interface SolidFormApi<TParentData, TFormOnMount extends undefined | FormValidateOrFn<TParentData>, TFormOnChange extends undefined | FormValidateOrFn<TParentData>, TFormOnChangeAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnBlur extends undefined | FormValidateOrFn<TParentData>, TFormOnBlurAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnSubmit extends undefined | FormValidateOrFn<TParentData>, TFormOnSubmitAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnDynamic extends undefined | FormValidateOrFn<TParentData>, TFormOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TParentData>, TFormOnServer extends undefined | FormAsyncValidateOrFn<TParentData>, TSubmitMeta> {
+     Field: FieldComponent<TParentData, TFormOnMount, TFormOnChange, TFormOnChangeAsync, TFormOnBlur, TFormOnBlurAsync, TFormOnSubmit, TFormOnSubmitAsync, TFormOnDynamic, TFormOnDynamicAsync, TFormOnServer, TSubmitMeta>;
+diff --git a/dist/source/createForm.jsx b/dist/source/createForm.jsx
+index 938dfe6d4530488abd69b831fdb00882c16fae9a..9be79136f91e1e210e01cfcb9f00557fdcd0114d 100644
+--- a/dist/source/createForm.jsx
++++ b/dist/source/createForm.jsx
+@@ -1,9 +1,9 @@
+ import { FormApi, functionalUpdate } from '@tanstack/form-core';
+-import { createComputed, onMount } from 'solid-js';
++import { createEffect, onSettled, untrack } from 'solid-js';
+ import { useStore } from '@tanstack/solid-store';
+ import { Field, createField } from './createField';
+ export function createForm(opts) {
+-    const options = opts?.();
++    const options = untrack(() => opts?.());
+     const api = new FormApi(options);
+     const extendedApi = api;
+     extendedApi.Field = (props) => <Field {...props} form={api}/>;
+@@ -12,12 +12,13 @@ export function createForm(opts) {
+     });
+     extendedApi.useStore = (selector) => useStore(api.store, selector);
+     extendedApi.Subscribe = (props) => functionalUpdate(props.children, useStore(api.store, props.selector));
+-    onMount(api.mount);
++    onSettled(() => {
++        api.mount();
++    });
+     /**
+      * formApi.update should not have any side effects. Think of it like a `useRef`
+      * that we need to keep updated every render with the most up-to-date information.
+      */
+-    createComputed(() => api.update(opts?.()));
++    createEffect(() => opts?.(), (next) => api.update(next));
+     return extendedApi;
+ }
+-//# sourceMappingURL=createForm.jsx.map
+\ No newline at end of file
+diff --git a/dist/source/createFormHook.d.ts b/dist/source/createFormHook.d.ts
+index 0390f7df9624302b227b5d31752335f0a8a7b867..272dc54f5fe06184bd8d6162abade66f88ac6110 100644
+--- a/dist/source/createFormHook.d.ts
++++ b/dist/source/createFormHook.d.ts
+@@ -1,5 +1,5 @@
+ import type { AnyFieldApi, AnyFormApi, BaseFormOptions, DeepKeysOfType, FieldApi, FieldsMap, FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@tanstack/form-core';
+-import type { Accessor, Component, Context, JSXElement, ParentProps } from 'solid-js';
++import type { Accessor, Component, Context, Element as JSXElement, ParentProps } from "solid-js";
+ import type { FieldComponent } from './createField';
+ import type { AppFieldExtendedSolidFieldGroupApi } from './createFieldGroup';
+ import type { SolidFormExtendedApi } from './createForm';
+diff --git a/dist/source/createFormHook.jsx b/dist/source/createFormHook.jsx
+index 688033b1f52e8c2cf03503a1b30794aebe1c8963..d7a21bea7575ba4d42d137d3b7245348779485b0 100644
+--- a/dist/source/createFormHook.jsx
++++ b/dist/source/createFormHook.jsx
+@@ -1,4 +1,4 @@
+-import { createComponent, createContext, mergeProps, splitProps, useContext, } from 'solid-js';
++import { createComponent, createContext, merge, omit, useContext, } from 'solid-js';
+ import { createFieldGroup } from './createFieldGroup';
+ import { createForm } from './createForm';
+ export function createFormHookContexts() {
+@@ -28,16 +28,17 @@ export function createFormHook(opts) {
+     function useAppForm(props) {
+         const form = createForm(props);
+         const AppForm = ((formProps) => {
+-            return (<opts.formContext.Provider value={form}>
++            return (<opts.formContext value={form}>
+           {formProps.children}
+-        </opts.formContext.Provider>);
++        </opts.formContext>);
+         });
+         const AppField = ((_props) => {
+-            const [childProps, fieldProps] = splitProps(_props, ['children']);
++            const childProps = _props;
++            const fieldProps = omit(_props, 'children');
+             return (<form.Field {...fieldProps}>
+-          {(field) => (<opts.fieldContext.Provider value={field}>
++          {(field) => (<opts.fieldContext value={field}>
+               {createComponent(() => childProps.children(Object.assign(field, opts.fieldComponents)), {})}
+-            </opts.fieldContext.Provider>)}
++            </opts.fieldContext>)}
+         </form.Field>);
+         });
+         const extendedForm = form;
+@@ -51,7 +52,7 @@ export function createFormHook(opts) {
+         return extendedForm;
+     }
+     function withForm({ render, props, }) {
+-        return (innerProps) => createComponent(render, mergeProps(props ?? {}, innerProps));
++        return (innerProps) => createComponent(render, merge(props ?? {}, innerProps));
+     }
+     function withFieldGroup({ render, props, defaultValues, }) {
+         return function Render(innerProps) {
+@@ -62,7 +63,7 @@ export function createFormHook(opts) {
+                 formComponents: opts.formComponents,
+             };
+             const fieldGroupApi = createFieldGroup(() => fieldGroupProps);
+-            return createComponent(render, mergeProps(props ?? {}, innerProps, { group: fieldGroupApi }));
++            return createComponent(render, merge(props ?? {}, innerProps, { group: fieldGroupApi }));
+         };
+     }
+     return {

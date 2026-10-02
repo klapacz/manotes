@@ -1,7 +1,7 @@
 import type { DropdownMenuTriggerProps } from "@kobalte/core/dropdown-menu";
 import { Effect } from "effect";
 import { Show } from "solid-js";
-import { toast } from "somoto";
+import { toast } from "./ui/toast";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import { bindRt } from "../lib";
 import { useGraph } from "../lib/graph-access/graph-runtime/context";
@@ -22,7 +22,7 @@ import {
 } from "./ui/dropdown-menu";
 import { ChevronLeftIcon, ChevronsUpDownIcon, DownloadIcon, LockIcon, TerminalIcon } from "./icons";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../lib/atom-solid";
 import { Button } from "./ui/button";
 import { CliSetupDialog } from "./cli-setup-dialog";
 

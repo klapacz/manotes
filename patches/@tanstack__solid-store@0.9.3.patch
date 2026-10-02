@@ -1,0 +1,46 @@
+diff --git a/dist/esm/index.js b/dist/esm/index.js
+index 53522404c746c302946fdcb2831c3b0966aef2cb..43d1e6d726c515b93ef5474358c8290a86c93604 100644
+--- a/dist/esm/index.js
++++ b/dist/esm/index.js
+@@ -1,13 +1,15 @@
+ import { createSignal, onCleanup } from "solid-js";
+ export * from "@tanstack/store";
+ function useStore(store, selector = (d) => d, options = {}) {
+-  const [signal, setSignal] = createSignal(selector(store.get()));
++  let current = selector(store.get());
++  const [signal, setSignal] = createSignal(current, { ownedWrite: true });
+   const equal = options.equal ?? shallow;
+   const unsub = store.subscribe((s) => {
+     const data = selector(s);
+-    if (equal(signal(), data)) {
++    if (equal(current, data)) {
+       return;
+     }
++    current = data;
+     setSignal(() => data);
+   }).unsubscribe;
+   onCleanup(() => {
+diff --git a/dist/source/index.jsx b/dist/source/index.jsx
+index b93a4cc44b48a8a730430a365f96325e5dc0dc2c..cb2c41d0f72bde768bbe8fc1998c069900764c1e 100644
+--- a/dist/source/index.jsx
++++ b/dist/source/index.jsx
+@@ -1,13 +1,17 @@
+ import { createSignal, onCleanup } from 'solid-js';
+ export * from '@tanstack/store';
+ export function useStore(store, selector = (d) => d, options = {}) {
+-    const [signal, setSignal] = createSignal(selector(store.get()));
++    // Solid 2 reads return the committed value until flush, so compare against
++    // the last selected value. Store updates can land inside owned scopes.
++    let current = selector(store.get());
++    const [signal, setSignal] = createSignal(current, { ownedWrite: true });
+     const equal = options.equal ?? shallow;
+     const unsub = store.subscribe((s) => {
+         const data = selector(s);
+-        if (equal(signal(), data)) {
++        if (equal(current, data)) {
+             return;
+         }
++        current = data;
+         setSignal(() => data);
+     }).unsubscribe;
+     onCleanup(() => {

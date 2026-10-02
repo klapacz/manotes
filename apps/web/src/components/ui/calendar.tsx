@@ -1,168 +1,98 @@
-import type { ComponentProps, ValidComponent } from "solid-js";
-import { Match, Switch, splitProps } from "solid-js";
-import CalendarPrimitive from "@corvu/calendar";
-import { createLink } from "@tanstack/solid-router";
+import * as CalendarPrimitive from "@kobalte/core/calendar";
+import { Show, omit } from "solid-js";
+import type { ComponentProps } from "@solidjs/web";
 import { cx } from "../../lib/cva";
 import { ChevronLeftIcon, ChevronRightIcon } from "../icons";
 import { buttonVariants } from "./button";
 
-export type CalendarProps = ComponentProps<typeof CalendarPrimitive>;
+// Styled Kobalte calendar parts. Replaces @corvu/calendar, which has no Solid 2
+// build; class names keep the previous corvu-based styling.
+export const Calendar = CalendarPrimitive.Root;
 
-export const Calendar = (props: CalendarProps) => {
-  return <CalendarPrimitive data-slot="calendar" {...props} />;
-};
-
-export type CalendarNavProps<T extends ValidComponent = "button"> = ComponentProps<
-  typeof CalendarPrimitive.Nav<T>
->;
-
-export const CalendarNav = <T extends ValidComponent = "button">(props: CalendarNavProps<T>) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as CalendarNavProps, ["action", "class"]);
+export const CalendarHeader = (props: ComponentProps<typeof CalendarPrimitive.Header>) => {
+  const rest = omit(props, "class");
 
   return (
-    <CalendarPrimitive.Nav
-      data-slot="calendar-nav"
-      action={props.action}
-      class={buttonVariants({
-        variant: "outline",
-        class: ["size-7 bg-transparent p-0 opacity-50 hover:opacity-100", props.class],
-      })}
-      {...rest}
-    >
-      <Switch>
-        <Match when={props.action === "prev-year" || props.action === "prev-month"}>
-          <ChevronLeftIcon class="size-4" />
-        </Match>
-        <Match when={props.action === "next-year" || props.action === "next-month"}>
-          <ChevronRightIcon class="size-4" />
-        </Match>
-      </Switch>
-    </CalendarPrimitive.Nav>
-  );
-};
-
-export type CalendarLabelProps<T extends ValidComponent = "h2"> = ComponentProps<
-  typeof CalendarPrimitive.Label<T>
->;
-
-export const CalendarLabel = <T extends ValidComponent = "h2">(props: CalendarLabelProps<T>) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as CalendarLabelProps, ["class"]);
-
-  return (
-    <CalendarPrimitive.Label
-      data-slot="calendar-label"
-      class={cx("text-sm font-medium", props.class)}
+    <CalendarPrimitive.Header
+      data-slot="calendar-header"
+      class={cx("flex items-center justify-between pb-2", props.class)}
       {...rest}
     />
   );
 };
 
-export type CalendarTableProps<T extends ValidComponent = "table"> = ComponentProps<
-  typeof CalendarPrimitive.Table<T>
->;
+const navClass = buttonVariants({
+  variant: "outline",
+  class: "size-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+});
 
-export const CalendarTable = <T extends ValidComponent = "table">(props: CalendarTableProps<T>) => {
-  return <CalendarPrimitive.Table data-slot="calendar-table" {...props} />;
-};
+export const CalendarPrevTrigger = () => (
+  <CalendarPrimitive.PrevTrigger data-slot="calendar-nav" class={navClass}>
+    <ChevronLeftIcon class="size-4" />
+  </CalendarPrimitive.PrevTrigger>
+);
 
-export type CalendarHeadCellProps<T extends ValidComponent = "th"> = ComponentProps<
-  typeof CalendarPrimitive.HeadCell<T>
->;
+export const CalendarNextTrigger = () => (
+  <CalendarPrimitive.NextTrigger data-slot="calendar-nav" class={navClass}>
+    <ChevronRightIcon class="size-4" />
+  </CalendarPrimitive.NextTrigger>
+);
 
-export const CalendarHeadCell = <T extends ValidComponent = "th">(
-  props: CalendarHeadCellProps<T>,
-) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as CalendarHeadCellProps, ["class"]);
+export const CalendarHeading = () => (
+  <CalendarPrimitive.Heading data-slot="calendar-label" class="text-sm font-medium" />
+);
 
-  return (
-    <CalendarPrimitive.HeadCell
-      data-slot="calendar-head-cell"
-      class={cx("text-fg-subtle w-8 rounded-md text-[0.8rem] font-normal", props.class)}
-      {...rest}
-    />
-  );
-};
-
-export type CalendarCellProps<T extends ValidComponent = "td"> = ComponentProps<
-  typeof CalendarPrimitive.Cell<T>
->;
-
-export const CalendarCell = <T extends ValidComponent = "td">(props: CalendarCellProps<T>) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as CalendarCellProps, ["class"]);
-
-  return (
-    <CalendarPrimitive.Cell
-      data-slot="calendar-cell"
-      class={cx(
-        "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
-        props.class,
-      )}
-      {...rest}
-    />
-  );
-};
-
-export type CalendarCellTriggerProps<T extends ValidComponent = "button"> = ComponentProps<
-  typeof CalendarPrimitive.CellTrigger<T>
->;
-
-export const CalendarCellTrigger = <T extends ValidComponent = "button">(
-  props: CalendarCellTriggerProps<T>,
-) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as CalendarCellTriggerProps, ["class"]);
-
-  return (
-    <CalendarPrimitive.CellTrigger
-      data-slot="calendar-cell-trigger"
-      class={buttonVariants({
-        // plain: no hover/bg styles from the variant — we own every state
-        // below explicitly, avoiding specificity fights with shared hover rules.
-        variant: "plain",
-        class: [
-          "size-8 p-0 font-normal",
-          "hover:bg-control-hover hover:text-fg",
-          "not-aria-selected:data-today:bg-control not-aria-selected:data-today:text-fg",
-          "not-aria-selected:data-today:hover:bg-control-hover",
-          "aria-selected:bg-primary-solid aria-selected:text-primary-fg-solid",
-          "aria-selected:hover:bg-primary-solid-hover aria-selected:hover:text-primary-fg-solid",
-          props.class,
-        ],
-      })}
-      {...rest}
-    />
-  );
-};
-
-type CalendarCellLinkRootProps = Omit<ComponentProps<"a">, "href">;
-
-const CalendarCellLinkRoot = (props: CalendarCellLinkRootProps) => {
-  const [, rest] = splitProps(props, ["class"]);
-
-  return (
-    <a
-      data-slot="calendar-cell-link"
-      class={buttonVariants({
-        variant: "plain",
-        class: [
-          // Keep link day-cell styling aligned with CalendarCellTrigger above.
-          "size-8 p-0 font-normal",
-          "hover:bg-control-hover hover:text-fg",
-          "[&[data-today]:not([data-status=active])]:bg-control [&[data-today]:not([data-status=active])]:text-fg",
-          "[&[data-today]:not([data-status=active]):hover]:bg-control-hover",
-          "data-[status=active]:bg-primary-solid data-[status=active]:text-primary-fg-solid",
-          "data-[status=active]:hover:bg-primary-solid-hover data-[status=active]:hover:text-primary-fg-solid",
-          "aria-disabled:pointer-events-none aria-disabled:opacity-50",
-          props.class,
-        ],
-      })}
-      {...rest}
-    />
-  );
-};
-
-export const CalendarCellLink = createLink(CalendarCellLinkRoot);
+/** The month grid: weekday header and one row per week. */
+export const CalendarGrid = () => (
+  <CalendarPrimitive.Body>
+    <CalendarPrimitive.Grid data-slot="calendar-table" weekDayFormat="narrow">
+      <CalendarPrimitive.GridHeader>
+        <CalendarPrimitive.GridHeaderRow>
+          {(weekDay) => (
+            <CalendarPrimitive.GridHeaderCell
+              data-slot="calendar-head-cell"
+              class="text-fg-subtle w-8 rounded-md text-[0.8rem] font-normal"
+            >
+              {weekDay()}
+            </CalendarPrimitive.GridHeaderCell>
+          )}
+        </CalendarPrimitive.GridHeaderRow>
+      </CalendarPrimitive.GridHeader>
+      <CalendarPrimitive.GridBody>
+        {(weekIndex) => (
+          <CalendarPrimitive.GridBodyRow weekIndex={weekIndex()}>
+            {(date) => (
+              <Show when={date()} fallback={<td />}>
+                {(date) => (
+                  <CalendarPrimitive.GridBodyCell
+                    date={date()}
+                    data-slot="calendar-cell"
+                    class="relative p-0 text-center text-sm focus-within:relative focus-within:z-20"
+                  >
+                    <CalendarPrimitive.GridBodyCellTrigger
+                      data-slot="calendar-cell-trigger"
+                      class={buttonVariants({
+                        // plain: no hover/bg styles from the variant — we own every state
+                        // below explicitly, avoiding specificity fights with shared hover rules.
+                        variant: "plain",
+                        class: [
+                          "size-8 p-0 font-normal",
+                          "hover:bg-control-hover hover:text-fg",
+                          "data-outside-month:text-fg-subtle data-outside-month:opacity-50",
+                          "not-data-selected:data-today:bg-control not-data-selected:data-today:text-fg",
+                          "not-data-selected:data-today:hover:bg-control-hover",
+                          "data-selected:bg-primary-solid data-selected:text-primary-fg-solid",
+                          "data-selected:hover:bg-primary-solid-hover data-selected:hover:text-primary-fg-solid",
+                        ],
+                      })}
+                    />
+                  </CalendarPrimitive.GridBodyCell>
+                )}
+              </Show>
+            )}
+          </CalendarPrimitive.GridBodyRow>
+        )}
+      </CalendarPrimitive.GridBody>
+    </CalendarPrimitive.Grid>
+  </CalendarPrimitive.Body>
+);

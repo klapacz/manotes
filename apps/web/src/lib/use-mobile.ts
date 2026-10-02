@@ -1,7 +1,7 @@
 // https://github.com/solidjs-community/solid-primitives/blob/main/packages/media/src/index.ts
 
 import { createSignal, onCleanup } from "solid-js";
-import { isServer } from "solid-js/web";
+import { isServer } from "@solidjs/web";
 
 export const useIsMobile = () => {
   if (isServer) {
