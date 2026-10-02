@@ -257,10 +257,11 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
           .where(where)
           .orderBy(
             // Prefer title matches over body-only matches for non-empty searches,
-            // then keep the result order deterministic by creation time.
-            trimmed.length > 0
-              ? sql`CASE WHEN ${Tables.notes.title} LIKE ${`%${trimmed}%`} THEN 0 ELSE 1 END`
-              : sql`0`,
+            // then keep the result order deterministic by creation time. An empty
+            // search has no rank term: SQLite reads `ORDER BY 0` as a column index.
+            ...(trimmed.length > 0
+              ? [sql`CASE WHEN ${Tables.notes.title} LIKE ${`%${trimmed}%`} THEN 0 ELSE 1 END`]
+              : []),
             desc(Tables.notes.createdAt),
           );
       });
