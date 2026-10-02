@@ -1,10 +1,12 @@
 export {
   Calendar as CalendarIcon,
+  CalendarCog as CalendarCogIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   ChevronsUpDown as ChevronsUpDownIcon,
   Database as DatabaseIcon,
   Download as DownloadIcon,
+  Ellipsis as EllipsisIcon,
   House as HouseIcon,
   ArrowUpRight as ArrowUpRightIcon,
   Expand as ArrowsOutIcon,

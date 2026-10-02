@@ -26,7 +26,7 @@ import { NoteCreate } from "./note-create";
 import { PaneStreamFilter } from "./pane-stream-filter";
 import { Focus } from "./focus";
 import { PaneStreamRow } from "./pane-stream-row";
-import { PaneActions, PaneEmptyState, PaneShell } from "./shared";
+import { PaneEmptyState, PaneHeader, PaneShell } from "./shared";
 
 const PRELOAD_EDITOR_COUNT = 12;
 
@@ -179,13 +179,12 @@ export function PaneStream(props: ComponentProps<"section">) {
   return (
     <Focus.NodeProvider node={fnode}>
       <Focus.Element as={PaneShell} {...props}>
-        <div class="flex gap-3 justify-between">
+        <PaneHeader onCreate={Predicate.isTagged(state, "Success") ? handleCreate : undefined}>
           <PaneStreamFilter
             dirty={Predicate.isTagged(state, "Success") ? state.value.dirty : false}
             onRefresh={refresh}
           />
-          <PaneActions onCreate={Predicate.isTagged(state, "Success") ? handleCreate : undefined} />
-        </div>
+        </PaneHeader>
         <MatchTag
           when={state}
           cases={{

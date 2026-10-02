@@ -1,14 +1,33 @@
 import { getRouteApi } from "@tanstack/solid-router";
-import { Show } from "solid-js";
-import { LinkButton } from "../ui/link-button";
+import type { DropdownMenuTriggerProps } from "@kobalte/core/dropdown-menu";
+import { Show, createSignal } from "solid-js";
 import { NoteFormat } from "../../lib/note";
 import { PaneCursor } from "../../lib/note/pane.cursor";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneMake } from "../../lib/note/pane.make";
 import { PaneSchema } from "../../lib/note/pane.schema";
 import { PaneScroll } from "../../lib/note/pane.scroll";
-import { ArrowsOutIcon, ArrowUpRightIcon, LinkIcon, PlusIcon, RebaseIcon, XIcon } from "../icons";
+import {
+  ArrowsOutIcon,
+  ArrowUpRightIcon,
+  CalendarCogIcon,
+  CalendarIcon,
+  EllipsisIcon,
+  LinkIcon,
+  PlusIcon,
+  RebaseIcon,
+  XIcon,
+} from "../icons";
 import { Button } from "../ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { callHandler } from "../../lib/call-handler";
 import { cx } from "../../lib/cva";
 import { DOMScroll } from "../../lib/dom-scroll";
@@ -24,7 +43,7 @@ export function PaneShell(props: ComponentProps<"section">) {
 
   return (
     <section
-      class="h-full w-[min(44rem,100vw)] shrink-0 snap-center outline-none"
+      class="h-full w-pane max-w-screen shrink-0 snap-center outline-none"
       {...rest}
       onFocusIn={(event) => {
         callHandler(event, local.onFocusIn);
@@ -37,12 +56,22 @@ export function PaneShell(props: ComponentProps<"section">) {
         if (!(from instanceof Node && element.contains(from))) void DOMScroll.center(element);
       }}
     >
-      <div class="flex flex-col gap-4 h-full min-h-0 px-6 py-4">{local.children}</div>
+      <div class="flex flex-col h-full min-h-0">{local.children}</div>
     </section>
   );
 }
 
-export function PaneActions(props: { onCreate?: () => void }) {
+// Pane-level controls sit on the right; children (e.g. stream filters) fill the left.
+export function PaneHeader(props: ParentProps<{ onCreate?: () => void }>) {
+  return (
+    <div class="flex gap-3 justify-between p-4 pane:px-0">
+      {props.children}
+      <PaneActions onCreate={props.onCreate} />
+    </div>
+  );
+}
+
+function PaneActions(props: { onCreate?: () => void }) {
   const ctx = PaneCtx.use();
   const navigate = route.useNavigate();
   const fnode = Focus.useNode();
@@ -71,7 +100,7 @@ export function PaneActions(props: { onCreate?: () => void }) {
   ]);
 
   return (
-    <div class="flex gap-1">
+    <div class="ml-auto flex gap-1">
       <Show when={props.onCreate}>
         {(onCreate) => (
           <Button
@@ -98,12 +127,7 @@ export function PaneActions(props: { onCreate?: () => void }) {
   );
 }
 
-export function NoteActions(props: {
-  note: NoteSchema.Meta;
-  groupKey?: string;
-  dirty?: boolean;
-  sort: PaneSchema.StreamSort;
-}) {
+export function NoteActions(props: { note: NoteSchema.Meta }) {
   const ctx = PaneCtx.use();
   const scroll = PaneScroll.use();
   const navigate = route.useNavigate();
@@ -159,54 +183,97 @@ export function NoteActions(props: {
     },
   ]);
 
-  // Stays out of the way until the note is hovered or focused, then fades in.
-  // Keyboard shortcuts (o, b-i/b-o, d) work regardless of visibility.
-  return (
-    <div class="flex items-end gap-1 text-xs text-fg-subtle opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 h-6 px-6 justify-end">
-      <div class="flex items-center gap-2">
-        <Show when={props.dirty}>
-          <span class="text-warning-fg-subtle">Dirty</span>
-        </Show>
-        <Show when={props.sort === "date"}>
-          <time>{NoteFormat.formatUpdatedAt(props.note.updatedAt)}</time>
-        </Show>
-      </div>
-      <NoteActionButton label="Open note only" onClick={openOnly}>
-        <ArrowsOutIcon class="size-3.5" />
-      </NoteActionButton>
-      <NoteActionButton
-        label="Incoming backlinks (b i)"
-        onClick={() => openNext(PaneMake.backlink(props.note.id))}
-      >
-        <LinkIcon class="size-3.5" />
-      </NoteActionButton>
-      <NoteActionButton
-        label="Outgoing links (b o)"
-        onClick={() => openNext(PaneMake.outgoing(props.note.id))}
-      >
-        <ArrowUpRightIcon class="size-3.5" />
-      </NoteActionButton>
-      <DatePicker noteId={props.note.id} date={props.note.date} />
-      <Show when={props.note.date !== props.groupKey}>
-        <LinkButton onClick={() => openNext(PaneMake.date(props.note.date))}>
-          {NoteFormat.formatShortDate(props.note.date)}
-        </LinkButton>
-      </Show>
-    </div>
-  );
-}
+  const [datePickerOpen, setDatePickerOpen] = createSignal(false);
+  const [menuTrigger, setMenuTrigger] = createSignal<HTMLButtonElement>();
 
-function NoteActionButton(props: ParentProps<{ label: string; onClick: () => void }>) {
+  // Kobalte refocuses the menu trigger once the menu closes, which would steal
+  // focus from whatever the selection opened. Run the selection after that, as
+  // if its shortcut were pressed from the note.
+  let selected: (() => void) | undefined;
+
+  const select = (action: () => void) => () => {
+    selected = action;
+  };
+
+  // A corner menu that fades in on hover or focus. Keyboard shortcuts work
+  // regardless of visibility.
   return (
-    <button
-      type="button"
-      aria-label={props.label}
-      title={props.label}
-      class="rounded p-1 hover:bg-control-hover hover:text-fg"
-      onClick={props.onClick}
-    >
-      {props.children}
-    </button>
+    <>
+      <DropdownMenu placement="bottom-end">
+        <DropdownMenuTrigger
+          ref={setMenuTrigger}
+          as={(triggerProps: DropdownMenuTriggerProps<HTMLButtonElement>) => (
+            <Button
+              {...triggerProps}
+              variant="plain"
+              size="icon-xs"
+              rounded="full"
+              aria-label="Note actions"
+              class="absolute top-0.5 right-0 z-10 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 data-expanded:opacity-100 [&_svg]:text-fg-subtle hover:[&_svg]:text-fg data-expanded:[&_svg]:text-fg"
+            >
+              <EllipsisIcon />
+            </Button>
+          )}
+        />
+        <DropdownMenuPortal>
+          <DropdownMenuContent
+            class="min-w-52"
+            onCloseAutoFocus={() => {
+              const action = selected;
+
+              selected = undefined;
+
+              if (action) queueMicrotask(action);
+            }}
+          >
+            <DropdownMenuItem onSelect={select(openOnly)}>
+              <ArrowsOutIcon />
+              Open only this note
+              <DropdownMenuShortcut>O</DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={select(() => openNext(PaneMake.backlink(props.note.id)))}>
+              <LinkIcon />
+              Backlinks
+              <DropdownMenuShortcut>B I</DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={select(() => openNext(PaneMake.outgoing(props.note.id)))}>
+              <ArrowUpRightIcon />
+              Outgoing links
+              <DropdownMenuShortcut>B O</DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={select(() => openNext(PaneMake.date(props.note.date)))}>
+              <CalendarIcon />
+              Go to date
+              <DropdownMenuShortcut>D</DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={select(() => setDatePickerOpen(true))}>
+              <CalendarCogIcon />
+              Change date…
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <div class="px-2 py-1.5 text-xs text-fg-subtle">
+              <p>
+                Dated{" "}
+                <time dateTime={props.note.date}>
+                  {NoteFormat.formatShortDate(props.note.date)}
+                </time>
+              </p>
+              <p>
+                Edited <time>{NoteFormat.formatUpdatedAt(props.note.updatedAt)}</time>
+              </p>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenuPortal>
+      </DropdownMenu>
+      <DatePicker
+        noteId={props.note.id}
+        date={props.note.date}
+        open={datePickerOpen()}
+        onOpenChange={setDatePickerOpen}
+        anchor={menuTrigger()}
+      />
+    </>
   );
 }
 

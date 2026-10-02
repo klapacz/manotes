@@ -8,6 +8,12 @@
 
 @custom-variant dark (&:is([data-kb-theme="dark"] *));
 
+/* Pane width; the breakpoint mirrors it because media queries can't read variables. */
+@theme {
+  --container-pane: 44rem;
+  --breakpoint-pane: 44rem;
+}
+
 @theme inline {
   --color-bg: var(--color-sand-1);
   --color-bg-subtle: var(--color-sand-2);

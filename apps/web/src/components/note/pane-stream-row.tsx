@@ -13,7 +13,6 @@ import {
 } from "../../lib";
 import { EditorPool } from "./editor-pool";
 import { Focus } from "./focus";
-import { PaneCtx } from "../../lib/note/pane.ctx";
 import { NoteStream } from "../../lib/note/stream";
 import { NoteActions, NoteDivider, NoteShell } from "./shared";
 import { VirtualList } from "../../lib/virtual-list";
@@ -36,7 +35,6 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem }) {
   );
 
   const meta = createMemo((): NoteSchema.Meta => live.value ?? props.row.note);
-  const pane = PaneCtx.useStream();
 
   // Rows attach a pooled persistent editor instead of mounting their own;
   // scroll-back revisits reattach the same ProseMirror DOM instantly. The slot
@@ -81,12 +79,7 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem }) {
         </Show>
 
         <NoteShell>
-          <NoteActions
-            note={meta()}
-            groupKey={props.row.groupKey}
-            dirty={props.row.dirty}
-            sort={pane().sort}
-          />
+          <NoteActions note={meta()} />
           <MatchAsyncResult
             when={slotResult()}
             onSuccess={(slot) => {

@@ -14,7 +14,7 @@ export function PaneGrid(props: ComponentProps<"main">) {
   return (
     <main
       {...props}
-      class="flex h-full min-h-0 snap-x snap-mandatory overflow-x-auto overflow-y-hidden px-[calc((100vw-min(44rem,100vw))/2)]"
+      class="flex h-full min-h-0 gap-8 snap-x snap-mandatory overflow-x-auto overflow-y-hidden px-[calc((100vw-min(var(--container-pane),100vw))/2)]"
     />
   );
 }

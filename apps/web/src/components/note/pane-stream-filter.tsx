@@ -1,3 +1,4 @@
+import { ToggleGroup } from "@kobalte/core/toggle-group";
 import { getRouteApi } from "@tanstack/solid-router";
 import { Option, Stream } from "effect";
 import { Show, createMemo, type JSX } from "solid-js";
@@ -6,7 +7,7 @@ import { NoteFormat } from "../../lib/note";
 import { PaneCursor } from "../../lib/note/pane.cursor";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneSchema } from "../../lib/note/pane.schema";
-import { Button } from "../ui/button";
+import { Button, buttonVariants } from "../ui/button";
 import { Focus } from "./focus";
 
 const route = getRouteApi("/$graph/");
@@ -32,8 +33,9 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
 
   // Type and sort travel together: notes read like a journal (logical date),
   // pages like documents (last updated).
-  const cycleType = () => {
-    const nextType = pane().filter.type === "notes" ? "pages" : "notes";
+  const setType = (nextType: "notes" | "pages") => {
+    if (nextType === pane().filter.type) return;
+
     updatePaneAndCloseRest({
       ...pane(),
       filter: { ...pane().filter, type: nextType },
@@ -48,7 +50,7 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
     {
       key: [["T"]],
       handler: () => {
-        cycleType();
+        setType(pane().filter.type === "notes" ? "pages" : "notes");
 
         return true;
       },
@@ -74,9 +76,29 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
 
   return (
     <div class="space-x-2">
-      <FilterChipButton label="Type" title="Cycle between notes and pages" onClick={cycleType}>
-        {pane().filter.type}
-      </FilterChipButton>
+      <ToggleGroup
+        aria-label="Content type"
+        class="inline-flex rounded-full bg-control p-0.5 align-middle"
+        value={pane().filter.type}
+        onChange={(value) => {
+          if (value === "notes" || value === "pages") setType(value);
+        }}
+      >
+        <ToggleGroup.Item
+          value="notes"
+          class={typeToggleItemClass}
+          title="Show notes, sorted by date"
+        >
+          Notes
+        </ToggleGroup.Item>
+        <ToggleGroup.Item
+          value="pages"
+          class={typeToggleItemClass}
+          title="Show pages, sorted by last updated"
+        >
+          Pages
+        </ToggleGroup.Item>
+      </ToggleGroup>
       <Show when={pane().filter.backlinksTo}>
         {(targetId) => (
           <FilterChipButton label="Backlinks to">
@@ -112,6 +134,14 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
     </div>
   );
 }
+
+const typeToggleItemClass = buttonVariants({
+  variant: "plain",
+  size: "chip",
+  rounded: "full",
+  class:
+    "h-6 text-fg-subtle hover:text-fg data-[pressed]:bg-bg data-[pressed]:text-fg data-[pressed]:shadow-xs focus-visible:z-10",
+});
 
 function FilterChipButton(props: {
   label: string;

@@ -1,10 +1,9 @@
 import { useAtom } from "@effect/atom-solid";
 import { DateTime, Effect } from "effect";
-import { For, createSignal } from "solid-js";
+import { For } from "solid-js";
 import { Temporal } from "temporal-polyfill";
 import { MaterializedEventService, bindRt } from "../../lib";
 import { JSDateToPlainDate, plainDateToJSDate } from "../../lib/temporal/utils";
-import { CalendarIcon } from "../icons";
 import {
   Calendar,
   CalendarCell,
@@ -14,11 +13,19 @@ import {
   CalendarNav,
   CalendarTable,
 } from "../ui/calendar";
-import { Popover, PopoverContent, PopoverPortal, PopoverTrigger } from "../ui/popover";
+import { Popover, PopoverContent, PopoverPortal } from "../ui/popover";
 
-/** Calendar button opening a date picker that rewrites the note's date. */
-export function DatePicker(props: { noteId: string; date: string }) {
-  const [open, setOpen] = createSignal(false);
+/**
+ * Calendar popover that rewrites the note's date. It has no trigger of its own
+ * (a menu item opens it), so it anchors to and returns focus to `anchor`.
+ */
+export function DatePicker(props: {
+  noteId: string;
+  date: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  anchor: HTMLElement | undefined;
+}) {
   const [setDateResult, setDate] = useAtom(SetDate, { mode: "promise" });
   const selectedDate = () => plainDateToJSDate(Temporal.PlainDate.from(props.date));
 
@@ -30,21 +37,20 @@ export function DatePicker(props: { noteId: string; date: string }) {
         noteId: props.noteId,
         date: JSDateToPlainDate(value).toString(),
       });
-      setOpen(false);
+      props.onOpenChange(false);
     } catch {}
   }
 
   return (
-    <Popover open={open()} onOpenChange={setOpen}>
-      <PopoverTrigger
-        aria-label="Edit note date"
-        title="Edit note date"
-        class="rounded p-1 hover:bg-control-hover hover:text-fg"
-      >
-        <CalendarIcon class="size-3.5" />
-      </PopoverTrigger>
+    <Popover open={props.open} onOpenChange={props.onOpenChange} anchorRef={() => props.anchor}>
       <PopoverPortal>
-        <PopoverContent class="w-auto p-3">
+        <PopoverContent
+          class="w-auto p-3"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            props.anchor?.focus();
+          }}
+        >
           <Calendar
             mode="single"
             value={selectedDate()}

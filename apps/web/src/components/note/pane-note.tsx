@@ -17,8 +17,8 @@ import {
   NoteActions,
   NoteDivider,
   NoteShell,
-  PaneActions,
   PaneEmptyState,
+  PaneHeader,
   PaneShell,
 } from "./shared";
 import { Focus } from "./focus";
@@ -72,9 +72,7 @@ export function PaneNote(props: ComponentProps<"section">) {
   return (
     <Focus.NodeProvider node={fnode}>
       <Focus.Element as={PaneShell} {...props}>
-        <div class="flex justify-end">
-          <PaneActions onCreate={handleCreate} />
-        </div>
+        <PaneHeader onCreate={handleCreate} />
         <MatchTag
           when={note}
           cases={{
@@ -105,7 +103,7 @@ function PaneNoteInner(props: { note: NoteSchema.Meta }) {
       <Focus.Element class="overflow-y-auto outline-none group">
         <NoteDivider date={props.note.date} />
         <NoteShell>
-          <NoteActions note={props.note} sort="date" />
+          <NoteActions note={props.note} />
           <Editor noteId={props.note.id} style={{ "min-height": "30svh" }} />
         </NoteShell>
       </Focus.Element>

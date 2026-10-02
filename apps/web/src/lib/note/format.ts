@@ -53,7 +53,7 @@ const groupDateFormatOptions = {
 } satisfies Intl.DateTimeFormatOptions;
 
 const updatedAtFormatOptions = {
-  dateStyle: "medium",
+  dateStyle: "short",
   timeStyle: "short",
 } satisfies Intl.DateTimeFormatOptions;
 

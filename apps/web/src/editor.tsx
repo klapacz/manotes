@@ -182,7 +182,7 @@ export default function Editor(props: Props): JSX.Element {
               current.editor.mount(element);
               fnode.setElement(element);
             }}
-            class="outline-none p-6 pt-0"
+            class="outline-none p-4"
             style={props.style}
           />
           <BacklinkMenu currentNoteId={props.noteId} />
