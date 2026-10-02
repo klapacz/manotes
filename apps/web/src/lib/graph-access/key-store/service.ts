@@ -1,5 +1,8 @@
-import { Effect, HashMap, Layer, Schema, Context, Stream, SubscriptionRef } from "effect";
+import { Effect, HashMap, Layer, Schema, Context, Stream, SubscriptionRef, Option } from "effect";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
+import { SqlClient } from "effect/unstable/sql";
+import * as LocalRegistry from "../local-registry";
+import * as LocalRegistryLayer from "../local-registry/layer";
 
 type GraphKeyId = string;
 
@@ -12,6 +15,8 @@ const toGraphKeyId = (envelope: GraphEncryption.GraphKeyEnvelope) =>
 
 export class Service extends Context.Service<Service>()("GraphAccess.KeyStore.Service", {
   make: Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+
     const ref = yield* SubscriptionRef.make<HashMap.HashMap<GraphKeyId, UnwrappedGraphKey>>(
       HashMap.empty(),
     );
@@ -30,13 +35,34 @@ export class Service extends Context.Service<Service>()("GraphAccess.KeyStore.Se
       const key = yield* toGraphKeyId(envelope);
       const map = yield* SubscriptionRef.get(ref);
 
-      return HashMap.get(map, key);
+      const memoryKey = HashMap.get(map, key);
+
+      if (Option.isSome(memoryKey)) return memoryKey;
+
+      return yield* LocalRegistry.Repo.findRememberedKey({ envelope }).pipe(
+        Effect.provideService(SqlClient.SqlClient, sql),
+        Effect.map(
+          Option.map(({ rememberedGraphKey }) => GraphEncryption.castArray(rememberedGraphKey)),
+        ),
+      );
+    });
+
+    const remember = Effect.fn("GraphAccessKeyStore.remember")(function* (
+      envelope: GraphEncryption.GraphKeyEnvelope,
+      graphKey: UnwrappedGraphKey,
+    ) {
+      yield* LocalRegistry.Repo.saveRememberedKey({ envelope, graphKey }).pipe(
+        Effect.provideService(SqlClient.SqlClient, sql),
+      );
     });
 
     const remove = Effect.fn("GraphAccessKeyStore.remove")(function* (
       envelope: GraphEncryption.GraphKeyEnvelope,
     ) {
       const key = yield* toGraphKeyId(envelope);
+      yield* LocalRegistry.Repo.forgetRememberedKey({ envelope }).pipe(
+        Effect.provideService(SqlClient.SqlClient, sql),
+      );
       yield* SubscriptionRef.update(ref, HashMap.remove(key));
     });
 
@@ -45,10 +71,17 @@ export class Service extends Context.Service<Service>()("GraphAccess.KeyStore.Se
     ) {
       const key = yield* toGraphKeyId(envelope);
 
-      return SubscriptionRef.changes(ref).pipe(
-        Stream.map((map) => HashMap.get(map, key)),
-        // This compares Some(Uint8Array) by identity, not byte contents.
-        // That's acceptable for now because writes are expected to be rare.
+      const memory = SubscriptionRef.changes(ref).pipe(Stream.map((map) => HashMap.get(map, key)));
+
+      const saved = LocalRegistry.Repo.findRememberedKeyReactive({ envelope }).pipe(
+        Stream.provideService(SqlClient.SqlClient, sql),
+        Stream.map(
+          Option.map(({ rememberedGraphKey }) => GraphEncryption.castArray(rememberedGraphKey)),
+        ),
+      );
+
+      return Stream.zipLatest(memory, saved).pipe(
+        Stream.map(([memoryKey, savedKey]) => Option.orElse(memoryKey, () => savedKey)),
         Stream.changes,
       );
     });
@@ -57,9 +90,12 @@ export class Service extends Context.Service<Service>()("GraphAccess.KeyStore.Se
       set,
       get,
       remove,
+      remember,
       changes,
     };
   }),
 }) {
-  static readonly layer = Layer.effect(this, this.make);
+  static readonly layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(LocalRegistryLayer.Layer),
+  );
 }

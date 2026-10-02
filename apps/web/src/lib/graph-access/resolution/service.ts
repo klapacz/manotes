@@ -4,6 +4,7 @@ import * as LocalRegistry from "../local-registry";
 import * as SessionService from "../session/service";
 import * as SessionApi from "@manotes/shared/session/api";
 import type { SchemaError } from "effect/Schema";
+import type { SqlError } from "effect/unstable/sql/SqlError";
 
 export type Resolution = Data.TaggedEnum<{
   Missing: {};
@@ -53,7 +54,7 @@ export const findReactive = Effect.fn("GraphAccessResolution.findReactive")(func
     sessionService.stream.find,
   ).pipe(
     Stream.switchMap(
-      ([recordOption, sessionOpt]): Stream.Stream<Resolution, SchemaError, never> => {
+      ([recordOption, sessionOpt]): Stream.Stream<Resolution, SchemaError | SqlError, never> => {
         return Result.match(resolveWithoutKeyLookup(recordOption, sessionOpt), {
           onSuccess: Stream.succeed,
           onFailure: (record) => {

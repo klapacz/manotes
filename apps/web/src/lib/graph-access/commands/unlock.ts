@@ -6,6 +6,7 @@ import * as LocalRegistry from "../local-registry";
 export type UnlockCloudGraphInput = {
   graph: LocalRegistry.Schema.CloudRecord;
   password: string;
+  remember: boolean;
 };
 
 export class Service extends Context.Service<Service>()("GraphAccess.Commands.Unlock.Service", {
@@ -15,6 +16,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Un
     const unlockCloudGraph = Effect.fn("GraphAccessCommandsUnlock.unlockCloudGraph")(function* ({
       graph,
       password,
+      remember,
     }: UnlockCloudGraphInput) {
       const graphKey = yield* Effect.tryPromise({
         try: () =>
@@ -30,7 +32,11 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Un
               : new Error("Failed to unlock graph."),
       });
 
-      yield* keyStore.set(graph.graphKeyEnvelope, graphKey);
+      if (remember) {
+        yield* keyStore.remember(graph.graphKeyEnvelope, graphKey);
+      } else {
+        yield* keyStore.set(graph.graphKeyEnvelope, graphKey);
+      }
 
       return {
         localGraphId: graph.localGraphId,

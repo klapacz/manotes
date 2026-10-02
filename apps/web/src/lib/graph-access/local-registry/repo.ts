@@ -2,6 +2,7 @@ import { SqlClient, SqlSchema } from "effect/unstable/sql";
 import { Array, Effect, Option, Stream, Schema as S } from "effect";
 import * as Schema from "./schema";
 import * as Errors from "./errors";
+import * as GraphEncryption from "@manotes/shared/graph-encryption";
 
 const GRAPH_COLUMNS =
   "localGraphId, displayName, status, mode, graphId, accountId, graphKeyEnvelope";
@@ -29,6 +30,8 @@ export const migrate = Effect.gen(function* () {
   yield* sql`ALTER TABLE graphs ADD COLUMN status TEXT NOT NULL DEFAULT 'active'`.pipe(
     Effect.ignore,
   );
+
+  yield* sql`ALTER TABLE graphs ADD COLUMN rememberedGraphKey TEXT`.pipe(Effect.ignore);
 });
 
 export const listGraphs = SqlSchema.findAll({
@@ -73,6 +76,68 @@ export const findGraph = SqlSchema.findOneOption({
   }),
 });
 
+const RememberedKeyRequest = S.Struct({
+  envelope: S.fromJsonString(GraphEncryption.GraphKeyEnvelopeSchema),
+});
+
+const RememberedKeyResult = S.Struct({
+  rememberedGraphKey: S.Uint8ArrayFromBase64.pipe(S.check(S.isLengthBetween(32, 32))),
+});
+
+export const findRememberedKey = SqlSchema.findOneOption({
+  Request: RememberedKeyRequest,
+  Result: RememberedKeyResult,
+  execute: Effect.fn("LocalRegistryRepo.findRememberedKey.execute")(function* ({ envelope }) {
+    const sql = yield* SqlClient.SqlClient;
+
+    return yield* sql`
+      SELECT rememberedGraphKey FROM graphs
+      WHERE graphKeyEnvelope = ${envelope}
+        AND mode = 'cloud' AND status = 'active'
+        AND rememberedGraphKey IS NOT NULL
+      LIMIT 1
+    `;
+  }),
+});
+
+export const findRememberedKeyReactive = Effect.fn("LocalRegistryRepo.findRememberedKeyReactive")(
+  function* (input: typeof RememberedKeyRequest.Type) {
+    const sql = yield* SqlClient.SqlClient;
+
+    return sql.reactive(["graphs"], findRememberedKey(input));
+  },
+  Stream.unwrap,
+);
+
+export const saveRememberedKey = SqlSchema.findOne({
+  Request: S.Struct({
+    ...RememberedKeyRequest.fields,
+    graphKey: RememberedKeyResult.fields.rememberedGraphKey,
+  }),
+  Result: S.Struct({ localGraphId: S.String }),
+  execute: Effect.fn("LocalRegistryRepo.saveRememberedKey.execute")(function* ({
+    envelope,
+    graphKey,
+  }) {
+    const sql = yield* SqlClient.SqlClient;
+
+    return yield* sql`
+      UPDATE graphs SET rememberedGraphKey = ${graphKey}
+      WHERE graphKeyEnvelope = ${envelope} AND mode = 'cloud' AND status = 'active'
+      RETURNING localGraphId
+    `;
+  }),
+});
+
+export const forgetRememberedKey = SqlSchema.void({
+  Request: RememberedKeyRequest,
+  execute: Effect.fn("LocalRegistryRepo.forgetRememberedKey.execute")(function* ({ envelope }) {
+    const sql = yield* SqlClient.SqlClient;
+
+    yield* sql`UPDATE graphs SET rememberedGraphKey = NULL WHERE graphKeyEnvelope = ${envelope}`;
+  }),
+});
+
 export const insertGraph = SqlSchema.findOne({
   Request: Schema.Record,
   Result: Schema.Record,
@@ -97,7 +162,7 @@ export const updateGraph = SqlSchema.findOne({
     const sql = yield* SqlClient.SqlClient;
 
     return yield* sql`
-      UPDATE graphs SET ${sql.update(values, ["localGraphId"])}
+      UPDATE graphs SET ${sql.update({ ...values, rememberedGraphKey: null }, ["localGraphId"])}
       WHERE localGraphId = ${values.localGraphId}
       RETURNING ${sql.literal(GRAPH_COLUMNS)}
     `;

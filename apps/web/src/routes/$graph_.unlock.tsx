@@ -1,9 +1,9 @@
-import { useAtom } from "@effect/atom-solid";
-import { createFileRoute, redirect, useRouter } from "@tanstack/solid-router";
+import { useAtom, useAtomValue } from "@effect/atom-solid";
+import { createFileRoute, redirect, Navigate } from "@tanstack/solid-router";
 import { Match, Schema } from "effect";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { AppForm, useAppForm } from "../components/ui/form";
-import { MatchAsyncResult } from "../lib";
+import { MatchAsyncResult, MatchTag, createSyncedAtom } from "../lib";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import * as GraphAccessCommands from "../lib/graph-access/commands";
 import * as Resolution from "../lib/graph-access/resolution/service";
@@ -12,6 +12,7 @@ import { GraphDestination } from "../lib/graph-access/graph-runtime/destination"
 
 const UnlockGraphFormSchema = Schema.Struct({
   password: GraphEncryption.PasswordSchema,
+  remember: Schema.Boolean,
 }).pipe(Schema.toStandardSchemaV1);
 
 export const Route = createFileRoute("/$graph_/unlock")({
@@ -35,7 +36,15 @@ export const Route = createFileRoute("/$graph_/unlock")({
 
 function RouteComponent() {
   const data = Route.useRouteContext();
-  const router = useRouter();
+  const search = Route.useSearch();
+  const params = Route.useParams();
+  const localGraphIdAtom = createSyncedAtom(() => params().graph);
+
+  const resolutionAtom = GraphAccessRuntime.atom.atom((get) =>
+    Resolution.findReactive(get(localGraphIdAtom)),
+  );
+
+  const resolution = useAtomValue(() => resolutionAtom);
 
   const [unlockGraphResult, unlockGraph] = useAtom(
     () => GraphAccessCommands.Atom.unlockCloudGraph,
@@ -47,6 +56,7 @@ function RouteComponent() {
   const form = useAppForm(() => ({
     defaultValues: {
       password: "",
+      remember: false,
     },
     validators: {
       onDynamic: UnlockGraphFormSchema,
@@ -55,8 +65,8 @@ function RouteComponent() {
       await unlockGraph({
         graph: data().graph,
         password: GraphEncryption.normalizePassword(value.password),
+        remember: value.remember,
       });
-      await router.invalidate();
     },
   }));
 
@@ -70,6 +80,29 @@ function RouteComponent() {
       </header>
 
       <AppForm form={form} AppForm={form.AppForm}>
+        <MatchAsyncResult
+          when={resolution()}
+          onFailure={() => (
+            <Alert variant="destructive">
+              <AlertDescription>Failed to read graph access.</AlertDescription>
+            </Alert>
+          )}
+          onSuccess={(state) => (
+            <MatchTag
+              when={state()}
+              cases={{
+                Missing: () => <Navigate to="/" replace />,
+                Local: () => (
+                  <Navigate {...GraphDestination.linkOptions(params().graph, search().returnTo)} />
+                ),
+                CloudUnlocked: () => (
+                  <Navigate {...GraphDestination.linkOptions(params().graph, search().returnTo)} />
+                ),
+                CloudLocked: () => null,
+              }}
+            />
+          )}
+        />
         <MatchAsyncResult
           when={unlockGraphResult()}
           onError={(error) => (
@@ -90,6 +123,32 @@ function RouteComponent() {
 
         <form.AppField name="password">
           {(field) => <field.TextField type="password" label="Password" autofocus />}
+        </form.AppField>
+
+        <form.AppField name="remember">
+          {(field) => (
+            <div class="flex items-start gap-3">
+              <input
+                id="remember-graph"
+                class="mt-1 size-4"
+                type="checkbox"
+                name={field().name}
+                checked={field().state.value}
+                aria-describedby="remember-graph-description"
+                onChange={(event) => field().handleChange(event.currentTarget.checked)}
+                onBlur={() => field().handleBlur()}
+              />
+              <div class="space-y-1">
+                <label for="remember-graph" class="text-sm font-medium">
+                  Remember on this device
+                </label>
+                <p id="remember-graph-description" class="text-fg-subtle text-sm">
+                  Open without its password on this device. Lock graph forgets it. Anyone with
+                  access to this browser profile can open remembered graphs.
+                </p>
+              </div>
+            </div>
+          )}
         </form.AppField>
 
         <form.SubmitButton>Unlock graph</form.SubmitButton>
