@@ -7,7 +7,7 @@ export interface Target<Id, Options> {
   readonly id: Id;
   readonly element: HTMLElement;
   /** Receives the request's options; the requester decides how to scroll. */
-  readonly focus?: (options: Options | undefined) => void;
+  readonly focus: (options: Options | undefined) => void;
 }
 
 /** Observe browser focus; move it only in response to an explicit request. */
@@ -37,10 +37,7 @@ export function create<Id, Options = never>() {
       // cancel this operation.
       const target = yield* Effect.raceFirst(ready, interruptOnFocusChange(activeElement));
 
-      yield* Effect.sync(() => {
-        if (target.focus) target.focus(options);
-        else target.element.focus({ preventScroll: true });
-      });
+      yield* Effect.sync(() => target.focus(options));
     });
 
     // Publish the destination before waiting: the UI uses it to retain the

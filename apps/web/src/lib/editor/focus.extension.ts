@@ -34,21 +34,7 @@ export function define(onLeave: () => boolean) {
         Escape: (_state, _dispatch, view) => {
           if (!view || view.composing || !view.hasFocus()) return false;
 
-          if (!onLeave()) return false;
-
-          // Safari can resume typing at a retained DOM caret after focus leaves.
-          // Keep ProseMirror's selection so view.focus() restores it on re-entry.
-          const selection = view.dom.ownerDocument.getSelection();
-
-          if (
-            selection &&
-            view.dom.contains(selection.anchorNode) &&
-            view.dom.contains(selection.focusNode)
-          ) {
-            selection.removeAllRanges();
-          }
-
-          return true;
+          return onLeave();
         },
       }),
       Priority.lowest,

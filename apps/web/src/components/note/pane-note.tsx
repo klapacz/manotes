@@ -53,7 +53,7 @@ export function PaneNote(props: ComponentProps<"section">) {
   const fnode = Focus.createNode(() => ({
     id: fid.pane(),
     focus: (element) => {
-      element.focus({ preventScroll: true });
+      Focus.focusBrowseTarget(element);
       focus.request(fid.note(pane().id));
     },
   }));
@@ -96,7 +96,10 @@ export function PaneNote(props: ComponentProps<"section">) {
 }
 
 function PaneNoteInner(props: { note: NoteSchema.Meta }) {
-  const fnode = Focus.createNoteNode(() => props.note.id);
+  const fnode = Focus.createNoteNode(
+    () => props.note.id,
+    () => ({ focus: Focus.focusBrowseTarget }),
+  );
 
   return (
     <Focus.NodeProvider node={fnode}>

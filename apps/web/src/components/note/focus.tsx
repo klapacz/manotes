@@ -54,11 +54,13 @@ interface ContextState extends ContextValue {
   readonly highlightedElement: Accessor<Element | null>;
 }
 
-interface Options {
-  readonly id?: FocusId;
+interface TargetOptions {
+  readonly id: FocusId;
   readonly enabled?: boolean;
-  readonly focus?: (element: HTMLElement, options: RequestOptions | undefined) => void;
+  readonly focus: (element: HTMLElement, options: RequestOptions | undefined) => void;
 }
+
+type Options = TargetOptions | { readonly id?: undefined };
 
 export interface Node {
   readonly id: Accessor<FocusId | undefined>;
@@ -206,7 +208,7 @@ export function createNode(options: () => Options): Node {
       context.dom.register({
         id: options.id,
         element: current,
-        focus: options.focus ? (request) => options.focus!(current, request) : undefined,
+        focus: (request) => options.focus(current, request),
       }),
     );
   });
@@ -217,7 +219,7 @@ export function createNode(options: () => Options): Node {
 /** A note target: Enter edits the note, and its editor's Escape returns here. */
 export function createNoteNode(
   noteId: Accessor<NoteSchema.Id>,
-  options: () => Omit<Options, "id"> = () => ({}),
+  options: () => Omit<TargetOptions, "id">,
 ): Node {
   const context = useContextState();
   const ids = useId();
@@ -284,6 +286,24 @@ export function useId() {
     note: (noteId: NoteSchema.Id) => ids().note(noteId),
     editor: (noteId: NoteSchema.Id) => ids().editor(noteId),
   };
+}
+
+export function focusBrowseTarget(target: HTMLElement) {
+  target.focus({ preventScroll: true });
+
+  const document = target.ownerDocument;
+
+  if (document.activeElement !== target || target.isContentEditable) return;
+
+  const selection = document.getSelection();
+  const anchor = selection?.anchorNode;
+  const element = anchor instanceof globalThis.Element ? anchor : anchor?.parentElement;
+  const editor = element?.closest('[contenteditable="true"]');
+
+  // Safari can resume typing at a retained DOM caret after pane/note navigation.
+  // Clear only the native editor selection; ProseMirror restores its saved one
+  // on re-entry. Ordinary blur (e.g. a toolbar click) does not go through here.
+  if (selection && editor?.contains(selection.focusNode)) selection.removeAllRanges();
 }
 
 function useContextState(): ContextState {

@@ -133,7 +133,7 @@ export function PaneStream(props: ComponentProps<"section">) {
     id: fid.pane(),
     enabled: !Predicate.isTagged(state, "Loading"),
     focus: (element) => {
-      element.focus({ preventScroll: true });
+      Focus.focusBrowseTarget(element);
       const ids = listOrder();
       const previous = lastFocused();
       const target = previous && ids.includes(previous) ? previous : ids[0];

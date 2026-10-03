@@ -58,7 +58,7 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem }) {
       // Reveal only a booted row: its editor supplies Virtua with the real height.
       enabled: listRow.ready() && editorReady(),
       focus: (element, options) => {
-        element.focus({ preventScroll: true });
+        Focus.focusBrowseTarget(element);
 
         // Virtua owns vertical scrolling; the request decides whether to use it.
         if (
