@@ -19,6 +19,9 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
   const pane = PaneCtx.useStream();
   const navigate = route.useNavigate();
   const fnode = Focus.useNode();
+  const focus = Focus.use();
+  const fid = Focus.useId();
+  let searchInput: HTMLInputElement | undefined;
 
   const updatePane = (next: PaneSchema.PaneStream) =>
     void navigate(
@@ -65,6 +68,15 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
 
   fnode.registerShortcuts([
     {
+      key: [["/"]],
+      handler: () => {
+        searchInput?.focus();
+        searchInput?.select();
+
+        return true;
+      },
+    },
+    {
       key: [["T"]],
       handler: () => {
         setType(pane().filter.type === "notes" ? "pages" : "notes");
@@ -102,12 +114,30 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
   return (
     <HorizontalScroll class="-my-2 -ml-4 -mr-3 flex-1" contentClass="gap-2 py-2">
       <Input
+        ref={(element) => (searchInput = element)}
         type="search"
         aria-label="Search this stream"
+        aria-keyshortcuts="/"
+        title="Search this stream (/)"
         placeholder="Search…"
         class="h-7 w-30 shadow-none"
         value={pane().filter.search ?? ""}
         onInput={(event) => setSearch(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (
+            event.key !== "Enter" ||
+            event.isComposing ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.altKey ||
+            event.shiftKey
+          ) {
+            return;
+          }
+
+          event.preventDefault();
+          focus.request(fid.pane());
+        }}
       />
       <ToggleGroup
         aria-label="Content type"
