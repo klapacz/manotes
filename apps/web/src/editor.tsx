@@ -17,7 +17,7 @@ import { EditorSyncService, MatchTag, bindRt, createSyncedAtom } from "./lib";
 import { getProsemirrorXmlFragment } from "./lib/prosemirror/yjs";
 import { Cause, Data, Deferred, Effect, SubscriptionRef } from "effect";
 import { AsyncResult, type Atom } from "effect/unstable/reactivity";
-import BacklinkMenu, { TabMenu } from "./lib/editor/backlink/menu";
+import BacklinkMenu, { StreamRefMenu, TabMenu } from "./lib/editor/backlink/menu";
 import { useAtomValue } from "@effect/atom-solid";
 import { Focus } from "./components/note/focus";
 import type { NoteSchema } from "./lib/note.schema";
@@ -209,6 +209,7 @@ export default function Editor(props: Props): JSX.Element {
               />
               <BacklinkMenu currentNoteId={props.noteId} />
               <TabMenu />
+              <StreamRefMenu />
               <LinkMenu edit={linkEdit} />
               {/* Leaving to the note, like Escape, drops the keyboard; a plain blur gets refocused. */}
               <MobileToolbar linkEdit={linkEdit} onDismiss={() => focus.requestParent()} />

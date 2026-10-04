@@ -170,11 +170,13 @@ export function linkAtElement(view: EditorView, anchor: Element): Target | undef
   return anchor.isConnected ? linkRange(view.state, view.posAtDOM(anchor, 0)) : undefined;
 }
 
-/** The rendered link `<a>` an event hit; backlinks navigate on their own. */
+/** The rendered link `<a>` an event hit; inline refs navigate on their own. */
 export function element(view: EditorView, target: EventTarget | null): HTMLElement | undefined {
   const anchor = target instanceof Element ? target.closest<HTMLElement>("a[href]") : null;
 
-  return anchor && view.dom.contains(anchor) && !anchor.closest("[data-backlink]")
+  return anchor &&
+    view.dom.contains(anchor) &&
+    !anchor.closest("[data-backlink], [data-stream-ref]")
     ? anchor
     : undefined;
 }

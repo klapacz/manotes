@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { NOTE_SCHEMA } from "../app-schema";
 import { MdParse } from "./parse";
 import { MdSerialize } from "./serialize";
+import { decodeStreamRefAttrs, streamRefLabel } from "../../editor/stream-ref/spec";
 
 describe("app Markdown conversion", () => {
   it.each([
@@ -99,6 +100,50 @@ describe("app Markdown conversion", () => {
     expect(paragraph.child(2).marks[0]!.type.name).toBe("bold");
     expect(paragraph.child(3).text).toBe(" after ");
     expect(MdParse.parse(MdSerialize.serialize(doc)).eq(doc)).toBe(true);
+  });
+
+  it("round-trips stream settings as an inline ref without a pane identity or URL", () => {
+    const attrs = decodeStreamRefAttrs({
+      paneId: "source-pane",
+      href: "https://old-device.example/graph",
+      filter: {
+        type: "pages",
+        search: "a & b [x] (é)!",
+        backlinksTo: "project",
+        linksFrom: "article",
+        date: "2026-10-04",
+      },
+      sort: "updated",
+      view: "snippets",
+    });
+
+    const doc = NOTE_SCHEMA.node(
+      "doc",
+      null,
+      NOTE_SCHEMA.node("paragraph", null, [
+        NOTE_SCHEMA.text("See "),
+        NOTE_SCHEMA.node("streamRef", attrs),
+        NOTE_SCHEMA.text(" for more."),
+      ]),
+    );
+
+    const markdown = MdSerialize.serialize(doc);
+
+    expect(attrs).not.toHaveProperty("paneId");
+    expect(attrs).not.toHaveProperty("href");
+    expect(MdParse.parse(markdown).eq(doc)).toBe(true);
+    expect(markdown).toContain("stream:");
+    expect(streamRefLabel({ filter: { type: "pages" }, sort: "updated", view: "full" })).toBe(
+      "Pages",
+    );
+    expect(streamRefLabel({ filter: { type: "notes" }, sort: "date", view: "full" })).toBe("Notes");
+    expect(streamRefLabel(attrs)).toContain("snippets");
+    expect(decodeStreamRefAttrs({ filter: { type: "notes" } })).toMatchObject({
+      sort: "date",
+      view: "full",
+    });
+    expect(() => decodeStreamRefAttrs({ ...attrs, sort: "invalid" })).toThrow();
+    expect(() => MdParse.parse("[Stream](stream:%7Bbroken)")).toThrow();
   });
 
   it("distinguishes escaped task markers from actual tasks", () => {
@@ -237,8 +282,10 @@ describe("app Markdown conversion", () => {
     injected
   `,
   ])("rejects invalid code languages: %s", (language) => {
-    const code = NOTE_SCHEMA.node("codeBlock", { language }, NOTE_SCHEMA.text("code"));
-    expect(() => MdSerialize.serialize(NOTE_SCHEMA.node("doc", null, code))).toThrow(/language/);
+    expect(() => {
+      const code = NOTE_SCHEMA.node("codeBlock", { language }, NOTE_SCHEMA.text("code"));
+      MdSerialize.serialize(NOTE_SCHEMA.node("doc", null, code));
+    }).toThrow(/language/);
   });
 
   it("rejects non-boolean task state and empty backlink ids", () => {

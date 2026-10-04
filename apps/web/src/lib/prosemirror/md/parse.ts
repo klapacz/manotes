@@ -4,6 +4,7 @@ import { defaultMarkdownParser, MarkdownParser } from "prosemirror-markdown";
 import type { Node, Schema } from "prosekit/pm/model";
 import { NOTE_SCHEMA } from "../app-schema";
 import { numberOrderedLists } from "./number-ordered-lists";
+import { decodeStreamRefAttrs } from "../../editor/stream-ref/spec";
 
 /** Parse CommonMark plus strikethrough and tasks directly into the app schema. */
 export function parse(markdown: string, schema: Schema = NOTE_SCHEMA): Node {
@@ -18,7 +19,7 @@ export function parse(markdown: string, schema: Schema = NOTE_SCHEMA): Node {
     adaptListItems(tokens);
 
     for (const token of tokens) {
-      if (token.children) token.children = adaptBacklinks(token.children);
+      if (token.children) token.children = adaptRefs(token.children);
     }
   });
 
@@ -48,6 +49,10 @@ export function parse(markdown: string, schema: Schema = NOTE_SCHEMA): Node {
     strong: { mark: "bold" },
     s: { mark: "strike" },
     backlink: { node: "backlink", getAttrs: (token) => ({ id: token.attrGet("id") }) },
+    stream_ref: {
+      node: "streamRef",
+      getAttrs: (token) => decodeStreamRefAttrs(JSON.parse(token.content)),
+    },
     // Tables are recognized but deliberately have no mapping, so parsing fails
     // rather than quietly importing a table as unrelated paragraphs.
   });
@@ -104,18 +109,19 @@ function adaptListItems(tokens: readonly Token[]): void {
 
 // A backlink's label is display text, not stored content. Replace the entire
 // link token range with an atom without changing the original inline tokens.
-function adaptBacklinks(tokens: readonly Token[]): Token[] {
+function adaptRefs(tokens: readonly Token[]): Token[] {
   const result: Token[] = [];
   let nextIndex = 0;
 
   for (const [index, token] of tokens.entries()) {
     if (index < nextIndex) continue;
     const href = token.type === "link_open" ? token.attrGet("href") : null;
-    // Only ./<id>.md is a note reference. External links, parent paths, and
+    // Only ./<id>.md is a note ref. External links, parent paths, and
     // links with query strings or fragments keep their normal link tokens.
     const encodedId = /^\.\/([^/?#]+)\.md$/.exec(href ?? "")?.[1];
+    const streamData = href?.startsWith("stream:") ? href.slice("stream:".length) : undefined;
 
-    if (encodedId === undefined) {
+    if (encodedId === undefined && streamData === undefined) {
       result.push(token);
       continue;
     }
@@ -126,10 +132,13 @@ function adaptBacklinks(tokens: readonly Token[]): Token[] {
       (child, position) => position > index && child.type === "link_close",
     );
 
-    if (end < 0) throw new Error("Unclosed backlink");
-    const backlink = new Token("backlink", "", 0);
-    backlink.attrSet("id", decodeURIComponent(encodedId));
-    result.push(backlink);
+    if (end < 0) throw new Error("Unclosed ref");
+    const ref = new Token(streamData === undefined ? "backlink" : "stream_ref", "", 0);
+
+    if (streamData !== undefined) ref.content = decodeURIComponent(streamData);
+    else if (encodedId !== undefined) ref.attrSet("id", decodeURIComponent(encodedId));
+
+    result.push(ref);
     nextIndex = end + 1;
   }
 

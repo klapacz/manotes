@@ -15,6 +15,7 @@ import { defineStrike } from "prosekit/extensions/strike";
 import { defineCode } from "prosekit/extensions/code";
 import { defineLink } from "prosekit/extensions/link";
 import { defineBacklinkSpec } from "./lib/editor/backlink/spec";
+import { defineStreamRefSpec } from "./lib/editor/stream-ref/spec";
 import { defineAppListSpec } from "./lib/editor/list/extension";
 
 function defineDoc() {
@@ -44,6 +45,7 @@ export function defineAppSchema() {
     defineTable(),
     defineCodeBlock(),
     defineBacklinkSpec(),
+    defineStreamRefSpec(),
     // Marks
     defineItalic(),
     defineBold(),

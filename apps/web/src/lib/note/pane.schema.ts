@@ -28,6 +28,14 @@ const StreamView = Schema.Literals(["full", "snippets"]).pipe(
 
 export type StreamView = typeof StreamView.Type;
 
+export const StreamSettings = Schema.Struct({
+  filter: StreamFilter,
+  sort: StreamSort,
+  view: StreamView,
+});
+
+export type StreamSettings = typeof StreamSettings.Type;
+
 export const Id = Schema.NonEmptyString.pipe(Schema.brand("PaneId"));
 
 export type Id = typeof Id.Type;
@@ -41,9 +49,7 @@ export const Pane = Schema.TaggedUnion({
   },
   stream: {
     paneId: PaneId,
-    filter: StreamFilter,
-    sort: StreamSort,
-    view: StreamView,
+    ...StreamSettings.fields,
   },
 });
 

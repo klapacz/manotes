@@ -3,6 +3,7 @@ import { defaultMarkdownSerializer, MarkdownSerializer } from "prosemirror-markd
 import { Fragment, type Node } from "prosekit/pm/model";
 import { numberOrderedLists } from "./number-ordered-lists";
 import { decodeBacklinkAttrs } from "../../editor/backlink/spec";
+import { decodeStreamRefAttrs, streamRefLabel } from "../../editor/stream-ref/spec";
 import { decodeResolvedAppListAttrs } from "../../editor/list/extension";
 
 export type Options = {
@@ -100,6 +101,17 @@ function createSerializer(options: Options): MarkdownSerializer {
         state.wrapBlock(" ".repeat(marker.length), marker + task, node, () =>
           state.renderContent(node),
         );
+      },
+      streamRef(state, node) {
+        const attrs = decodeStreamRefAttrs(node.attrs);
+
+        const data = encodeURIComponent(JSON.stringify(attrs)).replace(
+          /[!'()*]/g,
+          (char) => `%${char.charCodeAt(0).toString(16)}`,
+        );
+
+        // Markdown transport only; the document stores settings, never a URL.
+        state.text(`[${state.esc(streamRefLabel(attrs))}](stream:${data})`, false);
       },
       backlink(state, node) {
         const { id } = decodeBacklinkAttrs(node.attrs);

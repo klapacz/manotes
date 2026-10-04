@@ -7,6 +7,8 @@ import { defineTaskListToggle } from "./editor.task-list-toggle.extension";
 import { defineCodeBlockBackspace } from "./lib/editor/code-block-backspace/extension";
 import { defineBacklinkCommands } from "./lib/editor/backlink/spec";
 import { defineBacklinkRuntime } from "./lib/editor/backlink/extension";
+import { defineStreamRefCommands } from "./lib/editor/stream-ref/spec";
+import { defineStreamRefRuntime } from "./lib/editor/stream-ref/extension";
 import { defineAppListExtension } from "./lib/editor/list/extension";
 import { EditorLink } from "./lib/editor/link/extension";
 import { defineAppSchema } from "./editor.schema";
@@ -22,6 +24,7 @@ export function defineAppExtension() {
     // Commands
     defineBaseCommands(),
     defineBacklinkCommands(),
+    defineStreamRefCommands(),
     // Keymaps & plugins
     defineAppListExtension(),
     defineBaseKeymap(),
@@ -39,6 +42,7 @@ export function defineAppExtension() {
     defineCodeBlockBackspace(),
     // Browser runtime (node views, clipboard)
     defineBacklinkRuntime(),
+    defineStreamRefRuntime(),
   );
 }
 

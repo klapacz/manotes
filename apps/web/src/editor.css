@@ -429,7 +429,7 @@ prosekit-table-handle-drop-indicator {
   }
 
   /* Underlined, unlike backlinks. Clicking opens it; a tap shows its panel. */
-  &:not([data-backlink]) {
+  &:not([data-backlink], [data-stream-ref]) {
     text-decoration-line: underline;
     text-decoration-color: color-mix(in oklch, currentColor 40%, transparent);
     text-underline-offset: 0.2em;
