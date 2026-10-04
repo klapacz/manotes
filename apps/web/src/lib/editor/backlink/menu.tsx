@@ -3,8 +3,9 @@ import { useEditor } from "prosekit/solid";
 import {
   AutocompleteEmpty,
   AutocompleteItem,
-  AutocompleteList,
-  AutocompletePopover,
+  AutocompletePopup,
+  AutocompletePositioner,
+  AutocompleteRoot,
 } from "prosekit/solid/autocomplete";
 import { For, Show, onCleanup, onMount } from "solid-js";
 import {
@@ -35,6 +36,8 @@ type BacklinkNote = {
 const EMPTY_BACKLINK_NOTES: BacklinkNote[] = [];
 
 const EMPTY_TAB_CANDIDATES: BrowserExtension.TabCandidate[] = [];
+
+const popupClass = cx(commandSurfaceClass, commandListClass, "block w-56 border p-1 shadow-md");
 
 const CreateTabNote = bindRt((rt) =>
   rt.fn(
@@ -91,43 +94,52 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
   );
 
   return (
-    <AutocompletePopover
+    <AutocompleteRoot
       regex={BACKLINK_REGEX}
-      class={cx(commandSurfaceClass, commandListClass, "block w-56 border p-1 shadow-md")}
-      onOpenChange={setOpen}
-      onQueryChange={makeQueryHandler(editor, BACKLINK_REGEX, setRawQuery)}
+      filter={() => true}
+      queryBuilder={rawQuery}
+      onOpenChange={(event) => setOpen(event.detail)}
+      onQueryChange={(event) => setRawQuery(event.detail)}
     >
-      <AutocompleteList filter={() => true}>
-        <AutocompleteEmpty class={commandEmptyClass}>No matching notes</AutocompleteEmpty>
+      <AutocompletePositioner class="z-50 block">
+        <AutocompletePopup class={popupClass}>
+          <AutocompleteEmpty class={commandEmptyClass}>No matching notes</AutocompleteEmpty>
 
-        <For each={notes.value}>
-          {(note) => (
-            <AutocompleteItem
-              class={cx(commandItemBaseClass, "data-focused:bg-control-hover data-focused:text-fg")}
-              onSelect={() => onSelect(note)}
-              value={note.id}
-            >
-              {note.title}
-            </AutocompleteItem>
-          )}
-        </For>
+          <For each={notes.value}>
+            {(note) => (
+              <AutocompleteItem
+                class={cx(
+                  commandItemBaseClass,
+                  "data-highlighted:bg-control-hover data-highlighted:text-fg",
+                )}
+                onSelect={() => onSelect(note)}
+                value={note.id}
+              >
+                {note.title}
+              </AutocompleteItem>
+            )}
+          </For>
 
-        {/* Keyed so the item is recreated on each query change: the prosekit
+          {/* Keyed so the item is recreated on each query change: the prosekit
             solid wrapper renders children via solid-js/h and does not track
             dynamic text children reactively after first render. */}
-        <Show when={query().trim()} keyed>
-          {(title) => (
-            <AutocompleteItem
-              class={cx(commandItemBaseClass, "data-focused:bg-control-hover data-focused:text-fg")}
-              onSelect={() => onCreatePage(title)}
-              value={`create:${title}`}
-            >
-              Create page “{title}”
-            </AutocompleteItem>
-          )}
-        </Show>
-      </AutocompleteList>
-    </AutocompletePopover>
+          <Show when={query().trim()} keyed>
+            {(title) => (
+              <AutocompleteItem
+                class={cx(
+                  commandItemBaseClass,
+                  "data-highlighted:bg-control-hover data-highlighted:text-fg",
+                )}
+                onSelect={() => onCreatePage(title)}
+                value={`create:${title}`}
+              >
+                Create page “{title}”
+              </AutocompleteItem>
+            )}
+          </Show>
+        </AutocompletePopup>
+      </AutocompletePositioner>
+    </AutocompleteRoot>
   );
 }
 
@@ -162,31 +174,37 @@ export function TabMenu() {
   };
 
   return (
-    <AutocompletePopover
+    <AutocompleteRoot
       regex={TAB_REGEX}
-      class={cx(commandSurfaceClass, commandListClass, "block w-56 border p-1 shadow-md")}
-      onOpenChange={setOpen}
-      onQueryChange={makeQueryHandler(editor, TAB_REGEX, setRawQuery)}
+      filter={() => true}
+      queryBuilder={rawQuery}
+      onOpenChange={(event) => setOpen(event.detail)}
+      onQueryChange={(event) => setRawQuery(event.detail)}
     >
-      <AutocompleteList filter={() => true}>
-        <AutocompleteEmpty class={commandEmptyClass}>No matching tabs</AutocompleteEmpty>
+      <AutocompletePositioner class="z-50 block">
+        <AutocompletePopup class={popupClass}>
+          <AutocompleteEmpty class={commandEmptyClass}>No matching tabs</AutocompleteEmpty>
 
-        <For each={tabs.value}>
-          {(tab) => (
-            <AutocompleteItem
-              class={cx(commandItemBaseClass, "data-focused:bg-control-hover data-focused:text-fg")}
-              onSelect={() => onTabSelect(tab)}
-              value={tab.id.toString()}
-            >
-              <div class="min-w-0">
-                <div class="truncate">{tab.title}</div>
-                <div class="truncate text-xs text-fg-subtle">{tab.url}</div>
-              </div>
-            </AutocompleteItem>
-          )}
-        </For>
-      </AutocompleteList>
-    </AutocompletePopover>
+          <For each={tabs.value}>
+            {(tab) => (
+              <AutocompleteItem
+                class={cx(
+                  commandItemBaseClass,
+                  "data-highlighted:bg-control-hover data-highlighted:text-fg",
+                )}
+                onSelect={() => onTabSelect(tab)}
+                value={tab.id.toString()}
+              >
+                <div class="min-w-0">
+                  <div class="truncate">{tab.title}</div>
+                  <div class="truncate text-xs text-fg-subtle">{tab.url}</div>
+                </div>
+              </AutocompleteItem>
+            )}
+          </For>
+        </AutocompletePopup>
+      </AutocompletePositioner>
+    </AutocompleteRoot>
   );
 }
 
@@ -240,25 +258,9 @@ function useArrowKeyAliases(editor: AppEditor, isOpen: () => boolean) {
   });
 }
 
-function makeQueryHandler(editor: AppEditor, regex: RegExp, setRawQuery: (query: string) => void) {
-  return (fallbackQuery: string) => {
-    try {
-      const view = editor().view;
-      const { $from } = view.state.selection;
-      const parentOffset = $from.parentOffset;
-
-      const textBeforeCursor = $from.parent.textBetween(
-        Math.max(0, parentOffset - 200),
-        parentOffset,
-      );
-
-      const match = regex.exec(textBeforeCursor);
-
-      setRawQuery((match?.[1] ?? fallbackQuery).trim());
-    } catch {
-      setRawQuery(fallbackQuery.trim());
-    }
-  };
+// The default builder lowercases and strips punctuation; keep what was typed.
+function rawQuery(match: RegExpExecArray) {
+  return (match[1] ?? "").trim();
 }
 
 const filterTabs =
