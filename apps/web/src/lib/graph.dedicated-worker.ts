@@ -1,3 +1,4 @@
+import { AudioMemoWorker } from "./audio-memo/worker";
 import { BrowserRuntime, BrowserWorkerRunner } from "@effect/platform-browser";
 import { Socket } from "effect/unstable/socket";
 import { Effect, Layer, References, Stream, SubscriptionRef } from "effect";
@@ -90,6 +91,9 @@ function makeRpcHandler(localGraphId: string, graphSyncConfig: GraphSyncConfig.G
         Effect.forkScoped,
       );
 
+      const audioMemos = yield* AudioMemoWorker.make();
+      const removeAudioMemo = ({ path }: { path: string }) => audioMemos.remove(path);
+
       if (graphSyncConfig.mode === "cloud") {
         const syncStatusRef = yield* SubscriptionRef.make(
           new SyncStatusCloud({
@@ -128,6 +132,8 @@ function makeRpcHandler(localGraphId: string, graphSyncConfig: GraphSyncConfig.G
         }).pipe(Effect.provide(graphSyncLayer));
 
         return {
+          removeAudioMemo,
+          audioMemoStatusStream: () => audioMemos.statusStream,
           placeholder: Effect.fn("DedicatedWorker.placeholder")(function* () {
             yield* Effect.logInfo("Placeholder RPC invoked");
           }),
@@ -136,6 +142,8 @@ function makeRpcHandler(localGraphId: string, graphSyncConfig: GraphSyncConfig.G
       }
 
       return {
+        removeAudioMemo,
+        audioMemoStatusStream: () => audioMemos.statusStream,
         placeholder: Effect.fn("DedicatedWorker.placeholder")(function* () {
           yield* Effect.logInfo("Placeholder RPC invoked");
         }),

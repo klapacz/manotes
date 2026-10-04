@@ -102,3 +102,5 @@ const getUsedTables = Effect.fnUntraced(function* <T>(query: DrizzleQuery<T, "sq
 
   return yield* decodeUsedTables(query.getUsedTables()).pipe(Effect.orDie);
 });
+
+export * as DB from "./db.service";

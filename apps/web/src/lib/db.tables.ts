@@ -46,3 +46,13 @@ export const backlinks = sqliteTable(
     index("backlinks_target_id_idx").on(table.targetId),
   ],
 );
+
+export const recordings = sqliteTable("recordings", {
+  path: text("path").primaryKey(),
+  recordedAt: text("recordedAt").notNull(),
+  mimeType: text("mimeType").notNull(),
+  state: text("state", { enum: ["pending", "completed", "error"] }).notNull(),
+  noteId: text("noteId"),
+});
+
+export * as Tables from "./db.tables";

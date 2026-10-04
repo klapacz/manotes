@@ -107,3 +107,5 @@ export class Service extends Context.Service<Service>()("MaterializationCheckpoi
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
+
+export * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";

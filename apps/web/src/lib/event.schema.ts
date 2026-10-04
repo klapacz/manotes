@@ -40,3 +40,5 @@ export const Create = Schema.Struct({
 });
 
 export type Create = typeof Create.Type;
+
+export * as EventSchema from "./event.schema";

@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@corvu/calendar": "^0.1.2",
+    "@effect-uai/core": "0.17.0",
+    "@effect-uai/openai": "0.17.0",
     "@effect/atom-solid": "catalog:",
     "@effect/platform-browser": "catalog:",
     "@effect/platform-node": "catalog:",

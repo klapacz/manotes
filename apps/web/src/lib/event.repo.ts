@@ -294,3 +294,5 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
+
+export * as EventRepo from "./event.repo";

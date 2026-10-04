@@ -2,7 +2,7 @@ import { Array, Effect, flow, Layer, Option, pipe, Schema, Context, Stream } fro
 import * as DB from "./db.service";
 import * as NoteSchema from "./note.schema";
 import * as Tables from "./db.tables";
-import { and, desc, eq, isNotNull, isNull, like, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, like, ne, or, sql, type SQL } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { LibOption } from "./effect/option";
 
@@ -74,6 +74,17 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       if (Option.isNone(record)) return Option.none();
 
       return yield* decodeRecord(record.value).pipe(Effect.asSome);
+    });
+
+    const findIdByTitle = Effect.fn("NoteRepo.findIdByTitle")(function* (title: string) {
+      return yield* db.find((db) =>
+        db
+          .select({ id: Tables.notes.id })
+          .from(Tables.notes)
+          .where(eq(Tables.notes.title, title))
+          .orderBy(asc(Tables.notes.createdAt), asc(Tables.notes.id))
+          .limit(1),
+      );
     });
 
     const getById = Effect.fn("NoteRepo.getById")(function* (id: string) {
@@ -273,6 +284,7 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       create,
       updateById,
       findById,
+      findIdByTitle,
       getById,
       findByIdWithBacklinks,
       findBootById,
@@ -346,3 +358,5 @@ function streamFilterConditions(query: StreamListQuery): Array<SQL> {
 
   return conditions;
 }
+
+export * as NoteRepo from "./note.repo";

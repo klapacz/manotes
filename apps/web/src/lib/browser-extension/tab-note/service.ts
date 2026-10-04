@@ -1,11 +1,8 @@
 import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
 import { DateTime, Effect, Layer, Context } from "effect";
 import { nanoid } from "nanoid";
-import { prosemirrorJSONToYDoc } from "y-prosemirror";
-import * as Y from "yjs";
 import * as MaterializedEventService from "../../materialized-event.service";
-import { NOTE_SCHEMA } from "../../prosemirror/app-schema";
-import { PROSEMIRROR_XML_FRAGMENT_KEY } from "../../prosemirror/yjs";
+import { ProsemirrorEncode } from "../../prosemirror/encode";
 
 export class Service extends Context.Service<Service>()("BrowserExtensionTabNoteService.Service", {
   make: Effect.gen(function* () {
@@ -16,33 +13,24 @@ export class Service extends Context.Service<Service>()("BrowserExtensionTabNote
     ) {
       const noteId = nanoid();
 
-      const yDoc = prosemirrorJSONToYDoc(
-        NOTE_SCHEMA,
+      const payload = ProsemirrorEncode.encodeDocument([
         {
-          type: "doc",
+          type: "heading",
+          attrs: { level: 1 },
+          content: [{ type: "text", text: tab.title }],
+        },
+        {
+          type: "paragraph",
           content: [
+            { type: "text", text: "Source: " },
             {
-              type: "heading",
-              attrs: { level: 1 },
-              content: [{ type: "text", text: tab.title }],
-            },
-            {
-              type: "paragraph",
-              content: [
-                { type: "text", text: "Source: " },
-                {
-                  type: "text",
-                  text: tab.url,
-                  marks: [{ type: "link", attrs: { href: tab.url } }],
-                },
-              ],
+              type: "text",
+              text: tab.url,
+              marks: [{ type: "link", attrs: { href: tab.url } }],
             },
           ],
         },
-        PROSEMIRROR_XML_FRAGMENT_KEY,
-      );
-
-      const payload = Y.encodeStateAsUpdate(yDoc);
+      ]);
 
       return yield* materializedEventService.create({
         noteId,

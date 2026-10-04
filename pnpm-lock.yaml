@@ -102,6 +102,12 @@ importers:
       '@corvu/calendar':
         specifier: ^0.1.2
         version: 0.1.2(solid-js@1.9.15)
+      '@effect-uai/core':
+        specifier: 0.17.0
+        version: 0.17.0(effect@4.0.0-rc.112)
+      '@effect-uai/openai':
+        specifier: 0.17.0
+        version: 0.17.0(@effect-uai/core@0.17.0(effect@4.0.0-rc.112))(effect@4.0.0-rc.112)(ws@8.21.3)
       '@effect/atom-solid':
         specifier: 'catalog:'
         version: 4.0.0-rc.112(effect@4.0.0-rc.112)(solid-js@1.9.15)
@@ -1168,6 +1174,27 @@ packages:
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
+
+  '@effect-uai/core@0.17.0':
+    resolution: {integrity: sha512-KR5XE0HFoKelexeHMoyL+aZ5CfZd+e43jKQ492zWynTK5YsMVsCrQQ+3qKIFnmOs/p4P4QdShfK1BCNL3GvgrQ==}
+    peerDependencies:
+      effect: '>=4.0.0-rc.111 <5.0.0'
+
+  '@effect-uai/openai@0.17.0':
+    resolution: {integrity: sha512-48hRzh+MM+c5IF2jSVrP/Jf8JAn/EBQLHWVzpdf68Z2QWyzn8H1jrV2+Tl9B6rRnjzZNWsdNCGNsgHVBpKaN7g==}
+    peerDependencies:
+      '@effect-uai/core': '>=0.2.0 <1'
+      effect: '>=4.0.0-rc.111 <5.0.0'
+      ws: ^8.0.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+
+  '@effect-uai/responses@0.17.0':
+    resolution: {integrity: sha512-oQ9oAidF8axHNAXeH5eBESZvxckV8qsuC1fsttqMUvKVQaJy2ww9ayZvg0GfYDdDLLGz46T/QyYhOQ4rUcIM7g==}
+    peerDependencies:
+      '@effect-uai/core': '>=0.2.0 <1'
+      effect: '>=4.0.0-rc.111 <5.0.0'
 
   '@effect/atom-solid@4.0.0-rc.112':
     resolution: {integrity: sha512-hp2KW9VnV/sWkWjNkJl5DPilFM6fe6eVG1JOjsADtXNYmPAdzBtkAysCwaC6UKpPdK3x0551QW4k31bKv6xTvg==}
@@ -8282,6 +8309,24 @@ snapshots:
       effect: 4.0.0-rc.112
 
   '@drizzle-team/brocli@0.10.2': {}
+
+  '@effect-uai/core@0.17.0(effect@4.0.0-rc.112)':
+    dependencies:
+      '@standard-schema/spec': 1.1.0
+      effect: 4.0.0-rc.112
+
+  '@effect-uai/openai@0.17.0(@effect-uai/core@0.17.0(effect@4.0.0-rc.112))(effect@4.0.0-rc.112)(ws@8.21.3)':
+    dependencies:
+      '@effect-uai/core': 0.17.0(effect@4.0.0-rc.112)
+      '@effect-uai/responses': 0.17.0(@effect-uai/core@0.17.0(effect@4.0.0-rc.112))(effect@4.0.0-rc.112)
+      effect: 4.0.0-rc.112
+    optionalDependencies:
+      ws: 8.21.3
+
+  '@effect-uai/responses@0.17.0(@effect-uai/core@0.17.0(effect@4.0.0-rc.112))(effect@4.0.0-rc.112)':
+    dependencies:
+      '@effect-uai/core': 0.17.0(effect@4.0.0-rc.112)
+      effect: 4.0.0-rc.112
 
   '@effect/atom-solid@4.0.0-rc.112(effect@4.0.0-rc.112)(solid-js@1.9.15)':
     dependencies:

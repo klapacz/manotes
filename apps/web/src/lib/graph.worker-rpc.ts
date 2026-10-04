@@ -43,6 +43,17 @@ export class DedicatedWorkerHealth extends Schema.Class<DedicatedWorkerHealth>(
 
 /** External RPC surface (main thread -> SharedWorker). */
 export class GraphSharedWorkerRpc extends RpcGroup.make(
+  Rpc.make("audioMemoStatusStream", {
+    payload: {},
+    success: Schema.NullOr(Schema.String),
+    error: Schema.Never,
+    stream: true,
+  }),
+  Rpc.make("removeAudioMemo", {
+    payload: { path: Schema.String },
+    success: Schema.Void,
+    error: Schema.String,
+  }),
   Rpc.make("placeholder", {
     success: Schema.Void,
     error: Schema.Never,
@@ -71,6 +82,17 @@ export class GraphSharedWorkerRpc extends RpcGroup.make(
 
 /** Internal RPC surface (SharedWorker -> Dedicated Worker via MessagePort). */
 export class GraphDedicatedRpc extends RpcGroup.make(
+  Rpc.make("audioMemoStatusStream", {
+    payload: {},
+    success: Schema.NullOr(Schema.String),
+    error: Schema.Never,
+    stream: true,
+  }),
+  Rpc.make("removeAudioMemo", {
+    payload: { path: Schema.String },
+    success: Schema.Void,
+    error: Schema.String,
+  }),
   Rpc.make("placeholder", {
     payload: {},
     success: Schema.Void,

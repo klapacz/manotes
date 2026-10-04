@@ -81,6 +81,8 @@ const RpcHandler = GraphSharedWorkerRpc.toLayer(
 
     const dedicatedWorkerHealth = yield* createDedicatedWorkerHealth;
 
+    const audioMemoStatusRef = yield* SubscriptionRef.make<string | null>(null);
+
     const syncStatusRef = yield* SubscriptionRef.make<SyncStatus>(
       getDisconnectedSyncStatus(initialMessage.graphSyncMode),
     );
@@ -101,7 +103,9 @@ const RpcHandler = GraphSharedWorkerRpc.toLayer(
           // Swapping the ScopedRef value guarantees old connection cleanup.
           const connected = yield* ScopedRef.set(
             dedicatedWorkerRef,
-            acquireDedicatedConnection(payload.port, syncStatusRef).pipe(Effect.map(Option.some)),
+            acquireDedicatedConnection(payload.port, syncStatusRef, audioMemoStatusRef).pipe(
+              Effect.map(Option.some),
+            ),
           ).pipe(
             Effect.as(true),
             Effect.catchCause((cause) =>
@@ -160,9 +164,19 @@ const RpcHandler = GraphSharedWorkerRpc.toLayer(
         (effect) => effect.pipe(annotateHandler),
       ),
 
+      removeAudioMemo: Effect.fn("SharedWorker.removeAudioMemo")(function* (payload) {
+        const current = yield* ScopedRef.get(dedicatedWorkerRef);
+
+        if (Option.isNone(current)) return yield* Effect.fail("No dedicated worker available.");
+        yield* current.value
+          .removeAudioMemo(payload)
+          .pipe(Effect.mapError(() => "Could not delete this recording."));
+      }),
+
       healthStream: () => SubscriptionRef.changes(dedicatedWorkerHealth.ref),
 
       syncStatusStream: () => SubscriptionRef.changes(syncStatusRef),
+      audioMemoStatusStream: () => SubscriptionRef.changes(audioMemoStatusRef),
     };
   }),
 );
@@ -217,6 +231,7 @@ BrowserRuntime.runMain(
 const acquireDedicatedConnection = Effect.fn("SharedWorker.acquireDedicatedConnection")(function* (
   port: MessagePort,
   syncStatusRef: SubscriptionRef.SubscriptionRef<SyncStatus>,
+  audioMemoStatusRef: SubscriptionRef.SubscriptionRef<string | null>,
 ) {
   // Close this transferred port when the ScopedRef entry is released.
   // Register the finalizer first so client setup failures still close it.
@@ -226,6 +241,7 @@ const acquireDedicatedConnection = Effect.fn("SharedWorker.acquireDedicatedConne
   yield* Effect.addFinalizer(() =>
     SubscriptionRef.update(syncStatusRef, (current) => getDisconnectedSyncStatus(current.mode)),
   );
+  yield* Effect.addFinalizer(() => SubscriptionRef.set(audioMemoStatusRef, null));
 
   const layer = Layer.mergeAll(
     RpcClient.layerProtocolWorker({ size: 1, concurrency: 16 }).pipe(
@@ -248,6 +264,17 @@ const acquireDedicatedConnection = Effect.fn("SharedWorker.acquireDedicatedConne
         yield* SubscriptionRef.update(syncStatusRef, (current) =>
           getDisconnectedSyncStatus(current.mode),
         );
+      }),
+    ),
+    Effect.forkScoped,
+  );
+
+  yield* client.audioMemoStatusStream({}).pipe(
+    Stream.runForEach((path) => SubscriptionRef.set(audioMemoStatusRef, path)),
+    Effect.catchCause((cause) =>
+      Effect.gen(function* () {
+        yield* Effect.logWarning("audioMemoStatusStream from dedicated worker failed", cause);
+        yield* SubscriptionRef.set(audioMemoStatusRef, null);
       }),
     ),
     Effect.forkScoped,

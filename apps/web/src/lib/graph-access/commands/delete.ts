@@ -1,5 +1,6 @@
 import { Data, Effect, Layer, Context } from "effect";
 
+import { AudioMemoFiles } from "../../audio-memo/files";
 import * as OPFS from "../../opfs.service";
 import * as GraphRuntime from "../graph-runtime";
 import * as DBResolution from "../graph-runtime/db-resolution";
@@ -30,7 +31,9 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.De
             Effect.catchTag("TimeoutError", () => Effect.fail(new LockTimeout({ localGraphId }))),
           );
 
-          yield* OPFS.removeFileFromOpfsRoot(DBResolution.getPath(localGraphId)).pipe(
+          yield* AudioMemoFiles.removeGraph(localGraphId);
+
+          yield* OPFS.removeEntryFromOpfsRoot(DBResolution.getPath(localGraphId)).pipe(
             Effect.catchTag("NotFoundError", () => Effect.void),
           );
 

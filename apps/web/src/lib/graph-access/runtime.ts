@@ -31,3 +31,5 @@ const memoMap = Layer.makeMemoMapUnsafe();
 export const atom = Atom.context({ memoMap })(GraphAccessLayer);
 
 export const rt = ManagedRuntime.make(GraphAccessLayer, { memoMap });
+
+export * as GraphAccessRuntime from "./runtime";

@@ -23,7 +23,12 @@ export const migrate = Effect.gen(function* () {
 
     CREATE UNIQUE INDEX IF NOT EXISTS graphs_graph_id_idx
     ON graphs (graphId)
-    WHERE graphId IS NOT NULL
+    WHERE graphId IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS settings (
+      id INTEGER PRIMARY KEY,
+      openaiApiKey TEXT
+    )
   `;
 
   // Run this separately from CREATE TABLE so existing installs get the new column too.

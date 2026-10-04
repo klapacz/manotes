@@ -34,3 +34,5 @@ export const Layer = EffectLayer.unwrap(
     );
   }),
 );
+
+export * as GraphAccessLocalRegistryLayer from "./layer";

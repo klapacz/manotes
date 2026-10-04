@@ -251,3 +251,5 @@ const becomeLeader = Effect.fn("GraphWorkerClient.becomeLeader")(function* (
     );
   }).pipe(Effect.retry(retrySchedule), Effect.withLogSpan("workerSetup"));
 });
+
+export * as GraphWorkerClient from "./graph-worker.client";

@@ -14,3 +14,5 @@ export function getOptions(opts: GetOptonsOpts): LinkOptions {
     resetScroll: false,
   });
 }
+
+export * as NoteLink from "./link";
