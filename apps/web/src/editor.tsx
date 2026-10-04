@@ -159,8 +159,10 @@ export default function Editor(props: Props): JSX.Element {
     id: fid.editor(props.noteId),
     enabled: (props.attached ?? true) && BootState.$is("Ready")(bootState()),
     focus: (_element, options) => {
-      // The pooled view already has a live, transaction-mapped selection.
+      // The pooled view keeps a live, transaction-mapped selection; reuse it
+      // only while visible, so entering a long note does not jump.
       const view = state().editor.view;
+      EditorFocus.placeCaretInView(view);
       view.focus();
 
       if (options?.reveal) view.dispatch(view.state.tr.scrollIntoView());
