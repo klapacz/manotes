@@ -64,7 +64,7 @@ export function PaneShell(props: ComponentProps<"section">) {
 // Pane-level controls sit on the right; children (e.g. stream filters) fill the left.
 export function PaneHeader(props: ParentProps<{ onCreate?: () => void }>) {
   return (
-    <div class="flex gap-3 justify-between p-4 pane:px-0">
+    <div class="flex items-center gap-3 justify-between p-4 pane:px-0">
       {props.children}
       <PaneActions onCreate={props.onCreate} />
     </div>
@@ -314,5 +314,5 @@ export function NoteDivider(props: { date: string }) {
 }
 
 export function PaneEmptyState(props: ParentProps) {
-  return <p class="py-12 text-sm text-fg-subtle">{props.children}</p>;
+  return <p class="px-4 py-12 text-sm text-fg-subtle pane:px-0">{props.children}</p>;
 }

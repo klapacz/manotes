@@ -312,6 +312,7 @@ export type StreamListQuery = {
   readonly date?: string;
   readonly backlinksTo?: string;
   readonly linksFrom?: string;
+  readonly search?: string;
   readonly sort: "date" | "updated";
 };
 
@@ -331,6 +332,17 @@ function streamFilterConditions(query: StreamListQuery): Array<SQL> {
   if (query.type === "notes") conditions.push(isNull(Tables.notes.title));
 
   if (query.date) conditions.push(eq(Tables.notes.date, query.date));
+
+  const search = query.search?.trim();
+
+  if (search) {
+    // Treat LIKE wildcards as literal text in the search field.
+    const pattern = `%${search.replace(/[!%_]/g, "!$&")}%`;
+
+    conditions.push(
+      sql`(${Tables.notes.title} LIKE ${pattern} ESCAPE '!' OR ${Tables.notes.text} LIKE ${pattern} ESCAPE '!')`,
+    );
+  }
 
   return conditions;
 }

@@ -68,6 +68,7 @@ type ComparablePane =
       backlinksTo: string | null,
       linksFrom: string | null,
       date: string | null,
+      search: string | null,
       sort: PaneSchema.StreamSort,
     ];
 
@@ -80,6 +81,7 @@ function normalizeToInput(value: PaneSchema.PaneInput | PaneSchema.Pane): Compar
     value.filter.backlinksTo ?? null,
     value.filter.linksFrom ?? null,
     value.filter.date ?? null,
+    value.filter.search?.trim() || null,
     value.sort ?? "date",
   ];
 }

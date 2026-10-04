@@ -199,7 +199,13 @@ export function PaneStream(props: ComponentProps<"section">) {
               <EditorPool.Provider pool={state().value.pool}>
                 <Show
                   when={state().value.rows.length > 0}
-                  fallback={<PaneEmptyState>No notes in this pane.</PaneEmptyState>}
+                  fallback={
+                    <PaneEmptyState>
+                      {pane().filter.search?.trim()
+                        ? "No notes match your search."
+                        : "No notes in this pane."}
+                    </PaneEmptyState>
+                  }
                 >
                   <RevealedRows rows={state().value.rows} retained={retained()} />
                 </Show>

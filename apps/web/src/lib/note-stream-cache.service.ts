@@ -48,6 +48,7 @@ function cacheKey(query: NoteRepo.StreamListQuery): NoteRepo.StreamListQuery {
     date: query.date,
     backlinksTo: query.backlinksTo,
     linksFrom: query.linksFrom,
+    search: query.search,
     sort: query.sort,
   };
 }

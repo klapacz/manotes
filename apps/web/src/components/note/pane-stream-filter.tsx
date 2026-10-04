@@ -8,6 +8,8 @@ import { PaneCursor } from "../../lib/note/pane.cursor";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneSchema } from "../../lib/note/pane.schema";
 import { Button, buttonVariants } from "../ui/button";
+import { Input } from "../ui/input";
+import { HorizontalScroll } from "../ui/horizontal-scroll";
 import { Focus } from "./focus";
 
 const route = getRouteApi("/$graph/");
@@ -49,6 +51,18 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
   const toggleView = () =>
     updatePane({ ...pane(), view: pane().view === "full" ? "snippets" : "full" });
 
+  const setSearch = (search: string) =>
+    void navigate({
+      ...PaneCtx.linkOptions(
+        ctx,
+        PaneCursor.updateCurrent(() => ({
+          ...pane(),
+          filter: { ...pane().filter, search: search || undefined },
+        })),
+      ),
+      replace: true,
+    });
+
   fnode.registerShortcuts([
     {
       key: [["T"]],
@@ -86,7 +100,15 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
   ]);
 
   return (
-    <div class="space-x-2">
+    <HorizontalScroll class="-my-2 -ml-4 -mr-3 flex-1" contentClass="gap-2 py-2">
+      <Input
+        type="search"
+        aria-label="Search this stream"
+        placeholder="Search…"
+        class="h-7 w-30 shadow-none"
+        value={pane().filter.search ?? ""}
+        onInput={(event) => setSearch(event.currentTarget.value)}
+      />
       <ToggleGroup
         aria-label="Content type"
         class="inline-flex rounded-full bg-control p-0.5 align-middle"
@@ -145,7 +167,7 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
           Refresh
         </Button>
       </Show>
-    </div>
+    </HorizontalScroll>
   );
 }
 

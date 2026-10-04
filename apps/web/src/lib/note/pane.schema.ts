@@ -11,6 +11,7 @@ const StreamFilter = Schema.Struct({
   backlinksTo: Schema.optional(Schema.String),
   linksFrom: Schema.optional(Schema.String),
   date: Schema.optional(TemporalSchema.PlainDateString),
+  search: Schema.optional(Schema.String),
 });
 
 const StreamSort = Schema.Literals(["date", "updated"]).pipe(
@@ -60,6 +61,7 @@ export function paneToQuery(pane: PaneStream): NoteRepo.StreamListQuery {
     date: pane.filter.date,
     backlinksTo: pane.filter.backlinksTo,
     linksFrom: pane.filter.linksFrom,
+    search: pane.filter.search?.trim() || undefined,
     sort: pane.sort,
   };
 }
