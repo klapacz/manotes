@@ -414,9 +414,17 @@ prosekit-table-handle-drop-indicator {
     color: var(--editor-link-hover);
   }
 
-  /* Clicking opens the link; touch taps place the caret instead. */
-  @media (pointer: fine) {
-    &:not([data-backlink]) {
+  /* Underlined, unlike backlinks. Clicking opens it; a tap shows its panel. */
+  &:not([data-backlink]) {
+    text-decoration-line: underline;
+    text-decoration-color: color-mix(in oklch, currentColor 40%, transparent);
+    text-underline-offset: 0.2em;
+
+    &:hover {
+      text-decoration-color: currentColor;
+    }
+
+    @media (pointer: fine) {
       cursor: pointer;
     }
   }

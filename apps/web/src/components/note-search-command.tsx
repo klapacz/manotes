@@ -51,7 +51,8 @@ export const NoteSearchCommand = (props: { children?: (open: () => void) => JSX.
 
   createEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== "k") return;
+      // The editor claims Cmd/Ctrl-K over a selection or link to edit it.
+      if (event.defaultPrevented || event.key.toLowerCase() !== "k") return;
 
       if (!event.metaKey && !event.ctrlKey) return;
 

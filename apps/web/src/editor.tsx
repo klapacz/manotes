@@ -22,6 +22,7 @@ import { useAtomValue } from "@effect/atom-solid";
 import { Focus } from "./components/note/focus";
 import type { NoteSchema } from "./lib/note.schema";
 import { EditorFocus } from "./lib/editor/focus.extension";
+import { createLinkEdit, LinkMenu } from "./lib/editor/link/menu";
 
 export type BootState = Data.TaggedEnum<{
   Loading: {};
@@ -171,32 +172,37 @@ export default function Editor(props: Props): JSX.Element {
 
   return (
     <Show when={state()} keyed>
-      {(current) => (
-        <ProseKit editor={current.editor}>
-          {/* ProseKit appends node view portals after its children, and Solid
-              re-inserts trailing siblings when they mount. Re-inserting the
-              autocomplete elements reconfigures the editor mid-transaction,
-              which reverts it from Yjs, so keep a single stable child. */}
-          <div class="contents">
-            <MatchTag
-              when={bootState()}
-              cases={{
-                Error: (value) => <p class="text-error-fg mb-3 text-sm">{value().message}</p>,
-              }}
-            />
-            <div
-              ref={(element) => {
-                current.editor.mount(element);
-                fnode.setElement(element);
-              }}
-              class="outline-none p-4"
-              style={props.style}
-            />
-            <BacklinkMenu currentNoteId={props.noteId} />
-            <TabMenu />
-          </div>
-        </ProseKit>
-      )}
+      {(current) => {
+        const linkEdit = createLinkEdit();
+
+        return (
+          <ProseKit editor={current.editor}>
+            {/* ProseKit appends node view portals after its children, and Solid
+                re-inserts trailing siblings when they mount. Re-inserting the
+                autocomplete elements reconfigures the editor mid-transaction,
+                which reverts it from Yjs, so keep a single stable child. */}
+            <div class="contents">
+              <MatchTag
+                when={bootState()}
+                cases={{
+                  Error: (value) => <p class="text-error-fg mb-3 text-sm">{value().message}</p>,
+                }}
+              />
+              <div
+                ref={(element) => {
+                  current.editor.mount(element);
+                  fnode.setElement(element);
+                }}
+                class="outline-none p-4"
+                style={props.style}
+              />
+              <BacklinkMenu currentNoteId={props.noteId} />
+              <TabMenu />
+              <LinkMenu edit={linkEdit} />
+            </div>
+          </ProseKit>
+        );
+      }}
     </Show>
   );
 }
