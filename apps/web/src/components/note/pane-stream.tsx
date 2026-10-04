@@ -123,6 +123,16 @@ export function PaneStream(props: ComponentProps<"section">) {
 
   const retained = () => [lastFocused(), pendingNote()].filter((id) => id !== undefined);
 
+  const jump = (index: number) => {
+    const noteId = listOrder().at(index);
+
+    if (!noteId) return false;
+
+    focus.request(fid.note(noteId), { reveal: "if-hidden" });
+
+    return true;
+  };
+
   const move = (delta: number) => {
     const ids = listOrder();
 
@@ -153,6 +163,14 @@ export function PaneStream(props: ComponentProps<"section">) {
   }));
 
   fnode.registerShortcuts([
+    {
+      key: [["G"]],
+      handler: () => jump(0),
+    },
+    {
+      key: [["Shift+G"]],
+      handler: () => jump(-1),
+    },
     {
       key: [["J"], ["ArrowDown"]],
       allowRepeat: true,

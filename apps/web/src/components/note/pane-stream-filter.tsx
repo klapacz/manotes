@@ -125,7 +125,8 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
         onInput={(event) => setSearch(event.currentTarget.value)}
         onKeyDown={(event) => {
           if (
-            event.key !== "Enter" ||
+            (event.key !== "Enter" &&
+              !(event.key === "Escape" && event.currentTarget.value === "")) ||
             event.isComposing ||
             event.metaKey ||
             event.ctrlKey ||
