@@ -304,7 +304,10 @@ export function NoteShell(props: ComponentProps<"article">) {
 // visible. Notes continuing a run render nothing.
 export function NoteDivider(props: { date: string }) {
   return (
-    <time dateTime={props.date} class="block font-serif font-medium my-3 text-center">
+    <time
+      dateTime={props.date}
+      class="block font-serif font-medium my-3 text-center text-fg-subtle"
+    >
       {NoteFormat.formatGroupLabel(props.date)}
     </time>
   );
