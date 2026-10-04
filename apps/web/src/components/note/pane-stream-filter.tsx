@@ -46,6 +46,9 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
   const cycleSort = () =>
     updatePane({ ...pane(), sort: pane().sort === "date" ? "updated" : "date" });
 
+  const toggleView = () =>
+    updatePane({ ...pane(), view: pane().view === "full" ? "snippets" : "full" });
+
   fnode.registerShortcuts([
     {
       key: [["T"]],
@@ -59,6 +62,14 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
       key: [["S"]],
       handler: () => {
         cycleSort();
+
+        return true;
+      },
+    },
+    {
+      key: [["V"]],
+      handler: () => {
+        toggleView();
 
         return true;
       },
@@ -118,6 +129,9 @@ export function PaneStreamFilter(props: { dirty: boolean; onRefresh: () => void 
       </Show>
       <FilterChipButton label="Sort" title="Cycle sort order" onClick={cycleSort}>
         {pane().sort}
+      </FilterChipButton>
+      <FilterChipButton label="View" title="Toggle note snippets (V)" onClick={toggleView}>
+        {pane().view}
       </FilterChipButton>
       <Show when={props.dirty}>
         <Button

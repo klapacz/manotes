@@ -19,6 +19,14 @@ const StreamSort = Schema.Literals(["date", "updated"]).pipe(
 
 export type StreamSort = typeof StreamSort.Type;
 
+// Display only: snippets clamp each note to its first lines in the stream.
+const StreamView = Schema.Literals(["full", "snippets"]).pipe(
+  Schema.withDecodingDefault(Effect.sync(() => "full" as const)),
+  Schema.withConstructorDefault(Effect.succeed("full" as const)),
+);
+
+export type StreamView = typeof StreamView.Type;
+
 export const Id = Schema.NonEmptyString.pipe(Schema.brand("PaneId"));
 
 export type Id = typeof Id.Type;
@@ -34,6 +42,7 @@ export const Pane = Schema.TaggedUnion({
     paneId: PaneId,
     filter: StreamFilter,
     sort: StreamSort,
+    view: StreamView,
   },
 });
 

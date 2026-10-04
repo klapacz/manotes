@@ -1,8 +1,8 @@
 import { useAtomValue } from "@effect/atom-solid";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { BootState } from "../../editor";
-import { Option, Stream } from "effect";
-import { createEffect, createMemo, onCleanup, Show } from "solid-js";
+import { Equal, Option, Stream } from "effect";
+import { createEffect, createMemo, createSignal, onCleanup, Show } from "solid-js";
 import {
   MatchAsyncResult,
   NoteCache,
@@ -14,6 +14,7 @@ import {
 import { EditorPool } from "./editor-pool";
 import { Focus } from "./focus";
 import { NoteStream } from "../../lib/note/stream";
+import { PaneCtx } from "../../lib/note/pane.ctx";
 import { NoteActions, NoteDivider, NoteShell } from "./shared";
 import { VirtualList } from "../../lib/virtual-list";
 
@@ -71,6 +72,17 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem }) {
     }),
   );
 
+  const pane = PaneCtx.useStream();
+  const focus = Focus.use();
+  const fid = Focus.useId();
+
+  // Snippets expand while editing: the (sticky) highlight sits on the editor
+  // inside the note, or a request is about to enter it.
+  const clamped = () =>
+    pane().view === "snippets" &&
+    !(fnode.highlightWithin() && !fnode.highlighted()) &&
+    !Equal.equals(focus.pendingId(), fid.editor(props.row.note.id));
+
   return (
     <Focus.NodeProvider node={fnode}>
       <Focus.Element class="outline-none group">
@@ -88,11 +100,44 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem }) {
                 onCleanup(() => slot().setAttached(false));
               });
 
-              return slot().container;
+              return <NoteClip clamped={clamped()} content={slot().container} />;
             }}
           />
         </NoteShell>
       </Focus.Element>
     </Focus.NodeProvider>
+  );
+}
+
+// Clamps the note to its first lines, fading the cut only when content overflows.
+function NoteClip(props: { clamped: boolean; content: HTMLElement }) {
+  const [clip, setClip] = createSignal<HTMLDivElement>();
+  const [overflowing, setOverflowing] = createSignal(false);
+
+  createEffect(() => {
+    const element = clip();
+
+    if (!element) return;
+
+    const observer = new ResizeObserver(() =>
+      setOverflowing(element.scrollHeight > element.clientHeight),
+    );
+
+    observer.observe(element);
+    observer.observe(props.content);
+    onCleanup(() => observer.disconnect());
+  });
+
+  return (
+    <div
+      ref={setClip}
+      class="overflow-hidden"
+      classList={{
+        "max-h-32": props.clamped,
+        "mask-b-from-40%": props.clamped && overflowing(),
+      }}
+    >
+      {props.content}
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Effect, Stream, Predicate } from "effect";
+import { Effect, Equal, Stream, Predicate } from "effect";
 import {
   Show,
   createEffect,
@@ -35,7 +35,13 @@ export function PaneStream(props: ComponentProps<"section">) {
   const focus = Focus.use();
   const fid = Focus.useId();
   const [refreshToken, setRefreshToken] = createSignal(0);
-  const queryAtom = createSyncedAtom(() => PaneSchema.paneToQuery(pane()));
+
+  // Display-only pane changes (the snippet view) must not restart the query.
+  const query = createMemo(() => PaneSchema.paneToQuery(pane()), undefined, {
+    equals: Equal.equals,
+  });
+
+  const queryAtom = createSyncedAtom(query);
   const refreshTokenAtom = createSyncedAtom(refreshToken);
 
   // Pooled editors persist across row unmounts. The pool is an Effect resource
