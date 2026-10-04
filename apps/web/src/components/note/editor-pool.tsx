@@ -45,7 +45,10 @@ export type Pool = {
   ) => Effect.Effect<void, EditorBootError, Scope.Scope>;
 };
 
-export const make = Effect.fn("EditorPool.make")(function* (owner: Owner | null) {
+export const make = Effect.fn("EditorPool.make")(function* (
+  owner: Owner | null,
+  search: Accessor<string>,
+) {
   // Slots are created under the pane's owner so pooled editors keep its contexts
   // (graph runtime, atom registry, NoteLinkScope, router).
   const slots = yield* RcMap.make({
@@ -55,7 +58,7 @@ export const make = Effect.fn("EditorPool.make")(function* (owner: Owner | null)
         Effect.sync(() => {
           if (!owner) throw new Error("EditorPool requires a Solid owner");
 
-          return runWithOwner(owner, () => createSlot(noteId))!;
+          return runWithOwner(owner, () => createSlot(noteId, search))!;
         }),
         (slot) => Effect.sync(() => slot.dispose()),
       ),
@@ -94,7 +97,7 @@ type PooledSlot = Slot & {
   readonly dispose: () => void;
 };
 
-function createSlot(noteId: NoteSchema.Id): PooledSlot {
+function createSlot(noteId: NoteSchema.Id, search: Accessor<string>): PooledSlot {
   const ready = Deferred.makeUnsafe<void, EditorBootError>();
 
   return createRoot((dispose) => {
@@ -117,7 +120,12 @@ function createSlot(noteId: NoteSchema.Id): PooledSlot {
     // its public JSX.Element type is broader than the generated runtime value.
     const container = (
       <div>
-        <Editor noteId={noteId} attached={attached()} onBootStateChange={setBootStateReady} />
+        <Editor
+          noteId={noteId}
+          attached={attached()}
+          search={search()}
+          onBootStateChange={setBootStateReady}
+        />
       </div>
     ) as HTMLDivElement;
 

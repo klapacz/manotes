@@ -48,7 +48,10 @@ export function PaneStream(props: ComponentProps<"section">) {
   // owned by its atom's scope, captured under the pane owner so pooled editor
   // roots inherit the pane's contexts.
   const owner = getOwner();
-  const poolAtom = bindRt((rt) => rt.atom(EditorPool.make(owner)));
+
+  const poolAtom = bindRt((rt) =>
+    rt.atom(EditorPool.make(owner, () => pane().filter.search ?? "")),
+  );
 
   // The DB query owns filtering and sorting; the stream only layers the
   // refresh-gated pinned snapshot on top of the matching rows. Each successful

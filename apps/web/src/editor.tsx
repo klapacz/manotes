@@ -24,6 +24,7 @@ import type { NoteSchema } from "./lib/note.schema";
 import { EditorFocus } from "./lib/editor/focus.extension";
 import { createLinkEdit, LinkMenu } from "./lib/editor/link/menu";
 import { MobileToolbar } from "./lib/editor/mobile-toolbar";
+import { defineSearchHighlight, setSearchHighlight } from "./lib/editor/search-highlight.extension";
 
 export type BootState = Data.TaggedEnum<{
   Loading: {};
@@ -43,6 +44,7 @@ const EDITOR_LOAD_ERROR_MESSAGE = "Failed to load note content.";
 type Props = {
   noteId: NoteSchema.Id;
   attached?: boolean;
+  search?: string;
   onBootStateChange?: (state: BootState) => void;
   style?: JSX.CSSProperties;
 };
@@ -62,6 +64,7 @@ export default function Editor(props: Props): JSX.Element {
           defineYjs({ doc }),
           defineAppExtension(),
           EditorFocus.define(() => focus.requestParent()),
+          defineSearchHighlight(),
         ]);
 
         const editor = createEditor({ extension });
@@ -153,6 +156,12 @@ export default function Editor(props: Props): JSX.Element {
 
   createEffect(() => {
     props.onBootStateChange?.(bootState());
+  });
+
+  createEffect(() => {
+    if (BootState.$is("Ready")(bootState())) {
+      setSearchHighlight(state().editor.view, props.search ?? "");
+    }
   });
 
   const fid = Focus.useId();

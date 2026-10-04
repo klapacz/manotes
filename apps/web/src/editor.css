@@ -26,6 +26,11 @@
   white-space: pre-wrap;
 }
 
+.ProseMirror .search-highlight {
+  background-color: var(--color-primary-control-hover);
+  border-radius: 2px;
+}
+
 .ProseMirror li {
   position: relative;
 }
