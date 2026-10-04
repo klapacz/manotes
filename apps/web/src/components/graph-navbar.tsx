@@ -1,10 +1,9 @@
 import { Link, getRouteApi, useMatchRoute } from "@tanstack/solid-router";
 import { Show } from "solid-js";
 import { GraphMenu } from "./graph-menu";
-import { DatabaseIcon, HouseIcon, SearchIcon } from "./icons";
-import { NoteSearchCommand } from "./note-search-command";
+import { DatabaseIcon, HouseIcon } from "./icons";
 import { SyncStatusIndicator } from "./sync-status-indicator";
-import { Button, buttonVariants } from "./ui/button";
+import { buttonVariants } from "./ui/button";
 import { WorkerHealthBanner } from "./worker-health-banner";
 
 const graphRoute = getRouteApi("/$graph");
@@ -43,18 +42,6 @@ export function GraphNavbar() {
               <HouseIcon />
             </Link>
           </Show>
-          <NoteSearchCommand>
-            {(openSearch) => (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={openSearch}
-                title="Search notes (Ctrl+K)"
-              >
-                <SearchIcon />
-              </Button>
-            )}
-          </NoteSearchCommand>
         </div>
       </div>
     </div>
