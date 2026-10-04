@@ -31,14 +31,6 @@ export function MatchTag<E extends { readonly _tag: string }>(
 ): JSX.Element {
   const stateValue = createMemo(() => props.when, undefined, { name: "tagged value" });
 
-  function expectState<TTag extends Types.Tags<E>>(tag: TTag): Types.ExtractTag<E, TTag> {
-    const current = stateValue();
-
-    if (current._tag !== tag) throw new Error("MatchTag");
-
-    return current as Types.ExtractTag<E, TTag>;
-  }
-
   const state = props.keyed
     ? stateValue
     : createMemo(stateValue, undefined, {
@@ -54,9 +46,17 @@ export function MatchTag<E extends { readonly _tag: string }>(
         | ((value: Accessor<E>) => JSX.Element)
         | undefined;
 
-      return render
-        ? untrack(() => render(() => expectState(current._tag as Types.Tags<E>)))
-        : (props.fallback ?? null);
+      if (!render) return props.fallback ?? null;
+
+      // Outgoing consumers can still read during a branch change (for example,
+      // a portalled graph menu while locking). Keep their value on the old tag.
+      const branchValue = createMemo((previous: E) => {
+        const next = stateValue();
+
+        return next._tag === current._tag ? next : previous;
+      }, current);
+
+      return untrack(() => render(branchValue));
     },
     undefined,
     { name: "value" },
