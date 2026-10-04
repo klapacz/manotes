@@ -8,6 +8,7 @@ import { defineCodeBlockBackspace } from "./lib/editor/code-block-backspace/exte
 import { defineBacklinkCommands } from "./lib/editor/backlink/spec";
 import { defineBacklinkRuntime } from "./lib/editor/backlink/extension";
 import { defineAppListExtension } from "./lib/editor/list/extension";
+import { EditorLink } from "./lib/editor/link/extension";
 import { defineAppSchema } from "./editor.schema";
 
 /**
@@ -27,6 +28,7 @@ export function defineAppExtension() {
     defineGapCursor(),
     defineVirtualSelection(),
     defineModClickPrevention(),
+    EditorLink.define(),
     defineTaskListToggle(),
     // Using createMoveListCommand directly because defineKeymap needs raw
     // ProseMirror commands, and prosekit doesn't re-export this from flat-list.

@@ -414,6 +414,13 @@ prosekit-table-handle-drop-indicator {
     color: var(--editor-link-hover);
   }
 
+  /* Clicking opens the link; touch taps place the caret instead. */
+  @media (pointer: fine) {
+    &:not([data-backlink]) {
+      cursor: pointer;
+    }
+  }
+
   &[data-backlink-state="Missing"] {
     color: var(--color-warning-fg-subtle);
 
