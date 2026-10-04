@@ -23,6 +23,7 @@ import { Focus } from "./components/note/focus";
 import type { NoteSchema } from "./lib/note.schema";
 import { EditorFocus } from "./lib/editor/focus.extension";
 import { createLinkEdit, LinkMenu } from "./lib/editor/link/menu";
+import { MobileToolbar } from "./lib/editor/mobile-toolbar";
 
 export type BootState = Data.TaggedEnum<{
   Loading: {};
@@ -199,6 +200,8 @@ export default function Editor(props: Props): JSX.Element {
               <BacklinkMenu currentNoteId={props.noteId} />
               <TabMenu />
               <LinkMenu edit={linkEdit} />
+              {/* Leaving to the note, like Escape, drops the keyboard; a plain blur gets refocused. */}
+              <MobileToolbar linkEdit={linkEdit} onDismiss={() => focus.requestParent()} />
             </div>
           </ProseKit>
         );

@@ -225,6 +225,15 @@ img.ProseMirror-separator {
   background-color: var(--color-control-hover);
 }
 
+/* A finger-sized hit area around the small checkbox */
+@media (pointer: coarse) {
+  .prosemirror-flat-list[data-list-kind="task"] > .list-marker label::before {
+    position: absolute;
+    inset: -0.5rem;
+    content: "";
+  }
+}
+
 /* Show checkmark when checked */
 .prosemirror-flat-list[data-list-kind="task"][data-list-checked] > .list-marker label::after {
   opacity: 1;

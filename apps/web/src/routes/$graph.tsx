@@ -46,7 +46,13 @@ function RouteComponent() {
             ),
             Ready: (graph) => (
               <GraphProvider graph={graph}>
-                <div class="flex h-svh flex-col overflow-hidden">
+                {/* The mobile editor toolbar fits the shell above the keyboard. */}
+                <div
+                  class="flex flex-col overflow-hidden"
+                  style={{
+                    height: "calc(var(--app-height, 100svh) - var(--editor-toolbar-height, 0px))",
+                  }}
+                >
                   <GraphNavbar />
                   <div class="min-h-0 flex-1">
                     <Outlet />
