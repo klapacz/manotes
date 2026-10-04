@@ -3,12 +3,17 @@ import { Schema } from "effect";
 import type { Node } from "prosekit/pm/model";
 import { Plugin, PluginKey } from "prosekit/pm/state";
 import { Decoration, DecorationSet, type EditorView } from "prosekit/pm/view";
+import { decodeBacklinkAttrs } from "./backlink/spec";
 
-type State = { query: string; decorations: DecorationSet };
+type State = { query: string; backlinksTo?: string; decorations: DecorationSet };
 
 const key = new PluginKey<State>("manotes-search-highlight");
 
-const decodeQuery = Schema.decodeUnknownSync(Schema.UndefinedOr(Schema.String));
+const decodeFilter = Schema.decodeUnknownSync(
+  Schema.UndefinedOr(
+    Schema.Struct({ query: Schema.String, backlinksTo: Schema.optional(Schema.String) }),
+  ),
+);
 
 export function defineSearchHighlight(): PlainExtension {
   return definePlugin(
@@ -17,11 +22,21 @@ export function defineSearchHighlight(): PlainExtension {
       state: {
         init: () => ({ query: "", decorations: DecorationSet.empty }),
         apply: (transaction, previous) => {
-          const query = decodeQuery(transaction.getMeta(key)) ?? previous.query;
+          const { query, backlinksTo } = decodeFilter(transaction.getMeta(key)) ?? previous;
 
-          if (!transaction.docChanged && query === previous.query) return previous;
+          if (
+            !transaction.docChanged &&
+            query === previous.query &&
+            backlinksTo === previous.backlinksTo
+          ) {
+            return previous;
+          }
 
-          return { query, decorations: highlight(transaction.doc, query) };
+          return {
+            query,
+            backlinksTo,
+            decorations: highlight(transaction.doc, query, backlinksTo),
+          };
         },
       },
       props: {
@@ -31,21 +46,32 @@ export function defineSearchHighlight(): PlainExtension {
   );
 }
 
-export function setSearchHighlight(view: EditorView, search: string): void {
+export function setSearchHighlight(view: EditorView, search: string, backlinksTo?: string): void {
   const query = foldCase(search.trim());
+  const previous = key.getState(view.state);
 
-  if (key.getState(view.state)?.query === query) return;
+  if (previous?.query === query && previous.backlinksTo === backlinksTo) return;
 
-  view.dispatch(view.state.tr.setMeta(key, query).setMeta("addToHistory", false));
+  view.dispatch(view.state.tr.setMeta(key, { query, backlinksTo }).setMeta("addToHistory", false));
 }
 
-function highlight(doc: Node, query: string): DecorationSet {
-  if (!query) return DecorationSet.empty;
+function highlight(doc: Node, query: string, backlinksTo?: string): DecorationSet {
+  if (!query && !backlinksTo) return DecorationSet.empty;
 
   const decorations: Decoration[] = [];
 
   doc.descendants((node, position) => {
-    if (!node.isTextblock) return;
+    if (node.type.name === "backlink") {
+      if (backlinksTo && decodeBacklinkAttrs(node.attrs).id === backlinksTo) {
+        decorations.push(
+          Decoration.node(position, position + node.nodeSize, { class: "search-highlight" }),
+        );
+      }
+
+      return false;
+    }
+
+    if (!query || !node.isTextblock) return;
 
     // Flatten formatting boundaries while keeping inline atoms one position wide.
     const text = foldCase(node.textBetween(0, node.content.size, "", "\uFFFC"));
@@ -56,7 +82,7 @@ function highlight(doc: Node, query: string): DecorationSet {
       decorations.push(Decoration.inline(from, from + query.length, { class: "search-highlight" }));
     }
 
-    return false;
+    // Continue into the textblock to decorate matching backlink atoms as well.
   });
 
   return DecorationSet.create(doc, decorations);

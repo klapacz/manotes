@@ -47,7 +47,7 @@ export type Pool = {
 
 export const make = Effect.fn("EditorPool.make")(function* (
   owner: Owner | null,
-  search: Accessor<string>,
+  filter: Accessor<{ search?: string; backlinksTo?: string }>,
 ) {
   // Slots are created under the pane's owner so pooled editors keep its contexts
   // (graph runtime, atom registry, NoteLinkScope, router).
@@ -58,7 +58,7 @@ export const make = Effect.fn("EditorPool.make")(function* (
         Effect.sync(() => {
           if (!owner) throw new Error("EditorPool requires a Solid owner");
 
-          return runWithOwner(owner, () => createSlot(noteId, search))!;
+          return runWithOwner(owner, () => createSlot(noteId, filter))!;
         }),
         (slot) => Effect.sync(() => slot.dispose()),
       ),
@@ -97,7 +97,10 @@ type PooledSlot = Slot & {
   readonly dispose: () => void;
 };
 
-function createSlot(noteId: NoteSchema.Id, search: Accessor<string>): PooledSlot {
+function createSlot(
+  noteId: NoteSchema.Id,
+  filter: Accessor<{ search?: string; backlinksTo?: string }>,
+): PooledSlot {
   const ready = Deferred.makeUnsafe<void, EditorBootError>();
 
   return createRoot((dispose) => {
@@ -123,7 +126,8 @@ function createSlot(noteId: NoteSchema.Id, search: Accessor<string>): PooledSlot
         <Editor
           noteId={noteId}
           attached={attached()}
-          search={search()}
+          search={filter().search}
+          backlinksTo={filter().backlinksTo}
           onBootStateChange={setBootStateReady}
         />
       </div>

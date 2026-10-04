@@ -45,6 +45,7 @@ type Props = {
   noteId: NoteSchema.Id;
   attached?: boolean;
   search?: string;
+  backlinksTo?: string;
   onBootStateChange?: (state: BootState) => void;
   style?: JSX.CSSProperties;
 };
@@ -160,7 +161,7 @@ export default function Editor(props: Props): JSX.Element {
 
   createEffect(() => {
     if (BootState.$is("Ready")(bootState())) {
-      setSearchHighlight(state().editor.view, props.search ?? "");
+      setSearchHighlight(state().editor.view, props.search ?? "", props.backlinksTo);
     }
   });
 
