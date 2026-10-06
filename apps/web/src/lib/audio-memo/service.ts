@@ -9,13 +9,17 @@ import { EventSchema } from "../event.schema";
 import { MaterializationCheckpointRepo } from "../materialization-checkpoint.repo";
 import { ProsemirrorEncode } from "../prosemirror/encode";
 import { AudioMemoFiles } from "./files";
-import { toLocalDateString } from "../temporal/utils";
 import { AudioMemoRepo } from "./repo";
+import type { AudioMemoIntent } from "./intent";
+import type { NoteSchema } from "../note.schema";
 
 export const register = Effect.fn("AudioMemoService.register")(function* (
-  recording: Pick<AudioMemoRepo.Record, "path" | "recordedAt" | "mimeType">,
+  recording: Pick<AudioMemoRepo.Record, "path" | "recordedAt" | "mimeType" | "durationMs"> & {
+    noteId: NoteSchema.Id;
+    intent: AudioMemoIntent.Record;
+  },
 ) {
-  yield* AudioMemoRepo.insert({ ...recording, state: "pending", noteId: null });
+  yield* AudioMemoRepo.insert({ ...recording, state: "pending" });
 });
 
 export const retry = Effect.fn("AudioMemoService.retry")(function* (path: string) {
@@ -76,34 +80,31 @@ const transcribeFile = Effect.fn("AudioMemoService.transcribeFile")(
 // Both events and recording completion live in the graph DB. No checkpoint wait
 // may run inside this transaction: the materializer needs to acquire the DB itself.
 const publish = Effect.fn("AudioMemoService.publish")(function* (
-  { path, recordedAt }: AudioMemoRepo.Record,
+  { path, recordedAt, noteId, intent }: AudioMemoRepo.Record,
   transcript: string,
 ) {
   const db = yield* DB.Service;
   const events = yield* EventRepo.Service;
   const checkpoint = yield* MaterializationCheckpointRepo.Service;
-  const date = toLocalDateString(recordedAt);
-
   const categoryId = yield* getCategoryNoteId();
 
   const localSeq = yield* db.transaction(
     Effect.gen(function* () {
-      const noteId = nanoid();
       yield* events.create({
         noteId,
         type: "update",
         createdAt: recordedAt,
-        payload: transcriptPayload(categoryId, transcript),
+        payload: transcriptPayload({ categoryId, transcript, backlink: intent.backlink }),
       });
 
       const last = yield* events.create({
         noteId,
         type: "date",
         createdAt: recordedAt,
-        payload: yield* EventSchema.encodeDatePayload({ date }),
+        payload: yield* EventSchema.encodeDatePayload({ date: intent.date }),
       });
 
-      yield* AudioMemoRepo.update({ path }, { state: "completed", noteId });
+      yield* AudioMemoRepo.update({ path }, { state: "completed" });
 
       return last.localSeq;
     }),
@@ -141,7 +142,15 @@ const getCategoryNoteId = Effect.fn("AudioMemoService.getCategoryNoteId")(functi
   return categoryId;
 });
 
-function transcriptPayload(categoryId: string, transcript: string) {
+function transcriptPayload({
+  categoryId,
+  transcript,
+  backlink,
+}: {
+  categoryId: string;
+  transcript: string;
+  backlink: string | null;
+}) {
   return ProsemirrorEncode.encodeDocument(
     transcript
       .trim()
@@ -152,6 +161,12 @@ function transcriptPayload(categoryId: string, transcript: string) {
           index === 0
             ? [
                 { type: "backlink", attrs: { id: categoryId } },
+                ...(backlink === null || backlink === categoryId
+                  ? []
+                  : [
+                      { type: "text", text: " " },
+                      { type: "backlink", attrs: { id: backlink } },
+                    ]),
                 { type: "text", text: ` ${text}` },
               ]
             : [{ type: "text", text }],

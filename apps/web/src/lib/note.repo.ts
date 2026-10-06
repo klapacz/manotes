@@ -333,6 +333,7 @@ export type StreamListQuery = {
 const streamColumns = {
   id: Tables.notes.id,
   date: Tables.notes.date,
+  createdAt: Tables.notes.createdAt,
   updatedAt: Tables.notes.updatedAt,
 } as const;
 

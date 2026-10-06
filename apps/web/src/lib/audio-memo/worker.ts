@@ -39,14 +39,14 @@ export const make = Effect.fn("AudioMemoWorker.make")(function* () {
     remove: Effect.fn("AudioMemoWorker.remove")(function* (path: string) {
       const job = AudioMemoService.remove(path).pipe(
         Semaphore.withPermit(serial),
-        Effect.mapError(() => "Could not delete this recording."),
+        Effect.mapError(() => "Could not remove this recording."),
       );
 
       // Replacing the matching job interrupts transcription and releases its
-      // permit. Keep this key occupied until deletion finishes.
-      const deletion = yield* FiberMap.run(jobs, path, job);
+      // permit. Keep this key occupied until removal finishes.
+      const removal = yield* FiberMap.run(jobs, path, job);
 
-      yield* Fiber.join(deletion);
+      yield* Fiber.join(removal);
     }),
   };
 });

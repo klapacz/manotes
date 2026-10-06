@@ -53,6 +53,7 @@ export type BootRecord = typeof BootRecord.Type;
 export const Meta = Schema.Struct({
   id: Id,
   date: Schema.String,
+  createdAt: Schema.DateTimeUtcFromString,
   updatedAt: Schema.DateTimeUtcFromString,
 });
 

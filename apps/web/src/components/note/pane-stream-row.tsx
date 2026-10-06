@@ -2,40 +2,108 @@ import { useAtomValue } from "@effect/atom-solid";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { BootState } from "../../editor";
 import { Equal, Option, Stream } from "effect";
-import { createEffect, createMemo, createSignal, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import {
   MatchAsyncResult,
+  MatchTag,
   NoteCache,
   NoteSchema,
   bindRt,
   createAtomStore,
   createSyncedAtom,
 } from "../../lib";
+import { AudioMemo } from "../audio-memo";
 import { EditorPool } from "./editor-pool";
 import { Focus } from "./focus";
-import { NoteStream } from "../../lib/note/stream";
+import type { NoteStream } from "../../lib/note/stream";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { NoteActions, NoteDivider, NoteShell } from "./shared";
 import { VirtualList } from "../../lib/virtual-list";
 
-export function PaneStreamRow(props: { row: NoteStream.ListItem }) {
-  // The stream stops refreshing a note once it leaves the query (it is only
-  // retained); the shared per-note cache keeps its metadata live regardless.
-  const noteIdAtom = createSyncedAtom(() => props.row.note.id);
+export type Row = NoteStream.ListItem;
 
-  const live = createAtomStore(
-    bindRt((rt) =>
-      rt.atom((get) =>
-        NoteCache.Service.use((cache) => cache.changes(get(noteIdAtom))).pipe(
-          Stream.unwrap,
-          Stream.map(Option.getOrNull),
-        ),
-      ),
-    ),
-    null,
+export function Root(props: { row: Row; onClearDraft: (id: NoteSchema.Id) => void }) {
+  return (
+    <MatchTag
+      when={props.row}
+      cases={{
+        draft: (row) => {
+          const id = row().draft.id;
+          onCleanup(() => props.onClearDraft(id));
+
+          return (
+            <RecordingContent
+              draft={row().draft}
+              groupKey={row().groupKey}
+              firstInGroup={row().firstInGroup}
+              onCancel={() => props.onClearDraft(id)}
+            />
+          );
+        },
+        note: (row) => {
+          const noteIdAtom = createSyncedAtom(() => row().note.id);
+
+          const live = createAtomStore(
+            bindRt((rt) =>
+              rt.atom((get) =>
+                NoteCache.Service.use((cache) => cache.changes(get(noteIdAtom))).pipe(
+                  Stream.unwrap,
+                  Stream.map(Option.getOrNull),
+                ),
+              ),
+            ),
+            null,
+          );
+
+          return (
+            <NoteContent
+              note={live.value ?? row().note}
+              groupKey={row().groupKey}
+              firstInGroup={row().firstInGroup}
+            />
+          );
+        },
+      }}
+    />
   );
+}
 
-  const meta = createMemo((): NoteSchema.Meta => live.value ?? props.row.note);
+function RecordingContent(props: {
+  draft: AudioMemo.Draft;
+  groupKey: string;
+  firstInGroup: boolean;
+  onCancel: () => void;
+}) {
+  const listRow = VirtualList.useRow();
+  const fid = Focus.useId();
+
+  const node = Focus.createNode(() => ({
+    id: fid.note(props.draft.id),
+    enabled: listRow.ready(),
+    focus: (element, options) => {
+      Focus.focusBrowseTarget(element);
+
+      if (options?.reveal === "always" || (options?.reveal === "if-hidden" && !listRow.visible()))
+        listRow.reveal();
+    },
+  }));
+
+  return (
+    <Focus.NodeProvider node={node}>
+      <Focus.Element class="outline-none group">
+        <Show when={props.firstInGroup}>
+          <NoteDivider date={props.groupKey} />
+        </Show>
+        <NoteShell>
+          <AudioMemo.RecordingRow draft={props.draft} onCancel={props.onCancel} />
+        </NoteShell>
+      </Focus.Element>
+    </Focus.NodeProvider>
+  );
+}
+
+function NoteContent(props: { note: NoteSchema.Meta; groupKey: string; firstInGroup: boolean }) {
+  const noteIdAtom = createSyncedAtom(() => props.note.id);
 
   // Rows attach a pooled persistent editor instead of mounting their own;
   // scroll-back revisits reattach the same ProseMirror DOM instantly. The slot
@@ -54,7 +122,7 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem }) {
   };
 
   const fnode = Focus.createNoteNode(
-    () => props.row.note.id,
+    () => props.note.id,
     () => ({
       // Reveal only a booted row: its editor supplies Virtua with the real height.
       enabled: listRow.ready() && editorReady(),
@@ -81,17 +149,17 @@ export function PaneStreamRow(props: { row: NoteStream.ListItem }) {
   const clamped = () =>
     pane().view === "snippets" &&
     !(fnode.highlightWithin() && !fnode.highlighted()) &&
-    !Equal.equals(focus.pendingId(), fid.editor(props.row.note.id));
+    !Equal.equals(focus.pendingId(), fid.editor(props.note.id));
 
   return (
     <Focus.NodeProvider node={fnode}>
       <Focus.Element class="outline-none group">
-        <Show when={props.row.firstInGroup}>
-          <NoteDivider date={props.row.groupKey} />
+        <Show when={props.firstInGroup}>
+          <NoteDivider date={props.groupKey} />
         </Show>
 
         <NoteShell>
-          <NoteActions note={meta()} />
+          <NoteActions note={props.note} />
           <MatchAsyncResult
             when={slotResult()}
             onSuccess={(slot) => {
@@ -141,3 +209,5 @@ function NoteClip(props: { clamped: boolean; content: HTMLElement }) {
     </div>
   );
 }
+
+export * as PaneStreamRow from "./pane-stream-row";

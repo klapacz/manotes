@@ -1,4 +1,5 @@
 import { Effect, Equal, Stream, Predicate } from "effect";
+import { Atom } from "effect/unstable/reactivity";
 import {
   Show,
   createEffect,
@@ -26,6 +27,7 @@ import { NoteCreate } from "./note-create";
 import { PaneStreamFilter } from "./pane-stream-filter";
 import { Focus } from "./focus";
 import { PaneStreamRow } from "./pane-stream-row";
+import { PaneStreamRecording } from "./pane-stream-recording";
 import { PaneEmptyState, PaneHeader, PaneShell } from "./shared";
 
 const PRELOAD_EDITOR_COUNT = 12;
@@ -51,6 +53,8 @@ export function PaneStream(props: ComponentProps<"section">) {
 
   const poolAtom = bindRt((rt) => rt.atom(EditorPool.make(owner, () => pane().filter)));
 
+  const recording = PaneStreamRecording.use();
+
   // The DB query owns filtering and sorting; the stream only layers the
   // refresh-gated pinned snapshot on top of the matching rows. Each successful
   // emission has already preloaded and booted the first editor slots.
@@ -69,10 +73,16 @@ export function PaneStream(props: ComponentProps<"section">) {
             // `scan` emits its initial accumulator before the first SQL result;
             // keep Success tied to real rows, after the first result is preloaded.
             Stream.drop(1),
-            Stream.map(({ dirty, items }) => ({ dirty, rows: NoteStream.list(items), pool })),
+            Stream.map((snapshot) => ({ ...snapshot, pool })),
             Stream.mapEffect((state) =>
-              Effect.scoped(pool.preload(preloadNoteIds(state.rows))).pipe(Effect.as(state)),
+              Effect.scoped(pool.preload(preloadNoteIds(state.items))).pipe(Effect.as(state)),
             ),
+            // Draft changes rebuild the final list, without restarting SQL or
+            // entering its pinned snapshot. Grouping runs once, after insertion.
+            Stream.zipLatestWith(Atom.toStream(recording.draftAtom), (snapshot, draft) => ({
+              ...snapshot,
+              rows: NoteStream.list({ items: snapshot.items, draft, sort: query.sort }),
+            })),
           );
         }),
       );
@@ -105,9 +115,9 @@ export function PaneStream(props: ComponentProps<"section">) {
   const createNearFocus = () => {
     const noteId = Focus.noteIn(pane().paneId, focus.activeId());
     const rows = Predicate.isTagged(state, "Success") ? state.value.rows : [];
-    const row = rows.find((row) => row.note.id === noteId);
+    const row = rows.find((row) => NoteStream.noteId(row) === noteId);
 
-    createNoteOn(row ? row.note.date : pane().filter.date);
+    createNoteOn(row ? NoteStream.date(row) : pane().filter.date);
   };
 
   // Rendering, keyboard order and retention all derive from these same rows.
@@ -117,9 +127,22 @@ export function PaneStream(props: ComponentProps<"section">) {
 
   const [lastFocused, setLastFocused] = createSignal<NoteSchema.Id>();
 
+  const record = recording.createControls({
+    enabled: () => Predicate.isTagged(state, "Success"),
+    getFocusedRow() {
+      if (!Predicate.isTagged(state, "Success")) return;
+
+      // The Record button may have taken focus from the originating note.
+      const id = Focus.noteIn(pane().paneId, focus.activeId()) ?? lastFocused();
+
+      return state.value.items.find(({ note }) => note.id === id);
+    },
+  });
+
   const pendingNote = () => Focus.noteIn(pane().paneId, focus.pendingId());
 
-  const retained = () => [lastFocused(), pendingNote()].filter((id) => id !== undefined);
+  const retained = () =>
+    [lastFocused(), pendingNote(), recording.draftId()].filter((id) => id !== undefined);
 
   const jump = (index: number) => {
     const noteId = listOrder().at(index);
@@ -204,7 +227,10 @@ export function PaneStream(props: ComponentProps<"section">) {
   return (
     <Focus.NodeProvider node={fnode}>
       <Focus.Element as={PaneShell} {...props}>
-        <PaneHeader onCreate={Predicate.isTagged(state, "Success") ? handleCreate : undefined}>
+        <PaneHeader
+          onCreate={Predicate.isTagged(state, "Success") ? handleCreate : undefined}
+          record={record()}
+        >
           <PaneStreamFilter
             dirty={Predicate.isTagged(state, "Success") ? state.value.dirty : false}
             onRefresh={refresh}
@@ -226,7 +252,11 @@ export function PaneStream(props: ComponentProps<"section">) {
                     </PaneEmptyState>
                   }
                 >
-                  <RevealedRows rows={state().value.rows} retained={retained()} />
+                  <RevealedRows
+                    rows={state().value.rows}
+                    retained={retained()}
+                    onClearDraft={recording.clearDraft}
+                  />
                 </Show>
               </EditorPool.Provider>
             ),
@@ -240,6 +270,7 @@ export function PaneStream(props: ComponentProps<"section">) {
 function RevealedRows(props: {
   rows: ReadonlyArray<NoteStream.ListItem>;
   retained: ReadonlyArray<NoteSchema.Id>;
+  onClearDraft: (id: NoteSchema.Id) => void;
 }) {
   const [revealed, setRevealed] = createSignal(false);
 
@@ -257,17 +288,17 @@ function RevealedRows(props: {
         "opacity-0": !revealed(),
       }}
     >
-      <VirtualList.Root data={props.rows} key={(row) => row.note.id} retained={props.retained}>
-        {(item) => <PaneStreamRow row={item} />}
+      <VirtualList.Root data={props.rows} key={NoteStream.noteId} retained={props.retained}>
+        {(item) => <PaneStreamRow.Root row={item} onClearDraft={props.onClearDraft} />}
       </VirtualList.Root>
     </div>
   );
 }
 
-function preloadNoteIds(rows: ReadonlyArray<NoteStream.ListItem>): ReadonlyArray<NoteSchema.Id> {
-  return noteIdsFromRows(rows).slice(0, PRELOAD_EDITOR_COUNT);
+function preloadNoteIds(items: NoteStream.InnerItems): ReadonlyArray<NoteSchema.Id> {
+  return items.slice(0, PRELOAD_EDITOR_COUNT).map(({ note }) => note.id);
 }
 
 function noteIdsFromRows(rows: ReadonlyArray<NoteStream.ListItem>): ReadonlyArray<NoteSchema.Id> {
-  return rows.map((row) => row.note.id);
+  return rows.map(NoteStream.noteId);
 }

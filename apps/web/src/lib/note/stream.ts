@@ -1,4 +1,5 @@
-import { Array } from "effect";
+import { Array, DateTime, Predicate } from "effect";
+import type { AudioMemoSession } from "../audio-memo/session";
 import type * as NoteSchema from "../note.schema";
 import { toLocalDateString } from "../temporal/utils";
 import type { StreamSort } from "./pane.schema";
@@ -14,19 +15,23 @@ export type InnerItem = {
 
 /**
  * `id` is the rendered row identity used by reconciliation and the
- * virtualizer. Keeping it stable preserves mounted note editors across
- * stream updates.
+ * reconciled store. Keeping it stable preserves mounted editors and recordings
+ * across updates; different variant keys replace the draft with its note.
  *
- * A group separator is not its own row: the first note of each run carries
+ * A group separator is not its own row: the first item of each run carries
  * `firstInGroup`, and the row renders the dated divider above its content.
  */
-export type ListItem = {
-  _tag: "note";
-  id: string;
-  note: NoteSchema.Meta;
-  groupKey: string;
-  dirty: boolean;
+export type ListItem = (NoteItem | DraftItem) & {
   firstInGroup: boolean;
+};
+
+type NoteItem = InnerItem & { _tag: "note"; id: string };
+
+type DraftItem = {
+  _tag: "draft";
+  id: string;
+  draft: AudioMemoSession.Draft;
+  groupKey: string;
 };
 
 export type InnerItems = ReadonlyArray<InnerItem>;
@@ -110,27 +115,80 @@ export const retain =
     };
   };
 
-/** Marks the first note of each run sharing a captured group key. */
-export function list(notes: ReadonlyArray<InnerItem>): ReadonlyArray<ListItem> {
-  if (!Array.isReadonlyArrayNonEmpty(notes)) return [];
+/** Inserts the local draft, then marks each group's first row in the final order. */
+export function list(options: {
+  items: InnerItems;
+  draft: AudioMemoSession.Draft | undefined;
+  sort: StreamSort;
+}): ReadonlyArray<ListItem> {
+  const notes = Array.map(options.items, (item): NoteItem => ({
+    // oxlint-disable-next-line anti-slop-effect/no-manual-tagged-construction -- Plain rows are reconciled by ID to preserve mounted editors and recordings.
+    _tag: "note",
+    id: `note:${item.note.id}`,
+    ...item,
+  }));
+
+  const items = insertDraft(notes, options.draft, options.sort);
 
   // SAFETY: The accumulator starts as null and becomes each item's string group key.
-  const [, rows] = Array.mapAccum(notes, null as string | null, (lastGroupKey, item) => {
-    const noteRow: ListItem = {
-      // This plain row tag has no existing Effect constructor.
-      // oxlint-disable-next-line anti-slop-effect/no-manual-tagged-construction
-      _tag: "note",
-      id: `note:${item.note.id}`,
-      note: item.note,
-      groupKey: item.groupKey,
-      dirty: item.dirty,
+  const [, rows] = Array.mapAccum(items, null as string | null, (lastGroupKey, item) => {
+    const row: ListItem = {
+      ...item,
       firstInGroup: item.groupKey !== lastGroupKey,
     };
 
-    return [item.groupKey, noteRow];
+    return [item.groupKey, row];
   });
 
   return rows;
+}
+
+export function noteId(row: ListItem): NoteSchema.Id {
+  if (Predicate.isTagged(row, "note")) return row.note.id;
+
+  return row.draft.id;
+}
+
+export function date(row: ListItem): string {
+  if (Predicate.isTagged(row, "note")) return row.note.date;
+
+  return row.draft.intent.date;
+}
+
+function insertDraft(
+  notes: ReadonlyArray<NoteItem>,
+  draft: AudioMemoSession.Draft | undefined,
+  sort: StreamSort,
+): ReadonlyArray<NoteItem | DraftItem> {
+  if (!draft) return notes;
+
+  // SQL can emit the transcript before the completion watcher clears the draft.
+  // The saved note takes its place immediately, without a duplicate ID.
+  if (Array.some(notes, (row) => row.note.id === draft.id)) return notes;
+
+  const createdAt = DateTime.toEpochMillis(draft.createdAt);
+
+  // Insert into the retained order without moving pinned notes. Drafts stay
+  // outside the pinned snapshot, so cancellation removes them immediately.
+  const [before, after] = Array.span(notes, ({ note }) => {
+    if (sort === "date") {
+      if (note.date !== draft.intent.date) return note.date > draft.intent.date;
+
+      return DateTime.toEpochMillis(note.createdAt) >= createdAt;
+    }
+
+    return DateTime.toEpochMillis(note.updatedAt) >= createdAt;
+  });
+
+  const row: DraftItem = {
+    // oxlint-disable-next-line anti-slop-effect/no-manual-tagged-construction -- The variant key makes reconciliation replace the draft when its transcript arrives.
+    _tag: "draft",
+    id: `draft:${draft.id}`,
+    draft,
+    groupKey: sort === "date" ? draft.intent.date : toLocalDateString(draft.createdAt),
+  };
+
+  return Array.appendAll(Array.append(before, row), after);
 }
 
 function groupKey(note: NoteSchema.Meta, sort: StreamSort): string {

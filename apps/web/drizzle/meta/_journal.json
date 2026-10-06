@@ -64,6 +64,27 @@
       "when": 1791124659481,
       "tag": "0008_audio_memos",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1791317787335,
+      "tag": "0009_recording_intents",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1791325610318,
+      "tag": "0010_recording_duration",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1791328610724,
+      "tag": "0011_required_recording_intent",
+      "breakpoints": true
     }
   ]
 }

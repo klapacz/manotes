@@ -14,6 +14,7 @@ import {
   CalendarIcon,
   EllipsisIcon,
   LinkIcon,
+  MicIcon,
   PlusIcon,
   RebaseIcon,
   XIcon,
@@ -61,17 +62,27 @@ export function PaneShell(props: ComponentProps<"section">) {
   );
 }
 
+export type RecordControls = {
+  onRecord: () => void;
+  isDisabled: boolean;
+};
+
+type PaneActionsProps = {
+  onCreate?: () => void;
+  record?: RecordControls;
+};
+
 // Pane-level controls sit on the right; children (e.g. stream filters) fill the left.
-export function PaneHeader(props: ParentProps<{ onCreate?: () => void }>) {
+export function PaneHeader(props: ParentProps<PaneActionsProps>) {
   return (
     <div class="flex items-center gap-3 justify-between p-4 pane:px-0">
       {props.children}
-      <PaneActions onCreate={props.onCreate} />
+      <PaneActions onCreate={props.onCreate} record={props.record} />
     </div>
   );
 }
 
-function PaneActions(props: { onCreate?: () => void }) {
+function PaneActions(props: PaneActionsProps) {
   const ctx = PaneCtx.use();
   const navigate = route.useNavigate();
   const fnode = Focus.useNode();
@@ -101,6 +112,22 @@ function PaneActions(props: { onCreate?: () => void }) {
 
   return (
     <div class="ml-auto flex gap-1">
+      <Show when={props.record}>
+        {(record) => (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            rounded="full"
+            title="Record audio memo"
+            aria-label="Record audio memo"
+            disabled={record().isDisabled}
+            onClick={() => record().onRecord()}
+          >
+            <MicIcon />
+          </Button>
+        )}
+      </Show>
       <Show when={props.onCreate}>
         {(onCreate) => (
           <Button

@@ -2,14 +2,12 @@ import { useAtom } from "@effect/atom-solid";
 import { DateTime, Effect } from "effect";
 import { nanoid } from "nanoid";
 import { toast } from "somoto";
-import { prosemirrorJSONToYDoc } from "y-prosemirror";
 import * as Y from "yjs";
 import { MaterializedEventService, NoteSchema, bindRt } from "../../lib";
 import type { PaneSchema } from "../../lib/note/pane.schema";
 import type { UnknownNodeJSON } from "../../lib/node-json";
 import type { Hotkey } from "@tanstack/hotkeys";
-import { NOTE_SCHEMA } from "../../lib/prosemirror/app-schema";
-import { PROSEMIRROR_XML_FRAGMENT_KEY } from "../../lib/prosemirror/yjs";
+import { ProsemirrorEncode } from "../../lib/prosemirror/encode";
 import type { EditorPool } from "./editor-pool";
 
 const EMPTY_YJS_UPDATE = Y.encodeStateAsUpdate(new Y.Doc());
@@ -65,16 +63,9 @@ export const shortcut: Hotkey[][] = [["Mod+Enter"]];
 
 /** Builds a page payload: a note whose title materializes from a leading H1. */
 export function pagePayload(title: string): Uint8Array<ArrayBufferLike> {
-  const yDoc = prosemirrorJSONToYDoc(
-    NOTE_SCHEMA,
-    {
-      type: "doc",
-      content: [{ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: title }] }],
-    },
-    PROSEMIRROR_XML_FRAGMENT_KEY,
-  );
-
-  return Y.encodeStateAsUpdate(yDoc);
+  return ProsemirrorEncode.encodeDocument([
+    { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: title }] },
+  ]);
 }
 
 /** Seeds a new note's content from the stream pane's filters. */
@@ -98,13 +89,7 @@ export function prefilledPayload(pane: PaneSchema.PaneStream): Uint8Array<ArrayB
 
   if (content.length === 0) return EMPTY_YJS_UPDATE;
 
-  const yDoc = prosemirrorJSONToYDoc(
-    NOTE_SCHEMA,
-    { type: "doc", content },
-    PROSEMIRROR_XML_FRAGMENT_KEY,
-  );
-
-  return Y.encodeStateAsUpdate(yDoc);
+  return ProsemirrorEncode.encodeDocument(content);
 }
 
 export * as NoteCreate from "./note-create";

@@ -2,10 +2,14 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { DateTime, Effect, Option, Schema, Stream, Types } from "effect";
 import { DB } from "../db.service";
 import { Tables } from "../db.tables";
+import { AudioMemoIntent } from "./intent";
 
 type RawRecord = typeof Tables.recordings.$inferSelect;
 
-export type Record = Types.MergeRight<RawRecord, { recordedAt: DateTime.Utc }>;
+export type Record = Types.MergeRight<
+  RawRecord,
+  { recordedAt: DateTime.Utc; intent: AudioMemoIntent.Record }
+>;
 
 export type Filter = { path?: string; state?: Record["state"] };
 
@@ -46,10 +50,11 @@ export const get = Effect.fn("AudioMemoRepo.get")(function* (path: string) {
 
 export const insert = Effect.fn("AudioMemoRepo.insert")(function* (recording: Record) {
   const db = yield* DB.Service;
+  const intent = yield* AudioMemoIntent.encode(recording.intent);
   yield* db.query((db) =>
     db
       .insert(Tables.recordings)
-      .values({ ...recording, recordedAt: DateTime.formatIso(recording.recordedAt) })
+      .values({ ...recording, intent, recordedAt: DateTime.formatIso(recording.recordedAt) })
       .onConflictDoNothing()
       .returning(),
   );
@@ -63,6 +68,7 @@ export const update = Effect.fn("AudioMemoRepo.update")(function* (
 
   const encoded = {
     ...values,
+    intent: values.intent === undefined ? undefined : yield* AudioMemoIntent.encode(values.intent),
     recordedAt: values.recordedAt === undefined ? undefined : DateTime.formatIso(values.recordedAt),
   };
 
@@ -92,7 +98,11 @@ function orderBy(order: "asc" | "desc") {
 const decodeRecordedAt = Schema.decodeEffect(Schema.DateTimeUtcFromString);
 
 const decode = Effect.fn("AudioMemoRepo.decode")(function* (row: RawRecord) {
-  return { ...row, recordedAt: yield* decodeRecordedAt(row.recordedAt) };
+  return {
+    ...row,
+    recordedAt: yield* decodeRecordedAt(row.recordedAt),
+    intent: yield* AudioMemoIntent.decode(row.intent),
+  };
 });
 
 export * as AudioMemoRepo from "./repo";
