@@ -6,16 +6,28 @@ import path from "node:path";
 
 const executable = path.resolve(process.argv[2]);
 
-const directory = mkdtempSync(path.join(tmpdir(), "manotes-package-"));
+const npmInstall = process.argv[3] === "--npm";
+
+const directory = mkdtempSync(path.join(tmpdir(), "manotes package "));
 
 try {
   const run = (args, input) => {
-    const result = spawnSync(executable, args, {
+    // Windows npm installs use a .cmd wrapper. All arguments here are test-owned.
+    const windows = process.platform === "win32";
+    const command = windows ? process.env.ComSpec : executable;
+
+    const commandArgs = windows
+      ? ["/d", "/s", "/c", `"${[executable, ...args].map((arg) => `"${arg}"`).join(" ")}"`]
+      : args;
+
+    const result = spawnSync(command, commandArgs, {
       cwd: directory,
-      // Neither Node nor any checkout-provided command can be found through PATH.
-      env: { HOME: directory, TMPDIR: directory, PATH: "/nonexistent" },
+      // Nix packages include Node; npm installs need the user's Node on PATH.
+      env: npmInstall ? process.env : { HOME: directory, TMPDIR: directory, PATH: "/nonexistent" },
+      windowsVerbatimArguments: windows,
       encoding: "utf8",
       input,
+      timeout: 20_000,
     });
 
     assert.ifError(result.error);
@@ -39,18 +51,18 @@ try {
   assert.match(run(["status"]), /Pending publication: 0 changes/);
   run(
     ["execute"],
-    'export default async (api) => { await api.createNote("smoke", [{ kind: "append", markdown: "# Packaged CLI\\n\\nCreated outside the checkout." }]); };',
+    'export default async (api) => { await api.createNote("smoke", [{ kind: "append", markdown: "# Packaged CLI\\n\\nCreated outside the checkout. Żółw 🐢." }]); };',
   );
   assert.match(
     readFileSync(path.join(directory, "smoke.md"), "utf8"),
-    /Created outside the checkout/,
+    /Created outside the checkout\. Żółw 🐢\./,
   );
 
   writeFileSync(
-    path.join(directory, "edit.ts"),
+    path.join(directory, "edit with spaces.ts"),
     'export default async (api: { editNote: Function }) => { await api.editNote("smoke", [{ kind: "replace", text: "Created outside the checkout.", with: "Updated by the installed CLI." }]); };',
   );
-  run(["execute", path.join(directory, "edit.ts")]);
+  run(["execute", path.join(directory, "edit with spaces.ts")]);
   assert.match(
     readFileSync(path.join(directory, "smoke.md"), "utf8"),
     /Updated by the installed CLI/,
