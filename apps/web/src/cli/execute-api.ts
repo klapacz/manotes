@@ -1,6 +1,6 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { Array, DateTime, Effect, FileSystem, flow, Option, Schema } from "effect";
+import { Array, DateTime, Effect, FileSystem, flow, Option, Schema, Stdio, Stream } from "effect";
 import { nanoid } from "nanoid";
 import { tsImport } from "tsx/esm/api";
 import * as Y from "yjs";
@@ -54,7 +54,8 @@ export const acquireStdinScript = Effect.fn("ExecuteApi.acquireStdinScript")(fun
     Effect.gen(function* () {
       const paths = yield* CliPaths.Service;
       const fs = yield* FileSystem.FileSystem;
-      const script = yield* fs.readFileString("/dev/stdin");
+      const stdio = yield* Stdio.Stdio;
+      const script = yield* stdio.stdin.pipe(Stream.decodeText(), Stream.mkString);
       const scriptPath = path.join(paths.manotesDir, `execute-${process.pid}-${Date.now()}.ts`);
 
       yield* fs.writeFileString(scriptPath, script, { mode: 0o600 });

@@ -21,17 +21,21 @@ export function make(config: Pick<CliConfig.Config, "origin" | "graphId">, id?: 
 
 export const open = Effect.fn("CliUrl.open")(
   function* (url: string) {
-    const command = Match.value(process.platform).pipe(
-      Match.when("darwin", () => "open"),
-      Match.when("linux", () => "xdg-open"),
+    const opener = Match.value(process.platform).pipe(
+      Match.when("darwin", () => ({ command: "open", args: [url] })),
+      Match.when("linux", () => ({ command: "xdg-open", args: [url] })),
+      Match.when("win32", () => ({
+        command: "rundll32.exe",
+        args: ["url.dll,FileProtocolHandler", url],
+      })),
       Match.orElse(() => undefined),
     );
 
-    if (command === undefined) {
+    if (opener === undefined) {
       return yield* Effect.fail(new Error(`Opening URLs is not supported on ${process.platform}.`));
     }
 
-    const child = yield* ChildProcess.make(command, [url], {
+    const child = yield* ChildProcess.make(opener.command, opener.args, {
       stdin: "ignore",
       stdout: "ignore",
       stderr: "inherit",
@@ -42,7 +46,7 @@ export const open = Effect.fn("CliUrl.open")(
     if (exitCode === 0) return;
 
     return yield* Effect.fail(
-      new Error(`${command} exited with code ${exitCode}. Open the printed URL manually.`),
+      new Error(`${opener.command} exited with code ${exitCode}. Open the printed URL manually.`),
     );
   },
   Effect.mapError((cause) => new CliError.UserError({ cause })),
