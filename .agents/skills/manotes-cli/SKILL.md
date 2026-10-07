@@ -11,6 +11,12 @@ description: Read, filter, create, and edit Manotes notes with zk and the CLI, t
 - Metadata: Frontmatter `date` is the logical assigned date, called `created` in zk. `modified` is the last update in UTC.
 - Setup: Consult `manotes init --help`.
 
+## Notes and pages
+
+- Notes capture thoughts, ideas, and experiences.
+- Pages are notes with an H1 heading (`# Title`), representing entities such as projects, libraries, or articles in progress.
+- Default to a note without an H1 for ordinary capture. Add an H1 when creating a page for an entity.
+
 ## Filter notes
 
 - Default command: `zk list --format short [filters]`.
@@ -83,7 +89,7 @@ type Api = {
 manotes execute <<'JS'
 export default async (api) => {
   await api.createNote(undefined, [
-    { kind: "append", markdown: "# New note\n\nFirst paragraph." },
+    { kind: "append", markdown: "First paragraph." },
     { kind: "date", date: "2026-09-12" },
   ]);
 
