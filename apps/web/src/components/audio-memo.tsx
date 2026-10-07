@@ -372,12 +372,6 @@ export function SavedRow(props: { recording: AudioMemoRepo.Record }) {
 
   return (
     <article class="border-t border-border-subtle px-4 py-3 pane:px-0">
-      <time
-        class="block text-xs text-fg-subtle mb-1"
-        dateTime={DateTime.formatIso(props.recording.recordedAt)}
-      >
-        {NoteFormat.formatUpdatedAt(props.recording.recordedAt)}
-      </time>
       <div class="flex flex-col gap-1">
         <RowBody>
           <Waveform mount={mountPlayer} />
@@ -418,7 +412,15 @@ export function SavedRow(props: { recording: AudioMemoRepo.Record }) {
             <XIcon class="size-4" />
           </Button>
         </RowBody>
-        <Failure message={failure()} />
+        <div class="flex items-baseline justify-between gap-2">
+          <Failure message={failure()} />
+          <time
+            class="ml-auto shrink-0 text-xs text-fg-subtle"
+            dateTime={DateTime.formatIso(props.recording.recordedAt)}
+          >
+            {NoteFormat.formatUpdatedAt(props.recording.recordedAt)}
+          </time>
+        </div>
       </div>
     </article>
   );

@@ -122,7 +122,7 @@ function createWaveform(element: HTMLElement, interact: boolean) {
     height: 56,
     barGap: 2,
     barWidth: 3,
-    cursorWidth: 0,
+    cursorWidth: interact ? 1 : 0,
     interact,
   });
 }
