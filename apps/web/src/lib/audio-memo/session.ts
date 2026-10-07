@@ -8,7 +8,7 @@ import {
   Option,
   Queue,
   Result,
-  type Scope,
+  Scope,
   Stream,
   SubscriptionRef,
 } from "effect";
@@ -62,6 +62,9 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
   const services = yield* Effect.context<DB.Service | GraphWorkerClient.Service | Scope.Scope>();
   const { localGraphId } = yield* DB.Config;
   const ref = yield* SubscriptionRef.make<State>(State.Starting());
+  // Keep the waveform until the row unmounts. Register its scope first so
+  // the later stop-and-save finalizer finishes before the recorder is released.
+  const recorderScope = yield* Scope.fork(yield* Effect.scope);
   const handle = yield* FiberHandle.make<void, never>();
 
   const transcriptionFailed = SubscriptionRef.update(
@@ -118,7 +121,7 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
           ),
         ),
         (recorder) => Effect.sync(() => recorder.cancel()),
-      );
+      ).pipe(Scope.provide(recorderScope));
 
       const started = yield* SubscriptionRef.modify(
         ref,
@@ -264,9 +267,7 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
     yield* FiberHandle.run(handle, action, { onlyIfMissing: true });
   }, Effect.provideContext(services));
 
-  // Keep recorder resources in the job's scope so they remain available while
-  // the session's finalizer stops recording and waits for its save to finish.
-  yield* run(Effect.scoped(record()));
+  yield* run(record());
 
   yield* Effect.addFinalizer(() =>
     Effect.gen(function* () {

@@ -162,8 +162,8 @@ function insertDraft(
 ): ReadonlyArray<NoteItem | DraftItem> {
   if (!draft) return notes;
 
-  // SQL can emit the transcript before the completion watcher clears the draft.
-  // The saved note takes its place immediately, without a duplicate ID.
+  // Replace the draft when its transcript enters the stream. Unmounting the
+  // draft row then clears the local draft state.
   if (Array.some(notes, (row) => row.note.id === draft.id)) return notes;
 
   const createdAt = DateTime.toEpochMillis(draft.createdAt);

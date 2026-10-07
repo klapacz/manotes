@@ -1,18 +1,27 @@
 import { useAtomSubscribe } from "@effect/atom-solid";
+import { getRouteApi } from "@tanstack/solid-router";
 import { DateTime, Effect, Option, Stream } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { nanoid } from "nanoid";
 import { type Accessor } from "solid-js";
+import { toast } from "somoto";
 import { NoteCache, NoteSchema, bindRt, createAtomState } from "../../lib";
+import { PaneCursor } from "../../lib/note/pane.cursor";
 import { PaneCtx } from "../../lib/note/pane.ctx";
+import { PaneMake } from "../../lib/note/pane.make";
 import type { NoteStream } from "../../lib/note/stream";
 import { toLocalDateString } from "../../lib/temporal/utils";
 import type { AudioMemo } from "../audio-memo";
 import { Focus } from "./focus";
 import type { RecordControls } from "./shared";
 
+const route = getRouteApi("/$graph/");
+
 export function use() {
+  const ctx = PaneCtx.use();
   const pane = PaneCtx.useStream();
+  const navigate = route.useNavigate();
+  const params = route.useParams();
   const focus = Focus.use();
   const fid = Focus.useId();
   const [draft, setDraft, draftAtom] = createAtomState<AudioMemo.Draft | undefined>(undefined);
@@ -22,23 +31,40 @@ export function use() {
     rt.atom((get) => {
       const id = get(draftAtom)?.id;
 
+      // Stream.empty preserves and re-emits the atom's previous success, which
+      // can trigger another toast while clearing the draft. Emit null to reset it.
       if (id === undefined) return Stream.succeed(null);
 
+      // Give the notes stream a second to replace the draft. If it doesn't
+      // (for example, due to filtering), clear it here. Clearing the draft
+      // through row cleanup invalidates this atom and cancels the wait.
       return NoteCache.Service.use((cache) => cache.changes(id)).pipe(
         Stream.unwrap,
-        Stream.map(Option.getOrNull),
+        Stream.filter(Option.isSome),
+        Stream.take(1),
+        Stream.mapEffect(() => Effect.as(Effect.sleep("1 second"), id)),
+        Stream.filter((noteId) => get.once(draftAtom)?.id === noteId),
       );
     }),
   );
 
-  // A materialized note ends the draft, even if it does not match this pane's
-  // filters. The normal notes stream supplies its row; this only clears the draft.
   useAtomSubscribe(
     completionAtom,
     (result) => {
-      if (!AsyncResult.isSuccess(result) || !result.value) return;
+      if (!AsyncResult.isSuccess(result) || result.value === null) return;
 
-      clearDraft(result.value.id);
+      const link = {
+        ...PaneCtx.linkOptions(ctx, PaneCursor.openNext(PaneMake.note(result.value))),
+        params: params(),
+      };
+
+      clearDraft(result.value);
+      toast.success("Audio memo ready", {
+        action: {
+          label: "Open",
+          onClick: () => void navigate(link),
+        },
+      });
     },
     { immediate: true },
   );
