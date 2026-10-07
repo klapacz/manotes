@@ -17,6 +17,8 @@ export {
   PanelLeftOpen as PanelLeftOpenIcon,
   Plus as PlusIcon,
   Mic as MicIcon,
+  Play as PlayIcon,
+  Pause as PauseIcon,
   Square as StopIcon,
   LoaderCircle as LoadingIcon,
   RotateCcw as RetryIcon,

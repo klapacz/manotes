@@ -11,7 +11,7 @@ export const make = Effect.fn("AudioMemoWorker.make")(function* () {
   const active = yield* SubscriptionRef.make<string | null>(null);
 
   yield* Stream.zipLatest(
-    AudioMemoRepo.listReactive({ state: "pending" }, "asc"),
+    AudioMemoRepo.listReactive({ state: ["pending"] }, "asc"),
     SettingsRepo.watchOpenAIKey.pipe(Stream.provideContext(registry)),
   ).pipe(
     Stream.runForEach(([recordings, key]) => {

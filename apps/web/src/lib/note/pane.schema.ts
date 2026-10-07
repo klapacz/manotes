@@ -43,6 +43,7 @@ export type Id = typeof Id.Type;
 const PaneId = Id.pipe(Schema.withDecodingDefaultKey(Effect.sync(makeId)));
 
 export const Pane = Schema.TaggedUnion({
+  recordings: { paneId: PaneId },
   note: {
     paneId: PaneId,
     id: NoteSchema.Id,
@@ -60,6 +61,8 @@ export type PaneInput = typeof Pane.Encoded;
 export type PaneStream = typeof Pane.cases.stream.Type;
 
 export type PaneNote = typeof Pane.cases.note.Type;
+
+export type PaneRecordings = typeof Pane.cases.recordings.Type;
 
 export function paneToQuery(pane: PaneStream): NoteRepo.StreamListQuery {
   return {

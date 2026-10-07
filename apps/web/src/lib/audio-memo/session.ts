@@ -67,32 +67,50 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
   const recorderScope = yield* Scope.fork(yield* Effect.scope);
   const handle = yield* FiberHandle.make<void, never>();
 
-  const transcriptionFailed = SubscriptionRef.update(
-    ref,
-    Match.type<State>().pipe(
-      Match.tag("Pending", ({ recording }) => State.TranscriptionFailed({ recording })),
-      Match.orElse((state) => state),
-    ),
-  );
-
-  // Start one background watcher. Pending subscribes to its persisted recording;
-  // leaving Pending cancels that subscription, and retrying starts a fresh one.
+  // A session saves only one recording. Wait for that save, then keep watching
+  // its row across retries and removals from either pane. The pane's existing
+  // completion watcher handles the actual note arriving and clearing the draft.
   yield* SubscriptionRef.changes(ref).pipe(
-    Stream.map(
+    Stream.filterMap(
       Match.type<State>().pipe(
-        Match.tag("Pending", ({ recording }) => recording),
-        Match.orElse(() => undefined),
+        Match.tag("Pending", ({ recording }) => Result.succeed(recording)),
+        Match.orElse(() => Result.failVoid),
       ),
     ),
-    Stream.changes,
+    Stream.take(1),
     Stream.switchMap((recording) => {
-      if (!recording) return Stream.empty;
+      const update = (row?: AudioMemoRepo.Record) => {
+        if (row?.state === "completed") return Effect.void;
+
+        return SubscriptionRef.update(
+          ref,
+          Match.type<State>().pipe(
+            Match.tag("Pending", "TranscriptionFailed", ({ recording }) => {
+              if (!row) return State.Closed();
+
+              if (row.state === "error") return State.TranscriptionFailed({ recording });
+
+              return State.Pending({ recording });
+            }),
+            Match.tag("RemoveFailed", (state) => (row ? state : State.Closed())),
+            Match.orElse((state) => state),
+          ),
+        );
+      };
 
       return AudioMemoRepo.listReactive({ path: recording.path }, "asc").pipe(
-        Stream.mapEffect((rows) =>
-          rows[0]?.state === "error" ? transcriptionFailed : Effect.void,
+        Stream.mapEffect((rows) => update(rows[0])),
+        Stream.catch(() =>
+          Stream.fromEffect(
+            SubscriptionRef.update(
+              ref,
+              Match.type<State>().pipe(
+                Match.tag("Pending", ({ recording }) => State.TranscriptionFailed({ recording })),
+                Match.orElse((state) => state),
+              ),
+            ),
+          ),
         ),
-        Stream.catch(() => Stream.fromEffect(transcriptionFailed)),
       );
     }),
     Stream.runDrain,

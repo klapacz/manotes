@@ -1,4 +1,5 @@
-import { DateTime, Effect } from "effect";
+import { type Cause, DateTime, Effect } from "effect";
+import { Atom } from "effect/unstable/reactivity";
 import WaveSurfer from "wavesurfer.js";
 import RecordPlugin from "wavesurfer.js/plugins/record";
 import type { AudioMemoRepo } from "./repo";
@@ -7,6 +8,11 @@ import { AudioMemoFiles } from "./files";
 export type Handle = {
   stop: () => void;
   cancel: () => void;
+};
+
+export type Player = {
+  isPlaying: Atom.Atom<boolean>;
+  playPause: Effect.Effect<void, Cause.UnknownError>;
 };
 
 export type RecordingMetadata = Pick<AudioMemoRepo.Record, "path" | "recordedAt" | "mimeType"> & {
@@ -24,21 +30,7 @@ export async function start(
 
   if (!mimeType) throw new Error("Audio recording is not supported in this browser.");
 
-  // Waveform settings adapted from klapacz/eaten@f57abd360e024abefaef6ea463ef7f559a4afd0e,
-  // src/components/meal/voice-recorder.tsx (WaveSurfer ^7.11.0). Reuse its scrolling
-  // bars with WaveSurfer 8.0.1 and the row's primary theme color.
-  const color = getComputedStyle(element).color;
-
-  const waveform = WaveSurfer.create({
-    container: element,
-    waveColor: color,
-    progressColor: color,
-    height: 56,
-    barGap: 2,
-    barWidth: 3,
-    cursorWidth: 0,
-    interact: false,
-  });
+  const waveform = createWaveform(element, false);
 
   const recorder = waveform.registerPlugin(
     RecordPlugin.create({
@@ -91,6 +83,48 @@ export async function start(
     waveform.destroy();
     throw error;
   }
+}
+
+export const makePlayer = Effect.fn("AudioMemoRecorder.makePlayer")(function* (options: {
+  element: HTMLElement;
+  blob: Blob;
+}) {
+  const waveform = yield* Effect.acquireRelease(
+    Effect.sync(() => createWaveform(options.element, true)),
+    (waveform) => Effect.sync(() => waveform.destroy()),
+  );
+
+  yield* Effect.tryPromise(() => waveform.loadBlob(options.blob));
+
+  const isPlaying = Atom.readable((get) => {
+    const signal = waveform.getState().isPlaying;
+    get.addFinalizer(signal.subscribe(() => get.refreshSelf()));
+
+    return signal.value;
+  });
+
+  return {
+    isPlaying,
+    playPause: Effect.tryPromise(() => waveform.playPause()),
+  } satisfies Player;
+});
+
+function createWaveform(element: HTMLElement, interact: boolean) {
+  // Waveform settings adapted from klapacz/eaten@f57abd360e024abefaef6ea463ef7f559a4afd0e,
+  // src/components/meal/voice-recorder.tsx (WaveSurfer ^7.11.0). Share its compact
+  // bars between recording and playback with WaveSurfer 8.0.1 and the primary color.
+  const color = getComputedStyle(element).color;
+
+  return WaveSurfer.create({
+    container: element,
+    waveColor: color,
+    progressColor: color,
+    height: 56,
+    barGap: 2,
+    barWidth: 3,
+    cursorWidth: 0,
+    interact,
+  });
 }
 
 export * as AudioMemoRecorder from "./recorder";

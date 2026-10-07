@@ -1,14 +1,100 @@
-import { useAtom, useAtomSubscribe } from "@effect/atom-solid";
+import { useAtom, useAtomSubscribe, useAtomValue } from "@effect/atom-solid";
 import { createEventListener } from "@solid-primitives/event-listener";
-import { Effect, Match as EffectMatch, Stream } from "effect";
+import { keyArray } from "@solid-primitives/keyed";
+import { Link, getRouteApi } from "@tanstack/solid-router";
+import { DateTime, Effect, Match as EffectMatch, Stream } from "effect";
 import { AsyncResult, Atom } from "effect/unstable/reactivity";
-import { Match, Show, Switch, createMemo, onMount } from "solid-js";
-import { bindRt } from "../lib";
+import { For, Match, Show, Switch, createMemo, onMount, type ParentProps } from "solid-js";
+import { toast } from "somoto";
+import { MatchAsyncResult, bindRt } from "../lib";
+import { AudioMemoFiles } from "../lib/audio-memo/files";
+import { AudioMemoRecorder } from "../lib/audio-memo/recorder";
+import { AudioMemoRepo } from "../lib/audio-memo/repo";
+import { AudioMemoSavedSession } from "../lib/audio-memo/saved-session";
 import { AudioMemoSession, State } from "../lib/audio-memo/session";
-import { LoadingIcon, RetryIcon, StopIcon, XIcon } from "./icons";
-import { Button } from "./ui/button";
+import { DB } from "../lib/db.service";
+import { GraphWorkerClient } from "../lib/graph-worker.client";
+import { NoteFormat } from "../lib/note/format";
+import { PaneCursor } from "../lib/note/pane.cursor";
+import { PaneMake } from "../lib/note/pane.make";
+import { LoadingIcon, PauseIcon, PlayIcon, RetryIcon, StopIcon, XIcon } from "./icons";
+import { PaneEmptyState } from "./note/shared";
+import { Button, buttonVariants } from "./ui/button";
 
 export type Draft = AudioMemoSession.Draft;
+
+const route = getRouteApi("/$graph/");
+
+// Navbar and pane share one subscription for the current graph.
+const recordingsAtom = bindRt((rt) =>
+  rt.atom(AudioMemoRepo.listReactive({ state: ["pending", "error"] }, "desc")),
+);
+
+const activePathAtom = bindRt((rt) =>
+  rt.atom(
+    GraphWorkerClient.Service.useSync(({ client }) => client.audioMemoStatusStream({})).pipe(
+      Stream.unwrap,
+    ),
+  ),
+);
+
+export function RecordingsLink() {
+  const recordings = useAtomValue(recordingsAtom);
+  const panes = route.useSearch({ select: (search) => search.panes });
+
+  const hasRecordings = () => {
+    const result = recordings();
+
+    return AsyncResult.isSuccess(result) && result.value.length > 0;
+  };
+
+  return (
+    <Show when={hasRecordings()}>
+      <Link
+        from="/$graph/"
+        to="/$graph"
+        search={{
+          panes: PaneCursor.openNext(PaneMake.recordings())({
+            stack: panes(),
+            index: panes().length - 1,
+          }),
+        }}
+        resetScroll={false}
+        class={buttonVariants({ variant: "ghost", size: "sm" })}
+      >
+        Recordings
+      </Link>
+    </Show>
+  );
+}
+
+export function RecordingList() {
+  const recordings = useAtomValue(recordingsAtom);
+
+  return (
+    <MatchAsyncResult
+      when={recordings()}
+      onFailure={() => <PaneEmptyState>Could not load recordings.</PaneEmptyState>}
+      onSuccess={(recordings) => {
+        // Database updates must not remount a row and restart its player.
+        const rows = keyArray(
+          recordings,
+          (recording) => recording.path,
+          (recording) => <SavedRow recording={recording()} />,
+        );
+
+        return (
+          <For
+            each={rows()}
+            fallback={<PaneEmptyState>No pending or failed recordings.</PaneEmptyState>}
+          >
+            {(row) => row}
+          </For>
+        );
+      }}
+    />
+  );
+}
 
 export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
   const atoms = bindRt((rt) => {
@@ -125,11 +211,9 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
 
   return (
     <div class="flex flex-col gap-1">
-      <div class="flex items-center gap-2">
-        <div ref={mountRecorder} class="text-primary-solid min-w-0 flex-1" />
-        <span class="text-xs text-text-muted tabular-nums shrink-0">
-          {Math.floor(elapsed() / 60)}:{String(elapsed() % 60).padStart(2, "0")}
-        </span>
+      <RowBody>
+        <Waveform mount={mountRecorder} />
+        <Duration seconds={elapsed()} />
         <Show when={!failure() || action()}>
           <Button
             variant="ghost"
@@ -158,15 +242,213 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
             <XIcon class="size-4" />
           </Button>
         </Show>
-      </div>
-      <Show when={failure()}>
-        {(error) => (
-          <p class="text-xs text-text-muted" role="alert">
-            {error()}
-          </p>
-        )}
-      </Show>
+      </RowBody>
+      <Failure message={failure()} />
     </div>
+  );
+}
+
+export function SavedRow(props: { recording: AudioMemoRepo.Record }) {
+  const atoms = bindRt((rt) => {
+    const player = rt
+      .fn(
+        Effect.fn("ComponentsAudioMemo.loadPlayer")(function* (element: HTMLDivElement) {
+          const { localGraphId } = yield* DB.Config;
+          const blob = yield* AudioMemoFiles.read(localGraphId, props.recording.path);
+
+          return yield* AudioMemoRecorder.makePlayer({ element, blob });
+        }),
+      )
+      .pipe(Atom.setIdleTTL(0));
+
+    const actions = rt
+      .atom(
+        AudioMemoSavedSession.make(props.recording.path).pipe(
+          Effect.map((session) =>
+            session.changes.pipe(Stream.map((action) => ({ session, action }))),
+          ),
+          Stream.unwrap,
+        ),
+      )
+      .pipe(Atom.setIdleTTL(0));
+
+    const isPlaying = Atom.readable((get) => {
+      const result = get(player);
+
+      if (!AsyncResult.isSuccess(result)) return false;
+
+      return get(result.value.isPlaying);
+    });
+
+    const playPause = rt
+      .fn(
+        Effect.fn("ComponentsAudioMemo.playPause")(function* (_: void, get: Atom.FnContext) {
+          const current = yield* get.result(player);
+
+          return yield* current.playPause.pipe(
+            Effect.catch(() =>
+              Effect.sync(() => {
+                toast.error("Could not play the recording.");
+              }),
+            ),
+          );
+        }),
+      )
+      .pipe(Atom.setIdleTTL(0));
+
+    const command = rt
+      .fn(
+        Effect.fn("ComponentsAudioMemo.savedCommand")(function* (
+          command: "retry" | "remove",
+          get: Atom.FnContext,
+        ) {
+          const { session } = yield* get.result(actions);
+
+          return yield* session[command];
+        }),
+      )
+      .pipe(Atom.setIdleTTL(0));
+
+    return { player, actions, isPlaying, playPause, command };
+  })();
+
+  const [player, start] = useAtom(() => atoms.player);
+  const actions = useAtomValue(() => atoms.actions);
+  const isPlaying = useAtomValue(() => atoms.isPlaying);
+  const [, togglePlayback] = useAtom(() => atoms.playPause);
+  const [, runCommand] = useAtom(() => atoms.command);
+  const activePath = useAtomValue(activePathAtom);
+
+  const isTranscribing = () => {
+    const result = activePath();
+
+    return AsyncResult.isSuccess(result) && result.value === props.recording.path;
+  };
+
+  const action = createMemo(() => {
+    const current = actions();
+
+    if (AsyncResult.isSuccess(current)) return current.value.action;
+
+    return AudioMemoSavedSession.Action.Idle();
+  });
+
+  const canAct = () => {
+    const result = actions();
+
+    return AsyncResult.isSuccess(result) && AudioMemoSavedSession.canAct(result.value.action);
+  };
+
+  const failure = createMemo(() => {
+    const actionError = EffectMatch.value(action()).pipe(
+      EffectMatch.tag("RetryFailed", () => "Could not retry transcription."),
+      EffectMatch.tag("RemoveFailed", () => "Could not remove recording."),
+      EffectMatch.orElse(() => undefined),
+    );
+
+    if (actionError) return actionError;
+
+    if (AsyncResult.isFailure(actions())) return "Could not load recording actions.";
+
+    if (AsyncResult.isFailure(player())) return "Could not load the recording audio.";
+
+    if (props.recording.state === "error")
+      return "Transcription failed. Check the OpenAI key and retry.";
+  });
+
+  function mountPlayer(element: HTMLDivElement) {
+    onMount(() => start(element));
+  }
+
+  const statusLabel = () => {
+    if (!canAct()) return "Processing recording";
+
+    if (props.recording.state === "error") return "Retry transcription";
+
+    if (isTranscribing()) return "Transcribing recording";
+
+    return "Pending transcription";
+  };
+
+  return (
+    <article class="border-t border-border-subtle px-4 py-3 pane:px-0">
+      <time
+        class="block text-xs text-fg-subtle mb-1"
+        dateTime={DateTime.formatIso(props.recording.recordedAt)}
+      >
+        {NoteFormat.formatUpdatedAt(props.recording.recordedAt)}
+      </time>
+      <div class="flex flex-col gap-1">
+        <RowBody>
+          <Waveform mount={mountPlayer} />
+          <Duration seconds={Math.floor((props.recording.durationMs ?? 0) / 1000)} />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={isPlaying() ? "Pause recording" : "Play recording"}
+            disabled={!AsyncResult.isSuccess(player())}
+            onClick={() => togglePlayback()}
+          >
+            <Show when={isPlaying()} fallback={<PlayIcon class="size-4" />}>
+              <PauseIcon class="size-4" />
+            </Show>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={statusLabel()}
+            title={statusLabel()}
+            disabled={!canAct() || props.recording.state !== "error"}
+            onClick={() => runCommand("retry")}
+          >
+            <Show
+              when={canAct() && props.recording.state === "error"}
+              fallback={<LoadingIcon class="size-4 animate-spin" />}
+            >
+              <RetryIcon class="size-4" />
+            </Show>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Remove recording"
+            disabled={!canAct()}
+            onClick={() => runCommand("remove")}
+          >
+            <XIcon class="size-4" />
+          </Button>
+        </RowBody>
+        <Failure message={failure()} />
+      </div>
+    </article>
+  );
+}
+
+function RowBody(props: ParentProps) {
+  return <div class="flex items-center gap-2">{props.children}</div>;
+}
+
+function Waveform(props: { mount: (element: HTMLDivElement) => void }) {
+  return <div ref={props.mount} class="text-primary-solid min-w-0 flex-1 h-14" />;
+}
+
+function Duration(props: { seconds: number }) {
+  return (
+    <span class="text-xs text-text-muted tabular-nums shrink-0">
+      {Math.floor(props.seconds / 60)}:{String(props.seconds % 60).padStart(2, "0")}
+    </span>
+  );
+}
+
+function Failure(props: { message?: string }) {
+  return (
+    <Show when={props.message}>
+      {(message) => (
+        <p class="text-xs text-text-muted" role="alert">
+          {message()}
+        </p>
+      )}
+    </Show>
   );
 }
 

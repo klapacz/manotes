@@ -1,5 +1,5 @@
-import { and, asc, desc, eq } from "drizzle-orm";
-import { DateTime, Effect, Option, Schema, Stream, Types } from "effect";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { type Array, DateTime, Effect, Option, Schema, Stream, Types } from "effect";
 import { DB } from "../db.service";
 import { Tables } from "../db.tables";
 import { AudioMemoIntent } from "./intent";
@@ -11,7 +11,10 @@ export type Record = Types.MergeRight<
   { recordedAt: DateTime.Utc; intent: AudioMemoIntent.Record }
 >;
 
-export type Filter = { path?: string; state?: Record["state"] };
+export type Filter = {
+  path?: string;
+  state?: Array.NonEmptyReadonlyArray<Record["state"]>;
+};
 
 export const list = Effect.fn("AudioMemoRepo.list")(function* (
   filter: Filter,
@@ -87,7 +90,7 @@ export const remove = Effect.fn("AudioMemoRepo.remove")(function* (path: string)
 function where(filter: Filter) {
   return and(
     filter.path === undefined ? undefined : eq(Tables.recordings.path, filter.path),
-    filter.state === undefined ? undefined : eq(Tables.recordings.state, filter.state),
+    filter.state === undefined ? undefined : inArray(Tables.recordings.state, [...filter.state]),
   );
 }
 

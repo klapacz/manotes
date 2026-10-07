@@ -61,6 +61,7 @@ export const inputMatches =
     Equal.equals(normalizeToInput(input), normalizeToInput(pane));
 
 type ComparablePane =
+  | readonly [variant: "recordings"]
   | readonly [variant: "note", id: string]
   | readonly [
       variant: "stream",
@@ -73,6 +74,8 @@ type ComparablePane =
     ];
 
 function normalizeToInput(value: PaneSchema.PaneInput | PaneSchema.Pane): ComparablePane {
+  if (Predicate.isTagged(value, "recordings")) return ["recordings"];
+
   if (Predicate.isTagged(value, "note")) return ["note", value.id];
 
   return [

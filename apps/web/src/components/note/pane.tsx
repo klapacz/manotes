@@ -8,6 +8,7 @@ import { PaneMake } from "../../lib/note/pane.make";
 import { PaneScroll } from "../../lib/note/pane.scroll";
 import { NoteLinkScope, type NoteLinkRenderer } from "../../lib/note/link-component";
 import { PaneNote } from "./pane-note";
+import { PaneRecordings } from "./pane-recordings";
 import { PaneStream } from "./pane-stream";
 
 export function PaneGrid(props: ComponentProps<"main">) {
@@ -52,6 +53,7 @@ export function Pane(props: { ref: Ref<HTMLElement | undefined> }) {
       <MatchTag
         when={pane()}
         cases={{
+          recordings: () => <PaneRecordings.Root ref={props.ref} />,
           stream: () => <PaneStream ref={props.ref} />,
           note: () => <PaneNote ref={props.ref} />,
         }}

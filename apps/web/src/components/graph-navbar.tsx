@@ -1,6 +1,7 @@
 import { Link, getRouteApi, useMatchRoute } from "@tanstack/solid-router";
 import { Show } from "solid-js";
 import { OpenAIKeyModal } from "./openai-key-modal";
+import { AudioMemo } from "./audio-memo";
 import { GraphMenu } from "./graph-menu";
 import { DatabaseIcon, HouseIcon } from "./icons";
 import { SyncStatusIndicator } from "./sync-status-indicator";
@@ -19,6 +20,9 @@ export function GraphNavbar() {
       <div class="flex flex-wrap items-center gap-2 px-4 py-2">
         <GraphMenu />
         <div class="ml-auto flex flex-wrap items-center justify-end gap-2">
+          <Show when={!onStudio()}>
+            <AudioMemo.RecordingsLink />
+          </Show>
           <OpenAIKeyModal.Root />
           <SyncStatusIndicator />
           <WorkerHealthBanner />

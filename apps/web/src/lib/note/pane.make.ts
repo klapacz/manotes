@@ -3,6 +3,10 @@ import { PaneSchema } from "./pane.schema";
 
 const make = Data.taggedEnum<PaneSchema.PaneInput>();
 
+export function recordings() {
+  return make.recordings({});
+}
+
 export function notes() {
   return make.stream({
     filter: { type: "notes" },

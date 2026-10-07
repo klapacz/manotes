@@ -220,9 +220,11 @@ export function StreamRefMenu() {
   const [isOpen, setOpen] = createSignal(false);
   useArrowKeyAliases(editor, isOpen);
 
-  const panes = createMemo(() => (isOpen() ? ctx.stack() : []));
+  const panes = createMemo(() =>
+    isOpen() ? ctx.stack().filter((pane) => !PaneSchema.Pane.guards.recordings(pane)) : [],
+  );
 
-  const onSelect = (pane: PaneSchema.Pane) => {
+  const onSelect = (pane: PaneSchema.PaneNote | PaneSchema.PaneStream) => {
     if (PaneSchema.Pane.guards.note(pane)) {
       insertBacklink(pane.id);
 
@@ -261,7 +263,11 @@ export function StreamRefMenu() {
   );
 }
 
-function StreamRefMenuItem(props: { pane: PaneSchema.Pane; query: string; onSelect: () => void }) {
+function StreamRefMenuItem(props: {
+  pane: PaneSchema.PaneNote | PaneSchema.PaneStream;
+  query: string;
+  onSelect: () => void;
+}) {
   const pane = props.pane;
 
   const resolveLabel = PaneSchema.Pane.guards.note(pane)

@@ -23,7 +23,7 @@ export const register = Effect.fn("AudioMemoService.register")(function* (
 });
 
 export const retry = Effect.fn("AudioMemoService.retry")(function* (path: string) {
-  yield* AudioMemoRepo.update({ path, state: "error" }, { state: "pending" });
+  yield* AudioMemoRepo.update({ path, state: ["error"] }, { state: "pending" });
 });
 
 export const remove = Effect.fn("AudioMemoService.remove")(function* (path: string) {
@@ -43,7 +43,7 @@ export const transcribe = Effect.fn("AudioMemoService.transcribe")(
   },
   (effect, path) => {
     return effect.pipe(
-      Effect.catch(() => AudioMemoRepo.update({ path, state: "pending" }, { state: "error" })),
+      Effect.catch(() => AudioMemoRepo.update({ path, state: ["pending"] }, { state: "error" })),
     );
   },
 );
