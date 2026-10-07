@@ -59,7 +59,7 @@ it("leaves unexpected defects in the defect channel", async () => {
 
 it("wraps an unsupported platform with manual opening instructions", async () => {
   const descriptor = Object.getOwnPropertyDescriptor(process, "platform")!;
-  Object.defineProperty(process, "platform", { value: "win32" });
+  Object.defineProperty(process, "platform", { value: "freebsd" });
 
   try {
     const result = await Effect.runPromise(
@@ -78,7 +78,7 @@ it("wraps an unsupported platform with manual opening instructions", async () =>
     expect(Result.isFailure(result)).toBe(true);
 
     if (!Result.isFailure(result)) return;
-    expect(result.failure.cause).toEqual(new Error("Opening URLs is not supported on win32."));
+    expect(result.failure.cause).toEqual(new Error("Opening URLs is not supported on freebsd."));
     expect(result.failure.userMessage).toContain("Open the printed URL manually.");
   } finally {
     Object.defineProperty(process, "platform", descriptor);
