@@ -280,38 +280,40 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
   });
 
   return (
-    <div class="flex flex-col gap-1">
+    <div class="flex flex-col gap-1 p-4">
       <RowBody>
         <Waveform mount={mountRecorder} />
         <Duration seconds={elapsed()} />
-        <Show when={!failure() || action()}>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={buttonLabel(state())}
-            disabled={!action()}
-            onClick={onAction}
-          >
-            <Switch fallback={<LoadingIcon class="size-4 animate-spin" />}>
-              <Match when={action() === "stop"}>
-                <StopIcon class="size-4" />
-              </Match>
-              <Match when={action() === "retry"}>
-                <RetryIcon class="size-4" />
-              </Match>
-            </Switch>
-          </Button>
-        </Show>
-        <Show when={discard()}>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={discard() === "remove" ? "Remove recording" : "Cancel recording"}
-            onClick={onDiscard}
-          >
-            <XIcon class="size-4" />
-          </Button>
-        </Show>
+        <div class="-mx-2 flex shrink-0 items-center">
+          <Show when={!failure() || action()}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={buttonLabel(state())}
+              disabled={!action()}
+              onClick={onAction}
+            >
+              <Switch fallback={<LoadingIcon class="size-4 animate-spin" />}>
+                <Match when={action() === "stop"}>
+                  <StopIcon class="size-4" />
+                </Match>
+                <Match when={action() === "retry"}>
+                  <RetryIcon class="size-4" />
+                </Match>
+              </Switch>
+            </Button>
+          </Show>
+          <Show when={discard()}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={discard() === "remove" ? "Remove recording" : "Cancel recording"}
+              onClick={onDiscard}
+            >
+              <XIcon class="size-4" />
+            </Button>
+          </Show>
+        </div>
       </RowBody>
       <Failure message={failure()} />
     </div>
@@ -441,46 +443,48 @@ export function SavedRow(props: { recording: AudioMemoRepo.Record }) {
   };
 
   return (
-    <article class="border-t border-border-subtle px-4 py-3 pane:px-0">
+    <article class="border-t border-border-subtle p-4">
       <div class="flex flex-col gap-1">
         <RowBody>
           <Waveform mount={mountPlayer} />
           <Duration seconds={Math.floor((props.recording.durationMs ?? 0) / 1000)} />
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={isPlaying() ? "Pause recording" : "Play recording"}
-            disabled={!AsyncResult.isSuccess(player())}
-            onClick={() => togglePlayback()}
-          >
-            <Show when={isPlaying()} fallback={<PlayIcon class="size-4" />}>
-              <PauseIcon class="size-4" />
-            </Show>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={statusLabel()}
-            title={statusLabel()}
-            disabled={!canAct() || props.recording.state !== "error"}
-            onClick={() => runCommand("retry")}
-          >
-            <Show
-              when={canAct() && props.recording.state === "error"}
-              fallback={<LoadingIcon class="size-4 animate-spin" />}
+          <div class="-mx-2 flex shrink-0 items-center">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={isPlaying() ? "Pause recording" : "Play recording"}
+              disabled={!AsyncResult.isSuccess(player())}
+              onClick={() => togglePlayback()}
             >
-              <RetryIcon class="size-4" />
-            </Show>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Remove recording"
-            disabled={!canAct()}
-            onClick={() => runCommand("remove")}
-          >
-            <XIcon class="size-4" />
-          </Button>
+              <Show when={isPlaying()} fallback={<PlayIcon class="size-4" />}>
+                <PauseIcon class="size-4" />
+              </Show>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={statusLabel()}
+              title={statusLabel()}
+              disabled={!canAct() || props.recording.state !== "error"}
+              onClick={() => runCommand("retry")}
+            >
+              <Show
+                when={canAct() && props.recording.state === "error"}
+                fallback={<LoadingIcon class="size-4 animate-spin" />}
+              >
+                <RetryIcon class="size-4" />
+              </Show>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Remove recording"
+              disabled={!canAct()}
+              onClick={() => runCommand("remove")}
+            >
+              <XIcon class="size-4" />
+            </Button>
+          </div>
         </RowBody>
         <div class="flex items-baseline justify-between gap-2">
           <Failure message={failure()} />
