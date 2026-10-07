@@ -160,13 +160,13 @@ function transcriptPayload({
         content:
           index === 0
             ? [
-                { type: "backlink", attrs: { id: categoryId } },
                 ...(backlink === null || backlink === categoryId
                   ? []
                   : [
-                      { type: "text", text: " " },
                       { type: "backlink", attrs: { id: backlink } },
+                      { type: "text", text: " " },
                     ]),
+                { type: "backlink", attrs: { id: categoryId } },
                 { type: "text", text: ` ${text}` },
               ]
             : [{ type: "text", text }],
