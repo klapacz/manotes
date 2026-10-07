@@ -1,0 +1,39 @@
+name: CLI on Windows
+
+on: [push, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31
+      - run: scripts/nix-develop -c pnpm --filter @manotes/cli... install --frozen-lockfile --ignore-scripts
+      - run: scripts/nix-develop -c node apps/cli/bin/pack.mjs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: manotes-cli
+          path: apps/cli/dist/manotes-cli.tgz
+          if-no-files-found: error
+
+  windows:
+    needs: package
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v8
+        with:
+          name: manotes-cli
+          path: ${{ runner.temp }}/manotes-package
+      - name: Install tarball
+        run: npm install --global --prefix "$env:RUNNER_TEMP\manotes install" "$env:RUNNER_TEMP\manotes-package\manotes-cli.tgz"
+      - name: Smoke test installed CLI
+        run: node nix/smoke.mjs "$env:RUNNER_TEMP\manotes install\manotes.cmd" --npm
