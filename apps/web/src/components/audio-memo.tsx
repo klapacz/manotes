@@ -1,12 +1,12 @@
-import { useAtom, useAtomSubscribe, useAtomValue } from "@effect/atom-solid";
+import { useAtom, useAtomMount, useAtomSubscribe, useAtomValue } from "@effect/atom-solid";
 import { createEventListener } from "@solid-primitives/event-listener";
 import { keyArray } from "@solid-primitives/keyed";
 import { Link, getRouteApi } from "@tanstack/solid-router";
-import { DateTime, Effect, Match as EffectMatch, Stream } from "effect";
+import { Array, DateTime, Effect, Match as EffectMatch, Option, Stream } from "effect";
 import { AsyncResult, Atom } from "effect/unstable/reactivity";
 import { For, Match, Show, Switch, createMemo, onMount, type ParentProps } from "solid-js";
 import { toast } from "somoto";
-import { MatchAsyncResult, bindRt } from "../lib";
+import { MatchAsyncResult, NoteCache, NoteSchema, bindRt } from "../lib";
 import { AudioMemoFiles } from "../lib/audio-memo/files";
 import { AudioMemoRecorder } from "../lib/audio-memo/recorder";
 import { AudioMemoRepo } from "../lib/audio-memo/repo";
@@ -16,6 +16,7 @@ import { DB } from "../lib/db.service";
 import { GraphWorkerClient } from "../lib/graph-worker.client";
 import { NoteFormat } from "../lib/note/format";
 import { PaneCursor } from "../lib/note/pane.cursor";
+import { PaneCtx } from "../lib/note/pane.ctx";
 import { PaneMake } from "../lib/note/pane.make";
 import { LoadingIcon, PauseIcon, PlayIcon, RetryIcon, StopIcon, XIcon } from "./icons";
 import { PaneEmptyState } from "./note/shared";
@@ -29,6 +30,45 @@ const route = getRouteApi("/$graph/");
 const recordingsAtom = bindRt((rt) =>
   rt.atom(AudioMemoRepo.listReactive({ state: ["pending", "error"] }, "desc")),
 );
+
+const completionAtom = bindRt((rt) => {
+  const recordings = recordingsAtom();
+
+  return rt
+    .atom((get) =>
+      get.streamResult(recordings).pipe(
+        Stream.zipWithPrevious,
+        // The initial snapshot is only a baseline. Watch rows leaving the list,
+        // outside their component scopes so unmounting can't cancel completion.
+        Stream.flatMap(([previous, current]) =>
+          Stream.fromIterable(
+            Array.differenceWith<AudioMemoRepo.Record>((a, b) => a.path === b.path)(
+              Option.getOrElse(previous, () => []),
+              current,
+            ),
+          ),
+        ),
+        Stream.flatMap((recording) =>
+          Stream.fromEffect(AudioMemoRepo.get(recording.path)).pipe(
+            Stream.filter((row) => row.state === "completed"),
+            // Completion is committed before materialization. Wait until the
+            // transcript exists so the notification's Open action can use it.
+            Stream.flatMap((row) =>
+              NoteCache.Service.use((cache) => cache.changes(row.noteId)).pipe(
+                Stream.unwrap,
+                Stream.filter(Option.isSome),
+                Stream.take(1),
+                Stream.map(() => NoteSchema.Id.make(row.noteId)),
+              ),
+            ),
+            // A manually removed recording has no row and no transcript to open.
+            Stream.catchTag("DB.NotFoundError", () => Stream.empty),
+          ),
+        ),
+      ),
+    )
+    .pipe(Atom.setIdleTTL(0));
+});
 
 const activePathAtom = bindRt((rt) =>
   rt.atom(
@@ -70,6 +110,14 @@ export function RecordingsLink() {
 
 export function RecordingList() {
   const recordings = useAtomValue(recordingsAtom);
+  const notifyReady = useNotifyReady();
+
+  // A subscription alone doesn't initialize an unread atom. Mount the watcher
+  // separately so subscribing doesn't replay its last completion notification.
+  useAtomMount(completionAtom);
+  useAtomSubscribe(completionAtom, (result) => {
+    if (AsyncResult.isSuccess(result)) notifyReady(result.value);
+  });
 
   return (
     <MatchAsyncResult
@@ -94,6 +142,28 @@ export function RecordingList() {
       }}
     />
   );
+}
+
+export function useNotifyReady(): (noteId: NoteSchema.Id) => void {
+  const ctx = PaneCtx.use();
+  const navigate = route.useNavigate();
+  const params = route.useParams();
+
+  return (noteId) => {
+    const link = {
+      ...PaneCtx.linkOptions(ctx, PaneCursor.openNext(PaneMake.note(noteId))),
+      params: params(),
+    };
+
+    toast.success("Audio memo ready", {
+      // The draft and recordings list can observe the same completion.
+      id: noteId,
+      action: {
+        label: "Open",
+        onClick: () => void navigate(link),
+      },
+    });
+  };
 }
 
 export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
