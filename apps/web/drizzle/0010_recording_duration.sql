@@ -1,1 +1,0 @@
-ALTER TABLE `recordings` ADD `durationMs` integer;

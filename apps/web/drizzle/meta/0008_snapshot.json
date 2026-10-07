@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "86c3a0c1-28e1-46d0-adba-aca4e846454f",
+  "id": "2d8d83be-8f4f-48e0-bf01-a3b5a3a43903",
   "prevId": "da9e8780-2f31-4638-9287-118735e6dbeb",
   "tables": {
     "backlinks": {
@@ -246,6 +246,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "durationMs": {
+          "name": "durationMs",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "state": {
           "name": "state",
           "type": "text",
@@ -257,7 +264,14 @@
           "name": "noteId",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "intent": {
+          "name": "intent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
           "autoincrement": false
         }
       },
