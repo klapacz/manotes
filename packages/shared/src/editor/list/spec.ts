@@ -38,6 +38,7 @@ export function defineAppListSpec(): Extension<{
       // Upstream defaults to `bullet`. We canonicalize plain lists as `toggle`
       // so expand/collapse is the built-in behavior for all non-task lists.
       kind: {
+        ...spec.attrs?.kind,
         default: "toggle",
         validate: Schema.decodeUnknownSync(ResolvedAppListAttrs.fields.kind),
       },
