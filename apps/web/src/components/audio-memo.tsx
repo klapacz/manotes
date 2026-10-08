@@ -182,7 +182,7 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
     const command = rt
       .fn(
         Effect.fn("ComponentsAudioMemo.command")(function* (
-          command: "stop" | "retry" | "cancel" | "remove",
+          command: "stop" | "retry" | "reload" | "cancel" | "remove",
           get: Atom.FnContext,
         ) {
           const { session } = yield* get.result(recording);
@@ -212,6 +212,8 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
     return EffectMatch.value(state()).pipe(
       EffectMatch.tag("StartFailed", () => "Could not start recording. Check microphone access."),
       EffectMatch.tag("SaveFailed", () => "Could not save recording."),
+      EffectMatch.tag("LoadFailed", () => "Could not load recording."),
+      EffectMatch.tag("RetryFailed", () => "Could not retry transcription."),
       EffectMatch.tag(
         "TranscriptionFailed",
         () => "Transcription failed. Check the OpenAI key and retry.",
@@ -230,7 +232,12 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
         "SaveFailed",
         () => "cancel" as const,
       ),
-      EffectMatch.tag("TranscriptionFailed", "RemoveFailed", () => "remove" as const),
+      EffectMatch.tag(
+        "TranscriptionFailed",
+        "RetryFailed",
+        "RemoveFailed",
+        () => "remove" as const,
+      ),
       EffectMatch.orElse(() => undefined),
     );
   });
@@ -240,7 +247,8 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
   const action = createMemo(() => {
     return EffectMatch.value(state()).pipe(
       EffectMatch.tag("Recording", () => "stop" as const),
-      EffectMatch.tag("TranscriptionFailed", "RemoveFailed", () => "retry" as const),
+      EffectMatch.tag("TranscriptionFailed", "RetryFailed", "RemoveFailed", () => "retry" as const),
+      EffectMatch.tag("LoadFailed", () => "reload" as const),
       EffectMatch.orElse(() => undefined),
     );
   });
@@ -297,7 +305,7 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
                 <Match when={action() === "stop"}>
                   <StopIcon class="size-4" />
                 </Match>
-                <Match when={action() === "retry"}>
+                <Match when={action() === "retry" || action() === "reload"}>
                   <RetryIcon class="size-4" />
                 </Match>
               </Switch>
@@ -538,10 +546,11 @@ function elapsedSeconds(state: AudioMemoSession.State) {
     EffectMatch.tag(
       "Pending",
       "Retrying",
+      "RetryFailed",
       "TranscriptionFailed",
       "Removing",
       "RemoveFailed",
-      (state) => Math.floor(state.recording.durationMs / 1000),
+      (state) => Math.floor((state.recording.durationMs ?? 0) / 1000),
     ),
     EffectMatch.orElse(() => 0),
   );
@@ -551,7 +560,8 @@ function buttonLabel(state: AudioMemoSession.State) {
   return EffectMatch.value(state).pipe(
     EffectMatch.tag("Recording", () => "Stop recording"),
     EffectMatch.tag("RemoveFailed", () => "Retry removing recording"),
-    EffectMatch.tag("TranscriptionFailed", () => "Retry transcription"),
+    EffectMatch.tag("TranscriptionFailed", "RetryFailed", () => "Retry transcription"),
+    EffectMatch.tag("LoadFailed", () => "Retry loading recording"),
     EffectMatch.orElse(() => "Processing recording"),
   );
 }

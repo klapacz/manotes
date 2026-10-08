@@ -34,17 +34,35 @@ export type Capture = {
   recording: RecordingMetadata;
 };
 
+type LocalState = Data.TaggedEnum<{
+  Starting: {};
+  StartFailed: {};
+  Recording: { recorder: AudioMemoRecorder.Handle; elapsedSeconds: number };
+  Saving: { capture: Capture };
+  SaveFailed: { capture: Capture };
+  Saved: { path: string };
+  Retrying: { path: string };
+  RetryFailed: { path: string };
+  Removing: { path: string };
+  RemoveFailed: { path: string };
+  Closed: {};
+}>;
+
+const LocalState = Data.taggedEnum<LocalState>();
+
 export type State = Data.TaggedEnum<{
   Starting: {};
   StartFailed: {};
   Recording: { recorder: AudioMemoRecorder.Handle; elapsedSeconds: number };
   Saving: { capture: Capture };
   SaveFailed: { capture: Capture };
-  Pending: { recording: RecordingMetadata };
-  Retrying: { recording: RecordingMetadata };
-  TranscriptionFailed: { recording: RecordingMetadata };
-  Removing: { recording: RecordingMetadata };
-  RemoveFailed: { recording: RecordingMetadata };
+  Pending: { recording: AudioMemoRepo.Record };
+  Retrying: { recording: AudioMemoRepo.Record };
+  RetryFailed: { recording: AudioMemoRepo.Record };
+  TranscriptionFailed: { recording: AudioMemoRepo.Record };
+  Removing: { recording: AudioMemoRepo.Record };
+  RemoveFailed: { recording: AudioMemoRepo.Record };
+  LoadFailed: { path: string };
   Closed: {};
 }>;
 
@@ -61,60 +79,49 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
 ) {
   const services = yield* Effect.context<DB.Service | GraphWorkerClient.Service | Scope.Scope>();
   const { localGraphId } = yield* DB.Config;
-  const ref = yield* SubscriptionRef.make<State>(State.Starting());
+  const ref = yield* SubscriptionRef.make<LocalState>(LocalState.Starting());
+  const queryRefresh = yield* SubscriptionRef.make(0);
   // Keep the waveform until the row unmounts. Register its scope first so
   // the later stop-and-save finalizer finishes before the recorder is released.
   const recorderScope = yield* Scope.fork(yield* Effect.scope);
   const handle = yield* FiberHandle.make<void, never>();
 
-  // A session saves only one recording. Wait for that save, then keep watching
-  // its row across retries and removals from either pane. The pane's existing
-  // completion watcher handles the actual record arriving and clearing the draft.
-  yield* SubscriptionRef.changes(ref).pipe(
-    Stream.filterMap(
-      Match.type<State>().pipe(
-        Match.tag("Pending", ({ recording }) => Result.succeed(recording)),
-        Match.orElse(() => Result.failVoid),
-      ),
-    ),
-    Stream.take(1),
-    Stream.switchMap((recording) => {
-      const update = (row?: AudioMemoRepo.Record) => {
-        if (row?.state === "completed") return Effect.void;
+  const changes = SubscriptionRef.changes(ref).pipe(
+    Stream.zipLatestWith(SubscriptionRef.changes(queryRefresh), (local) => local),
+    Stream.switchMap(
+      Match.type<LocalState>().pipe(
+        Match.tag("Saved", "Retrying", "RetryFailed", "Removing", "RemoveFailed", (local) => {
+          return AudioMemoRepo.listReactive({ path: local.path }, "asc").pipe(
+            Stream.map((rows): State => {
+              const recording = rows[0];
 
-        return SubscriptionRef.update(
-          ref,
-          Match.type<State>().pipe(
-            Match.tag("Pending", "TranscriptionFailed", ({ recording }) => {
-              if (!row) return State.Closed();
+              if (!recording) return State.Closed();
 
-              if (row.state === "error") return State.TranscriptionFailed({ recording });
+              // Completion precedes materialization. The pane's existing record
+              // watcher replaces or clears the draft when its transcript exists.
+              if (recording.state === "completed") return State.Pending({ recording });
 
-              return State.Pending({ recording });
+              return Match.value(local).pipe(
+                Match.tagsExhaustive({
+                  Saved: () => {
+                    return recording.state === "error"
+                      ? State.TranscriptionFailed({ recording })
+                      : State.Pending({ recording });
+                  },
+                  Retrying: () => State.Retrying({ recording }),
+                  RetryFailed: () => State.RetryFailed({ recording }),
+                  Removing: () => State.Removing({ recording }),
+                  RemoveFailed: () => State.RemoveFailed({ recording }),
+                }),
+              );
             }),
-            Match.tag("RemoveFailed", (state) => (row ? state : State.Closed())),
-            Match.orElse((state) => state),
-          ),
-        );
-      };
-
-      return AudioMemoRepo.listReactive({ path: recording.path }, "asc").pipe(
-        Stream.mapEffect((rows) => update(rows[0])),
-        Stream.catch(() => {
-          return Stream.fromEffect(
-            SubscriptionRef.update(
-              ref,
-              Match.type<State>().pipe(
-                Match.tag("Pending", ({ recording }) => State.TranscriptionFailed({ recording })),
-                Match.orElse((state) => state),
-              ),
-            ),
+            Stream.catch(() => Stream.succeed(State.LoadFailed({ path: local.path }))),
           );
         }),
-      );
-    }),
-    Stream.runDrain,
-    Effect.forkScoped,
+        Match.orElse((local) => Stream.succeed<State>(local)),
+      ),
+    ),
+    Stream.provideContext(services),
   );
 
   const record = Effect.fn("AudioMemoSession.record")(
@@ -144,8 +151,10 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
 
       const started = yield* SubscriptionRef.modify(
         ref,
-        Match.type<State>().pipe(
-          Match.tag("Starting", () => Step.go(State.Recording({ recorder, elapsedSeconds: 0 }))),
+        Match.type<LocalState>().pipe(
+          Match.tag("Starting", () => {
+            return Step.go(LocalState.Recording({ recorder, elapsedSeconds: 0 }));
+          }),
           Match.orElse(Step.stay),
         ),
       );
@@ -159,9 +168,9 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
               Progress: ({ elapsedSeconds }) => {
                 return SubscriptionRef.update(
                   ref,
-                  Match.type<State>().pipe(
+                  Match.type<LocalState>().pipe(
                     Match.tag("Recording", ({ recorder }) => {
-                      return State.Recording({ recorder, elapsedSeconds });
+                      return LocalState.Recording({ recorder, elapsedSeconds });
                     }),
                     Match.orElse((state) => state),
                   ),
@@ -182,8 +191,8 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
         // Claim Saving before writing, so Cancel cannot discard a capture being saved.
         const saving = yield* SubscriptionRef.modify(
           ref,
-          Match.type<State>().pipe(
-            Match.tag("Recording", () => Step.go(State.Saving({ capture }))),
+          Match.type<LocalState>().pipe(
+            Match.tag("Recording", () => Step.go(LocalState.Saving({ capture }))),
             Match.orElse(Step.stay),
           ),
         );
@@ -196,9 +205,9 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
           recordId: draft.id,
           intent: draft.intent,
         });
-        yield* SubscriptionRef.set(ref, State.Pending({ recording: capture.recording }));
+        yield* SubscriptionRef.set(ref, LocalState.Saved({ path: capture.recording.path }));
       }).pipe(
-        Effect.catch(() => SubscriptionRef.set(ref, State.SaveFailed({ capture }))),
+        Effect.catch(() => SubscriptionRef.set(ref, LocalState.SaveFailed({ capture }))),
         // Finish writing both the file and intent if the row unmounts after Stop.
         Effect.uninterruptible,
       );
@@ -208,8 +217,8 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
         Effect.catch(() => {
           return SubscriptionRef.update(
             ref,
-            Match.type<State>().pipe(
-              Match.tag("Starting", () => State.StartFailed()),
+            Match.type<LocalState>().pipe(
+              Match.tag("Starting", () => LocalState.StartFailed()),
               Match.orElse((state) => state),
             ),
           );
@@ -231,9 +240,9 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
   const cancel = Effect.fn("AudioMemoSession.cancel")(function* () {
     const closed = yield* SubscriptionRef.modify(
       ref,
-      Match.type<State>().pipe(
+      Match.type<LocalState>().pipe(
         Match.tag("Starting", "StartFailed", "Recording", "SaveFailed", () => {
-          return Step.go(State.Closed());
+          return Step.go(LocalState.Closed());
         }),
         Match.orElse(Step.stay),
       ),
@@ -248,19 +257,31 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
   const remove = Effect.fn("AudioMemoSession.remove")(function* () {
     const state = yield* SubscriptionRef.get(ref);
 
-    const recording = Match.value(state).pipe(
-      Match.tag("TranscriptionFailed", "RemoveFailed", ({ recording }) => recording),
+    const local = Match.value(state).pipe(
+      Match.tag("Saved", "RetryFailed", "RemoveFailed", (local) => local),
       Match.orElse(() => undefined),
     );
 
-    if (!recording) return;
+    if (!local) return;
 
-    yield* SubscriptionRef.set(ref, State.Removing({ recording }));
     yield* Effect.gen(function* () {
+      const recording = yield* AudioMemoRepo.get(local.path);
+
+      if (recording.state === "completed") return;
+
+      // We continue with removal when transcription has failed or a previous removal attempt needs retrying.
+      if (recording.state !== "error" && !LocalState.$is("RemoveFailed")(local)) return;
+
+      yield* SubscriptionRef.set(ref, LocalState.Removing({ path: local.path }));
       const { client } = yield* GraphWorkerClient.Service;
-      yield* client.removeAudioMemo({ path: recording.path });
-      yield* SubscriptionRef.set(ref, State.Closed());
-    }).pipe(Effect.catch(() => SubscriptionRef.set(ref, State.RemoveFailed({ recording }))));
+      yield* client.removeAudioMemo({ path: local.path });
+      yield* SubscriptionRef.set(ref, LocalState.Closed());
+    }).pipe(
+      Effect.catchTag("DB.NotFoundError", () => SubscriptionRef.set(ref, LocalState.Closed())),
+      Effect.catch(() => SubscriptionRef.set(ref, LocalState.RemoveFailed({ path: local.path }))),
+      // Deleting the row can unmount it before the worker call returns.
+      Effect.uninterruptible,
+    );
   });
 
   const retry = Effect.fn("AudioMemoSession.retry")(function* () {
@@ -268,13 +289,18 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
 
     return yield* Match.value(state).pipe(
       Match.tag("RemoveFailed", () => remove()),
-      Match.tag("TranscriptionFailed", ({ recording }) => {
+      Match.tag("Saved", "RetryFailed", ({ path }) => {
         return Effect.gen(function* () {
-          yield* SubscriptionRef.set(ref, State.Retrying({ recording }));
-          yield* AudioMemoService.retry(recording.path);
-          yield* SubscriptionRef.set(ref, State.Pending({ recording }));
+          const recording = yield* AudioMemoRepo.get(path);
+
+          if (recording.state !== "error") return;
+
+          yield* SubscriptionRef.set(ref, LocalState.Retrying({ path }));
+          yield* AudioMemoService.retry(path);
+          yield* SubscriptionRef.set(ref, LocalState.Saved({ path }));
         }).pipe(
-          Effect.catch(() => SubscriptionRef.set(ref, State.TranscriptionFailed({ recording }))),
+          Effect.catchTag("DB.NotFoundError", () => SubscriptionRef.set(ref, LocalState.Closed())),
+          Effect.catch(() => SubscriptionRef.set(ref, LocalState.RetryFailed({ path }))),
         );
       }),
       Match.orElse(() => Effect.void),
@@ -307,9 +333,10 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
   });
 
   return {
-    changes: SubscriptionRef.changes(ref),
+    changes,
     stop: stop(),
     cancel: cancel(),
+    reload: run(SubscriptionRef.update(queryRefresh, (version) => version + 1)),
     retry: run(retry()),
     remove: run(remove()),
   };
@@ -323,8 +350,8 @@ type RecorderEvent = Data.TaggedEnum<{
 const RecorderEvent = Data.taggedEnum<RecorderEvent>();
 
 const Step = {
-  stay: (state: State) => [false, state] as const,
-  go: (state: State) => [true, state] as const,
+  stay: (state: LocalState) => [false, state] as const,
+  go: (state: LocalState) => [true, state] as const,
 };
 
 export * as AudioMemoSession from "./session";
