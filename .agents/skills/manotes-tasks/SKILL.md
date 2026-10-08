@@ -36,6 +36,11 @@ tasks task:ABCD
 - Before working on a task, append `Session: <id>, cwd: <absolute path>` to its body via `tasks -- manotes execute` and `api.editNote`. Use `pwd` in the working checkout, not the task notebook.
 - Get your OMP PID with `ps -o pid,ppid,comm -p $$`, following PPIDs if needed. Run `lsof -p <omp-pid> -Fn`, read the open `sessions/...jsonl` file's `type: "session"` header, and use its `id`.
 
+## Complete tasks
+
+- Keep tasks in `state:in-progress` while awaiting user review, even after implementation and verification pass.
+- Mark a task `state:done` only after the user has reviewed and approved the result and explicitly says the task is done. Approval to implement or run checks is not approval to mark it done.
+
 ## Create and update tasks
 
 Use `tasks -- manotes execute` for scripts.
