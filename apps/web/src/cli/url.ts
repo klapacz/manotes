@@ -34,7 +34,7 @@ export const open = Effect.fn("CliUrl.open")(
     const child = yield* ChildProcess.make(command, [url], {
       stdin: "ignore",
       stdout: "ignore",
-      stderr: "inherit",
+      stderr: "ignore",
     });
 
     const exitCode = yield* child.exitCode;
@@ -45,7 +45,13 @@ export const open = Effect.fn("CliUrl.open")(
       new Error(`${command} exited with code ${exitCode}. Open the printed URL manually.`),
     );
   },
-  Effect.mapError((cause) => new CliError.UserError({ cause })),
+  Effect.mapError(
+    (cause) =>
+      new CliError.UserError({
+        cause,
+        userMessage: "Could not open the browser. Open the printed URL manually.",
+      }),
+  ),
 );
 
 export * as CliUrl from "./url";

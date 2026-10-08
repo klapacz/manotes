@@ -26,6 +26,62 @@ const CLI_ENTRY = fileURLToPath(new URL("./cli.ts", import.meta.url));
 const NOTE_ID = "workflow-note";
 
 describe("CLI local workflow", () => {
+  it.each(["missing", "nonzero", "success", "print-only"])(
+    "handles URL opening with %s opener",
+    { timeout: 30_000 },
+    async (mode) => {
+      const workspace = await mkdtemp(path.join(tmpdir(), "manotes-cli-url-"));
+
+      try {
+        const manotesDir = path.join(workspace, ".manotes");
+        const binDir = path.join(workspace, "bin");
+        await mkdir(manotesDir);
+        await mkdir(binDir);
+        await writeFile(
+          path.join(manotesDir, "config"),
+          JSON.stringify({
+            origin: "https://example.com",
+            token: "secret-token",
+            graphId: "test-graph",
+            graphKey: Buffer.alloc(32).toString("base64"),
+          }),
+        );
+
+        if (mode === "nonzero" || mode === "success") {
+          await writeFile(
+            path.join(binDir, process.platform === "darwin" ? "open" : "xdg-open"),
+            `#!/bin/sh\necho secret-opener-diagnostic >&2\nexit ${mode === "success" ? 0 : 7}\n`,
+            { mode: 0o755 },
+          );
+        }
+
+        const result = await runCli(
+          workspace,
+          ["url", ...(mode === "print-only" ? [] : ["--open"])],
+          undefined,
+          { ...process.env, PATH: binDir, NODE_NO_WARNINGS: "1" },
+        );
+
+        expect(result.stdout).toBe("https://example.com/open/test-graph\n");
+
+        if (mode === "success" || mode === "print-only") {
+          expect(result.code).toBe(0);
+          expect(result.stderr).toBe("");
+        } else {
+          expect(result.code).not.toBe(0);
+          expect(
+            result.stderr
+              .trim()
+              .split("\n")
+              .map((line) => line.trim()),
+          ).toEqual(["ERROR", "Could not open the browser. Open the printed URL manually."]);
+        }
+      } finally {
+        await rm(workspace, { recursive: true, force: true });
+      }
+    },
+  );
+
   it.each(["note.md", ".hidden"])(
     "rejects init in a directory containing %s before contacting the server",
     { timeout: 30_000 },
@@ -317,13 +373,18 @@ type CliResult = {
   readonly stderr: string;
 };
 
-function runCli(workspace: string, args: readonly string[], input?: string): Promise<CliResult> {
+function runCli(
+  workspace: string,
+  args: readonly string[],
+  input?: string,
+  env = process.env,
+): Promise<CliResult> {
   const { promise, resolve, reject } = Promise.withResolvers<CliResult>();
 
   const child = spawn(
     process.execPath,
     ["--import", "tsx", CLI_ENTRY, "--dir", workspace, ...args],
-    { cwd: APP_DIR, timeout: 20_000 },
+    { cwd: APP_DIR, timeout: 20_000, env },
   );
 
   let stdout = "";
