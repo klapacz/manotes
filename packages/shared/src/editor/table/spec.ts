@@ -5,8 +5,6 @@ import {
   defineTableRowSpec,
   defineTableCellSpec,
   defineTableHeaderCellSpec,
-  defineTableEditingPlugin,
-  defineTableDropIndicator,
   insertTable,
   exitTable,
   selectTable,
@@ -22,8 +20,14 @@ import {
   deleteTableRow,
   deleteCellSelection,
 } from "prosekit/extensions/table";
-import type { Node } from "prosekit/pm/model";
-import { Plugin, type Command, type Transaction } from "prosekit/pm/state";
+import { Fragment, type Node } from "prosekit/pm/model";
+import {
+  Plugin,
+  Selection,
+  type Command,
+  type EditorState,
+  type Transaction,
+} from "prosekit/pm/state";
 
 const TableCellAttrs = Schema.Struct({
   align: Schema.NullOr(Schema.Literals(["left", "center", "right"])),
@@ -55,11 +59,9 @@ export function defineAppTableSpec() {
   );
 }
 
-/** Keep ordinary table editing; merging and resizing have no Markdown representation. */
+/** Markdown-compatible table commands and document validation. */
 export function defineAppTableExtension() {
   return union(
-    defineTableEditingPlugin(),
-    defineTableDropIndicator(),
     defineCommands({
       insertTable: (options: { row: number; col: number }) =>
         insertTable({ ...options, header: true }),
@@ -149,30 +151,47 @@ function markdownTableCommand(command: Command): Command {
       state,
       dispatch &&
         ((tr) => {
-          normalizeTableRows(tr);
+          normalizeTableRows(tr, state);
           dispatch(tr);
         }),
       view,
     );
 }
 
-function normalizeTableRows(tr: Transaction): void {
+function normalizeTableRows(tr: Transaction, state: EditorState): void {
+  const selection = tr.selection.toJSON();
   tr.doc.descendants((table, tablePos) => {
     if (table.type.name !== "table") return;
-    const header = table.firstChild;
+    const previous = state.doc.nodeAt(tr.mapping.invert().map(tablePos, -1));
+
+    // Row changes retain the previous header's alignment, including a new first row.
+    const header =
+      previous?.type.name === "table" &&
+      previous.firstChild?.childCount === table.firstChild?.childCount
+        ? previous.firstChild
+        : table.firstChild;
 
     if (!header) return false;
     table.forEach((row, rowOffset, rowIndex) => {
-      row.forEach((cell, cellOffset, column) => {
+      const cells: Node[] = [];
+      row.forEach((cell, _, column) => {
         const type = tr.doc.type.schema.nodes[rowIndex === 0 ? "tableHeaderCell" : "tableCell"];
         const align = decodeTableCellAttrs(header.child(column).attrs).align;
-
-        if (type && (cell.type !== type || cell.attrs.align !== align)) {
-          tr.setNodeMarkup(tablePos + rowOffset + cellOffset + 2, type, { ...cell.attrs, align });
-        }
+        cells.push(type ? type.create({ ...cell.attrs, align }, cell.content, cell.marks) : cell);
       });
+      const normalized = row.copy(Fragment.fromArray(cells));
+
+      // Changing one cell at a time would temporarily mix header and body cells.
+      if (!row.eq(normalized))
+        tr.replaceWith(
+          tablePos + rowOffset + 1,
+          tablePos + rowOffset + 1 + row.nodeSize,
+          normalized,
+        );
     });
 
     return false;
   });
+  // Normalization keeps node sizes, so preserve the command's selection positions.
+  tr.setSelection(Selection.fromJSON(tr.doc, selection));
 }

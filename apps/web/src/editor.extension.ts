@@ -11,7 +11,7 @@ import { defineStreamRefCommands } from "@manotes/shared/editor/stream-ref/spec"
 import { defineStreamRefRuntime } from "./lib/editor/stream-ref/extension";
 import { defineAppListExtension } from "./lib/editor/list/extension";
 import { EditorLink } from "./lib/editor/link/extension";
-import { defineAppTableExtension } from "@manotes/shared/editor/table/spec";
+import { defineTableExtension } from "./lib/editor/table/extension";
 import { defineAppSchema } from "@manotes/shared/editor.schema";
 
 /**
@@ -28,7 +28,7 @@ export function defineAppExtension() {
     defineStreamRefCommands(),
     // Keymaps & plugins
     defineAppListExtension(),
-    defineAppTableExtension(),
+    defineTableExtension(),
     defineBaseKeymap(),
     defineGapCursor(),
     defineVirtualSelection(),

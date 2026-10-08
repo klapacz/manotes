@@ -375,6 +375,38 @@ describe("app Markdown conversion", () => {
     ).toBe(true);
   });
 
+  it.each([
+    "addTableRowAbove",
+    "addTableRowBelow",
+    "addTableColumnBefore",
+    "addTableColumnAfter",
+    "deleteTableRow",
+    "deleteTableColumn",
+  ] as const)("keeps a Markdown-compatible table after %s", (command) => {
+    const editor = createEditor({
+      extension: union(defineAppSchema(), defineAppTableExtension()),
+      defaultContent: MdParse.parse("| A | B |\n| :---: | ---: |\n| one | two |").toJSON(),
+    });
+
+    editor.commands.selectTableCell({ pos: 4 });
+    expect(editor.commands[command]()).toBe(true);
+    expect(editor.state.doc.firstChild!.type.name).toBe("table");
+    expect(() => editor.state.doc.check()).not.toThrow();
+
+    if (
+      command === "addTableRowAbove" ||
+      command === "addTableRowBelow" ||
+      command === "deleteTableRow"
+    ) {
+      expect(editor.state.doc.firstChild!.firstChild!.child(0).attrs.align).toBe("center");
+      expect(editor.state.doc.firstChild!.firstChild!.child(1).attrs.align).toBe("right");
+    }
+
+    expect(
+      MdParse.parse(MdSerialize.serialize(editor.state.doc), editor.schema).eq(editor.state.doc),
+    ).toBe(true);
+  });
+
   it("preserves column alignment when adding rows and columns", () => {
     const doc = MdParse.parse("| A | B |\n| :---: | ---: |\n| one | two |");
 

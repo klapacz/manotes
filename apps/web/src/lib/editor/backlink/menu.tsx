@@ -1,4 +1,4 @@
-import { Effect, flow, Stream, Array, Struct, Match } from "effect";
+import { Effect, flow, Stream, Array, Struct } from "effect";
 import { useEditor } from "prosekit/solid";
 import {
   AutocompleteEmpty,
@@ -7,7 +7,7 @@ import {
   AutocompletePositioner,
   AutocompleteRoot,
 } from "prosekit/solid/autocomplete";
-import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { For, Show, createMemo, createSignal } from "solid-js";
 import {
   commandEmptyClass,
   commandItemBaseClass,
@@ -17,6 +17,7 @@ import {
 import { NoteCreate } from "../../../components/note/note-create";
 import { NoteRepo, bindRt, createAtomState, createAtomStore, createSyncedAtom } from "../..";
 import { cx } from "../../cva";
+import { useArrowKeyAliases } from "../autocomplete";
 import { NoteFormat } from "../../note";
 import type { AppExtension } from "../../../editor.extension";
 import * as BrowserExtensionClient from "../../browser-extension/client";
@@ -314,34 +315,6 @@ function createBacklinkInsertion(editor: AppEditor) {
   // Autocomplete emits valueChange and also runs its internal submit handler.
   // Deferring insertion avoids the submit deletion step removing the node.
   return (id: string) => queueMicrotask(() => insertBacklink(id));
-}
-
-// The listbox navigates on ArrowDown/ArrowUp keydown events forwarded through
-// ProseMirror. Alias Ctrl-N / Ctrl-P to those keys while the popover is open.
-function useArrowKeyAliases(editor: AppEditor, isOpen: () => boolean) {
-  onMount(() => {
-    const dom = editor().view.dom;
-
-    const handler = (event: KeyboardEvent) => {
-      if (!isOpen() || !event.ctrlKey || event.metaKey || event.altKey) return;
-      const key = event.key.toLowerCase();
-
-      const aliased = Match.value(key).pipe(
-        Match.when("n", () => "ArrowDown"),
-        Match.when("p", () => "ArrowUp"),
-        Match.orElse(() => null),
-      );
-
-      if (!aliased) return;
-      event.preventDefault();
-      dom.dispatchEvent(
-        new KeyboardEvent("keydown", { key: aliased, bubbles: true, cancelable: true }),
-      );
-    };
-
-    dom.addEventListener("keydown", handler, { capture: true });
-    onCleanup(() => dom.removeEventListener("keydown", handler, { capture: true }));
-  });
 }
 
 // The default builder lowercases and strips punctuation; keep what was typed.

@@ -24,6 +24,8 @@ import type { NoteSchema } from "@manotes/shared/note.schema";
 import { EditorFocus } from "./lib/editor/focus.extension";
 import { createLinkEdit, LinkMenu } from "./lib/editor/link/menu";
 import { MobileToolbar } from "./lib/editor/mobile-toolbar";
+import { SlashMenu } from "./lib/editor/slash-menu";
+import { TableControls } from "./lib/editor/table/controls";
 import { defineSearchHighlight, setSearchHighlight } from "./lib/editor/search-highlight.extension";
 
 export type BootState = Data.TaggedEnum<{
@@ -210,6 +212,8 @@ export default function Editor(props: Props): JSX.Element {
               <BacklinkMenu currentNoteId={props.noteId} />
               <TabMenu />
               <StreamRefMenu />
+              <SlashMenu />
+              <TableControls />
               <LinkMenu edit={linkEdit} />
               {/* Leaving to the note, like Escape, drops the keyboard; a plain blur gets refocused. */}
               <MobileToolbar linkEdit={linkEdit} onDismiss={() => focus.requestParent()} />
