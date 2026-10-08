@@ -2,15 +2,12 @@ import { useAtom } from "@effect/atom-solid";
 import { DateTime, Effect } from "effect";
 import { nanoid } from "nanoid";
 import { toast } from "somoto";
-import * as Y from "yjs";
 import { MaterializedEventService, NoteSchema, bindRt } from "../../lib";
 import type { PaneSchema } from "../../lib/note/pane.schema";
 import type { UnknownNodeJSON } from "../../lib/node-json";
 import type { Hotkey } from "@tanstack/hotkeys";
 import { ProsemirrorEncode } from "../../lib/prosemirror/encode";
 import type { EditorPool } from "./editor-pool";
-
-const EMPTY_YJS_UPDATE = Y.encodeStateAsUpdate(new Y.Doc());
 
 export type CreateInput = {
   date?: string;
@@ -27,7 +24,7 @@ const CreateNote = bindRt((rt) =>
 
       const note = yield* service.create({
         noteId: nanoid(),
-        payload: input.payload ?? EMPTY_YJS_UPDATE,
+        payload: input.payload ?? ProsemirrorEncode.encodeDocument([{ type: "paragraph" }]),
         createdAt: yield* DateTime.now,
         date: input.date,
       });
@@ -87,7 +84,7 @@ export function prefilledPayload(pane: PaneSchema.PaneStream): Uint8Array<ArrayB
     });
   }
 
-  if (content.length === 0) return EMPTY_YJS_UPDATE;
+  if (content.length === 0) content.push({ type: "paragraph" });
 
   return ProsemirrorEncode.encodeDocument(content);
 }
