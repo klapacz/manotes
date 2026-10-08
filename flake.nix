@@ -2,9 +2,13 @@
   description = "Manotes CLI and development shell";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.nix-vite-plus = {
+    url = "github:ryoppippi/nix-vite-plus";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
 
   outputs =
-    { self, nixpkgs }:
+    { self, nixpkgs, nix-vite-plus }:
     let
       systems = [
         "x86_64-linux"
@@ -54,6 +58,7 @@
               pnpm
               bun
               jq
+              nix-vite-plus.packages.${pkgs.stdenv.hostPlatform.system}.vp
               # Use the installed zk fork rather than overriding it with nixpkgs' zk.
               (writeShellScriptBin "tasks" (builtins.readFile ./scripts/tasks))
             ];
