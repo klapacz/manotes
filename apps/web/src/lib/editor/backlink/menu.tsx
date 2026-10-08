@@ -27,7 +27,7 @@ import { useAtom } from "@effect/atom-solid";
 import { PaneCtx } from "../../note/pane.ctx";
 import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { createNoteLabel, createStreamRefLabel } from "../stream-ref/extension";
-import { decodeStreamRefAttrs } from "@manotes/shared/editor/stream-ref/spec";
+import type { StreamRefAttrs } from "@manotes/shared/editor/stream-ref/spec";
 
 const BACKLINK_REGEX = /\[\[([^\]\n]*)$/u;
 
@@ -233,7 +233,11 @@ export function StreamRefMenu() {
     }
 
     // Capture the settings now; later edits to the source pane do not change the ref.
-    const attrs = decodeStreamRefAttrs(pane);
+    const attrs: StreamRefAttrs = {
+      filter: { ...pane.filter },
+      sort: pane.sort,
+      view: pane.view,
+    };
 
     queueMicrotask(() => {
       editor().view.focus();

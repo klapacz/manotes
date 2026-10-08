@@ -47,8 +47,7 @@ export function defineStreamRefSpec() {
 
 export function defineStreamRefCommands() {
   return defineCommands({
-    insertStreamRef: (attrs: StreamRefAttrs) =>
-      insertNode({ type: "streamRef", attrs: decodeStreamRefAttrs(attrs) }),
+    insertStreamRef: (attrs: StreamRefAttrs) => insertNode({ type: "streamRef", attrs }),
   });
 }
 
