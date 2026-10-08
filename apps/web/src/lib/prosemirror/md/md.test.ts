@@ -9,6 +9,40 @@ import { MdSerialize } from "./serialize";
 import { decodeStreamRefAttrs, streamRefLabel } from "../../editor/stream-ref/spec";
 
 describe("app Markdown conversion", () => {
+  it.each(["list", "blockquote"])("keeps code fences inside %s containers", (container) => {
+    const paragraph = (text: string) => NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text(text));
+
+    const code = NOTE_SCHEMA.node(
+      "codeBlock",
+      { language: "ts" },
+      NOTE_SCHEMA.text("const n = 1;"),
+    );
+
+    const content = [
+      ...(container === "list" ? [paragraph("parent")] : []),
+      NOTE_SCHEMA.node(container, null, [code]),
+      NOTE_SCHEMA.node("list", null, [
+        NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.node("backlink", { id: "after-code" })),
+      ]),
+    ];
+
+    const doc = NOTE_SCHEMA.node("doc", null, [NOTE_SCHEMA.node(container, null, content)]);
+
+    expect(MdParse.parse(MdSerialize.serialize(doc)).eq(doc)).toBe(true);
+  });
+
+  it.each([" ", "\t", " \t\n"])("preserves whitespace-only paragraphs: %j", (text) => {
+    const paragraph = NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text(text));
+
+    const doc = NOTE_SCHEMA.node("doc", null, [
+      paragraph,
+      NOTE_SCHEMA.node("list", null, [paragraph]),
+      NOTE_SCHEMA.node("blockquote", null, [paragraph]),
+    ]);
+
+    expect(MdParse.parse(MdSerialize.serialize(doc)).eq(doc)).toBe(true);
+  });
+
   it.each([
     dedent`
       - first

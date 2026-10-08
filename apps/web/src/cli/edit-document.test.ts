@@ -225,4 +225,15 @@ describe("EditDocument.apply", () => {
     expect(edited.child(2).eq(MdParse.parse("**filled**").child(0))).toBe(true);
     expect(edited.child(3)).toBe(doc.child(3));
   });
+  it("keeps nested code and following backlinks when replacing a parent item", () => {
+    const doc = MdParse.parse(
+      "- parent\n\n  - ```ts\n    const n = 1;\n    ```\n\n  - [after](./after.md)",
+    );
+
+    const edited = EditDocument.apply(doc, [{ kind: "replace", text: "parent", with: "changed" }]);
+    const expected = doc.toJSON();
+    expected.content[0].content[0].content[0].text = "changed";
+
+    expect(edited.toJSON()).toEqual(expected);
+  });
 });

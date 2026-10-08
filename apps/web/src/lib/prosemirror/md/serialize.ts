@@ -68,6 +68,18 @@ function createSerializer(options: Options): MarkdownSerializer {
         if (node.content.size === 0) {
           state.write("<!-- manotes:empty-paragraph -->");
           state.closeBlock(node);
+        } else if (
+          node.childCount === 1 &&
+          node.firstChild?.isText &&
+          node.firstChild.marks.length === 0 &&
+          /^\s+$/.test(node.textContent)
+        ) {
+          // Blank source lines disappear during parsing; entities retain literal whitespace.
+          state.text(
+            Array.from(node.textContent, (char) => `&#${char.codePointAt(0)};`).join(""),
+            false,
+          );
+          state.closeBlock(node);
         } else {
           state.renderInline(node);
           state.closeBlock(node);
@@ -91,7 +103,8 @@ function createSerializer(options: Options): MarkdownSerializer {
         const fence = "`".repeat(Math.max(3, ...runs.map((run) => run.length + 1)));
         state.write(`${fence}${language}\n`);
         state.text(node.textContent, false);
-        state.write(`\n${fence}`);
+        state.write("\n");
+        state.write(fence);
         state.closeBlock(node);
       },
       table(state, node) {
