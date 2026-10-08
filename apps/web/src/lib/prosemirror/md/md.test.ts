@@ -1,4 +1,7 @@
 import dedent from "dedent";
+import { createEditor, union } from "prosekit/core";
+import { defineAppSchema } from "../../../editor.schema";
+import { defineAppTableExtension } from "../../editor/table/spec";
 import { describe, expect, it } from "vite-plus/test";
 import { NOTE_SCHEMA } from "../app-schema";
 import { MdParse } from "./parse";
@@ -131,7 +134,7 @@ describe("app Markdown conversion", () => {
 
     expect(attrs).not.toHaveProperty("paneId");
     expect(attrs).not.toHaveProperty("href");
-    expect(MdParse.parse(markdown).eq(doc)).toBe(true);
+    expect(MdParse.parse(markdown).toJSON()).toEqual(doc.toJSON());
     expect(markdown).toContain("stream:");
     expect(streamRefLabel({ filter: { type: "pages" }, sort: "updated", view: "full" })).toBe(
       "Pages",
@@ -216,20 +219,196 @@ describe("app Markdown conversion", () => {
     });
   });
 
-  it("rejects unsupported tables and marks instead of dropping content", () => {
+  it("preserves leading, trailing, consecutive, and nested empty paragraphs", () => {
+    const empty = NOTE_SCHEMA.node("paragraph");
+    const text = NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("text"));
+
+    const doc = NOTE_SCHEMA.node("doc", null, [
+      empty,
+      empty,
+      text,
+      empty,
+      empty,
+      NOTE_SCHEMA.node("blockquote", null, [empty, text, empty]),
+      NOTE_SCHEMA.node("list", { kind: "toggle" }, [empty, text, empty]),
+      NOTE_SCHEMA.node("list", { kind: "task", checked: true }, [empty, text, empty]),
+      NOTE_SCHEMA.node("list", { kind: "ordered", order: 1 }, [empty, text, empty]),
+      empty,
+    ]);
+
+    const { markdown, blocks } = MdSerialize.withBlockSpans(doc);
+    expect(markdown).toContain("<!-- manotes:empty-paragraph -->");
+    expect(MdParse.parse(markdown).toJSON()).toEqual(doc.toJSON());
+    blocks.forEach((block, index) => {
+      expect(
+        MdParse.parse(markdown.slice(block.mdFrom, block.mdTo)).firstChild!.eq(doc.child(index)),
+      ).toBe(true);
+    });
+    expect(
+      MdParse.parse(MdSerialize.serialize(NOTE_SCHEMA.node("doc", null, [empty, empty])))
+        .childCount,
+    ).toBe(2);
+  });
+
+  it("keeps the reserved marker literal in text, code, and table cells", () => {
+    const marker = "<!-- manotes:empty-paragraph -->";
+    const paragraph = NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text(marker));
+    const code = NOTE_SCHEMA.node("codeBlock", null, NOTE_SCHEMA.text(marker));
+    const cell = (type: string) => NOTE_SCHEMA.node(type, null, paragraph);
+
+    const table = NOTE_SCHEMA.node("table", null, [
+      NOTE_SCHEMA.node("tableRow", null, cell("tableHeaderCell")),
+      NOTE_SCHEMA.node("tableRow", null, cell("tableCell")),
+    ]);
+
+    const doc = NOTE_SCHEMA.node("doc", null, [paragraph, code, table]);
+    const markdown = MdSerialize.serialize(doc);
+    expect(markdown).toContain("\\<!-- manotes:empty-paragraph -->");
+    expect(MdParse.parse(markdown).eq(doc)).toBe(true);
+  });
+
+  it("removes unsupported image and underline types and link browser attributes", () => {
+    expect(NOTE_SCHEMA.nodes.image).toBeUndefined();
+    expect(NOTE_SCHEMA.marks.underline).toBeUndefined();
+    expect(
+      NOTE_SCHEMA.mark("link", { href: "https://example.com", target: "_blank", rel: "nofollow" })
+        .attrs,
+    ).toEqual({ href: "https://example.com" });
+    expect(() => MdParse.parse("![alt](image.png)")).toThrow(/image/);
+  });
+
+  it.each([
+    "| A | B |\n| --- | --- |\n| one | two |",
+    "| A | B | C |\n| :--- | :---: | ---: |\n| one | | three |",
+    "| **bold** | *italic* |\n| --- | --- |\n| ~~strike~~ | `code` |",
+    "| A | B |\n| --- | --- |\n| a\\|b | `c\\|d` |",
+    "| A | B |\n| --- | --- |\n| [note](./note.md) | [web](https://example.com) |",
+    "| Empty |\n| --- |",
+    "> | A | B |\n> | --- | --- |\n> | one | two |",
+    "- item\n\n  | A | B |\n  | --- | --- |\n  | one | two |",
+  ])("round-trips Markdown tables: %s", (markdown) => {
+    const doc = MdParse.parse(markdown);
+    const output = MdSerialize.serialize(doc);
+    expect(MdParse.parse(output).eq(doc)).toBe(true);
+    expect(MdSerialize.serialize(MdParse.parse(output))).toBe(output);
+  });
+
+  it("round-trips an editor-created aligned table with a stream ref and records its block span", () => {
+    const cell = (type: string, content: ReturnType<typeof NOTE_SCHEMA.text>[]) =>
+      NOTE_SCHEMA.node(type, { align: "center" }, NOTE_SCHEMA.node("paragraph", null, content));
+
+    const table = NOTE_SCHEMA.node("table", null, [
+      NOTE_SCHEMA.node("tableRow", null, cell("tableHeaderCell", [NOTE_SCHEMA.text("Header")])),
+      NOTE_SCHEMA.node(
+        "tableRow",
+        null,
+        cell("tableCell", [
+          NOTE_SCHEMA.text("pipe |", [NOTE_SCHEMA.mark("bold")]),
+          NOTE_SCHEMA.text(" "),
+          NOTE_SCHEMA.node("streamRef", decodeStreamRefAttrs({ filter: { type: "notes" } })),
+        ]),
+      ),
+    ]);
+
+    const doc = NOTE_SCHEMA.node("doc", null, [
+      NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("before")),
+      table,
+    ]);
+
+    const { markdown, blocks } = MdSerialize.withBlockSpans(doc);
+    expect(MdParse.parse(markdown).toJSON()).toEqual(doc.toJSON());
+    expect(
+      MdParse.parse(markdown.slice(blocks[1]!.mdFrom, blocks[1]!.mdTo)).firstChild!.eq(table),
+    ).toBe(true);
+  });
+
+  it("keeps table editing within the supported schema", () => {
+    const editor = createEditor({ extension: union(defineAppSchema(), defineAppTableExtension()) });
+    editor.commands.insertTable({ row: 2, col: 2 });
+    const table = editor.state.doc.firstChild!;
+    expect(table.type.name).toBe("table");
+    expect(table.firstChild!.firstChild!.type.name).toBe("tableHeaderCell");
+    expect(editor.commands).not.toHaveProperty("mergeTableCells");
+    expect(editor.commands).not.toHaveProperty("splitTableCell");
+    editor.commands.selectTableCell({ pos: 4 });
+    expect(editor.commands.addTableRowBelow.canExec()).toBe(true);
+    editor.commands.addTableRowBelow();
+    expect(editor.state.doc.firstChild!.childCount).toBe(3);
+    expect(
+      MdParse.parse(MdSerialize.serialize(editor.state.doc), editor.schema).firstChild!.eq(
+        editor.state.doc.firstChild!,
+      ),
+    ).toBe(true);
+  });
+
+  it("preserves column alignment when adding rows and columns", () => {
+    const doc = MdParse.parse("| A | B |\n| :---: | ---: |\n| one | two |");
+
+    const editor = createEditor({
+      extension: union(defineAppSchema(), defineAppTableExtension()),
+      defaultContent: doc.toJSON(),
+    });
+
+    editor.commands.selectTableCell({ pos: 4 });
+    editor.commands.addTableRowBelow();
+    editor.commands.addTableColumnAfter();
+    expect(editor.state.doc.firstChild!.childCount).toBe(3);
+    expect(editor.state.doc.firstChild!.firstChild!.childCount).toBe(3);
+    expect(
+      MdParse.parse(MdSerialize.serialize(editor.state.doc), editor.schema).eq(editor.state.doc),
+    ).toBe(true);
+  });
+
+  it("rejects merged cells, multi-block cells, ragged rows, missing headers, and cell line breaks", () => {
+    const paragraph = NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("cell"));
+    const cell = NOTE_SCHEMA.node("tableCell", null, paragraph);
+    const header = NOTE_SCHEMA.node("tableHeaderCell", null, paragraph);
+    const row = (cells: (typeof cell)[]) => NOTE_SCHEMA.node("tableRow", null, cells);
+
+    const exportRows = (rows: ReturnType<typeof row>[]) =>
+      MdSerialize.serialize(NOTE_SCHEMA.node("doc", null, NOTE_SCHEMA.node("table", null, rows)));
+
+    expect(() => exportRows([row([cell])])).toThrow(/header/);
+    expect(() => exportRows([row([header, header]), row([cell])])).toThrow(/width/);
     expect(() =>
-      MdParse.parse(dedent`
-      | A | B |
-      | --- | --- |
-      | one | two |
-    `),
-    ).toThrow(/table/);
-    const cell = NOTE_SCHEMA.node("tableCell", null, NOTE_SCHEMA.node("paragraph"));
-    const table = NOTE_SCHEMA.node("table", null, NOTE_SCHEMA.node("tableRow", null, cell));
-    expect(() => MdSerialize.serialize(NOTE_SCHEMA.node("doc", null, table))).toThrow(/table/);
-    const underlined = NOTE_SCHEMA.text("keep me", [NOTE_SCHEMA.mark("underline")]);
-    const doc = NOTE_SCHEMA.node("doc", null, NOTE_SCHEMA.node("paragraph", null, underlined));
-    expect(() => MdSerialize.serialize(doc)).toThrow(/underline/);
+      exportRows([row([header]), row([NOTE_SCHEMA.node("tableCell", { colspan: 2 }, paragraph)])]),
+    ).toThrow();
+    expect(() =>
+      exportRows([
+        row([header]),
+        row([NOTE_SCHEMA.node("tableCell", null, [paragraph, paragraph])]),
+      ]),
+    ).toThrow();
+
+    const broken = NOTE_SCHEMA.node(
+      "tableCell",
+      null,
+      NOTE_SCHEMA.node("paragraph", null, [
+        NOTE_SCHEMA.text("a"),
+        NOTE_SCHEMA.node("hardBreak"),
+        NOTE_SCHEMA.text("b"),
+      ]),
+    );
+
+    expect(() => exportRows([row([header]), row([broken])])).toThrow(/line breaks/);
+  });
+
+  it.each([
+    "**bold *italic* text**",
+    "[**bold** `code`](https://example.com)",
+    "``code ` tick``",
+    "\\*literal\\* \\_text\\_ \\~\\~strike\\~\\~",
+    "before\\\nnext",
+    "# Heading\n\n> quote\n\n---\n\nparagraph",
+  ])("round-trips retained nodes and formatting combinations: %s", (markdown) => {
+    const doc = MdParse.parse(markdown);
+    expect(MdParse.parse(MdSerialize.serialize(doc)).eq(doc)).toBe(true);
+  });
+
+  it("rejects an unsupported internal list kind at schema validation", () => {
+    expect(() =>
+      NOTE_SCHEMA.node("list", { kind: "bullet" }, NOTE_SCHEMA.node("paragraph")),
+    ).toThrow();
   });
 
   it("numbers imported ordered items by position and resets each list run", () => {
@@ -285,7 +464,7 @@ describe("app Markdown conversion", () => {
     expect(() => {
       const code = NOTE_SCHEMA.node("codeBlock", { language }, NOTE_SCHEMA.text("code"));
       MdSerialize.serialize(NOTE_SCHEMA.node("doc", null, code));
-    }).toThrow(/language/);
+    }).toThrow(/language|string/);
   });
 
   it("rejects non-boolean task state and empty backlink ids", () => {

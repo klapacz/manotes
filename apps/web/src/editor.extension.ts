@@ -11,6 +11,7 @@ import { defineStreamRefCommands } from "./lib/editor/stream-ref/spec";
 import { defineStreamRefRuntime } from "./lib/editor/stream-ref/extension";
 import { defineAppListExtension } from "./lib/editor/list/extension";
 import { EditorLink } from "./lib/editor/link/extension";
+import { defineAppTableExtension } from "./lib/editor/table/spec";
 import { defineAppSchema } from "./editor.schema";
 
 /**
@@ -27,6 +28,7 @@ export function defineAppExtension() {
     defineStreamRefCommands(),
     // Keymaps & plugins
     defineAppListExtension(),
+    defineAppTableExtension(),
     defineBaseKeymap(),
     defineGapCursor(),
     defineVirtualSelection(),

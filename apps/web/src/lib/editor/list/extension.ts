@@ -39,7 +39,7 @@ export interface AppListAttrs {
 }
 
 export const ResolvedAppListAttrs = Schema.Struct({
-  kind: Schema.Literals(["bullet", "ordered", "task", "toggle"]),
+  kind: Schema.Literals(["ordered", "task", "toggle"]),
   order: Schema.NullOr(Schema.Number),
   checked: Schema.Boolean,
   collapsed: Schema.Boolean,
@@ -62,6 +62,7 @@ export function defineAppListSpec(): Extension<{
       // so expand/collapse is the built-in behavior for all non-task lists.
       kind: {
         default: "toggle",
+        validate: Schema.decodeUnknownSync(ResolvedAppListAttrs.fields.kind),
       },
     },
     parseDOM: createAppListParseDomRules(),

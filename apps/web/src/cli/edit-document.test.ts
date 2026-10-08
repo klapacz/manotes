@@ -139,23 +139,90 @@ describe("EditDocument.apply", () => {
   });
 
   it("rejects unsupported replacement content but can append without touching it", () => {
-    const doc = NOTE_SCHEMA.node("doc", null, [
+    const doc = NOTE_SCHEMA.node(
+      "doc",
+      null,
       NOTE_SCHEMA.node(
-        "paragraph",
+        "table",
         null,
-        NOTE_SCHEMA.text("underlined", [NOTE_SCHEMA.mark("underline")]),
+        NOTE_SCHEMA.node(
+          "tableRow",
+          null,
+          NOTE_SCHEMA.node(
+            "tableCell",
+            null,
+            NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("headerless")),
+          ),
+        ),
       ),
-    ]);
+    );
 
     // No-op replacements need neither a matching anchor nor serializable content.
     expect(EditDocument.apply(doc, [{ kind: "replace", text: "missing", with: "missing" }])).toBe(
       doc,
     );
     expect(() =>
-      EditDocument.apply(doc, [{ kind: "replace", text: "underlined", with: "changed" }]),
+      EditDocument.apply(doc, [{ kind: "replace", text: "headerless", with: "changed" }]),
     ).toThrow();
     const appended = EditDocument.apply(doc, [{ kind: "append", markdown: "new" }]);
     expect(appended.child(0)).toBe(doc.child(0));
     expect(appended.child(1).textContent).toBe("new");
+  });
+  it("appends tables and replaces text within one without changing surrounding blocks", () => {
+    const original = MdParse.parse("before");
+
+    const appended = EditDocument.apply(original, [
+      { kind: "append", markdown: "| A | B |\n| --- | --- |\n| one | two |" },
+    ]);
+
+    const edited = EditDocument.apply(appended, [
+      { kind: "replace", text: "one", with: "**changed**" },
+    ]);
+
+    expect(edited.child(0)).toBe(original.child(0));
+    expect(edited.child(1).textContent).toContain("changed");
+    expect(MdParse.parse(MdSerialize.serialize(edited)).eq(edited)).toBe(true);
+  });
+  it("preserves empty paragraphs inside and outside a replaced Markdown range", () => {
+    const doc = NOTE_SCHEMA.node("doc", null, [
+      NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("before")),
+      NOTE_SCHEMA.node("paragraph"),
+      NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("after")),
+    ]);
+
+    expect(MdParse.parse(MdSerialize.serialize(doc)).eq(doc)).toBe(true);
+
+    const untouched = EditDocument.apply(doc, [
+      { kind: "replace", text: "before", with: "changed" },
+    ]);
+
+    expect(untouched.child(1)).toBe(doc.child(1));
+    const markdown = MdSerialize.serialize(doc).trimEnd();
+
+    const edited = EditDocument.apply(doc, [
+      { kind: "replace", text: markdown, with: markdown.replace("before", "changed") },
+    ]);
+
+    expect(edited.childCount).toBe(3);
+    expect(doc.childCount).toBe(3);
+  });
+  it("replaces a selected empty paragraph with Markdown", () => {
+    const doc = MdParse.parse(
+      "before\n\n<!-- manotes:empty-paragraph -->\n\n<!-- manotes:empty-paragraph -->\n\nafter",
+    );
+
+    const edited = EditDocument.apply(doc, [
+      {
+        kind: "replace",
+        text: "<!-- manotes:empty-paragraph -->",
+        with: "**filled**",
+        occurrence: 1,
+      },
+    ]);
+
+    expect(edited.child(0)).toBe(doc.child(0));
+    expect(edited.child(1)).toBe(doc.child(1));
+    expect(edited.child(2).eq(MdParse.parse("**filled**").child(0))).toBe(true);
+    expect(edited.child(3)).toBe(doc.child(3));
   });
 });

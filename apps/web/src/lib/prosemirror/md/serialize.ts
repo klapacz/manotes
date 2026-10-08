@@ -1,3 +1,4 @@
+import { checkMarkdownTable, decodeTableCellAttrs } from "../../editor/table/spec";
 import { Schema } from "effect";
 import { defaultMarkdownSerializer, MarkdownSerializer } from "prosemirror-markdown";
 import { Fragment, type Node } from "prosekit/pm/model";
@@ -23,7 +24,7 @@ const CodeBlockAttrs = Schema.Struct({
 
 const decodeCodeBlockAttrs = Schema.decodeUnknownSync(CodeBlockAttrs);
 
-/** Export supported content. Tables, underline, and unknown nodes/marks throw.
+/** Export supported content. Every retained node and mark has a Markdown representation.
  * Ordered items are numbered by position from one. Markdown does not retain
  * custom starting numbers, restarts, collapse state, or backlink display labels.
  */
@@ -59,15 +60,22 @@ export function withBlockSpans(doc: Node, options: Options = {}): WithBlockSpans
 function createSerializer(options: Options): MarkdownSerializer {
   const { nodes, marks } = defaultMarkdownSerializer;
 
-  return new MarkdownSerializer(
+  const serializer = new MarkdownSerializer(
     {
       // Delegate ordinary blocks, inline formatting, and escaping to the library.
       // Unmapped nodes and marks keep its default strict behavior and throw.
-      paragraph: requireSerializer(nodes, "paragraph"),
+      paragraph(state, node) {
+        if (node.content.size === 0) {
+          state.write("<!-- manotes:empty-paragraph -->");
+          state.closeBlock(node);
+        } else {
+          state.renderInline(node);
+          state.closeBlock(node);
+        }
+      },
       heading: requireSerializer(nodes, "heading"),
       blockquote: requireSerializer(nodes, "blockquote"),
       text: requireSerializer(nodes, "text"),
-      image: requireSerializer(nodes, "image"),
       horizontalRule: requireSerializer(nodes, "horizontal_rule"),
       hardBreak: requireSerializer(nodes, "hard_break"),
       codeBlock(state, node) {
@@ -86,12 +94,32 @@ function createSerializer(options: Options): MarkdownSerializer {
         state.write(`\n${fence}`);
         state.closeBlock(node);
       },
+      table(state, node) {
+        checkMarkdownTable(node);
+        const rows: string[] = [];
+        node.forEach((row, _, index) => {
+          const cells: string[] = [];
+          row.forEach((cell) => {
+            const markdown = cell.firstChild?.content.size === 0 ? "" : serializer.serialize(cell);
+            cells.push(markdown.replaceAll("|", "\\|"));
+          });
+          rows.push(`| ${cells.join(" | ")} |`);
+
+          if (index === 0) {
+            const delimiters: string[] = [];
+            row.forEach((cell) => {
+              const { align } = decodeTableCellAttrs(cell.attrs);
+              const delimiter = { left: ":---", center: ":---:", right: "---:" };
+              delimiters.push(align === null ? "---" : delimiter[align]);
+            });
+            rows.push(`| ${delimiters.join(" | ")} |`);
+          }
+        });
+        state.text(rows.join("\n"), false);
+        state.closeBlock(node);
+      },
       list(state, node) {
         const { checked, kind, order } = decodeResolvedAppListAttrs(node.attrs);
-
-        if (kind === "bullet") {
-          throw new Error("Unsupported list kind: bullet");
-        }
 
         // Each FlatList node is one item. Its order was normalized above.
         const marker = kind === "ordered" ? `${String(order)}. ` : "- ";
@@ -139,8 +167,10 @@ function createSerializer(options: Options): MarkdownSerializer {
       // The library handles nesting and whitespace around our strike delimiters.
       strike: { open: "~~", close: "~~", mixable: true, expelEnclosingWhitespace: true },
     },
-    { hardBreakNodeName: "hardBreak" },
+    { hardBreakNodeName: "hardBreak", escapeExtraCharacters: /</g },
   );
+
+  return serializer;
 }
 
 // Library maps have arbitrary string keys. Check lookups instead of asserting

@@ -3,6 +3,7 @@ import Token from "markdown-it/lib/token.mjs";
 import { defaultMarkdownParser, MarkdownParser } from "prosemirror-markdown";
 import type { Node, Schema } from "prosekit/pm/model";
 import { NOTE_SCHEMA } from "../app-schema";
+import { checkMarkdownTable } from "../../editor/table/spec";
 import { numberOrderedLists } from "./number-ordered-lists";
 import { decodeStreamRefAttrs } from "../../editor/stream-ref/spec";
 
@@ -13,18 +14,30 @@ export function parse(markdown: string, schema: Schema = NOTE_SCHEMA): Node {
     "table",
   ]);
 
+  defineEmptyParagraphRule(tokenizer);
+
   // Runs inside parser.parse(), after markdown-it has produced inline tokens
   // but before MarkdownParser turns any tokens into ProseMirror nodes.
   tokenizer.core.ruler.after("inline", "app-schema", ({ tokens }) => {
     adaptListItems(tokens);
+    tokens.splice(0, tokens.length, ...adaptTableCells(tokens));
 
     for (const token of tokens) {
       if (token.children) token.children = adaptRefs(token.children);
     }
   });
 
+  const { image: _image, ...tokens } = defaultMarkdownParser.tokens;
+
   const parser = new MarkdownParser(schema, tokenizer, {
-    ...defaultMarkdownParser.tokens,
+    ...tokens,
+    link: { mark: "link", getAttrs: (token) => ({ href: token.attrGet("href") }) },
+    table: { block: "table" },
+    thead: { ignore: true },
+    tbody: { ignore: true },
+    tr: { block: "tableRow" },
+    th: { block: "tableHeaderCell", getAttrs: tableCellAttrs },
+    td: { block: "tableCell", getAttrs: tableCellAttrs },
     // Ignore only the list wrappers. Their items still become app `list` nodes,
     // with kind and checked attributes supplied by adaptListItems below.
     bullet_list: { ignore: true },
@@ -53,15 +66,54 @@ export function parse(markdown: string, schema: Schema = NOTE_SCHEMA): Node {
       node: "streamRef",
       getAttrs: (token) => decodeStreamRefAttrs(JSON.parse(token.content)),
     },
-    // Tables are recognized but deliberately have no mapping, so parsing fails
-    // rather than quietly importing a table as unrelated paragraphs.
   });
 
   const doc = parser.parse(markdown);
   doc.check();
+  doc.descendants((node) => {
+    if (node.type.name === "table") checkMarkdownTable(node);
+  });
 
   // Number the finished tree by sibling position, ignoring source starts/restarts.
   return numberOrderedLists(doc);
+}
+
+// This reserved comment transports an empty block without enabling arbitrary HTML.
+function defineEmptyParagraphRule(tokenizer: MarkdownIt): void {
+  tokenizer.block.ruler.before(
+    "paragraph",
+    "empty_paragraph",
+    (state, startLine, _endLine, silent) => {
+      const indent = state.sCount[startLine];
+      const begin = state.bMarks[startLine];
+      const shift = state.tShift[startLine];
+      const end = state.eMarks[startLine];
+
+      if (indent === undefined || begin === undefined || shift === undefined || end === undefined) {
+        return false;
+      }
+
+      if (indent - state.blkIndent >= 4) return false;
+      const line = state.src.slice(begin + shift, end).trimEnd();
+      const marker = "<!-- manotes:empty-paragraph -->";
+      const task = state.parentType === "list" ? (/^(\[[ xX]\] )/.exec(line)?.[0] ?? "") : "";
+
+      if (line.slice(task.length) !== marker) return false;
+
+      if (silent) return true;
+      const open = state.push("paragraph_open", "p", 1);
+      open.map = [startLine, startLine + 1];
+      const inline = state.push("inline", "", 0);
+      inline.content = task;
+      inline.children = [];
+      inline.map = open.map;
+      state.push("paragraph_close", "p", -1);
+      state.line = startLine + 1;
+
+      return true;
+    },
+    { alt: ["paragraph", "reference", "blockquote", "list"] },
+  );
 }
 
 // Markdown has list wrappers; the app has one list node per item. Keep a
@@ -140,6 +192,30 @@ function adaptRefs(tokens: readonly Token[]): Token[] {
 
     result.push(ref);
     nextIndex = end + 1;
+  }
+
+  return result;
+}
+
+function tableCellAttrs(token: Token) {
+  const align = token.attrGet("style")?.replace("text-align:", "") ?? null;
+
+  return { align };
+}
+
+function adaptTableCells(tokens: readonly Token[]): Token[] {
+  const result: Token[] = [];
+
+  for (const token of tokens) {
+    if (token.type === "th_close" || token.type === "td_close") {
+      result.push(new Token("paragraph_close", "p", -1));
+    }
+
+    result.push(token);
+
+    if (token.type === "th_open" || token.type === "td_open") {
+      result.push(new Token("paragraph_open", "p", 1));
+    }
   }
 
   return result;
