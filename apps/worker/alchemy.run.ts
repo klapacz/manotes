@@ -35,7 +35,7 @@ export default Alchemy.Stack(
     if (dev && seedType === "demo") {
       yield* Command.Exec("SeedDemo", {
         command: "node --import tsx scripts/seed.ts",
-        cwd: fileURLToPath(new URL("../web/", import.meta.url)),
+        cwd: fileURLToPath(new URL("../cli/", import.meta.url)),
         memo: false,
         timeout: "2 minutes",
         env: {

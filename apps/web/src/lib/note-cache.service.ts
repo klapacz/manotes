@@ -1,6 +1,6 @@
 import { Cache, Context, Effect, Layer, Option, RcMap, Stream } from "effect";
-import * as NoteRepo from "./note.repo";
-import * as NoteSchema from "./note.schema";
+import * as NoteRepo from "@manotes/shared/note.repo";
+import * as NoteSchema from "@manotes/shared/note.schema";
 
 export type NotePreview = typeof NoteSchema.Preview.Type;
 

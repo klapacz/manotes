@@ -5,7 +5,7 @@ import { PaneCtx } from "../lib/note/pane.ctx";
 import { PaneScroll } from "../lib/note/pane.scroll";
 import { Focus } from "../components/note/focus";
 
-import { NoteSearch } from "../lib/note/search";
+import { NoteSearch } from "@manotes/shared/note/search";
 
 export const Route = createFileRoute("/$graph/")({
   component: RouteComponent,

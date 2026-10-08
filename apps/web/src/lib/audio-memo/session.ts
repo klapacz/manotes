@@ -12,9 +12,9 @@ import {
   Stream,
   SubscriptionRef,
 } from "effect";
-import { DB } from "../db.service";
+import { DB } from "@manotes/shared/db.service";
 import { GraphWorkerClient } from "../graph-worker.client";
-import type { NoteSchema } from "../note.schema";
+import type { NoteSchema } from "@manotes/shared/note.schema";
 import { AudioMemoFiles } from "./files";
 import type { AudioMemoIntent } from "./intent";
 import { AudioMemoRecorder } from "./recorder";

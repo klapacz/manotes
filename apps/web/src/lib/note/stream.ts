@@ -1,8 +1,8 @@
 import { Array, DateTime, Predicate } from "effect";
 import type { AudioMemoSession } from "../audio-memo/session";
-import type * as NoteSchema from "../note.schema";
-import { toLocalDateString } from "../temporal/utils";
-import type { StreamSort } from "./pane.schema";
+import type * as NoteSchema from "@manotes/shared/note.schema";
+import { toLocalDateString } from "@manotes/shared/temporal/utils";
+import type { StreamSort } from "@manotes/shared/note/pane.schema";
 
 export type InnerItem = {
   /** Latest row data for this pinned stream item, refreshed on every SQL emission. */

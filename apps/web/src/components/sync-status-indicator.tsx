@@ -3,7 +3,7 @@ import { Show } from "solid-js";
 import { bindRt, createAtomStore } from "../lib";
 import { sampleLatest } from "../lib/primitives/stream/sample-latest";
 import * as GraphWorkerClient from "../lib/graph-worker.client";
-import { SyncStatusLocal } from "../lib/graph.worker-rpc";
+import { SyncStatusLocal } from "@manotes/shared/graph-sync/status.schema";
 import { cx } from "../lib/cva";
 
 const initialStatus = new SyncStatusLocal({ mode: "local" });

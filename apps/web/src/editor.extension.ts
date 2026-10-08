@@ -5,14 +5,14 @@ import { defineVirtualSelection } from "prosekit/extensions/virtual-selection";
 import { defineModClickPrevention } from "prosekit/extensions/mod-click-prevention";
 import { defineTaskListToggle } from "./editor.task-list-toggle.extension";
 import { defineCodeBlockBackspace } from "./lib/editor/code-block-backspace/extension";
-import { defineBacklinkCommands } from "./lib/editor/backlink/spec";
+import { defineBacklinkCommands } from "@manotes/shared/editor/backlink/spec";
 import { defineBacklinkRuntime } from "./lib/editor/backlink/extension";
-import { defineStreamRefCommands } from "./lib/editor/stream-ref/spec";
+import { defineStreamRefCommands } from "@manotes/shared/editor/stream-ref/spec";
 import { defineStreamRefRuntime } from "./lib/editor/stream-ref/extension";
 import { defineAppListExtension } from "./lib/editor/list/extension";
 import { EditorLink } from "./lib/editor/link/extension";
-import { defineAppTableExtension } from "./lib/editor/table/spec";
-import { defineAppSchema } from "./editor.schema";
+import { defineAppTableExtension } from "@manotes/shared/editor/table/spec";
+import { defineAppSchema } from "@manotes/shared/editor.schema";
 
 /**
  * Full editor extension for the browser.

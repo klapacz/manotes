@@ -1,5 +1,5 @@
 import { Effect, Layer, RcMap, Context, Stream } from "effect";
-import * as NoteRepo from "./note.repo";
+import * as NoteRepo from "@manotes/shared/note.repo";
 
 const ENTRY_IDLE_TTL = "5 seconds";
 

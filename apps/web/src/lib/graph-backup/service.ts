@@ -1,11 +1,11 @@
 import { Array as Arr, DateTime, Effect, Struct } from "effect";
-import * as EventRepo from "../event.repo";
-import * as EventSchema from "../event.schema";
+import * as EventRepo from "@manotes/shared/event.repo";
+import * as EventSchema from "@manotes/shared/event.schema";
 import * as GraphRuntimeLayer from "../graph-access/graph-runtime/layer";
 import * as ManagedRuntime from "../graph-access/graph-runtime/managed-runtime";
 import * as SessionService from "../graph-access/session/service";
 import * as GraphAccessCommandsProvision from "../graph-access/commands/provision";
-import * as BackupSchema from "./schema";
+import * as BackupSchema from "@manotes/shared/graph-backup/schema";
 
 export function createBackup({
   sourceGraphDisplayName,

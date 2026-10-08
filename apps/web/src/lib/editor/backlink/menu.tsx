@@ -24,9 +24,9 @@ import * as BrowserExtensionTabNoteService from "../../browser-extension/tab-not
 import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
 import { useAtom } from "@effect/atom-solid";
 import { PaneCtx } from "../../note/pane.ctx";
-import { PaneSchema } from "../../note/pane.schema";
+import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { createNoteLabel, createStreamRefLabel } from "../stream-ref/extension";
-import { decodeStreamRefAttrs } from "../stream-ref/spec";
+import { decodeStreamRefAttrs } from "@manotes/shared/editor/stream-ref/spec";
 
 const BACKLINK_REGEX = /\[\[([^\]\n]*)$/u;
 

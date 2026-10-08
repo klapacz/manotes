@@ -1,10 +1,10 @@
 import { Chunk, Data, Deferred, Effect, Layer, pipe, Queue, Context, Stream } from "effect";
 import * as Y from "yjs";
 import { ySyncPluginKey } from "y-prosemirror";
-import * as EventRepo from "./event.repo";
+import * as EventRepo from "@manotes/shared/event.repo";
 import { Array, DateTime, Option } from "effect";
-import * as NoteSchema from "./note.schema";
-import * as NoteRepo from "./note.repo";
+import * as NoteSchema from "@manotes/shared/note.schema";
+import * as NoteRepo from "@manotes/shared/note.repo";
 import * as NoteCache from "./note-cache.service";
 import { streamDebounceNoDrop } from "./stream-debounce-no-drop";
 

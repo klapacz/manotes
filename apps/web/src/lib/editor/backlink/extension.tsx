@@ -10,7 +10,7 @@ import {
 import { createEffect, createMemo, type JSX } from "solid-js";
 import * as NoteCache from "../../note-cache.service";
 import { bindRt, createAtomStore, createSyncedAtom } from "../..";
-import { decodeBacklinkAttrs, type BacklinkAttrs } from "./spec";
+import { decodeBacklinkAttrs, type BacklinkAttrs } from "@manotes/shared/editor/backlink/spec";
 import { NoteFormat } from "../../note";
 import { NoteLink } from "../../note/link-component";
 

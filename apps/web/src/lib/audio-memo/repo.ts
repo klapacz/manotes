@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { type Array, DateTime, Effect, Option, Schema, Stream, Types } from "effect";
-import { DB } from "../db.service";
+import { DB } from "@manotes/shared/db.service";
 import { Tables } from "../db.tables";
 import { AudioMemoIntent } from "./intent";
 

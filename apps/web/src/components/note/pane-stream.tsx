@@ -11,7 +11,7 @@ import {
   type ComponentProps,
 } from "solid-js";
 import { VirtualList } from "../../lib/virtual-list";
-import type { NoteSchema } from "../../lib/note.schema";
+import type { NoteSchema } from "@manotes/shared/note.schema";
 import {
   MatchTag,
   NoteStreamCache,
@@ -20,7 +20,7 @@ import {
   createSyncedAtom,
 } from "../../lib";
 import { PaneCtx } from "../../lib/note/pane.ctx";
-import { PaneSchema } from "../../lib/note/pane.schema";
+import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { NoteStream } from "../../lib/note/stream";
 import { EditorPool } from "./editor-pool";
 import { NoteCreate } from "./note-create";

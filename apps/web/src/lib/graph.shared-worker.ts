@@ -24,10 +24,12 @@ import {
   GraphSharedInitialMessageSchema,
   GraphDedicatedRpc,
   DedicatedWorkerHealth,
+} from "./graph.worker-rpc";
+import {
   SyncStatusLocal,
   SyncStatusCloud,
   type SyncStatus,
-} from "./graph.worker-rpc";
+} from "@manotes/shared/graph-sync/status.schema";
 
 // ============================================================================
 // SharedWorker - Request Router

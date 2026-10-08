@@ -3,7 +3,7 @@ import { DateTime, Effect } from "effect";
 import { For } from "solid-js";
 import { Temporal } from "temporal-polyfill";
 import { MaterializedEventService, bindRt } from "../../lib";
-import { JSDateToPlainDate, plainDateToJSDate } from "../../lib/temporal/utils";
+import { JSDateToPlainDate, plainDateToJSDate } from "@manotes/shared/temporal/utils";
 import {
   Calendar,
   CalendarCell,

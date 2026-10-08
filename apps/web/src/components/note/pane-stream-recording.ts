@@ -6,7 +6,7 @@ import { type Accessor } from "solid-js";
 import { NoteCache, NoteSchema, bindRt, createAtomState } from "../../lib";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import type { NoteStream } from "../../lib/note/stream";
-import { toLocalDateString } from "../../lib/temporal/utils";
+import { toLocalDateString } from "@manotes/shared/temporal/utils";
 import { AudioMemo } from "../audio-memo";
 import { Focus } from "./focus";
 import type { RecordControls } from "./shared";

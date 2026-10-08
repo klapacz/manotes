@@ -14,13 +14,13 @@ import {
 } from "prosekit/extensions/yjs";
 import { defineAppExtension } from "./editor.extension";
 import { EditorSyncService, MatchTag, bindRt, createSyncedAtom } from "./lib";
-import { getProsemirrorXmlFragment } from "./lib/prosemirror/yjs";
+import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
 import { Cause, Data, Deferred, Effect, SubscriptionRef } from "effect";
 import { AsyncResult, type Atom } from "effect/unstable/reactivity";
 import BacklinkMenu, { StreamRefMenu, TabMenu } from "./lib/editor/backlink/menu";
 import { useAtomValue } from "@effect/atom-solid";
 import { Focus } from "./components/note/focus";
-import type { NoteSchema } from "./lib/note.schema";
+import type { NoteSchema } from "@manotes/shared/note.schema";
 import { EditorFocus } from "./lib/editor/focus.extension";
 import { createLinkEdit, LinkMenu } from "./lib/editor/link/menu";
 import { MobileToolbar } from "./lib/editor/mobile-toolbar";

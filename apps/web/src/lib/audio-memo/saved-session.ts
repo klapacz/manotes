@@ -1,5 +1,5 @@
 import { Data, Effect, FiberHandle, Match, Stream, SubscriptionRef } from "effect";
-import { DB } from "../db.service";
+import { DB } from "@manotes/shared/db.service";
 import { GraphWorkerClient } from "../graph-worker.client";
 import { AudioMemoService } from "./service";
 

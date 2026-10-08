@@ -1,9 +1,9 @@
 import { Effect, Layer, Context, DateTime } from "effect";
-import * as EventRepo from "./event.repo";
-import * as EventSchema from "./event.schema";
-import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
-import * as NoteRepo from "./note.repo";
-import * as DB from "./db.service";
+import * as EventRepo from "@manotes/shared/event.repo";
+import * as EventSchema from "@manotes/shared/event.schema";
+import * as MaterializationCheckpointRepo from "@manotes/shared/materialization-checkpoint.repo";
+import * as NoteRepo from "@manotes/shared/note.repo";
+import * as DB from "@manotes/shared/db.service";
 
 type CreateInput = {
   noteId: string;

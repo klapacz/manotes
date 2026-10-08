@@ -1,9 +1,9 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { PaneCursor } from "./pane.cursor";
-import { PaneMake } from "./pane.make";
-import { PaneSchema } from "./pane.schema";
-import { NoteSchema } from "../note.schema";
+import { PaneMake } from "@manotes/shared/note/pane.make";
+import { PaneSchema } from "@manotes/shared/note/pane.schema";
+import { NoteSchema } from "@manotes/shared/note.schema";
 
 const decodePane = Schema.decodeUnknownSync(PaneSchema.Pane);
 

@@ -6,7 +6,7 @@ import { NoteRepo, bindRt, createAtomStore, createSyncedAtom } from "../../lib";
 import { NoteFormat } from "../../lib/note";
 import { PaneCursor } from "../../lib/note/pane.cursor";
 import { PaneCtx } from "../../lib/note/pane.ctx";
-import { PaneSchema } from "../../lib/note/pane.schema";
+import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { Button, buttonVariants } from "../ui/button";
 import { Input } from "../ui/input";
 import { HorizontalScroll } from "../ui/horizontal-scroll";

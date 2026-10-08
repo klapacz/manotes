@@ -4,7 +4,7 @@ import { GraphDestination } from "../lib/graph-access/graph-runtime/destination"
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as SessionService from "../lib/graph-access/session/service";
-import { NoteSearch } from "../lib/note/search";
+import { NoteSearch } from "@manotes/shared/note/search";
 
 export const Route = createFileRoute("/open/$graphId")({
   component: () => null,

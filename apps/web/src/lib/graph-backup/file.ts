@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import * as BackupSchema from "./schema";
+import * as BackupSchema from "@manotes/shared/graph-backup/schema";
 
 export const readBackupFile = Effect.fn("GraphBackupFile.readBackupFile")(function* (file: File) {
   const text = yield* Effect.tryPromise(() => file.text());

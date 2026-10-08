@@ -4,7 +4,7 @@ import { MatchTag } from "../../lib";
 import { callHandler } from "../../lib/call-handler";
 import { PaneCursor } from "../../lib/note/pane.cursor";
 import { PaneCtx } from "../../lib/note/pane.ctx";
-import { PaneMake } from "../../lib/note/pane.make";
+import { PaneMake } from "@manotes/shared/note/pane.make";
 import { PaneScroll } from "../../lib/note/pane.scroll";
 import { NoteLinkScope, type NoteLinkRenderer } from "../../lib/note/link-component";
 import { PaneNote } from "./pane-note";

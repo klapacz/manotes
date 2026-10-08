@@ -1,1 +1,1 @@
-export * as NoteFormat from "./format.ts";
+export * as NoteFormat from "@manotes/shared/note/format";

@@ -1,6 +1,6 @@
 import { Array as Arr, Equal, Option, Predicate, pipe } from "effect";
-import { PaneMake } from "./pane.make";
-import type { PaneSchema } from "./pane.schema";
+import { PaneMake } from "@manotes/shared/note/pane.make";
+import type { PaneSchema } from "@manotes/shared/note/pane.schema";
 
 export type Stack = Arr.NonEmptyReadonlyArray<PaneSchema.Pane>;
 

@@ -20,7 +20,7 @@ let
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "manotes";
-  version = (lib.importJSON ../apps/web/package.json).version;
+  version = (lib.importJSON ../apps/cli/package.json).version;
 
   src = lib.fileset.toSource {
     root = ../.;
@@ -31,27 +31,25 @@ stdenv.mkDerivation (finalAttrs: {
       ../pnpm-workspace.yaml
       ../patches
       ../tsconfig.base.json
-      ../apps/web/package.json
-      ../apps/web/bin
-      ../apps/web/src
-      ../apps/web/drizzle
+      ../apps/cli/package.json
+      ../apps/cli/bin
+      ../apps/cli/src
+      ../apps/cli/vite.config.ts
+      ../apps/cli/tsconfig.json
+      ../apps/cli/drizzle
       ../packages/shared/package.json
       ../packages/shared/tsconfig.json
       ../packages/shared/vite.config.ts
       ../packages/shared/src
-      ../packages/sql-sqlite-wasm/package.json
-      ../packages/sql-sqlite-wasm/tsconfig.json
-      ../packages/sql-sqlite-wasm/vite.config.ts
-      ../packages/sql-sqlite-wasm/src
     ];
   };
 
-  pnpmWorkspaces = [ "@manotes/web..." ];
+  pnpmWorkspaces = [ "@manotes/cli..." ];
   pnpmDeps = fetchPnpmDeps {
     inherit (finalAttrs) pname version src pnpmWorkspaces;
     inherit pnpm;
     fetcherVersion = 3;
-    hash = "sha256-hxEAgQiKeIIZTzxsSKr4bOKxO/geUL5N3OmVjR1Ib4U=";
+    hash = "sha256-jL4cVkSyaO9qXAV47FmbfYLj+EHZjRrrAFb23K5bIgM=";
   };
 
   nativeBuildInputs = [
@@ -69,16 +67,16 @@ stdenv.mkDerivation (finalAttrs: {
   buildPhase = ''
     runHook preBuild
     pnpm --filter @manotes/shared build
-    pnpm --filter @manotes/sql-sqlite-wasm build
+    pnpm --filter @manotes/cli build
     runHook postBuild
   '';
 
   installPhase = ''
     runHook preInstall
 
-    # Preserve source-relative migration paths and tsx's runtime script loading.
+    # Keep migration assets beside the built CLI and support tsx script loading.
     # Enable lockfile-based deployment for this command without changing workspace linking in development.
-    pnpm --filter @manotes/web --offline --config.inject-workspace-packages=true \
+    pnpm --filter @manotes/cli --offline --config.inject-workspace-packages=true \
       deploy --prod --ignore-scripts "$out/lib/manotes"
     # Rebuild the deployed addon directly; pnpm rebuild can skip scripts in a deployed tree.
     for sqlite in "$out"/lib/manotes/node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3; do

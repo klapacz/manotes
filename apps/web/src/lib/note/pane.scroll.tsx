@@ -10,7 +10,7 @@ import {
   type Ref,
 } from "solid-js";
 import { PaneCursor } from "./pane.cursor";
-import type { PaneSchema } from "./pane.schema";
+import type { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { Array as Arr, pipe, Option, Number } from "effect";
 import { DOMScroll } from "../dom-scroll";
 import { animate } from "motion";

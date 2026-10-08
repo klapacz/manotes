@@ -1,8 +1,8 @@
 import { BrowserWorker } from "@effect/platform-browser";
 import { Data, Duration, Effect, Exit, Layer, Schedule, Scope, Context } from "effect";
 import { RpcClient, RpcClientError, RpcGroup, RpcWorker } from "effect/unstable/rpc";
-import * as DB from "./db.service";
-import * as GraphSyncConfig from "./graph-sync/config";
+import * as DB from "@manotes/shared/db.service";
+import * as GraphSyncConfig from "@manotes/shared/graph-sync/config";
 import {
   GraphSharedWorkerRpc,
   GraphSharedInitialMessageSchema,

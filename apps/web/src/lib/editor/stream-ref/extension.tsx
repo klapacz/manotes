@@ -7,9 +7,13 @@ import * as NoteCache from "../../note-cache.service";
 import { NoteFormat } from "../../note";
 import { PaneCursor } from "../../note/pane.cursor";
 import { PaneCtx } from "../../note/pane.ctx";
-import { PaneSchema } from "../../note/pane.schema";
+import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { PaneScroll } from "../../note/pane.scroll";
-import { decodeStreamRefAttrs, streamRefLabel, type StreamRefAttrs } from "./spec";
+import {
+  decodeStreamRefAttrs,
+  streamRefLabel,
+  type StreamRefAttrs,
+} from "@manotes/shared/editor/stream-ref/spec";
 
 const makePane = Data.taggedEnum<PaneSchema.PaneInput>();
 

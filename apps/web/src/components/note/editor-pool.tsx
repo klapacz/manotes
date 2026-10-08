@@ -11,7 +11,7 @@ import {
   type ParentProps,
 } from "solid-js";
 import Editor, { BootState } from "../../editor";
-import type { NoteSchema } from "../../lib/note.schema";
+import type { NoteSchema } from "@manotes/shared/note.schema";
 
 // Pool of persistent editors (corvu createPersistent-style: render once into a
 // detached root that outlives row unmounts, reattach the resolved DOM on

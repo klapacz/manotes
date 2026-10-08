@@ -2,16 +2,16 @@ import * as OpenAITranscriber from "@effect-uai/openai/OpenAITranscriber";
 import { DateTime, Effect, Option, Redacted } from "effect";
 import { FetchHttpClient } from "effect/unstable/http";
 import { nanoid } from "nanoid";
-import { DB } from "../db.service";
-import { NoteRepo } from "../note.repo";
-import { EventRepo } from "../event.repo";
-import { EventSchema } from "../event.schema";
-import { MaterializationCheckpointRepo } from "../materialization-checkpoint.repo";
+import { DB } from "@manotes/shared/db.service";
+import { NoteRepo } from "@manotes/shared/note.repo";
+import { EventRepo } from "@manotes/shared/event.repo";
+import { EventSchema } from "@manotes/shared/event.schema";
+import { MaterializationCheckpointRepo } from "@manotes/shared/materialization-checkpoint.repo";
 import { ProsemirrorEncode } from "../prosemirror/encode";
 import { AudioMemoFiles } from "./files";
 import { AudioMemoRepo } from "./repo";
 import type { AudioMemoIntent } from "./intent";
-import type { NoteSchema } from "../note.schema";
+import type { NoteSchema } from "@manotes/shared/note.schema";
 
 export const register = Effect.fn("AudioMemoService.register")(function* (
   recording: Pick<AudioMemoRepo.Record, "path" | "recordedAt" | "mimeType" | "durationMs"> & {

@@ -1,7 +1,8 @@
 import { Schema } from "effect";
+import { SyncStatus } from "@manotes/shared/graph-sync/status.schema";
 import { Rpc, RpcGroup } from "effect/unstable/rpc";
 import { Transferable } from "effect/unstable/workers";
-import * as GraphSyncConfig from "./graph-sync/config";
+import * as GraphSyncConfig from "@manotes/shared/graph-sync/config";
 
 /** Initial message sent from main thread to SharedWorker. */
 export const GraphSharedInitialMessageSchema = Schema.Struct({
@@ -10,28 +11,6 @@ export const GraphSharedInitialMessageSchema = Schema.Struct({
 });
 
 export type GraphSharedInitialMessage = typeof GraphSharedInitialMessageSchema.Type;
-
-export class SyncStatusLocal extends Schema.Class<SyncStatusLocal>("SyncStatusLocal")({
-  mode: Schema.Literals(["local"]),
-}) {}
-
-export class SyncStatusCloud extends Schema.Class<SyncStatusCloud>("SyncStatusCloud")({
-  mode: Schema.Literals(["cloud"]),
-  syncState: Schema.Literals([
-    // Not connected, or socket closed after opening. Will retry.
-    "Disconnected",
-    // Socket open failed (network, auth, server down). Will retry.
-    "Failed",
-    "Bootstrapping",
-    "Ready",
-    "Committing",
-  ]),
-  hasPending: Schema.Boolean,
-}) {}
-
-export const SyncStatus = Schema.Union([SyncStatusLocal, SyncStatusCloud]);
-
-export type SyncStatus = typeof SyncStatus.Type;
 
 export class DedicatedWorkerHealth extends Schema.Class<DedicatedWorkerHealth>(
   "DedicatedWorkerHealth",

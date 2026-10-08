@@ -1,5 +1,5 @@
 import { linkOptions, type LinkOptions } from "@tanstack/solid-router";
-import { PaneMake } from "./pane.make";
+import { PaneMake } from "@manotes/shared/note/pane.make";
 
 export interface GetOptonsOpts {
   id: string;

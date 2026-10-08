@@ -1,6 +1,6 @@
 import { linkOptions as routerLinkOptions, useRouterState } from "@tanstack/solid-router";
 import { Effect, Match, Option, Schema } from "effect";
-import { NoteSearch } from "../../note/search";
+import { NoteSearch } from "@manotes/shared/note/search";
 
 export const Destination = Schema.TaggedUnion({
   notes: { ...NoteSearch.Schema.fields, hash: Schema.optional(Schema.String) },

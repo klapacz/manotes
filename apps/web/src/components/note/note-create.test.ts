@@ -2,11 +2,11 @@ import { Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
 import * as MaterializedEventService from "../../lib/materialized-event.service";
-import { NoteSchema } from "../../lib/note.schema";
-import { PaneSchema } from "../../lib/note/pane.schema";
-import { yDocToNodeJSON } from "../../lib/prosemirror-materializer.utils";
-import { NOTE_SCHEMA } from "../../lib/prosemirror/app-schema";
-import { MdSerialize } from "../../lib/prosemirror/md/serialize";
+import { NoteSchema } from "@manotes/shared/note.schema";
+import { PaneSchema } from "@manotes/shared/note/pane.schema";
+import { yDocToNodeJSON } from "@manotes/shared/prosemirror-materializer.utils";
+import { NOTE_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
+import { MdSerialize } from "@manotes/shared/prosemirror/md/serialize";
 import { prefilledPayload, useCreateNote, type CreateInput } from "./note-create";
 
 vi.mock("../../lib", () => ({

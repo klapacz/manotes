@@ -1,7 +1,7 @@
 import { nodeFromJSON } from "prosekit/core";
 import { Fragment, type Node, type ResolvedPos } from "prosekit/pm/model";
-import type { UnknownNodeJSON } from "../node-json";
-import { NOTE_SCHEMA } from "./app-schema";
+import type { UnknownNodeJSON } from "@manotes/shared/node-json";
+import { NOTE_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
 
 /**
  * Creates an application-schema ProseMirror node from serialized JSON content.

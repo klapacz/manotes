@@ -3,7 +3,7 @@ import { Schema } from "effect";
 import type { Node } from "prosekit/pm/model";
 import { Plugin, PluginKey } from "prosekit/pm/state";
 import { Decoration, DecorationSet, type EditorView } from "prosekit/pm/view";
-import { decodeBacklinkAttrs } from "./backlink/spec";
+import { decodeBacklinkAttrs } from "@manotes/shared/editor/backlink/spec";
 
 type State = { query: string; backlinksTo?: string; decorations: DecorationSet };
 

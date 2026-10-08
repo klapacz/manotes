@@ -19,9 +19,9 @@ import {
 import { Dynamic } from "solid-js/web";
 import { FocusDOM } from "../../lib/focus-dom";
 import { Shortcuts } from "../../lib/shortcuts";
-import type { NoteSchema } from "../../lib/note.schema";
+import type { NoteSchema } from "@manotes/shared/note.schema";
 import { PaneCtx } from "../../lib/note/pane.ctx";
-import type { PaneSchema } from "../../lib/note/pane.schema";
+import type { PaneSchema } from "@manotes/shared/note/pane.schema";
 
 export type FocusId = Data.TaggedEnum<{
   Pane: { readonly paneId: PaneSchema.Id };

@@ -78,6 +78,67 @@ importers:
         specifier: 'catalog:'
         version: 0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0)
 
+  apps/cli:
+    dependencies:
+      '@effect/platform-node':
+        specifier: 'catalog:'
+        version: 4.0.0-rc.112(effect@4.0.0-rc.112)(redis@6.2.1)
+      '@effect/sql-sqlite-node':
+        specifier: 'catalog:'
+        version: 4.0.0-rc.112(effect@4.0.0-rc.112)
+      '@manotes/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-rc.112
+      nanoid:
+        specifier: ^5.1.6
+        version: 5.1.6
+      prosekit:
+        specifier: ^0.22.3
+        version: 0.22.3(@shikijs/types@4.5.0)(@types/hast@3.0.5)(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.2)(prosemirror-view@1.42.6)(react-dom@19.2.4(react@19.3.0))(react@19.3.0)(solid-js@1.9.15)(y-prosemirror@1.3.7(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-view@1.42.6)(y-protocols@1.0.6(yjs@13.6.27))(yjs@13.6.27))(yjs@13.6.27)
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
+      ws:
+        specifier: ^8.18.3
+        version: 8.21.3
+      y-prosemirror:
+        specifier: ^1.3.7
+        version: 1.3.7(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-view@1.42.6)(y-protocols@1.0.6(yjs@13.6.27))(yjs@13.6.27)
+      yjs:
+        specifier: ^13.6.27
+        version: 13.6.27
+    devDependencies:
+      '@types/node':
+        specifier: ^25.9.1
+        version: 25.9.6
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
+      '@typescript/native-preview':
+        specifier: 7.0.0-dev.20260707.2
+        version: 7.0.0-dev.20260707.2
+      dedent:
+        specifier: ^1.7.2
+        version: 1.7.2
+      drizzle-kit:
+        specifier: ^0.31.7
+        version: 0.31.7
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
+      vite:
+        specifier: npm:@voidzero-dev/vite-plus-core@0.3.1
+        version: '@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0)'
+      vite-plus:
+        specifier: 'catalog:'
+        version: 0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0)
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11)(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))
+
   apps/extension:
     dependencies:
       '@manotes/shared':
@@ -112,12 +173,6 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-rc.112(effect@4.0.0-rc.112)(solid-js@1.9.15)
       '@effect/platform-browser':
-        specifier: 'catalog:'
-        version: 4.0.0-rc.112(effect@4.0.0-rc.112)
-      '@effect/platform-node':
-        specifier: 'catalog:'
-        version: 4.0.0-rc.112(effect@4.0.0-rc.112)(redis@6.2.1)
-      '@effect/sql-sqlite-node':
         specifier: 'catalog:'
         version: 4.0.0-rc.112(effect@4.0.0-rc.112)
       '@fontsource-variable/source-sans-3':
@@ -201,9 +256,6 @@ importers:
       lucide-solid:
         specifier: ^1.20.0
         version: 1.20.0(solid-js@1.9.15)
-      markdown-it:
-        specifier: ^14.3.1
-        version: 14.3.1
       motion:
         specifier: ^12.40.0
         version: 12.40.0(react-dom@19.2.4(react@19.3.0))(react@19.3.0)
@@ -216,9 +268,6 @@ importers:
       prosemirror-flat-list:
         specifier: ^0.7.1
         version: 0.7.1
-      prosemirror-markdown:
-        specifier: ^1.13.7
-        version: 1.13.7
       prosemirror-model:
         specifier: ^1.25.12
         version: 1.25.12
@@ -237,9 +286,6 @@ importers:
       temporal-polyfill:
         specifier: ^0.3.0
         version: 0.3.0
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
       tw-animate-css:
         specifier: ^1.4.0
         version: 1.4.0
@@ -249,9 +295,6 @@ importers:
       wavesurfer.js:
         specifier: 8.0.1
         version: 8.0.1
-      ws:
-        specifier: ^8.18.3
-        version: 8.21.3
       y-prosemirror:
         specifier: ^1.3.7
         version: 1.3.7(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-view@1.42.6)(y-protocols@1.0.6(yjs@13.6.27))(yjs@13.6.27)
@@ -265,15 +308,9 @@ importers:
       '@tanstack/devtools-vite':
         specifier: ^0.8.5
         version: 0.8.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3)(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))
-      '@types/markdown-it':
-        specifier: ^14.2.0
-        version: 14.2.0
       '@types/node':
         specifier: ^25.9.1
         version: 25.9.6
-      '@types/ws':
-        specifier: ^8.18.1
-        version: 8.18.1
       '@typescript/native-preview':
         specifier: 7.0.0-dev.20260707.2
         version: 7.0.0-dev.20260707.2
@@ -356,13 +393,46 @@ importers:
 
   packages/shared:
     dependencies:
+      drizzle-orm:
+        specifier: ^0.44.7
+        version: 0.44.7(patch_hash=fc06771d64f348526ce73f91aec82565f1f79942e4ffc60a43940e8dc520b15d)(@cloudflare/workers-types@5.20260911.1)(@electric-sql/pglite@0.3.15)(@libsql/client@0.17.3)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.11.1)(bun-types@1.3.5)(kysely@0.28.8)(mysql2@3.22.4(@types/node@25.9.6))(pg@8.21.0)
       effect:
         specifier: 'catalog:'
         version: 4.0.0-rc.112
+      markdown-it:
+        specifier: ^14.3.1
+        version: 14.3.2
+      nanoid:
+        specifier: ^5.1.6
+        version: 5.1.6
+      prosekit:
+        specifier: ^0.22.3
+        version: 0.22.3(@shikijs/types@4.5.0)(@types/hast@3.0.5)(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.2)(prosemirror-view@1.42.6)(react-dom@19.2.4(react@19.3.0))(react@19.3.0)(solid-js@1.9.15)(y-prosemirror@1.3.7(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-view@1.42.6)(y-protocols@1.0.6(yjs@13.6.27))(yjs@13.6.27))(yjs@13.6.27)
+      prosemirror-flat-list:
+        specifier: ^0.7.1
+        version: 0.7.1
+      prosemirror-markdown:
+        specifier: ^1.13.7
+        version: 1.13.8
+      temporal-polyfill:
+        specifier: ^0.3.0
+        version: 0.3.0
+      y-prosemirror:
+        specifier: ^1.3.7
+        version: 1.3.7(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-view@1.42.6)(y-protocols@1.0.6(yjs@13.6.27))(yjs@13.6.27)
+      yjs:
+        specifier: ^13.6.27
+        version: 13.6.27
     devDependencies:
+      '@types/markdown-it':
+        specifier: ^14.2.0
+        version: 14.2.0
       '@typescript/native-preview':
         specifier: 7.0.0-dev.20260707.2
         version: 7.0.0-dev.20260707.2
+      dedent:
+        specifier: ^1.7.2
+        version: 1.7.2
       vite:
         specifier: npm:@voidzero-dev/vite-plus-core@0.3.1
         version: '@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0)'
@@ -5701,8 +5771,8 @@ packages:
     resolution: {integrity: sha512-1DiZmDHPXMBgMRjeUtHy1q1VYmeJscHxhIAexX9z/zjRMP80+0ETuPfssi8z+kMY4DwUgsKuHqpjxgmeA9gBNA==}
     engines: {node: '>=18'}
 
-  markdown-it@14.3.1:
-    resolution: {integrity: sha512-4Ej49aYTDFIQ+uBkfX8GBvJGccoARxxPep+7aWTs55ozbjQJpW9M26Fe53vnGgvLeVzva/amzjQQaQu9w0vMhA==}
+  markdown-it@14.3.2:
+    resolution: {integrity: sha512-sHHjZ5fJKlgrG4qns2YwVcdNep35h5fERrfkD2YNsb9UFk0UIHarbiTaHKVMlPuWAoiilyK8Fv/jAm11slsY7Q==}
     hasBin: true
 
   math-intrinsics@1.1.0:
@@ -6191,8 +6261,8 @@ packages:
   prosemirror-keymap@1.2.3:
     resolution: {integrity: sha512-4HucRlpiLd1IPQQXNqeo81BGtkY8Ai5smHhKW9jjPKRc2wQIxksg7Hl1tTI2IfT2B/LgX6bfYvXxEpJl7aKYKw==}
 
-  prosemirror-markdown@1.13.7:
-    resolution: {integrity: sha512-NV57Oxe3fXR+bNGXS5XW4sKt/XGIyY3n0eHVUoJORcismeF4FFMpLBnl0YESy2BvJQHloexX+9P+zT3VqFj/CQ==}
+  prosemirror-markdown@1.13.8:
+    resolution: {integrity: sha512-Zi43BXX28jmxDJKvk8TDS2gMkBY/mgP8ynd6l/Vxrv8rgNFs5hsV1G0VscxTID1UCzVPcidADP9fUOBY3xxUeA==}
 
   prosemirror-math@0.2.2:
     resolution: {integrity: sha512-9k3oRRAEeQBAc2Yjq0G6+Z7anJ62ODEo0CcYFYwbH+1aVVqQoGMWur+8qTrXdbPpKg5q/d1dyDcpVA3p2Xf0xA==}
@@ -12281,7 +12351,7 @@ snapshots:
 
   many-keys-map@3.0.3: {}
 
-  markdown-it@14.3.1:
+  markdown-it@14.3.2:
     dependencies:
       argparse: 2.0.1
       entities: 4.5.0
@@ -12836,10 +12906,10 @@ snapshots:
       prosemirror-state: 1.4.4
       w3c-keyname: 2.2.8
 
-  prosemirror-markdown@1.13.7:
+  prosemirror-markdown@1.13.8:
     dependencies:
       '@types/markdown-it': 14.2.0
-      markdown-it: 14.3.1
+      markdown-it: 14.3.2
       prosemirror-model: 1.25.12
 
   prosemirror-math@0.2.2:

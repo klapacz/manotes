@@ -8,7 +8,7 @@ import {
   type ParentProps,
 } from "solid-js";
 import { PaneCursor } from "./pane.cursor";
-import { PaneSchema } from "./pane.schema";
+import { PaneSchema } from "@manotes/shared/note/pane.schema";
 
 export type Ctx = {
   stack: Accessor<PaneCursor.Stack>;

@@ -12,7 +12,7 @@ import { MatchAsyncResult, MatchTag } from "../lib";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as GraphBackupFile from "../lib/graph-backup/file";
 import * as GraphBackupService from "../lib/graph-backup/service";
-import type * as GraphBackupSchema from "../lib/graph-backup/schema";
+import type * as GraphBackupSchema from "@manotes/shared/graph-backup/schema";
 
 export const Route = createFileRoute("/import")({
   component: RouteComponent,
