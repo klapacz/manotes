@@ -3,7 +3,7 @@ import { useAtom, useAtomMount, useAtomSubscribe, useAtomValue } from "@effect/a
 import { createEventListener } from "@solid-primitives/event-listener";
 import { keyArray } from "@solid-primitives/keyed";
 import { Link, getRouteApi } from "@tanstack/solid-router";
-import { Array, DateTime, Effect, Match as EffectMatch, Option, Stream } from "effect";
+import { Array, DateTime, Effect, Match as EffectMatch, Option, Predicate, Stream } from "effect";
 import { AsyncResult, Atom } from "effect/reactivity";
 import { For, Match, Show, Switch, createMemo, onMount, type ParentProps } from "solid-js";
 import { toast } from "somoto";
@@ -11,8 +11,9 @@ import { MatchAsyncResult, RecordCache, RecordSchema, bindRt } from "../lib";
 import { AudioMemoFiles } from "../lib/audio-memo/files";
 import { AudioMemoRecorder } from "../lib/audio-memo/recorder";
 import { AudioMemoRepo } from "../lib/audio-memo/repo";
-import { AudioMemoSavedSession } from "../lib/audio-memo/saved-session";
-import { AudioMemoSession, State } from "../lib/audio-memo/session";
+import { AtomUtils } from "../lib/atom";
+import { AudioMemoService } from "../lib/audio-memo/service";
+import { AudioMemoSession } from "../lib/audio-memo/session";
 import { DB } from "@manotes/shared/db.service";
 import { GraphWorkerClient } from "../lib/graph-worker.client";
 import { RecordFormat } from "@manotes/shared/record/format";
@@ -172,7 +173,7 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
       .fn((element: HTMLDivElement) => {
         return AudioMemoSession.make(element, props.draft).pipe(
           Effect.map((session) => {
-            return session.changes.pipe(Stream.map((state) => ({ session, state })));
+            return session.changes.pipe(Stream.map((result) => ({ session, result })));
           }),
           Stream.unwrap,
         );
@@ -182,15 +183,15 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
     const command = rt
       .fn(
         Effect.fn("ComponentsAudioMemo.command")(function* (
-          command: "stop" | "retry" | "reload" | "cancel" | "remove",
+          command: AudioMemoSession.Command,
           get: Atom.FnContext,
         ) {
           const { session } = yield* get.result(recording);
 
-          return yield* session[command];
+          return yield* session.run(command);
         }),
       )
-      .pipe(Atom.setIdleTTL(0));
+      .pipe(AtomUtils.ignoreWhileWaiting);
 
     return { recording, command };
   })();
@@ -198,82 +199,46 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
   const [result, start] = useAtom(() => atoms.recording);
   const [, runCommand] = useAtom(() => atoms.command);
 
-  const state = createMemo(() => {
+  const state = createMemo<AudioMemoSession.Result>(() => {
     const current = result();
 
-    if (AsyncResult.isSuccess(current)) return current.value.state;
+    if (AsyncResult.isSuccess(current)) return current.value.result;
 
-    if (AsyncResult.isFailure(current)) return State.StartFailed();
+    if (AsyncResult.isFailure(current)) {
+      return AsyncResult.fail(
+        new AudioMemoSession.SessionError({ operation: "start", cause: current.cause }),
+      );
+    }
 
-    return State.Starting();
+    return AsyncResult.initial(true);
   });
 
-  const failure = createMemo(() => {
-    return EffectMatch.value(state()).pipe(
-      EffectMatch.tag("StartFailed", () => "Could not start recording. Check microphone access."),
-      EffectMatch.tag("SaveFailed", () => "Could not save recording."),
-      EffectMatch.tag("LoadFailed", () => "Could not load recording."),
-      EffectMatch.tag("RetryFailed", () => "Could not retry transcription."),
-      EffectMatch.tag(
-        "TranscriptionFailed",
-        () => "Transcription failed. Check the OpenAI key and retry.",
-      ),
-      EffectMatch.tag("RemoveFailed", () => "Could not remove recording."),
-      EffectMatch.orElse(() => undefined),
-    );
-  });
-
-  const discard = createMemo(() => {
-    return EffectMatch.value(state()).pipe(
-      EffectMatch.tag(
-        "Starting",
-        "StartFailed",
-        "Recording",
-        "SaveFailed",
-        () => "cancel" as const,
-      ),
-      EffectMatch.tag(
-        "TranscriptionFailed",
-        "RetryFailed",
-        "RemoveFailed",
-        () => "remove" as const,
-      ),
-      EffectMatch.orElse(() => undefined),
-    );
-  });
-
-  const elapsed = createMemo(() => elapsedSeconds(state()));
-
-  const action = createMemo(() => {
-    return EffectMatch.value(state()).pipe(
-      EffectMatch.tag("Recording", () => "stop" as const),
-      EffectMatch.tag("TranscriptionFailed", "RetryFailed", "RemoveFailed", () => "retry" as const),
-      EffectMatch.tag("LoadFailed", () => "reload" as const),
-      EffectMatch.orElse(() => undefined),
-    );
-  });
+  const failure = () => failureMessage(state());
+  const discardCommand = () => discard(state());
+  const actionCommand = () => action(state());
+  const elapsed = () => elapsedSeconds(AudioMemoSession.value(state()));
 
   useAtomSubscribe(
     () => atoms.recording,
     (current) => {
       if (!AsyncResult.isSuccess(current)) return;
 
-      if (State.$is("Closed")(current.value.state)) props.onCancel();
+      if (AudioMemoSession.value(current.value.result)?._tag === "Closed") props.onCancel();
     },
   );
 
   function onAction() {
-    const command = action();
+    const command = actionCommand();
 
-    if (command) return runCommand(command);
+    if (command) return runCommand(AudioMemoSession.Command[command]());
   }
 
   function onDiscard() {
-    if (AsyncResult.isFailure(result())) return props.onCancel();
+    if (AsyncResult.isInitial(state()) || AsyncResult.isFailure(result())) return props.onCancel();
 
-    const command = discard();
+    const command = discardCommand();
 
-    if (command) return runCommand(command);
+    if (command) return runCommand(AudioMemoSession.Command[command]());
   }
 
   function mountRecorder(element: HTMLDivElement) {
@@ -281,7 +246,9 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
   }
 
   createEventListener(window, "beforeunload", (event) => {
-    if (!AudioMemoSession.hasUnsavedAudio(state())) return;
+    const phase = AudioMemoSession.value(state());
+
+    if (!Predicate.isTagged(phase, "Recording") && !Predicate.isTagged(phase, "Captured")) return;
 
     event.preventDefault();
     event.returnValue = "";
@@ -293,29 +260,35 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
         <Waveform mount={mountRecorder} />
         <Duration seconds={elapsed()} />
         <div class="-mx-2 flex shrink-0 items-center">
-          <Show when={!failure() || action()}>
+          <Show when={!failure() || actionCommand()}>
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={buttonLabel(state())}
-              disabled={!action()}
+              aria-label={buttonLabel(actionCommand())}
+              disabled={!actionCommand()}
               onClick={onAction}
             >
               <Switch fallback={<LoadingIcon class="size-4 animate-spin" />}>
-                <Match when={action() === "stop"}>
+                <Match when={actionCommand() === "stop"}>
                   <StopIcon class="size-4" />
                 </Match>
-                <Match when={action() === "retry" || action() === "reload"}>
+                <Match
+                  when={
+                    actionCommand() === "retry" ||
+                    actionCommand() === "reload" ||
+                    actionCommand() === "remove"
+                  }
+                >
                   <RetryIcon class="size-4" />
                 </Match>
               </Switch>
             </Button>
           </Show>
-          <Show when={discard()}>
+          <Show when={discardCommand()}>
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={discard() === "remove" ? "Remove recording" : "Cancel recording"}
+              aria-label={discardCommand() === "remove" ? "Remove recording" : "Cancel recording"}
               onClick={onDiscard}
             >
               <XIcon class="size-4" />
@@ -338,17 +311,6 @@ export function SavedRow(props: { recording: AudioMemoRepo.Record }) {
 
           return yield* AudioMemoRecorder.makePlayer({ element, blob });
         }),
-      )
-      .pipe(Atom.setIdleTTL(0));
-
-    const actions = rt
-      .atom(
-        AudioMemoSavedSession.make(props.recording.path).pipe(
-          Effect.map((session) => {
-            return session.changes.pipe(Stream.map((action) => ({ session, action })));
-          }),
-          Stream.unwrap,
-        ),
       )
       .pipe(Atom.setIdleTTL(0));
 
@@ -378,25 +340,33 @@ export function SavedRow(props: { recording: AudioMemoRepo.Record }) {
 
     const command = rt
       .fn(
-        Effect.fn("ComponentsAudioMemo.savedCommand")(function* (
-          command: "retry" | "remove",
-          get: Atom.FnContext,
-        ) {
-          const { session } = yield* get.result(actions);
+        Effect.fn("ComponentsAudioMemo.savedCommand")(function* (command: "retry" | "remove") {
+          const action = Effect.gen(function* () {
+            if (command === "retry") return yield* AudioMemoService.retry(props.recording.path);
 
-          return yield* session[command];
+            const { client } = yield* GraphWorkerClient.Service;
+
+            return yield* client
+              .removeAudioMemo({ path: props.recording.path })
+              .pipe(Effect.uninterruptible);
+          });
+
+          return yield* action.pipe(
+            Effect.catchCause((cause) => {
+              return Effect.fail(new AudioMemoSession.SessionError({ operation: command, cause }));
+            }),
+          );
         }),
       )
-      .pipe(Atom.setIdleTTL(0));
+      .pipe(AtomUtils.ignoreWhileWaiting);
 
-    return { player, actions, isPlaying, playPause, command };
+    return { player, isPlaying, playPause, command };
   })();
 
   const [player, start] = useAtom(() => atoms.player);
-  const actions = useAtomValue(() => atoms.actions);
   const isPlaying = useAtomValue(() => atoms.isPlaying);
   const [, togglePlayback] = useAtom(() => atoms.playPause);
-  const [, runCommand] = useAtom(() => atoms.command);
+  const [commands, runCommand] = useAtom(() => atoms.command);
   const activePath = useAtomValue(activePathAtom);
 
   const isTranscribing = () => {
@@ -405,36 +375,16 @@ export function SavedRow(props: { recording: AudioMemoRepo.Record }) {
     return AsyncResult.isSuccess(result) && result.value === props.recording.path;
   };
 
-  const action = createMemo(() => {
-    const current = actions();
+  const state = createMemo(() => withRecording(commands(), props.recording));
 
-    if (AsyncResult.isSuccess(current)) return current.value.action;
-
-    return AudioMemoSavedSession.Action.Idle();
-  });
-
-  const canAct = () => {
-    const result = actions();
-
-    return AsyncResult.isSuccess(result) && AudioMemoSavedSession.canAct(result.value.action);
-  };
+  const canAct = () => !state().waiting;
 
   const failure = createMemo(() => {
-    const actionError = EffectMatch.value(action()).pipe(
-      EffectMatch.tag("RetryFailed", () => "Could not retry transcription."),
-      EffectMatch.tag("RemoveFailed", () => "Could not remove recording."),
-      EffectMatch.orElse(() => undefined),
-    );
+    const message = failureMessage(state());
 
-    if (actionError) return actionError;
-
-    if (AsyncResult.isFailure(actions())) return "Could not load recording actions.";
+    if (message) return message;
 
     if (AsyncResult.isFailure(player())) return "Could not load the recording audio.";
-
-    if (props.recording.state === "error") {
-      return "Transcription failed. Check the OpenAI key and retry.";
-    }
   });
 
   function mountPlayer(element: HTMLDivElement) {
@@ -537,31 +487,113 @@ function Failure(props: { message?: string }) {
   );
 }
 
-function elapsedSeconds(state: AudioMemoSession.State) {
-  return EffectMatch.value(state).pipe(
-    EffectMatch.tag("Recording", (state) => state.elapsedSeconds),
-    EffectMatch.tag("Saving", "SaveFailed", (state) => {
-      return Math.floor(state.capture.recording.durationMs / 1000);
-    }),
-    EffectMatch.tag(
-      "Pending",
-      "Retrying",
-      "RetryFailed",
-      "TranscriptionFailed",
-      "Removing",
-      "RemoveFailed",
-      (state) => Math.floor((state.recording.durationMs ?? 0) / 1000),
-    ),
+function action(
+  result: AudioMemoSession.Result,
+): "stop" | "retry" | "remove" | "reload" | undefined {
+  if (result.waiting) return;
+  const phase = AudioMemoSession.value(result);
+
+  if (
+    Predicate.isTagged(phase, "Closed") ||
+    (Predicate.isTagged(phase, "Saved") && phase.recording.state === "completed")
+  ) {
+    return;
+  }
+
+  const operation = AudioMemoSession.error(result)?.operation;
+
+  if (operation === "load") return "reload";
+
+  if (operation === "retry" || operation === "remove") return operation;
+
+  if (Predicate.isTagged(phase, "Recording")) return "stop";
+
+  if (Predicate.isTagged(phase, "Saved") && phase.recording.state === "error") return "retry";
+}
+
+function discard(result: AudioMemoSession.Result): "cancel" | "remove" | undefined {
+  const phase = AudioMemoSession.value(result);
+
+  if (!phase) return "cancel";
+
+  if (
+    result.waiting ||
+    Predicate.isTagged(phase, "Closed") ||
+    AudioMemoSession.error(result)?.operation === "load"
+  ) {
+    return;
+  }
+
+  if (!Predicate.isTagged(phase, "Saved")) return "cancel";
+
+  if (
+    phase.recording.state !== "completed" &&
+    (phase.recording.state === "error" || AudioMemoSession.error(result))
+  ) {
+    return "remove";
+  }
+}
+
+function failureMessage(result: AudioMemoSession.Result) {
+  const operation = AudioMemoSession.error(result)?.operation;
+
+  switch (operation) {
+    case "start":
+      return "Could not start recording. Check microphone access.";
+    case "save":
+      return "Could not save recording.";
+    case "load":
+      return "Could not load recording.";
+    case "retry":
+      return "Could not retry transcription.";
+    case "remove":
+      return "Could not remove recording.";
+  }
+
+  const phase = AudioMemoSession.value(result);
+
+  if (Predicate.isTagged(phase, "Saved") && phase.recording.state === "error") {
+    return "Transcription failed. Check the OpenAI key and retry.";
+  }
+}
+
+function withRecording(
+  result: AsyncResult.AsyncResult<unknown, unknown>,
+  recording: AudioMemoRepo.Record,
+): AudioMemoSession.Result {
+  const saved = AsyncResult.success(AudioMemoSession.Phase.Saved({ recording }));
+
+  if (!AsyncResult.isFailure(result)) {
+    return AsyncResult.success(saved.value, { waiting: result.waiting });
+  }
+
+  const failure = Option.getOrUndefined(AsyncResult.error(result));
+
+  return AsyncResult.fail(
+    failure instanceof AudioMemoSession.SessionError
+      ? failure
+      : new AudioMemoSession.SessionError({ operation: "load", cause: result.cause }),
+    { previousSuccess: Option.some(saved), waiting: result.waiting },
+  );
+}
+
+function elapsedSeconds(phase: AudioMemoSession.Phase | undefined) {
+  if (!phase) return 0;
+
+  return EffectMatch.value(phase).pipe(
+    EffectMatch.tag("Recording", ({ elapsedSeconds }) => elapsedSeconds),
+    EffectMatch.tag("Captured", ({ capture }) => Math.floor(capture.recording.durationMs / 1000)),
+    EffectMatch.tag("Saved", ({ recording }) => Math.floor((recording.durationMs ?? 0) / 1000)),
     EffectMatch.orElse(() => 0),
   );
 }
 
-function buttonLabel(state: AudioMemoSession.State) {
-  return EffectMatch.value(state).pipe(
-    EffectMatch.tag("Recording", () => "Stop recording"),
-    EffectMatch.tag("RemoveFailed", () => "Retry removing recording"),
-    EffectMatch.tag("TranscriptionFailed", "RetryFailed", () => "Retry transcription"),
-    EffectMatch.tag("LoadFailed", () => "Retry loading recording"),
+function buttonLabel(command: "stop" | "retry" | "remove" | "reload" | undefined) {
+  return EffectMatch.value(command).pipe(
+    EffectMatch.when("stop", () => "Stop recording"),
+    EffectMatch.when("remove", () => "Retry removing recording"),
+    EffectMatch.when("retry", () => "Retry transcription"),
+    EffectMatch.when("reload", () => "Retry loading recording"),
     EffectMatch.orElse(() => "Processing recording"),
   );
 }

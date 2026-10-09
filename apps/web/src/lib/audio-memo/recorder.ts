@@ -1,4 +1,4 @@
-import { type Cause, DateTime, Effect } from "effect";
+import { type Cause, Data, DateTime, Effect, Queue, Stream } from "effect";
 import { Atom } from "effect/reactivity";
 import WaveSurfer from "wavesurfer.js";
 import RecordPlugin from "wavesurfer.js/plugins/record";
@@ -9,6 +9,42 @@ export type Handle = {
   stop: () => void;
   cancel: () => void;
 };
+
+export type Capture = { blob: Blob; recording: RecordingMetadata };
+
+export type Event = Data.TaggedEnum<{
+  Started: { recorder: Handle };
+  Progress: { elapsedSeconds: number };
+  Captured: { capture: Capture };
+}>;
+
+export const Event = Data.taggedEnum<Event>();
+
+// Bridge native callbacks to an ordered stream; the caller owns the waveform scope.
+export const events = Effect.fn("AudioMemoRecorder.events")(function* (element: HTMLElement) {
+  const queue = yield* Queue.make<Event, Cause.Done>();
+
+  const recorder = yield* Effect.acquireRelease(
+    Effect.tryPromise(() => {
+      return start(
+        element,
+        (blob, recording) => {
+          Queue.offerUnsafe(queue, Event.Captured({ capture: { blob, recording } }));
+          Queue.endUnsafe(queue);
+        },
+        (ms) => {
+          return Queue.offerUnsafe(
+            queue,
+            Event.Progress({ elapsedSeconds: Math.floor(ms / 1000) }),
+          );
+        },
+      );
+    }),
+    (recorder) => Effect.sync(() => recorder.cancel()),
+  );
+
+  return Stream.concat(Stream.succeed(Event.Started({ recorder })), Stream.fromQueue(queue));
+});
 
 export type Player = {
   isPlaying: Atom.Atom<boolean>;
