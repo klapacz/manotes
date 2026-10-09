@@ -1,1 +1,8 @@
-export { notes, events, backlinks, materializationCheckpoint } from "@manotes/shared/db.tables";
+export {
+  notes,
+  props,
+  ruleExpects,
+  events,
+  backlinks,
+  materializationCheckpoint,
+} from "@manotes/shared/db.tables";

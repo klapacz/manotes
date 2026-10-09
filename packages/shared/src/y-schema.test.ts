@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { Effect, Option, Result, Schema } from "effect";
+import { Effect, Option, Record, Result, Schema } from "effect";
 import * as Y from "yjs";
 import { AttrsSchema } from "./attrs.schema";
 import { YSchema } from "./y-schema";
@@ -294,12 +294,13 @@ describe("YSchema bound selections", () => {
 
       expect(map.get("props")).toBeInstanceOf(Y.Map);
       const snapshot = Effect.runSync(attrs.pipe(YSchema.toJSON));
-      expect(snapshot).toEqual(
-        AttrsSchema.Attrs.members[0].make({
-          props: { [AttrsSchema.NoteId.make("priority")]: high },
-        }),
-      );
-      expect(Schema.decodeUnknownSync(AttrsSchema.Attrs)(snapshot)).toEqual(snapshot);
+
+      const decoded = AttrsSchema.Attrs.members[0].make({
+        props: { [AttrsSchema.NoteId.make("priority")]: high },
+      });
+
+      expect(snapshot).toEqual(Record.remove(decoded, "builtin"));
+      expect(Schema.decodeUnknownSync(AttrsSchema.Attrs)(snapshot)).toEqual(decoded);
       expect(Effect.runSync(note.pipe(YSchema.find("props")))).toMatchObject({
         value: { value: { priority: high } },
       });
@@ -446,15 +447,17 @@ describe("YSchema bound selections", () => {
       expect(map.get("rule_expects")).toBeInstanceOf(Y.Map);
       expect(map.get("rule_targets")).toEqual([]);
       expect(Effect.runSync(attrs.pipe(YSchema.toJSON))).toEqual(
-        AttrsSchema.Attrs.members[3].make({
-          props: {},
-          rule_targets: [],
-          rule_expects: {
-            [AttrsSchema.NoteId.make("priority")]: AttrsSchema.RuleExpectation.cases.required.make(
-              {},
-            ),
-          },
-        }),
+        Record.remove(
+          AttrsSchema.Attrs.members[3].make({
+            props: {},
+            rule_targets: [],
+            rule_expects: {
+              [AttrsSchema.NoteId.make("priority")]:
+                AttrsSchema.RuleExpectation.cases.required.make({}),
+            },
+          }),
+          "builtin",
+        ),
       );
       const optional = AttrsSchema.RuleExpectation.cases.optional.make({});
       Effect.runSync(
@@ -608,15 +611,19 @@ describe("YSchema bound selections", () => {
     }
   });
 
-  it("strict export enforces matching defaults and required fields", () => {
+  it("strict export defaults missing shared fields and enforces property defaults", () => {
     const { doc, map, attrs } = fixture();
 
     try {
       expect(Effect.runSync(attrs.pipe(YSchema.exportLoose))).toEqual({});
+      expect(Effect.runSync(attrs.pipe(YSchema.exportStrict))).toEqual(
+        AttrsSchema.Attrs.members[0].make({}),
+      );
+      expect(map.toJSON()).toEqual({});
+      map.set("_tag", "prop");
       expect(
         Result.isFailure(Effect.runSync(Effect.result(attrs.pipe(YSchema.exportStrict)))),
       ).toBe(true);
-      map.set("_tag", "prop");
       map.set("props", new Y.Map());
       map.set("prop_type", "bool");
       map.set("prop_default", AttrsSchema.PropVal.cases.text.make({ val: "wrong kind" }));

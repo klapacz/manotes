@@ -1,6 +1,13 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 
-export { notes, events, backlinks, materializationCheckpoint } from "@manotes/shared/db.tables";
+export {
+  notes,
+  props,
+  ruleExpects,
+  events,
+  backlinks,
+  materializationCheckpoint,
+} from "@manotes/shared/db.tables";
 
 export const recordings = sqliteTable("recordings", {
   path: text("path").primaryKey(),

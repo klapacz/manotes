@@ -94,7 +94,9 @@ type Members<S> = S extends { readonly [MapTypeId]: infer Inner }
       ? Members<C[keyof C]>
       : S extends { readonly schema: infer Inner }
         ? Members<Inner>
-        : S;
+        : S extends { readonly to: infer Inner }
+          ? Members<Inner>
+          : S;
 
 type NarrowSchema<S, K extends string, V> =
   S extends Map<infer Inner, infer Name>
@@ -124,7 +126,9 @@ type Unwrap<S> = S extends { readonly [MapTypeId]: ObjectSchema }
   ? S
   : S extends { readonly schema: infer Inner }
     ? Unwrap<Inner>
-    : S;
+    : S extends { readonly to: infer Inner }
+      ? Unwrap<Inner>
+      : S;
 
 type MapKeys<A, S> = {
   [K in Keys<A>]: [Unwrap<PropertySchema<S, K>>] extends [never]
