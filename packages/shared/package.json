@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./attrs.schema": "./dist/attrs.schema.mjs",
     "./browser-extension/contract": "./dist/browser-extension/contract.mjs",
     "./db.service": "./dist/db.service.mjs",
     "./db.tables": "./dist/db.tables.mjs",
@@ -64,6 +65,7 @@
     "./session/auth": "./dist/session/auth.mjs",
     "./temporal.schema": "./dist/temporal.schema.mjs",
     "./temporal/utils": "./dist/temporal/utils.mjs",
+    "./y-schema": "./dist/y-schema.mjs",
     "./package.json": "./package.json"
   },
   "scripts": {
