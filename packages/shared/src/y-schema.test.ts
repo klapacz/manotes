@@ -749,8 +749,10 @@ function typeChecks(attrs: YSchema.Cursor<AttrsSchema.Attrs, typeof AttrsSchema.
 
   const priority = loose.props?.[AttrsSchema.NoteId.make("priority")];
   const optionalNumber: number | undefined = priority?._tag === "number" ? priority.val : undefined;
+  const optionalParent: AttrsSchema.NoteId | undefined = loose.owned_parent;
 
   void optionalNumber;
+  void optionalParent;
   // @ts-expect-error a loose export does not guarantee required fields
   const full: AttrsSchema.Attrs = loose;
   void full;

@@ -5,6 +5,7 @@ import * as EventSchema from "./event.schema";
 import * as EventRepo from "./event.repo";
 import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
 import * as BacklinkService from "./materializer/backlink/service";
+import { MaterializerAttrs } from "./materializer/attrs.service";
 import * as NoteRepo from "./note.repo";
 import { extractText, findFirstH1Text, yDocToNodeJSON } from "./prosemirror-materializer.utils";
 import { toLocalDateString } from "./temporal/utils";
@@ -17,6 +18,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
     const eventRepo = yield* EventRepo.Service;
     const noteRepo = yield* NoteRepo.Service;
     const backlinkService = yield* BacklinkService.Service;
+    const attrsService = yield* MaterializerAttrs.Service;
     const checkpointRepo = yield* MaterializationCheckpointRepo.Service;
 
     const materializeNoteUpTo = Effect.fn("MaterializerService.materializeNoteUpTo")(function* ({
@@ -63,6 +65,8 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
           content: materialized.content,
         });
 
+        yield* attrsService.materialize({ recordId: note.id, yDoc });
+
         yield* Effect.logInfo(`Materialized note up to event ${upToLocalSeq}`);
 
         return;
@@ -84,7 +88,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
         yDoc,
       });
 
-      yield* noteRepo.create({
+      const note = yield* noteRepo.create({
         id: noteId,
         title: materialized.title,
         content: materialized.content,
@@ -100,6 +104,8 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
         sourceId: noteId,
         content: materialized.content,
       });
+
+      yield* attrsService.materialize({ recordId: note.id, yDoc });
 
       yield* Effect.logInfo(`Materialized note up to event ${upToLocalSeq}`);
     });
@@ -192,6 +198,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
     Layer.provide(EventRepo.Service.layer),
     Layer.provide(NoteRepo.Service.layer),
     Layer.provide(BacklinkService.Service.layer),
+    Layer.provide(MaterializerAttrs.Service.layer),
     Layer.provide(MaterializationCheckpointRepo.Service.layer),
   );
 }

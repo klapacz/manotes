@@ -67,6 +67,19 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       });
     });
 
+    const updateAttrs = Effect.fn("NoteRepo.updateAttrs")(function* (opts: {
+      readonly id: NoteSchema.Id;
+      readonly columns: AttrsColumns;
+    }) {
+      yield* db.query((db) =>
+        db
+          .update(Tables.notes)
+          .set(opts.columns)
+          .where(eq(Tables.notes.id, opts.id))
+          .returning({ id: Tables.notes.id }),
+      );
+    });
+
     const findById = Effect.fn("NoteRepo.findById")(function* (id: string) {
       const record = yield* db.find((db) =>
         db.select().from(Tables.notes).where(eq(Tables.notes.id, id)),
@@ -278,6 +291,7 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
     return {
       create,
       updateById,
+      updateAttrs,
       findById,
       findIdByTitle,
       getById,
@@ -293,6 +307,19 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
+
+export type AttrsColumns = Pick<
+  typeof Tables.notes.$inferSelect,
+  | "_tag"
+  | "builtin"
+  | "prop_type"
+  | "prop_default"
+  | "prop_targets"
+  | "owned_type"
+  | "owned_parent"
+  | "rule_targets"
+  | "attrs_valid"
+>;
 
 export type NoteWithBacklinks = {
   readonly record: NoteSchema.Record;

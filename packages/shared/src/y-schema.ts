@@ -153,13 +153,11 @@ export type Loose<S extends Schema.Constraint> = {
 };
 
 type LooseField<S> =
-  Unwrap<S> extends infer F
-    ? F extends Map<infer Inner, infer _Name>
-      ? Loose<Inner>
-      : F extends Schema.Constraint
-        ? F["Type"]
-        : never
-    : never;
+  Unwrap<S> extends Map<infer Inner, infer _Name>
+    ? Loose<Inner>
+    : S extends Schema.Constraint
+      ? S["Type"]
+      : never;
 
 type Keys<A> = A extends unknown ? Extract<keyof A, string> : never;
 
