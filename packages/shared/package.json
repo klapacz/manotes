@@ -52,6 +52,7 @@
     "./note/pane.make": "./dist/note/pane.make.mjs",
     "./note/pane.schema": "./dist/note/pane.schema.mjs",
     "./note/search": "./dist/note/search.mjs",
+    "./note/stream-filter": "./dist/note/stream-filter.mjs",
     "./note/stream-settings": "./dist/note/stream-settings.mjs",
     "./prosemirror-materializer.utils": "./dist/prosemirror-materializer.utils.mjs",
     "./prosemirror/app-schema": "./dist/prosemirror/app-schema.mjs",
