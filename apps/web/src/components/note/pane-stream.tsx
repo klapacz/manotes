@@ -28,7 +28,7 @@ import { PaneStreamFilter } from "./pane-stream-filter";
 import { Focus } from "./focus";
 import { PaneStreamRow } from "./pane-stream-row";
 import { PaneStreamRecording } from "./pane-stream-recording";
-import { PaneEmptyState, PaneHeader, PaneShell } from "./shared";
+import { PaneEmptyState, PaneShell } from "./shared";
 
 const PRELOAD_EDITOR_COUNT = 12;
 
@@ -227,15 +227,12 @@ export function PaneStream(props: ComponentProps<"section">) {
   return (
     <Focus.NodeProvider node={fnode}>
       <Focus.Element as={PaneShell} {...props}>
-        <PaneHeader
+        <PaneStreamFilter
           onCreate={Predicate.isTagged(state, "Success") ? handleCreate : undefined}
           record={record()}
-        >
-          <PaneStreamFilter
-            dirty={Predicate.isTagged(state, "Success") ? state.value.dirty : false}
-            onRefresh={refresh}
-          />
-        </PaneHeader>
+          dirty={Predicate.isTagged(state, "Success") ? state.value.dirty : false}
+          onRefresh={refresh}
+        />
         <MatchTag
           when={state}
           cases={{

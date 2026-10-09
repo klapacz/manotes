@@ -3,6 +3,7 @@ import * as DB from "./db.service";
 import * as NoteSchema from "./note.schema";
 import * as Tables from "./db.tables";
 import { and, asc, desc, eq, isNotNull, isNull, like, ne, or, sql, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 import { LibOption } from "./effect/option";
 
@@ -183,31 +184,25 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
             ? [desc(Tables.notes.date), desc(Tables.notes.createdAt)]
             : [desc(Tables.notes.updatedAt)];
 
-        // Incoming backlinks: notes whose links target the given note.
+        let statement = db.select(streamColumns).from(Tables.notes).$dynamic();
+
         if (query.backlinksTo !== undefined) {
-          return db
-            .select(streamColumns)
-            .from(Tables.notes)
-            .innerJoin(Tables.backlinks, eq(Tables.backlinks.sourceId, Tables.notes.id))
-            .where(and(...conditions, eq(Tables.backlinks.targetId, query.backlinksTo)))
-            .orderBy(...orderBy);
+          const incoming = alias(Tables.backlinks, "incoming");
+          statement = statement.innerJoin(
+            incoming,
+            and(eq(incoming.sourceId, Tables.notes.id), eq(incoming.targetId, query.backlinksTo)),
+          );
         }
 
-        // Outgoing links: notes the given note links to.
         if (query.linksFrom !== undefined) {
-          return db
-            .select(streamColumns)
-            .from(Tables.notes)
-            .innerJoin(Tables.backlinks, eq(Tables.backlinks.targetId, Tables.notes.id))
-            .where(and(...conditions, eq(Tables.backlinks.sourceId, query.linksFrom)))
-            .orderBy(...orderBy);
+          const outgoing = alias(Tables.backlinks, "outgoing");
+          statement = statement.innerJoin(
+            outgoing,
+            and(eq(outgoing.targetId, Tables.notes.id), eq(outgoing.sourceId, query.linksFrom)),
+          );
         }
 
-        return db
-          .select(streamColumns)
-          .from(Tables.notes)
-          .where(and(...conditions))
-          .orderBy(...orderBy);
+        return statement.where(and(...conditions)).orderBy(...orderBy);
       });
 
       return stream.pipe(Stream.mapEffect((n) => decodeMetaArray(n)));

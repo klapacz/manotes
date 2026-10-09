@@ -1,5 +1,5 @@
 import { getRouteApi } from "@tanstack/solid-router";
-import type { DropdownMenuTriggerProps } from "@kobalte/core/dropdown-menu";
+import { Data } from "effect";
 import { Show, createSignal } from "solid-js";
 import { NoteFormat } from "../../lib/note";
 import { PaneCursor } from "../../lib/note/pane.cursor";
@@ -20,19 +20,14 @@ import {
   XIcon,
 } from "../icons";
 import { Button } from "../ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuPortal,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
+import { Picker } from "../ui/picker";
 import { callHandler } from "../../lib/call-handler";
 import { cx } from "../../lib/cva";
 import { DOMScroll } from "../../lib/dom-scroll";
-import { DatePicker } from "./date-picker";
+import { NoteDatePicker } from "./date-picker";
+import { QueryEngine } from "../../lib/query-engine";
+import { MenuQuery } from "../../lib/menu-query";
+import { DateSuggestions } from "../../lib/date-suggestions";
 import { splitProps, type ComponentProps, type ParentProps } from "solid-js";
 import type { NoteSchema } from "../../lib";
 import { Focus } from "./focus";
@@ -73,9 +68,9 @@ type PaneActionsProps = {
 };
 
 // Pane-level controls sit on the right; children (e.g. stream filters) fill the left.
-export function PaneHeader(props: ParentProps<PaneActionsProps>) {
+export function PaneHeader(props: ParentProps<PaneActionsProps & { class?: string }>) {
   return (
-    <div class="flex items-center gap-3 justify-between p-4 pane:px-0">
+    <div class={cx("flex items-center gap-3 justify-between p-4 pane:px-0", props.class)}>
       {props.children}
       <PaneActions onCreate={props.onCreate} record={props.record} />
     </div>
@@ -100,7 +95,7 @@ function PaneActions(props: PaneActionsProps) {
       },
     },
     {
-      key: [["F"]],
+      key: [["Shift+F"]],
       enabled: canFocus,
       handler: () => {
         focusPane();
@@ -136,6 +131,7 @@ function PaneActions(props: PaneActionsProps) {
             size="icon-xs"
             rounded="full"
             title="Create note (Ctrl+Enter)"
+            aria-label="Create note"
             onClick={() => onCreate()()}
           >
             <PlusIcon />
@@ -175,7 +171,23 @@ export function NoteActions(props: { note: NoteSchema.Meta }) {
     return void navigate(PaneCtx.linkOptions(ctx, PaneCursor.replaceAll(input)));
   };
 
+  const [menuOpen, setMenuOpen] = createSignal(false);
+  const [changingDate, setChangingDate] = createSignal(false);
+
+  const changeMenuOpen = (open: boolean) => {
+    if (open) setChangingDate(false);
+    setMenuOpen(open);
+  };
+
   fnode.registerShortcuts([
+    {
+      key: [["M"]],
+      handler: () => {
+        changeMenuOpen(true);
+
+        return true;
+      },
+    },
     {
       key: [["B", "I"]],
       handler: () => {
@@ -210,99 +222,136 @@ export function NoteActions(props: { note: NoteSchema.Meta }) {
     },
   ]);
 
-  const [datePickerOpen, setDatePickerOpen] = createSignal(false);
-  const [menuTrigger, setMenuTrigger] = createSignal<HTMLButtonElement>();
-
-  // Kobalte refocuses the menu trigger once the menu closes, which would steal
-  // focus from whatever the selection opened. Run the selection after that, as
-  // if its shortcut were pressed from the note.
-  let selected: (() => void) | undefined;
-
-  const select = (action: () => void) => () => {
-    selected = action;
-  };
-
-  // A corner menu that fades in on hover or focus. Keyboard shortcuts work
-  // regardless of visibility.
   return (
     <>
-      <DropdownMenu placement="bottom-end">
-        <DropdownMenuTrigger
-          ref={setMenuTrigger}
-          as={(triggerProps: DropdownMenuTriggerProps<HTMLButtonElement>) => (
-            <Button
-              {...triggerProps}
-              variant="plain"
-              size="icon-xs"
-              rounded="full"
-              aria-label="Note actions"
-              class="absolute top-0.5 right-0 z-10 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 data-expanded:opacity-100 [&_svg]:text-fg-subtle hover:[&_svg]:text-fg data-expanded:[&_svg]:text-fg"
-            >
-              <EllipsisIcon />
-            </Button>
-          )}
-        />
-        <DropdownMenuPortal>
-          <DropdownMenuContent
-            class="min-w-52"
-            onCloseAutoFocus={() => {
-              const action = selected;
+      <Picker.Root label="Note actions" open={menuOpen()} onOpenChange={changeMenuOpen}>
+        <Picker.Trigger
+          title="Note actions (M)"
+          variant="plain"
+          size="icon-xs"
+          rounded="full"
+          class="absolute top-0.5 right-0 z-10 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 data-expanded:opacity-100 [&_svg]:text-fg-subtle hover:[&_svg]:text-fg data-expanded:[&_svg]:text-fg"
+        >
+          <EllipsisIcon />
+        </Picker.Trigger>
+        <Picker.Content>
+          {(close) => {
+            const changeDate = NoteDatePicker.useChangeDate({
+              get noteId() {
+                return props.note.id;
+              },
+              onChanged: close,
+            });
 
-              selected = undefined;
+            const dates = QueryEngine.map(DateSuggestions.query, (date): NoteMenuChoice => ({
+              ...NoteMenuAction.SetDate({ date: date.id }),
+              value: date.id,
+              label: date.title,
+            }));
 
-              if (action) queueMicrotask(action);
-            }}
-          >
-            <DropdownMenuItem onSelect={select(openOnly)}>
-              <ArrowsOutIcon />
-              Open only this note
-              <DropdownMenuShortcut>O</DropdownMenuShortcut>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={select(() => openNext(PaneMake.backlink(props.note.id)))}>
-              <LinkIcon />
-              Backlinks
-              <DropdownMenuShortcut>B I</DropdownMenuShortcut>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={select(() => openNext(PaneMake.outgoing(props.note.id)))}>
-              <ArrowUpRightIcon />
-              Outgoing links
-              <DropdownMenuShortcut>B O</DropdownMenuShortcut>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={select(() => openNext(PaneMake.date(props.note.date)))}>
-              <CalendarIcon />
-              Go to date
-              <DropdownMenuShortcut>D</DropdownMenuShortcut>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={select(() => setDatePickerOpen(true))}>
-              <CalendarCogIcon />
-              Change date…
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <div class="px-2 py-1.5 text-xs text-fg-subtle">
-              <p>
-                Dated{" "}
-                <time dateTime={props.note.date}>
-                  {NoteFormat.formatShortDate(props.note.date)}
-                </time>
-              </p>
-              <p>
-                Edited <time>{NoteFormat.formatUpdatedAt(props.note.updatedAt)}</time>
-              </p>
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenuPortal>
-      </DropdownMenu>
-      <DatePicker
-        noteId={props.note.id}
-        date={props.note.date}
-        open={datePickerOpen()}
-        onOpenChange={setDatePickerOpen}
-        anchor={menuTrigger()}
-      />
+            const actions: readonly NoteMenuChoice[] = [
+              {
+                ...NoteMenuAction.Navigate({ run: openOnly }),
+                value: "open",
+                label: "Open only this note",
+                icon: <ArrowsOutIcon />,
+                shortcut: "O",
+              },
+              {
+                ...NoteMenuAction.Navigate({
+                  run: () => openNext(PaneMake.backlink(props.note.id)),
+                }),
+                value: "backlinks",
+                label: "Link to",
+                icon: <LinkIcon />,
+                shortcut: "B I",
+              },
+              {
+                ...NoteMenuAction.Navigate({
+                  run: () => openNext(PaneMake.outgoing(props.note.id)),
+                }),
+                value: "outgoing",
+                label: "Outgoing links",
+                icon: <ArrowUpRightIcon />,
+                shortcut: "B O",
+              },
+              {
+                ...NoteMenuAction.Navigate({ run: () => openNext(PaneMake.date(props.note.date)) }),
+                value: "date",
+                label: "Go to date",
+                icon: <CalendarIcon />,
+                shortcut: "D",
+                group: "date",
+              },
+              {
+                ...NoteMenuAction.OpenDatePicker(),
+                value: "change-date",
+                keywords: ["calendar"],
+                label: "Change date",
+                suffix: <Picker.Caret />,
+                icon: <CalendarCogIcon />,
+                group: "date",
+              },
+            ];
+
+            const query = QueryEngine.combine([
+              MenuQuery.choices(() => actions),
+              MenuQuery.nested({ label: "Change date", query: dates }),
+            ]);
+
+            return (
+              <Show
+                when={changingDate()}
+                fallback={
+                  <>
+                    <Picker.Query
+                      label="Note actions"
+                      query={query}
+                      onSelect={(choice) =>
+                        NoteMenuAction.$match(choice, {
+                          Navigate: ({ run }) => close(run),
+                          OpenDatePicker: () => setChangingDate(true),
+                          SetDate: ({ date }) => void changeDate(date),
+                        })
+                      }
+                    />
+                    <div class="border-t border-border-subtle px-3 py-2 text-xs text-fg-subtle">
+                      <p>
+                        Dated{" "}
+                        <time dateTime={props.note.date}>
+                          {NoteFormat.formatShortDate(props.note.date)}
+                        </time>
+                      </p>
+                      <p>
+                        Edited <time>{NoteFormat.formatUpdatedAt(props.note.updatedAt)}</time>
+                      </p>
+                    </div>
+                  </>
+                }
+              >
+                <NoteDatePicker.Menu
+                  date={props.note.date}
+                  onChange={(date) => void changeDate(date)}
+                  onBack={() => setChangingDate(false)}
+                />
+              </Show>
+            );
+          }}
+        </Picker.Content>
+      </Picker.Root>
     </>
   );
 }
+
+type NoteMenuAction = Data.TaggedEnum<{
+  Navigate: { run: () => void };
+  OpenDatePicker: {};
+  SetDate: { date: string };
+}>;
+
+const NoteMenuAction = Data.taggedEnum<NoteMenuAction>();
+
+type NoteMenuChoice = Picker.Choice & NoteMenuAction;
 
 // The background marks the active note; the top border marks browse mode.
 // Keep this highlight while a local control or portal temporarily takes focus.

@@ -163,6 +163,9 @@ importers:
       '@corvu/calendar':
         specifier: ^0.1.2
         version: 0.1.2(solid-js@1.9.15)
+      '@corvu/drawer':
+        specifier: ^0.2.4
+        version: 0.2.4(solid-js@1.9.15)
       '@effect-uai/core':
         specifier: 0.17.0
         version: 0.17.0(effect@4.0.0-rc.112)
@@ -1192,6 +1195,21 @@ packages:
 
   '@corvu/calendar@0.1.2':
     resolution: {integrity: sha512-Vbdns1iNNI0WTIwDZS7m9pHWtr/YTz7yrisXhHUCfl4mxDvb9W8MMmun651wiEjhL7+OrcNbbl2kTOmYSFIf4g==}
+    peerDependencies:
+      solid-js: ^1.8
+
+  '@corvu/dialog@0.2.4':
+    resolution: {integrity: sha512-n54vJq+fOy8GVrnYBdJpD6JXNuyx7LOeMrRxwzAvZnYGpW8+AA12tnb/P/2emJj/HjOO5otheGKb0breshdFlA==}
+    peerDependencies:
+      solid-js: ^1.8
+
+  '@corvu/drawer@0.2.4':
+    resolution: {integrity: sha512-7jQoGZ8ROB9CmXam2nMY2wEskU3IoFwZQywkF/7vrBc/edGsPv7mOVQ1GN6G+4nd7nrMZ3UtqHAhmRh9V0azlw==}
+    peerDependencies:
+      solid-js: ^1.8
+
+  '@corvu/utils@0.3.2':
+    resolution: {integrity: sha512-ZWlyWEE8qV9+CB9OAyo2bTrZGXQN9ZeM+JfYv89zoR+lRACKTDuoOZEdiyL8Uc7U5dUSH1uTqKhTTnaHWb+wZA==}
     peerDependencies:
       solid-js: ^1.8
 
@@ -6590,11 +6608,26 @@ packages:
     resolution: {integrity: sha512-RQsvleCbF8cVHEv+xuDGaA4pOizFqJ0GgjtMSRo6oP8pnN7WsigHgVGey6aILRBKv4W2YOMHLqbKdnB6hpB9fw==}
     engines: {node: '>=20.0.0'}
 
+  solid-dismissible@0.1.1:
+    resolution: {integrity: sha512-9kcKBJIMdS+586cA1g63HYWxKh3h89leeNHbPZ1csYjuni+NvPBtNr11l0iEX2AKKEt6FHk6qNhc/gjoYAW1pA==}
+    peerDependencies:
+      solid-js: ^1.8
+
+  solid-focus-trap@0.1.9:
+    resolution: {integrity: sha512-LTyNki6GUJPRLXV5uMWPkYClB07SUMubbr2EkAddiR0CJCF/I283txilMU9RURSr/P8EewMfXWu2o3aWrK7A5A==}
+    peerDependencies:
+      solid-js: ^1.8
+
   solid-js@1.9.15:
     resolution: {integrity: sha512-EeiY2xfpZJqPLjXspVEKjAII4yv8NyG//NxZ3IpOFHdUNnnTyL0uJOeS9LWGvA7cFCz5y94cjFwYlmw5Luncsg==}
 
   solid-presence@0.1.8:
     resolution: {integrity: sha512-pWGtXUFWYYUZNbg5YpG5vkQJyOtzn2KXhxYaMx/4I+lylTLYkITOLevaCwMRN+liCVk0pqB6EayLWojNqBFECA==}
+    peerDependencies:
+      solid-js: ^1.8
+
+  solid-presence@0.2.0:
+    resolution: {integrity: sha512-YM92o+jvpzX3XGaD4rLYmq/Kc2ZVh47GSCLEufHBFQQIurvZTs8SoGJxO8BJGNDxBKdcS8F3dYhW1SDXp4BNjA==}
     peerDependencies:
       solid-js: ^1.8
 
@@ -6607,6 +6640,11 @@ packages:
     resolution: {integrity: sha512-F3aPsX6hVw9ttm5LYlth8Q15x6MlI/J3Dn+o3EQyRTtTxidepSTwAYdozt01/YA+7ObcciagGEyXIopGZzQtbA==}
     peerDependencies:
       solid-js: ^1.3
+
+  solid-transition-size@0.1.4:
+    resolution: {integrity: sha512-ocHVnbfy23CgfaH4cEUR/AFg0Y3CEL8Oh3n9Qv8OHFJgPh+zkmERKZQfi/xH5XvxDCizg8VjPrVUhiHB1Gza8g==}
+    peerDependencies:
+      solid-js: ^1.8
 
   somoto@0.0.2:
     resolution: {integrity: sha512-2e7V2O16D+DkE3z0kBdA4AnVYOi4yLLwIrKe3SE1kRAicwALrw+kx57/SRqSbEXaIsZrIPhGfL7VcRQE+tI0Bg==}
@@ -8324,6 +8362,28 @@ snapshots:
   '@corvu/calendar@0.1.2(solid-js@1.9.15)':
     dependencies:
       '@corvu/utils': 0.4.2(solid-js@1.9.15)
+      solid-js: 1.9.15
+
+  '@corvu/dialog@0.2.4(solid-js@1.9.15)':
+    dependencies:
+      '@corvu/utils': 0.4.2(solid-js@1.9.15)
+      solid-dismissible: 0.1.1(solid-js@1.9.15)
+      solid-focus-trap: 0.1.9(solid-js@1.9.15)
+      solid-js: 1.9.15
+      solid-presence: 0.2.0(solid-js@1.9.15)
+      solid-prevent-scroll: 0.1.10(solid-js@1.9.15)
+
+  '@corvu/drawer@0.2.4(solid-js@1.9.15)':
+    dependencies:
+      '@corvu/dialog': 0.2.4(solid-js@1.9.15)
+      '@corvu/utils': 0.4.2(solid-js@1.9.15)
+      '@solid-primitives/memo': 1.4.5(solid-js@1.9.15)
+      solid-js: 1.9.15
+      solid-transition-size: 0.1.4(solid-js@1.9.15)
+
+  '@corvu/utils@0.3.2(solid-js@1.9.15)':
+    dependencies:
+      '@floating-ui/dom': 1.8.0
       solid-js: 1.9.15
 
   '@corvu/utils@0.4.2(solid-js@1.9.15)':
@@ -13358,6 +13418,16 @@ snapshots:
 
   smob@1.6.2: {}
 
+  solid-dismissible@0.1.1(solid-js@1.9.15):
+    dependencies:
+      '@corvu/utils': 0.4.2(solid-js@1.9.15)
+      solid-js: 1.9.15
+
+  solid-focus-trap@0.1.9(solid-js@1.9.15):
+    dependencies:
+      '@corvu/utils': 0.4.2(solid-js@1.9.15)
+      solid-js: 1.9.15
+
   solid-js@1.9.15:
     dependencies:
       csstype: 3.2.3
@@ -13365,6 +13435,11 @@ snapshots:
       seroval-plugins: 1.5.6(seroval@1.5.6)
 
   solid-presence@0.1.8(solid-js@1.9.15):
+    dependencies:
+      '@corvu/utils': 0.4.2(solid-js@1.9.15)
+      solid-js: 1.9.15
+
+  solid-presence@0.2.0(solid-js@1.9.15):
     dependencies:
       '@corvu/utils': 0.4.2(solid-js@1.9.15)
       solid-js: 1.9.15
@@ -13382,6 +13457,11 @@ snapshots:
       solid-js: 1.9.15
     transitivePeerDependencies:
       - supports-color
+
+  solid-transition-size@0.1.4(solid-js@1.9.15):
+    dependencies:
+      '@corvu/utils': 0.3.2(solid-js@1.9.15)
+      solid-js: 1.9.15
 
   somoto@0.0.2(solid-js@1.9.15):
     dependencies:

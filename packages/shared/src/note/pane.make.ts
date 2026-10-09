@@ -1,4 +1,5 @@
 import { Data } from "effect";
+import { StreamSettings } from "./stream-settings";
 import { PaneSchema } from "./pane.schema";
 
 const make = Data.taggedEnum<PaneSchema.PaneInput>();
@@ -8,10 +9,7 @@ export function recordings() {
 }
 
 export function notes() {
-  return make.stream({
-    filter: { type: "notes" },
-    sort: "date",
-  });
+  return make.stream(StreamSettings.defaults("notes"));
 }
 
 export function note(id: string) {
@@ -20,25 +18,22 @@ export function note(id: string) {
 
 // Incoming backlinks: notes that link to `targetId`.
 export function backlink(targetId: string) {
-  return make.stream({
-    filter: { type: "notes", backlinksTo: targetId },
-    sort: "date",
-  });
+  const settings = StreamSettings.defaults("notes");
+
+  return make.stream({ ...settings, filter: { ...settings.filter, backlinksTo: targetId } });
 }
 
 // Outgoing links: notes that `sourceId` links to.
 export function outgoing(sourceId: string) {
-  return make.stream({
-    filter: { type: "pages", linksFrom: sourceId },
-    sort: "updated",
-  });
+  const settings = StreamSettings.defaults("pages");
+
+  return make.stream({ ...settings, filter: { ...settings.filter, linksFrom: sourceId } });
 }
 
 export function date(date: string) {
-  return make.stream({
-    filter: { type: "notes", date },
-    sort: "date",
-  });
+  const settings = StreamSettings.defaults("notes");
+
+  return make.stream({ ...settings, filter: { ...settings.filter, date } });
 }
 
 export * as PaneMake from "./pane.make";

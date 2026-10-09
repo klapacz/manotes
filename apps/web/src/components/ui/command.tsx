@@ -15,7 +15,8 @@ export const commandRootClass = `${commandSurfaceClass} flex h-full w-full flex-
 export const commandDialogClass =
   "bg-bg text-fg [&_[cmdk-group-heading]]:text-fg-subtle flex h-full w-full flex-col overflow-hidden rounded-md **:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5";
 
-export const commandListClass = "max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto";
+export const commandListClass =
+  "max-h-[var(--command-list-height,300px)] scroll-py-1 overflow-x-hidden overflow-y-auto";
 
 export const commandEmptyClass = "py-6 text-center text-sm";
 
@@ -31,7 +32,12 @@ export const Command = (props: CommandProps) => {
   const [, rest] = splitProps(props, ["class"]);
 
   return (
-    <CommandPrimitive data-slot="command" class={cx(commandRootClass, props.class)} {...rest} />
+    <CommandPrimitive
+      loop
+      data-slot="command"
+      class={cx(commandRootClass, props.class)}
+      {...rest}
+    />
   );
 };
 
@@ -79,6 +85,7 @@ export const CommandDialog = (props: CommandDialogProps) => {
           )}
         >
           <CommandPrimitive
+            loop
             data-slot="command-dialog"
             class={cx(commandDialogClass, props.class)}
             {...rest}
@@ -115,16 +122,30 @@ export const CommandInput = (props: CommandInputProps) => {
 export type CommandListProps = ComponentProps<typeof CommandPrimitive.List>;
 
 export const CommandList = (props: CommandListProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const [, rest] = splitProps(props, ["class", "children"]);
 
   return (
     <CommandPrimitive.List
       data-slot="command-list"
-      class={cx(commandListClass, props.class)}
+      class={cx("overflow-hidden", props.class)}
+      {...rest}
+    >
+      <div class="flex max-h-[var(--command-list-height,300px)] flex-col">{props.children}</div>
+    </CommandPrimitive.List>
+  );
+};
+
+export function CommandScroll(props: ComponentProps<"div">) {
+  const [, rest] = splitProps(props, ["class"]);
+
+  return (
+    <div
+      data-command-scroll=""
+      class={cx(commandListClass, "min-h-0 p-1", props.class)}
       {...rest}
     />
   );
-};
+}
 
 export type CommandEmptyProps = ComponentProps<typeof CommandPrimitive.Empty>;
 
