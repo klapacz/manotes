@@ -6,7 +6,7 @@ import { MaterializedEventService, NoteSchema, bindRt } from "../../lib";
 import type { PaneSchema } from "@manotes/shared/note/pane.schema";
 import type { UnknownNodeJSON } from "@manotes/shared/node-json";
 import type { Hotkey } from "@tanstack/hotkeys";
-import { ProsemirrorEncode } from "../../lib/prosemirror/encode";
+import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 import type { EditorPool } from "./editor-pool";
 
 export type CreateInput = {

@@ -1,4 +1,4 @@
-import { Effect, Layer, Context } from "effect";
+import { DateTime, Effect, Layer, Context, Schema } from "effect";
 import { nanoid } from "nanoid";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import { type Graph } from "@manotes/shared/graph-registry/contract";
@@ -6,9 +6,12 @@ import * as KeyStoreService from "../key-store/service";
 import * as LocalRegistry from "../local-registry";
 import * as RemoteRegistryService from "../remote-registry/service";
 import * as SessionService from "../session/service";
+import type * as BackupSchema from "@manotes/shared/graph-backup/schema";
+import { GraphInitialize } from "../graph-runtime/initialize";
 
 export type CreateLocalInput = {
   displayName: string;
+  events?: BackupSchema.Bundle["events"];
 };
 
 export type CreateSyncedInput = {
@@ -26,8 +29,13 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Pr
 
     const createLocal = Effect.fn("GraphAccessCommandsProvision.createLocal")(function* ({
       displayName,
+      events,
     }: CreateLocalInput) {
-      return yield* LocalRegistry.Repo.insertGraph(makeLocalRecord({ displayName }));
+      const createdAt = yield* DateTime.now;
+      const graph = yield* LocalRegistry.Repo.insertGraph(makeLocalRecord({ displayName }));
+      yield* GraphInitialize.initialize({ localGraphId: graph.localGraphId, createdAt, events });
+
+      return graph;
     });
 
     const createSynced = Effect.fn("GraphAccessCommandsProvision.createSynced")(function* ({
@@ -51,6 +59,10 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Pr
       });
 
       yield* keyStore.set(wrapped.envelope, wrapped.graphKey);
+      yield* GraphInitialize.initialize({
+        localGraphId: localGraph.localGraphId,
+        createdAt: yield* Schema.decodeEffect(Schema.DateTimeUtcFromString)(graph.createdAt),
+      });
 
       return localGraph;
     });

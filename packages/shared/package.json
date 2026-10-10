@@ -4,7 +4,9 @@
   "type": "module",
   "exports": {
     "./attrs.schema": "./dist/attrs.schema.mjs",
+    "./attrs.service": "./dist/attrs.service.mjs",
     "./browser-extension/contract": "./dist/browser-extension/contract.mjs",
+    "./builtin-attrs.service": "./dist/builtin-attrs.service.mjs",
     "./db.service": "./dist/db.service.mjs",
     "./db.tables": "./dist/db.tables.mjs",
     "./dev-env": "./dist/dev-env.mjs",
@@ -60,6 +62,7 @@
     "./prop.repo": "./dist/prop.repo.mjs",
     "./prosemirror-materializer.utils": "./dist/prosemirror-materializer.utils.mjs",
     "./prosemirror/app-schema": "./dist/prosemirror/app-schema.mjs",
+    "./prosemirror/encode": "./dist/prosemirror/encode.mjs",
     "./prosemirror/md/number-ordered-lists": "./dist/prosemirror/md/number-ordered-lists.mjs",
     "./prosemirror/md/parse": "./dist/prosemirror/md/parse.mjs",
     "./prosemirror/md/serialize": "./dist/prosemirror/md/serialize.mjs",

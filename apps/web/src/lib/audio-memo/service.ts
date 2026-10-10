@@ -7,7 +7,7 @@ import { NoteRepo } from "@manotes/shared/note.repo";
 import { EventRepo } from "@manotes/shared/event.repo";
 import { EventSchema } from "@manotes/shared/event.schema";
 import { MaterializationCheckpointRepo } from "@manotes/shared/materialization-checkpoint.repo";
-import { ProsemirrorEncode } from "../prosemirror/encode";
+import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 import { AudioMemoFiles } from "./files";
 import { AudioMemoRepo } from "./repo";
 import type { AudioMemoIntent } from "./intent";

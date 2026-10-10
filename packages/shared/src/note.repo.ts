@@ -158,13 +158,13 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
 
     const findAllRecords = Effect.fn("NoteRepo.findAllRecords")(function* () {
       return yield* db
-        .query((db) => db.select().from(Tables.notes))
+        .query((db) => db.select().from(Tables.notes).where(eq(Tables.notes._tag, "note")))
         .pipe(Effect.flatMap(decodeRecordArray));
     });
 
     const reactiveStreamRecords = Effect.fn("NoteRepo.reactiveStreamRecords")(function* () {
       return yield* db
-        .reactiveQuery((db) => db.select().from(Tables.notes))
+        .reactiveQuery((db) => db.select().from(Tables.notes).where(eq(Tables.notes._tag, "note")))
         .pipe(Effect.map(Stream.mapEffect((rows) => decodeRecordArray(rows))));
     });
 
@@ -232,6 +232,7 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
         const trimmed = filter.trim();
 
         const where = and(
+          eq(Tables.notes._tag, "note"),
           ne(Tables.notes.text, ""),
           trimmed.length > 0
             ? or(like(Tables.notes.title, `%${trimmed}%`), like(Tables.notes.text, `%${trimmed}%`))
@@ -336,7 +337,7 @@ const streamColumns = {
 } as const;
 
 function streamFilterConditions(query: StreamListQuery): Array<SQL> {
-  const conditions: Array<SQL> = [];
+  const conditions: Array<SQL> = [eq(Tables.notes._tag, "note")];
 
   if (query.type === "pages") conditions.push(isNotNull(Tables.notes.title));
 

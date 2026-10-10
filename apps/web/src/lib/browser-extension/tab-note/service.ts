@@ -2,7 +2,7 @@ import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
 import { DateTime, Effect, Layer, Context } from "effect";
 import { nanoid } from "nanoid";
 import * as MaterializedEventService from "../../materialized-event.service";
-import { ProsemirrorEncode } from "../../prosemirror/encode";
+import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 
 export class Service extends Context.Service<Service>()("BrowserExtensionTabNoteService.Service", {
   make: Effect.gen(function* () {

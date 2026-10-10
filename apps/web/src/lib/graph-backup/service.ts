@@ -1,9 +1,6 @@
 import { Array as Arr, DateTime, Effect, Struct } from "effect";
 import * as EventRepo from "@manotes/shared/event.repo";
 import * as EventSchema from "@manotes/shared/event.schema";
-import * as GraphRuntimeLayer from "../graph-access/graph-runtime/layer";
-import * as ManagedRuntime from "../graph-access/graph-runtime/managed-runtime";
-import * as SessionService from "../graph-access/session/service";
 import * as GraphAccessCommandsProvision from "../graph-access/commands/provision";
 import * as BackupSchema from "@manotes/shared/graph-backup/schema";
 
@@ -59,27 +56,7 @@ export const exportBackup = Effect.fn("GraphBackupService.exportBackup")(functio
 export const importBackupToNewGraph = Effect.fn("GraphBackupService.importBackupToNewGraph")(
   function* ({ backup, displayName }: { backup: BackupSchema.Bundle; displayName: string }) {
     const provision = yield* GraphAccessCommandsProvision.Service;
-    const sessionService = yield* SessionService.Service;
-    const graph = yield* provision.createLocal({ displayName });
 
-    yield* Effect.acquireUseRelease(
-      ManagedRuntime.createScoped(
-        GraphRuntimeLayer.makeLayer({
-          localGraphId: graph.localGraphId,
-          displayName: graph.displayName,
-          graphSyncConfig: { mode: "local" },
-          sessionService,
-        }),
-      ),
-      (runtime) =>
-        Effect.tryPromise(() =>
-          runtime.runPromise(
-            EventRepo.Service.use((eventRepo) => eventRepo.importBackupEvents(backup.events)),
-          ),
-        ),
-      (runtime) => runtime.dispose,
-    );
-
-    return graph;
+    return yield* provision.createLocal({ displayName, events: backup.events });
   },
 );

@@ -56,6 +56,19 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
         .pipe(EffectOption.traverseOrElse(decodeRecord, () => new DB.NotFoundError()));
     });
 
+    const createIfAbsent = Effect.fn("EventRepo.createIfAbsent")(function* (
+      event: EventSchema.Create & { readonly id: string },
+    ) {
+      const encoded = yield* Schema.encodeEffect(EventSchema.Create)(event);
+
+      yield* db.execute((db) =>
+        db
+          .insert(Tables.events)
+          .values({ ...encoded, id: event.id, commitSeq: encoded.commitSeq ?? null })
+          .onConflictDoNothing({ target: Tables.events.id }),
+      );
+    });
+
     const findByEventId = Effect.fn("EventRepo.findByEventId")(function* (eventId: string) {
       return yield* db
         .find((db) => db.select().from(Tables.events).where(eq(Tables.events.id, eventId)))
@@ -256,6 +269,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
 
     return {
       create,
+      createIfAbsent,
       deleteByLocalSeq,
       findByEventId,
       getLastCommitSeq,
