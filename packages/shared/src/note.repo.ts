@@ -66,12 +66,8 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       readonly id: NoteSchema.Id;
       readonly columns: AttrsColumns;
     }) {
-      yield* db.query((db) =>
-        db
-          .update(Tables.notes)
-          .set(opts.columns)
-          .where(eq(Tables.notes.id, opts.id))
-          .returning({ id: Tables.notes.id }),
+      yield* db.execute((db) =>
+        db.update(Tables.notes).set(opts.columns).where(eq(Tables.notes.id, opts.id)),
       );
     });
 

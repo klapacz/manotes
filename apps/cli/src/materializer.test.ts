@@ -3,6 +3,7 @@ import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { DB } from "@manotes/shared/db.service";
 import { EventRepo } from "@manotes/shared/event.repo";
 import * as Materializer from "@manotes/shared/materializer.service";
+import { MaterializerAttrs } from "@manotes/shared/materializer/attrs.service";
 import { NoteRepo } from "@manotes/shared/note.repo";
 import { DateTime, Effect, Layer, Result, type Scope } from "effect";
 import * as Reactivity from "effect/unstable/reactivity/Reactivity";
@@ -206,6 +207,20 @@ describe("attrs materialization", () => {
         yield* appendEvent(doc, "rule");
         yield* sql`CREATE TEMP TRIGGER reject_expect BEFORE INSERT ON rule_expects
           BEGIN SELECT RAISE(ABORT, 'forced failure'); END`;
+        const attrsService = yield* MaterializerAttrs.Service;
+
+        const directFailure = yield* attrsService
+          .materialize({
+            recordId: AttrsSchema.NoteId.make("rule"),
+            yDoc: doc,
+          })
+          .pipe(Effect.result);
+
+        expect(Result.isFailure(directFailure)).toBe(true);
+        expect(yield* sql`SELECT * FROM notes`).toEqual(beforeNotes);
+        expect(yield* sql`SELECT * FROM props`).toEqual(beforeProps);
+        expect(yield* sql`SELECT * FROM rule_expects`).toEqual(beforeExpects);
+
         const materializer = yield* Materializer.Service;
         const failed = yield* materializer.catchUp().pipe(Effect.result);
         expect(Result.isFailure(failed)).toBe(true);
@@ -273,6 +288,7 @@ function runIntegration(
     | DB.Service
     | EventRepo.Service
     | Materializer.Service
+    | MaterializerAttrs.Service
     | NoteRepo.Service
     | SqlClient.SqlClient
     | Scope.Scope
@@ -280,7 +296,7 @@ function runIntegration(
 ) {
   return Effect.runPromise(
     program.pipe(
-      Effect.provide(CliRuntime.layer),
+      Effect.provide(MaterializerAttrs.Service.layer.pipe(Layer.provideMerge(CliRuntime.layer))),
       Effect.provide(Layer.succeed(DB.Config, { localGraphId: "test", databasePath: ":memory:" })),
       Effect.provide(NodeServices.layer),
       Effect.provide(Reactivity.layer),

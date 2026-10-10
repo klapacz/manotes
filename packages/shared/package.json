@@ -50,6 +50,7 @@
     "./node-json": "./dist/node-json.mjs",
     "./note.repo": "./dist/note.repo.mjs",
     "./note.schema": "./dist/note.schema.mjs",
+    "./note/doc": "./dist/note/doc.mjs",
     "./note/format": "./dist/note/format.mjs",
     "./note/pane.make": "./dist/note/pane.make.mjs",
     "./note/pane.schema": "./dist/note/pane.schema.mjs",

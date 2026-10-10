@@ -3,18 +3,18 @@ import { Effect, Option, Record, Result, Schema } from "effect";
 import * as Y from "yjs";
 import { AttrsSchema } from "./attrs.schema";
 import { YSchema } from "./y-schema";
+import { NoteDoc } from "./note/doc";
 
 function fixture() {
-  const doc = new Y.Doc();
+  const { doc, attrs } = NoteDoc.make();
   const map = doc.getMap<unknown>("attrs");
-  const attrs = YSchema.make({ schema: AttrsSchema.Attrs, map });
 
   return { doc, map, attrs };
 }
 
 const example = (doc: Y.Doc, targets: AttrsSchema.TargetFilter | undefined) =>
   Effect.gen(function* () {
-    const attrs = YSchema.make({ schema: AttrsSchema.Attrs, map: doc.getMap("attrs") });
+    const { attrs } = NoteDoc.fromDoc({ doc });
 
     const prop = yield* attrs.pipe(
       YSchema.upsert("_tag", "prop"),

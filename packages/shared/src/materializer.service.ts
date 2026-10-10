@@ -7,6 +7,7 @@ import * as MaterializationCheckpointRepo from "./materialization-checkpoint.rep
 import * as BacklinkService from "./materializer/backlink/service";
 import { MaterializerAttrs } from "./materializer/attrs.service";
 import * as NoteRepo from "./note.repo";
+import { NoteDoc } from "./note/doc";
 import { extractText, findFirstH1Text, yDocToNodeJSON } from "./prosemirror-materializer.utils";
 import { toLocalDateString } from "./temporal/utils";
 
@@ -208,7 +209,7 @@ const applyMaterializationUpdates = Effect.fn("MaterializerService.applyMaterial
     baseSnapshot: Uint8Array<ArrayBufferLike> | null,
     events: ReadonlyArray<{ payload: Uint8Array<ArrayBufferLike> }>,
   ) {
-    const yDoc = new Y.Doc();
+    const { doc: yDoc } = NoteDoc.make();
 
     if (baseSnapshot !== null) {
       yield* Effect.sync(() => Y.applyUpdate(yDoc, baseSnapshot));

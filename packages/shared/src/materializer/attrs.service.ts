@@ -1,14 +1,16 @@
 import { Context, Effect, Layer, Record, Result, Array, Predicate, pipe } from "effect";
 import * as Y from "yjs";
-import { AttrsSchema } from "../attrs.schema";
+import { DB } from "../db.service";
 import { NoteRepo } from "../note.repo";
 import { NoteSchema } from "../note.schema";
+import { NoteDoc } from "../note/doc";
 import { PropRepo } from "../prop.repo";
 import { RuleExpectRepo } from "../rule-expect.repo";
 import { YSchema } from "../y-schema";
 
 export class Service extends Context.Service<Service>()("MaterializerAttrs.Service", {
   make: Effect.gen(function* () {
+    const db = yield* DB.Service;
     const noteRepo = yield* NoteRepo.Service;
     const propRepo = yield* PropRepo.Service;
     const expectRepo = yield* RuleExpectRepo.Service;
@@ -36,12 +38,13 @@ export class Service extends Context.Service<Service>()("MaterializerAttrs.Servi
           rows: Array.map(projection.expects, (expect) => ({ ...expect, ruleId: opts.recordId })),
         });
       }
-    });
+    }, db.transaction);
 
     return { materialize };
   }),
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(DB.Service.layer),
     Layer.provide(NoteRepo.Service.layer),
     Layer.provide(PropRepo.Service.layer),
     Layer.provide(RuleExpectRepo.Service.layer),
@@ -49,7 +52,7 @@ export class Service extends Context.Service<Service>()("MaterializerAttrs.Servi
 }
 
 const project = Effect.fn("MaterializerAttrs.project")(function* (opts: { readonly yDoc: Y.Doc }) {
-  const attrs = YSchema.make({ schema: AttrsSchema.Attrs, map: opts.yDoc.getMap("attrs") });
+  const { attrs } = NoteDoc.fromDoc({ doc: opts.yDoc });
   const loose = yield* YSchema.exportLoose(attrs);
   const strict = yield* YSchema.exportStrict(attrs).pipe(Effect.result);
 

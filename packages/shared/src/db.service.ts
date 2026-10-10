@@ -50,6 +50,12 @@ export class Service extends Context.Service<Service>()("DB", {
       return yield* sql.unsafe<T[number]>(statement.sql, statement.params);
     });
 
+    const execute = Effect.fn("DB.execute")(function* (cb: QueryCallbackFn<unknown>) {
+      const statement = cb(drizzle).toSQL();
+
+      yield* sql.unsafe(statement.sql, statement.params);
+    });
+
     const find = Effect.fn("DB.find")(function* <T extends object[]>(cb: QueryCallbackFn<T>) {
       const [result] = yield* query<T>(cb);
 
@@ -59,6 +65,7 @@ export class Service extends Context.Service<Service>()("DB", {
     return {
       transaction,
       query,
+      execute,
       reactiveQuery,
       find,
     };
