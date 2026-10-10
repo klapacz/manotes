@@ -1,10 +1,11 @@
 import { nanoid } from "nanoid";
-import { Array, Effect, Layer, flow, Option, Context } from "effect";
+import { Array, Effect, Layer, Context } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import type * as SqlError from "effect/unstable/sql/SqlError";
 import type * as GraphEncryption from "@manotes/shared/graph-encryption";
 import { DisplayNameTakenError } from "@manotes/shared/graph-registry/contract";
 import * as Schema from "./schema.ts";
+import { EffectOption } from "@manotes/shared/effect/effect-option";
 
 const GRAPH_ID_LENGTH = 12;
 
@@ -13,13 +14,11 @@ export class Service extends Context.Service<Service>()("GraphRegistryRepo.Servi
     const sql = yield* SqlClient.SqlClient;
 
     const listGraphs = Effect.fn("GraphRegistryRepo.listGraphs")(function* () {
-      const rows = yield* sql<Schema.RawRecord>`
+      return yield* sql<Schema.RawRecord>`
         SELECT graphId, displayName, createdAt, graphKeyEnvelope
         FROM graphs
         ORDER BY displayName ASC
-      `;
-
-      return yield* Schema.decodeArray(rows);
+      `.pipe(Effect.flatMap(Schema.decodeArray));
     });
 
     const getGraph = Effect.fn("GraphRegistryRepo.getGraph")(function* ({
@@ -27,19 +26,12 @@ export class Service extends Context.Service<Service>()("GraphRegistryRepo.Servi
     }: {
       graphId: string;
     }) {
-      const rows = yield* sql<Schema.RawRecord>`
+      return yield* sql<Schema.RawRecord>`
         SELECT graphId, displayName, createdAt, graphKeyEnvelope
         FROM graphs
         WHERE graphId = ${graphId}
         LIMIT 1
-      `;
-
-      return yield* Array.head(rows).pipe(
-        Option.match({
-          onNone: () => Effect.succeed(Option.none()),
-          onSome: flow(Schema.decodeRecord, Effect.asSome),
-        }),
-      );
+      `.pipe(Effect.map(Array.head), EffectOption.traverse(Schema.decodeRecord));
     });
 
     const createGraph = Effect.fn("GraphRegistryRepo.createGraph")(function* ({
@@ -56,23 +48,17 @@ export class Service extends Context.Service<Service>()("GraphRegistryRepo.Servi
         graphKeyEnvelope,
       });
 
-      const rows = yield* sql<Schema.RawRecord>`
+      return yield* sql<Schema.RawRecord>`
         INSERT INTO graphs ${sql.insert(values)}
         RETURNING graphId, displayName, createdAt, graphKeyEnvelope
       `.pipe(
         Effect.catchTag("SqlError", (error) =>
           Effect.fail(remapDisplayNameSqlError(error, displayName)),
         ),
+        Effect.flatMap(Schema.decodeArray),
+        Effect.map(Array.head),
+        EffectOption.getOrEffect(() => Effect.die(new Error("Graph insert returned no rows"))),
       );
-
-      const created = yield* Schema.decodeArray(rows);
-      const head = Array.head(created);
-
-      if (Option.isNone(head)) {
-        return yield* Effect.die(new Error("Graph insert returned no rows"));
-      }
-
-      return head.value;
     });
 
     const renameGraph = Effect.fn("GraphRegistryRepo.renameGraph")(function* ({
@@ -82,7 +68,7 @@ export class Service extends Context.Service<Service>()("GraphRegistryRepo.Servi
       graphId: string;
       displayName: string;
     }) {
-      const rows = yield* sql<Schema.RawRecord>`
+      return yield* sql<Schema.RawRecord>`
         UPDATE graphs
         SET displayName = ${displayName}
         WHERE graphId = ${graphId}
@@ -91,13 +77,8 @@ export class Service extends Context.Service<Service>()("GraphRegistryRepo.Servi
         Effect.catchTag("SqlError", (error) =>
           Effect.fail(remapDisplayNameSqlError(error, displayName)),
         ),
-      );
-
-      return yield* Array.head(rows).pipe(
-        Option.match({
-          onNone: () => Effect.succeed(Option.none()),
-          onSome: flow(Schema.decodeRecord, Effect.asSome),
-        }),
+        Effect.map(Array.head),
+        EffectOption.traverse(Schema.decodeRecord),
       );
     });
 

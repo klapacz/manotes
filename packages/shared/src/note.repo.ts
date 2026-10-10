@@ -6,6 +6,7 @@ import { and, asc, desc, eq, isNotNull, isNull, like, ne, or, sql, type SQL } fr
 import { alias } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 import { LibOption } from "./effect/option";
+import { EffectOption } from "./effect/effect-option";
 
 const decodeRecord = Schema.decodeEffect(NoteSchema.Record);
 
@@ -28,27 +29,24 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
 
       const id = encoded.id ?? nanoid();
 
-      const record = yield* db.find((db) =>
-        db
-          .insert(Tables.notes)
-          .values({
-            id,
-            title: encoded.title,
-            content: encoded.content,
-            text: encoded.text,
-            date: encoded.date,
-            materializedYUpdate: encoded.materializedYUpdate ?? null,
-            createdAt: encoded.createdAt,
-            updatedAt: encoded.updatedAt,
-            lastEventLocalSeq: encoded.lastEventLocalSeq ?? 0,
-          })
-          .returning(),
-      );
-
-      return yield* Option.match(record, {
-        onNone: () => new DB.NotFoundError(),
-        onSome: decodeRecord,
-      });
+      return yield* db
+        .find((db) =>
+          db
+            .insert(Tables.notes)
+            .values({
+              id,
+              title: encoded.title,
+              content: encoded.content,
+              text: encoded.text,
+              date: encoded.date,
+              materializedYUpdate: encoded.materializedYUpdate ?? null,
+              createdAt: encoded.createdAt,
+              updatedAt: encoded.updatedAt,
+              lastEventLocalSeq: encoded.lastEventLocalSeq ?? 0,
+            })
+            .returning(),
+        )
+        .pipe(EffectOption.traverseOrElse(decodeRecord, () => new DB.NotFoundError()));
     });
 
     const updateById = Effect.fn("NoteRepo.updateById")(function* (
@@ -57,14 +55,11 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
     ) {
       const encoded = yield* pipe(updates, Schema.encodeEffect(NoteSchema.Update));
 
-      const record = yield* db.find((db) =>
-        db.update(Tables.notes).set(encoded).where(eq(Tables.notes.id, id)).returning(),
-      );
-
-      return yield* Option.match(record, {
-        onNone: () => new DB.NotFoundError(),
-        onSome: decodeRecord,
-      });
+      return yield* db
+        .find((db) =>
+          db.update(Tables.notes).set(encoded).where(eq(Tables.notes.id, id)).returning(),
+        )
+        .pipe(EffectOption.traverseOrElse(decodeRecord, () => new DB.NotFoundError()));
     });
 
     const updateAttrs = Effect.fn("NoteRepo.updateAttrs")(function* (opts: {
@@ -81,13 +76,9 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
     });
 
     const findById = Effect.fn("NoteRepo.findById")(function* (id: string) {
-      const record = yield* db.find((db) =>
-        db.select().from(Tables.notes).where(eq(Tables.notes.id, id)),
-      );
-
-      if (Option.isNone(record)) return Option.none();
-
-      return yield* decodeRecord(record.value).pipe(Effect.asSome);
+      return yield* db
+        .find((db) => db.select().from(Tables.notes).where(eq(Tables.notes.id, id)))
+        .pipe(EffectOption.traverse(decodeRecord));
     });
 
     const findIdByTitle = Effect.fn("NoteRepo.findIdByTitle")(function* (title: string) {
@@ -102,11 +93,7 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
     });
 
     const getById = Effect.fn("NoteRepo.getById")(function* (id: string) {
-      const note = yield* findById(id);
-
-      if (Option.isNone(note)) return yield* new DB.NotFoundError();
-
-      return note.value;
+      return yield* findById(id).pipe(EffectOption.getOrEffect(() => new DB.NotFoundError()));
     });
 
     // Previews of outgoing [[link]] targets prime the note cache. They are optional:
@@ -138,38 +125,39 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
     const findByIdWithBacklinks = Effect.fn("NoteRepo.findByIdWithBacklinks")(function* (
       id: string,
     ) {
-      const [record, backlinks] = yield* Effect.all(
-        [findById(id), findOutgoingBacklinkPreviews(id)],
-        { concurrency: "unbounded" },
+      return yield* Effect.zipWith(
+        findById(id),
+        findOutgoingBacklinkPreviews(id),
+        (record, backlinks) => {
+          return record.pipe(
+            Option.flatMap((record) => Option.some<NoteWithBacklinks>({ record, backlinks })),
+          );
+        },
+        { concurrent: true },
       );
-
-      if (Option.isNone(record)) return Option.none();
-
-      return Option.some<NoteWithBacklinks>({ record: record.value, backlinks });
     });
 
     const findBootById = Effect.fn("NoteRepo.findBootById")(function* (id: string) {
-      const [record, backlinks] = yield* Effect.all(
-        [
-          db
-            .find((db) =>
-              db
-                .select({
-                  materializedYUpdate: Tables.notes.materializedYUpdate,
-                  lastEventLocalSeq: Tables.notes.lastEventLocalSeq,
-                })
-                .from(Tables.notes)
-                .where(eq(Tables.notes.id, id)),
-            )
-            .pipe(Effect.flatMap(LibOption.mapEffect(decodeBootRecord))),
-          findOutgoingBacklinkPreviews(id),
-        ],
-        { concurrency: "unbounded" },
+      return yield* Effect.zipWith(
+        db
+          .find((db) =>
+            db
+              .select({
+                materializedYUpdate: Tables.notes.materializedYUpdate,
+                lastEventLocalSeq: Tables.notes.lastEventLocalSeq,
+              })
+              .from(Tables.notes)
+              .where(eq(Tables.notes.id, id)),
+          )
+          .pipe(EffectOption.traverse(decodeBootRecord)),
+        findOutgoingBacklinkPreviews(id),
+        (record, backlinks) => {
+          return record.pipe(
+            Option.flatMap((record) => Option.some<BootResult>({ record, backlinks })),
+          );
+        },
+        { concurrent: true },
       );
-
-      if (Option.isNone(record)) return Option.none();
-
-      return Option.some<BootResult>({ record: record.value, backlinks });
     });
 
     const findAllRecords = Effect.fn("NoteRepo.findAllRecords")(function* () {
@@ -224,31 +212,23 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
     const reactiveFindPreviewById = Effect.fn("NoteRepo.reactiveFindPreviewById")(function* (
       id: string,
     ) {
-      const stream = yield* db.reactiveQuery((db) =>
-        db
-          .select({
-            id: Tables.notes.id,
-            title: Tables.notes.title,
-            text: Tables.notes.text,
-            date: Tables.notes.date,
-            createdAt: Tables.notes.createdAt,
-            updatedAt: Tables.notes.updatedAt,
-          })
-          .from(Tables.notes)
-          .where(eq(Tables.notes.id, id)),
-      );
+      const stream = yield* db
+        .reactiveQuery((db) =>
+          db
+            .select({
+              id: Tables.notes.id,
+              title: Tables.notes.title,
+              text: Tables.notes.text,
+              date: Tables.notes.date,
+              createdAt: Tables.notes.createdAt,
+              updatedAt: Tables.notes.updatedAt,
+            })
+            .from(Tables.notes)
+            .where(eq(Tables.notes.id, id)),
+        )
+        .pipe(Effect.map(Stream.mapEffect(flow(Array.head, LibOption.mapEffect(decodePreview)))));
 
-      return stream.pipe(
-        Stream.mapEffect(
-          flow(
-            Array.head,
-            Option.match({
-              onNone: () => Effect.succeedNone,
-              onSome: flow(decodePreview, Effect.asSome),
-            }),
-          ),
-        ),
-      );
+      return stream;
     });
 
     const reactiveSearchPreview = Effect.fn("NoteRepo.reactiveSearch")(function* (filter: string) {
