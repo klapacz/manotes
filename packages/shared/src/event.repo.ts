@@ -4,6 +4,7 @@ import * as EventSchema from "./event.schema";
 import * as Tables from "./db.tables";
 import { and, asc, count, eq, gt, isNull, lte, max } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { EffectOption } from "./effect/effect-option";
 
 const decodeRecord = Schema.decodeEffect(EventSchema.Record);
 
@@ -30,49 +31,35 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
     const create = Effect.fn("EventRepo.create")(function* (event: typeof EventSchema.Create.Type) {
       const encoded = yield* pipe(event, Schema.encodeEffect(EventSchema.Create));
 
-      const record = yield* db.find((db) =>
-        db
-          .insert(Tables.events)
-          .values({
-            type: encoded.type,
-            noteId: encoded.noteId,
-            payload: encoded.payload,
-            createdAt: encoded.createdAt,
-            id: encoded.id ?? nanoid(),
-            commitSeq: encoded.commitSeq ?? null,
-          })
-          .returning(),
-      );
-
-      return yield* Option.match(record, {
-        onNone: () => new DB.NotFoundError(),
-        onSome: decodeRecord,
-      });
+      return yield* db
+        .find((db) =>
+          db
+            .insert(Tables.events)
+            .values({
+              type: encoded.type,
+              noteId: encoded.noteId,
+              payload: encoded.payload,
+              createdAt: encoded.createdAt,
+              id: encoded.id ?? nanoid(),
+              commitSeq: encoded.commitSeq ?? null,
+            })
+            .returning(),
+        )
+        .pipe(EffectOption.traverseOrElse(decodeRecord, () => new DB.NotFoundError()));
     });
 
     const deleteByLocalSeq = Effect.fn("EventRepo.delete")(function* (localSeq: number) {
-      const record = yield* db.find((db) =>
-        db.delete(Tables.events).where(eq(Tables.events.localSeq, localSeq)).returning(),
-      );
-
-      return yield* Option.match(record, {
-        onNone: () => new DB.NotFoundError(),
-        onSome: decodeRecord,
-      });
+      return yield* db
+        .find((db) =>
+          db.delete(Tables.events).where(eq(Tables.events.localSeq, localSeq)).returning(),
+        )
+        .pipe(EffectOption.traverseOrElse(decodeRecord, () => new DB.NotFoundError()));
     });
 
     const findByEventId = Effect.fn("EventRepo.findByEventId")(function* (eventId: string) {
-      const record = yield* db.find((db) =>
-        db.select().from(Tables.events).where(eq(Tables.events.id, eventId)),
-      );
-
-      if (Option.isNone(record)) {
-        return Option.none();
-      }
-
-      const decoded = yield* decodeRecord(record.value);
-
-      return Option.some(decoded);
+      return yield* db
+        .find((db) => db.select().from(Tables.events).where(eq(Tables.events.id, eventId)))
+        .pipe(EffectOption.traverse(decodeRecord));
     });
 
     const findPending = Effect.fn("EventRepo.findPending")(function* (limit: number) {
@@ -254,23 +241,17 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       eventId: string;
       commitSeq: number;
     }) {
-      const record = yield* db.find((db) =>
-        db
-          .update(Tables.events)
-          .set({
-            commitSeq,
-          })
-          .where(eq(Tables.events.id, eventId))
-          .returning(),
-      );
-
-      return yield* pipe(
-        record,
-        Option.match({
-          onNone: () => new DB.NotFoundError(),
-          onSome: decodeRecord,
-        }),
-      );
+      return yield* db
+        .find((db) =>
+          db
+            .update(Tables.events)
+            .set({
+              commitSeq,
+            })
+            .where(eq(Tables.events.id, eventId))
+            .returning(),
+        )
+        .pipe(EffectOption.traverseOrElse(decodeRecord, () => new DB.NotFoundError()));
     });
 
     return {

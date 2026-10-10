@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
-import { type Array, DateTime, Effect, Option, Schema, Stream, Types } from "effect";
+import { type Array, DateTime, Effect, Schema, Stream, Types } from "effect";
 import { DB } from "@manotes/shared/db.service";
+import { EffectOption } from "@manotes/shared/effect/effect-option";
 import { Tables } from "../db.tables";
 import { AudioMemoIntent } from "./intent";
 
@@ -42,13 +43,9 @@ export const listReactive = (filter: Filter, order: "asc" | "desc") =>
 export const get = Effect.fn("AudioMemoRepo.get")(function* (path: string) {
   const db = yield* DB.Service;
 
-  const row = yield* db.find((db) =>
-    db.select().from(Tables.recordings).where(eq(Tables.recordings.path, path)),
-  );
-
-  if (Option.isNone(row)) return yield* new DB.NotFoundError();
-
-  return yield* decode(row.value);
+  return yield* db
+    .find((db) => db.select().from(Tables.recordings).where(eq(Tables.recordings.path, path)))
+    .pipe(EffectOption.traverseOrElse(decode, () => new DB.NotFoundError()));
 });
 
 export const insert = Effect.fn("AudioMemoRepo.insert")(function* (recording: Record) {

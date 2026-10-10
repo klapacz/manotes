@@ -1,4 +1,5 @@
-import { DateTime, Effect, Layer, Schema as S, Context, Option } from "effect";
+import { DateTime, Effect, Layer, Schema as S, Context } from "effect";
+import { EffectOption } from "@manotes/shared/effect/effect-option";
 import { nanoid } from "nanoid";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 import * as Schema from "./schema.ts";
@@ -51,11 +52,9 @@ export class Service extends Context.Service<Service>()("AccountsRepo.Service", 
     const findOrCreate = Effect.fn("AccountsRepo.findOrCreate")(function* (
       request: typeof CreateAccountRequest.Type,
     ) {
-      const existing = yield* getAccountByEmail({ email: request.email });
-
-      if (Option.isSome(existing)) return existing.value;
-
-      return yield* createAccount(request);
+      return yield* getAccountByEmail({ email: request.email }).pipe(
+        EffectOption.getOrEffect(() => createAccount(request)),
+      );
     });
 
     const activateByEmail = SqlSchema.void({

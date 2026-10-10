@@ -2,6 +2,7 @@ import { DateTime, Effect, Layer, Option, Context, Stream, Array } from "effect"
 import { eq } from "drizzle-orm";
 import * as DB from "./db.service";
 import * as Tables from "./db.tables";
+import { EffectOption } from "./effect/effect-option";
 
 const CHECKPOINT_ROW_ID = 1;
 
@@ -25,21 +26,22 @@ export class Service extends Context.Service<Service>()("MaterializationCheckpoi
 
       const updatedAt = yield* nowISOString;
 
-      const inserted = yield* db.find((db) =>
-        db
-          .insert(Tables.materializationCheckpoint)
-          .values({
-            id: CHECKPOINT_ROW_ID,
-            lastAppliedLocalSeq: 0,
-            updatedAt,
-          })
-          .returning(),
-      );
-
-      return yield* Option.match(inserted, {
-        onNone: () => Effect.die(new Error("Failed to initialize materialization checkpoint row.")),
-        onSome: (row) => Effect.succeed(row),
-      });
+      return yield* db
+        .find((db) =>
+          db
+            .insert(Tables.materializationCheckpoint)
+            .values({
+              id: CHECKPOINT_ROW_ID,
+              lastAppliedLocalSeq: 0,
+              updatedAt,
+            })
+            .returning(),
+        )
+        .pipe(
+          EffectOption.getOrEffect(() =>
+            Effect.die(new Error("Failed to initialize materialization checkpoint row.")),
+          ),
+        );
     });
 
     const getLastAppliedLocalSeq = Effect.fn(
@@ -83,19 +85,17 @@ export class Service extends Context.Service<Service>()("MaterializationCheckpoi
           .where(eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID)),
       );
 
-      const reached = yield* stream.pipe(
+      return yield* stream.pipe(
         Stream.map(Array.head),
         Stream.filter(Option.isSome),
         Stream.map((row) => row.value.lastAppliedLocalSeq),
         Stream.filter((lastAppliedLocalSeq) => lastAppliedLocalSeq >= targetLocalSeq),
         Stream.runHead,
-      );
-
-      return yield* Option.match(reached, {
-        onNone: () =>
+        EffectOption.getOrEffect(() =>
           Effect.die(new Error("Checkpoint stream ended before target event was materialized.")),
-        onSome: () => Effect.void,
-      });
+        ),
+        Effect.asVoid,
+      );
     });
 
     return {
