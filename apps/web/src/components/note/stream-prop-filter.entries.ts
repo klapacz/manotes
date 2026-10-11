@@ -1,13 +1,12 @@
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
-import type { PropRecordRepo } from "@manotes/shared/prop-record.repo";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import { Option, Record } from "effect";
 import { PropQuery } from "./prop-query";
 
 export type Entry = {
   readonly id: AttrsSchema.NoteId;
-  readonly def: PropRecordRepo.Def<"bool">;
-  readonly value: AttrsSchema.PropVal | undefined;
+  readonly def: PropQuery.Def;
+  readonly value: Option.Option<AttrsSchema.PropVal>;
   readonly label: string;
   readonly detail: string | undefined;
   readonly modified: boolean;
@@ -16,7 +15,7 @@ export type Entry = {
 };
 
 export function make(opts: {
-  defs: readonly PropRecordRepo.Def<"bool">[];
+  defs: readonly PropQuery.Def[];
   filter: StreamSettings.Filter;
 }): readonly Entry[] {
   const values = StreamSettings.propFilters(opts.filter);
@@ -24,7 +23,7 @@ export function make(opts: {
 
   return opts.defs.map((def) => {
     const id = def.id;
-    const value = Option.getOrUndefined(Record.get(values, id));
+    const value = Record.get(values, id);
     const modified = changed.has(id);
 
     return {
@@ -34,21 +33,26 @@ export function make(opts: {
       label: def.title || "Untitled",
       detail: appliedLabel({ value, modified }),
       modified,
-      showChip: value !== undefined && modified,
-      canClear: value !== undefined,
+      showChip: Option.isSome(value) && modified,
+      canClear: Option.isSome(value),
     };
   });
 }
 
 function appliedLabel(opts: {
-  value: AttrsSchema.PropVal | undefined;
+  value: Option.Option<AttrsSchema.PropVal>;
   modified: boolean;
 }): string | undefined {
-  if (opts.value !== undefined) return PropQuery.valueLabel(opts.value);
+  return opts.value.pipe(
+    Option.map(PropQuery.valueLabel),
+    Option.getOrElse(() => {
+      if (opts.modified) {
+        return "Any";
+      }
 
-  if (opts.modified) return "Any";
-
-  return undefined;
+      return undefined;
+    }),
+  );
 }
 
 export * as StreamPropFilterEntries from "./stream-prop-filter.entries";

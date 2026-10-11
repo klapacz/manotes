@@ -1,17 +1,18 @@
 import { useAtom } from "@effect/atom-solid";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
-import { Effect, Predicate } from "effect";
+import { Data, Effect, Match, Option } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { Show } from "solid-js";
 import type * as Y from "yjs";
 import { bindRt } from "../../lib";
-import { Button } from "../ui/button";
+import { CommandList, CommandScroll } from "../ui/command";
 import { DescriptionList } from "../ui/description-list";
 import { Picker } from "../ui/picker";
 import { PropQuery } from "./prop-query";
 import { PropPicker } from "./prop-picker";
 import { Focus } from "./focus";
+import { MenuQuery } from "../../lib/menu-query";
 
 const typeLabels = {
   text: "Text",
@@ -20,6 +21,15 @@ const typeLabels = {
   enum: "Enum",
   link: "Reference",
 } satisfies Record<AttrsSchema.PropValTag, string>;
+
+type Change = Data.TaggedEnum<{
+  Type: { type: PropQuery.EditableType };
+  Default: { value: Option.Option<AttrsSchema.PropVal> };
+}>;
+
+const Change = Data.taggedEnum<Change>();
+
+const typeChoices = PropQuery.editableTypes.map((value) => ({ value, label: typeLabels[value] }));
 
 export function Root(props: {
   doc: Y.Doc;
@@ -32,25 +42,19 @@ export function Root(props: {
   const focus = Focus.useNode();
   const [mutation, edit] = useAtom(Edit, { mode: "promise" });
 
-  const change = async (value: AttrsSchema.PropVal) => {
+  const change = async (change: Change) => {
     try {
-      await edit({ doc: props.doc, value });
+      await edit({ doc: props.doc, change });
     } catch {}
   };
 
-  const defaultLabel = () => {
-    const value = props.attrs.prop_default;
+  const editableType = () => PropQuery.editableTypes.find((type) => type === props.attrs.prop_type);
 
-    if (!value) {
-      return "Choose";
-    }
-
-    if (value._tag !== props.attrs.prop_type) {
-      return "Invalid value";
-    }
-
-    return PropQuery.valueLabel(value);
-  };
+  const defaultState = () =>
+    PropQuery.valueState({
+      type: props.attrs.prop_type,
+      value: Option.fromNullishOr(props.attrs.prop_default),
+    });
 
   return (
     <div class="px-4 pb-4">
@@ -66,9 +70,29 @@ export function Root(props: {
           <DescriptionList.Row>
             <DescriptionList.Term>Value kind</DescriptionList.Term>
             <DescriptionList.Details>
-              <Button variant="ghost" size="chip" class="h-7 px-2 text-sm font-normal" disabled>
-                {typeLabels[props.attrs.prop_type]}
-              </Button>
+              <Picker.Root label="Value kind">
+                <Picker.Trigger
+                  variant="ghost"
+                  rounded="default"
+                  class="h-7 border-0 px-2 text-sm"
+                  disabled={props.attrs.builtin || mutation().waiting}
+                >
+                  {typeLabels[props.attrs.prop_type]}
+                </Picker.Trigger>
+                <Picker.Content>
+                  {(close) => (
+                    <Picker.Query<(typeof typeChoices)[number]>
+                      label="Value kind"
+                      query={MenuQuery.choices(() => typeChoices)}
+                      selected={props.attrs.prop_type}
+                      onSelect={(choice) => {
+                        void change(Change.Type({ type: choice.value }));
+                        close();
+                      }}
+                    />
+                  )}
+                </Picker.Content>
+              </Picker.Root>
             </DescriptionList.Details>
           </DescriptionList.Row>
           <DescriptionList.Row>
@@ -78,28 +102,45 @@ export function Root(props: {
                 <Picker.Trigger
                   variant="ghost"
                   rounded="default"
-                  class="h-7 border-0 px-2 text-sm"
-                  disabled={
-                    props.attrs.builtin || props.attrs.prop_type !== "bool" || mutation().waiting
-                  }
+                  aria-invalid={Attrs.ValueState.$is("Invalid")(defaultState())}
+                  class="h-7 border-0 px-2 text-sm aria-[invalid=true]:bg-error-control aria-[invalid=true]:text-error-fg aria-[invalid=true]:hover:bg-error-control-hover"
+                  disabled={props.attrs.builtin || !editableType() || mutation().waiting}
                 >
-                  {defaultLabel()}
+                  {PropQuery.stateLabel(defaultState())}
                 </Picker.Trigger>
                 <Picker.Content>
                   {(close) => (
-                    <Picker.Query
-                      label="Default value"
-                      query={PropQuery.boolQuery({ defaultValue: undefined })}
-                      selected={
-                        Predicate.isTagged(props.attrs.prop_default, "bool")
-                          ? String(props.attrs.prop_default.val)
-                          : undefined
-                      }
-                      onSelect={(choice) => {
-                        void change(choice.propVal);
-                        close();
-                      }}
-                    />
+                    <Show when={editableType()}>
+                      {(type) => (
+                        <PropPicker.Value
+                          label="Default value"
+                          type={type()}
+                          defaultValue={Option.none()}
+                          state={defaultState()}
+                          disabled={mutation().waiting}
+                          onChange={(value) => {
+                            void change(Change.Default({ value: Option.some(value) }));
+                            close();
+                          }}
+                        >
+                          {(items) => (
+                            <CommandList>
+                              <CommandScroll>{items}</CommandScroll>
+                              <PropPicker.Invalid state={defaultState()} />
+                              <Picker.Footer>
+                                <Picker.Clear
+                                  disabled={!props.attrs.prop_default || mutation().waiting}
+                                  onSelect={() => {
+                                    void change(Change.Default({ value: Option.none() }));
+                                    close();
+                                  }}
+                                />
+                              </Picker.Footer>
+                            </CommandList>
+                          )}
+                        </PropPicker.Value>
+                      )}
+                    </Show>
                   )}
                 </Picker.Content>
               </Picker.Root>
@@ -120,10 +161,22 @@ const Edit = bindRt((rt) =>
   rt.fn(
     Effect.fn("ComponentsNotePropertyDef.edit")(function* (opts: {
       readonly doc: Y.Doc;
-      readonly value: AttrsSchema.PropVal;
+      readonly change: Change;
     }) {
       const attrs = yield* Attrs.Service;
-      yield* attrs.setPropDefault(opts);
+
+      yield* Match.value(opts.change).pipe(
+        Match.tag("Type", ({ type }) => attrs.setPropType({ doc: opts.doc, type })),
+        Match.tag("Default", ({ value }) =>
+          value.pipe(
+            Option.match({
+              onNone: () => attrs.clearPropDefault({ doc: opts.doc }),
+              onSome: (value) => attrs.setPropDefault({ doc: opts.doc, value }),
+            }),
+          ),
+        ),
+        Match.exhaustive,
+      );
     }),
   ),
 );

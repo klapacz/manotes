@@ -203,22 +203,15 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
 
           statement = statement
             .leftJoin(prop, and(eq(prop.recordId, Tables.notes.id), eq(prop.propId, propId)))
-            .innerJoin(
-              def,
-              and(
-                eq(def.id, propId),
-                eq(def._tag, "prop"),
-                eq(def.prop_type, value._tag),
-                eq(def.attrs_valid, 1),
-              ),
-            );
+            .leftJoin(def, and(eq(def.id, propId), eq(def._tag, "prop"), eq(def.attrs_valid, 1)));
 
-          conditions.push(sql`CASE
+          // Ignore saved filters while their definition is unavailable or invalid.
+          conditions.push(sql`(${def.id} IS NULL OR (${def.prop_type} = ${value._tag} AND CASE
             WHEN ${prop.recordId} IS NULL THEN json_extract(${def.prop_default}, '$.val')
             WHEN json_extract(${prop.value}, '$._tag') = ${value._tag}
               THEN json_extract(${prop.value}, '$.val')
             ELSE NULL
-          END = ${Predicate.isTagged(value, "bool") ? (value.val ? 1 : 0) : value.val}`);
+          END = ${Predicate.isTagged(value, "bool") ? (value.val ? 1 : 0) : value.val}))`);
         }
 
         if (query.backlinksTo !== undefined) {

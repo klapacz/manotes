@@ -179,6 +179,8 @@ describe("Attrs property editing", () => {
                 }),
                 attrs.clearProp({ doc, propId }),
                 attrs.setPropDefault({ doc, value }),
+                attrs.setPropType({ doc, type: "number" }),
+                attrs.clearPropDefault({ doc }),
                 attrs.initializeProp({ doc, builtin: false, defaultValue: value }),
               ];
 
@@ -199,7 +201,7 @@ describe("Attrs property editing", () => {
     },
   );
 
-  it("decodes SQL cells, encodes them back and rejects invalid definition defaults", () => {
+  it("decodes SQL cells and rejects incompatible defaults", () => {
     const row: typeof PropRecordRepo.ValidDef.Encoded = {
       id: "archived",
       title: "Archived",
@@ -219,9 +221,59 @@ describe("Attrs property editing", () => {
     const decode = Schema.decodeUnknownResult(PropRecordRepo.ValidDef);
     expect(Result.isFailure(decode({ ...row, builtin: 2 }))).toBe(true);
     expect(Result.isFailure(decode({ ...row, prop_type: null }))).toBe(true);
-    expect(Result.isFailure(decode({ ...row, prop_default: '{"_tag":"number","val":1}' }))).toBe(
-      true,
-    );
+    const incompatible = { ...row, prop_default: '{"_tag":"number","val":1}' };
+    expect(Result.isFailure(decode(incompatible))).toBe(true);
+    expect(incompatible.prop_default).toBe('{"_tag":"number","val":1}');
+  });
+
+  it("preserves defaults and assignments when changing kind, and allows explicit replacement", () => {
+    const doc = new Y.Doc();
+    const propId = AttrsSchema.NoteId.make("hours");
+    const original = AttrsSchema.PropVal.cases.bool.make({ val: false });
+
+    try {
+      Effect.runSync(
+        Attrs.Service.use((attrs) =>
+          Effect.gen(function* () {
+            yield* attrs.initializeProp({ doc, builtin: false, defaultValue: original });
+            yield* attrs.setProp({
+              doc,
+              recordId: AttrsSchema.NoteId.make("record"),
+              propId,
+              value: original,
+            });
+            yield* attrs.setPropType({ doc, type: "number" });
+            const map = doc.getMap("attrs");
+            expect(map.get("prop_type")).toBe("number");
+            expect(map.get("prop_default")).toEqual(original);
+            expect(map.toJSON().props[propId]).toEqual(original);
+
+            const before = Y.encodeStateAsUpdate(doc);
+            expect(
+              Result.isFailure(
+                yield* Effect.result(
+                  attrs.setPropDefault({
+                    doc,
+                    // oxlint-disable-next-line anti-slop-effect/no-manual-tagged-construction
+                    value: { _tag: "number", val: Infinity },
+                  }),
+                ),
+              ),
+            ).toBe(true);
+            expect(Y.encodeStateAsUpdate(doc)).toEqual(before);
+
+            const value = AttrsSchema.PropVal.cases.number.make({ val: 7.5 });
+            yield* attrs.setPropDefault({ doc, value });
+            expect(map.get("prop_default")).toEqual(value);
+            yield* attrs.clearPropDefault({ doc });
+            expect(map.has("prop_default")).toBe(false);
+            expect(map.toJSON().props[propId]).toEqual(original);
+          }),
+        ).pipe(Effect.provide(Attrs.Service.layer)),
+      );
+    } finally {
+      doc.destroy();
+    }
   });
 
   it("ties each entry's value type to its definition", () => {

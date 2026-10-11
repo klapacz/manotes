@@ -2,6 +2,7 @@ import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import type { PropRecordRepo } from "@manotes/shared/prop-record.repo";
+import { Option } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { StreamPropFilterEntries } from "./stream-prop-filter.entries";
 
@@ -24,7 +25,7 @@ describe("property filter entries", () => {
       {
         id: archived.id,
         def: archived,
-        value: archived.prop_default,
+        value: Option.some(archived.prop_default),
         label: "Archived",
         detail: "False",
         modified: false,
@@ -45,7 +46,7 @@ describe("property filter entries", () => {
 
     expect(entries[0]).toMatchObject({
       detail: "Any",
-      value: undefined,
+      value: Option.none(),
       modified: true,
       showChip: false,
       canClear: false,

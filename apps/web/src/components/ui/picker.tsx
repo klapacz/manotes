@@ -17,7 +17,7 @@ import { Dynamic } from "solid-js/web";
 import Drawer from "@corvu/drawer";
 import { PickerQuery } from "./picker-query";
 import { useIsMobile } from "../../lib/use-mobile";
-import { SelectedIcon, EnterSubmenuIcon, BackIcon, XIcon } from "../icons";
+import { SelectedIcon, EnterSubmenuIcon, BackIcon, XIcon, ApplyIcon } from "../icons";
 import { Button, type ButtonProps } from "./button";
 import { cx } from "../../lib/cva";
 import {
@@ -421,6 +421,15 @@ export function Clear(props: { onSelect?: () => void; disabled?: boolean }) {
     >
       <XIcon />
       Clear
+    </CommandItem>
+  );
+}
+
+export function Apply(props: { onSelect: () => void; disabled?: boolean }) {
+  return (
+    <CommandItem value="apply" disabled={props.disabled} onSelect={props.onSelect}>
+      <ApplyIcon />
+      Apply
     </CommandItem>
   );
 }

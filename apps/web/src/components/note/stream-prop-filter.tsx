@@ -1,7 +1,7 @@
 import { PropRecordRepo } from "@manotes/shared/prop-record.repo";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
-import { Array, Match, Stream } from "effect";
+import { Array, Option, Stream } from "effect";
 import { createMemo } from "solid-js";
 import { bindRt, createAtomStore } from "../../lib";
 import { MenuQuery } from "../../lib/menu-query";
@@ -12,7 +12,7 @@ import { PropPicker } from "./prop-picker";
 import { PropQuery } from "./prop-query";
 import { StreamPropFilterEntries } from "./stream-prop-filter.entries";
 
-type Def = PropRecordRepo.Def<"bool">;
+type Def = PropQuery.Def;
 
 export type Entry = StreamPropFilterEntries.Entry;
 
@@ -50,7 +50,7 @@ function useDefs() {
       rt.atom(
         PropRecordRepo.Service.use((repo) => repo.reactiveDefs()).pipe(
           Stream.unwrap,
-          Stream.map((defs) => ({ defs: Array.filterMap(defs, boolDef) })),
+          Stream.map((defs) => ({ defs: Array.filterMap(defs, PropQuery.editableDef) })),
         ),
       ),
     ),
@@ -59,11 +59,6 @@ function useDefs() {
 
   return () => state.value.defs;
 }
-
-const boolDef = Match.type<PropRecordRepo.Def>().pipe(
-  Match.when({ prop_type: "bool" }, (def) => def),
-  Match.result,
-);
 
 export function query(opts: {
   entries: readonly Entry[];
@@ -89,7 +84,10 @@ export function query(opts: {
       MenuQuery.nested({
         label: entry.label,
         query: QueryEngine.map(
-          PropQuery.boolQuery({ defaultValue: entry.def.prop_default?.val }),
+          PropQuery.values({
+            type: entry.def.prop_type,
+            defaultValue: Option.fromNullishOr(entry.def.prop_default),
+          }),
           (choice) => ({
             ...choice,
             group: "properties",
@@ -109,6 +107,9 @@ export function Menu(props: {
   onBack: () => void;
   onClear: () => void;
 }) {
+  const state = () =>
+    PropQuery.valueState({ type: props.entry.def.prop_type, value: props.entry.value });
+
   const footer = () => (
     <Picker.Footer>
       <Picker.Back onSelect={props.onBack} />
@@ -117,19 +118,22 @@ export function Menu(props: {
   );
 
   return (
-    <PropPicker.Bool
-      def={props.entry.def}
-      value={props.entry.value}
+    <PropPicker.Value
+      label={props.entry.label}
+      type={props.entry.def.prop_type}
+      defaultValue={Option.fromNullishOr(props.entry.def.prop_default)}
+      state={state()}
       search={props.search}
       onChange={props.onChange}
     >
       {(items) => (
         <CommandList>
           <CommandScroll>{items}</CommandScroll>
+          <PropPicker.Invalid state={state()} />
           {footer()}
         </CommandList>
       )}
-    </PropPicker.Bool>
+    </PropPicker.Value>
   );
 }
 

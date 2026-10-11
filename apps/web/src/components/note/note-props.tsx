@@ -2,7 +2,7 @@ import { useAtom } from "@effect/atom-solid";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { PropRecordRepo } from "@manotes/shared/prop-record.repo";
-import { Array, Effect, Match, Predicate, Stream } from "effect";
+import { Array, Effect, Match, Option, Predicate, Stream } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { Show } from "solid-js";
 import type * as Y from "yjs";
@@ -27,7 +27,7 @@ export function query(opts: {
         const defs = yield* PropRecordRepo.Service.use((repo) => repo.reactiveDefs());
 
         return attrs.watchProps({ doc, defs }).pipe(
-          Stream.map((entries) => Array.filterMap(entries, boolEntry)),
+          Stream.map((entries) => Array.filterMap(entries, editableEntry)),
           Stream.map((entries) =>
             entries.flatMap(({ def, value }) => {
               if (def.id === opts.recordId) return [];
@@ -46,7 +46,11 @@ export function query(opts: {
                     label,
                     group: "properties",
                     builtin: def.builtin,
-                    detail: () => valueLabel(value),
+                    detail: () =>
+                      Match.value(value).pipe(
+                        Match.tag("Unset", () => undefined),
+                        Match.orElse(PropQuery.stateLabel),
+                      ),
                   },
                 },
               ];
@@ -58,8 +62,8 @@ export function query(opts: {
   };
 }
 
-const boolEntry = Match.type<Attrs.Entry>().pipe(
-  Match.when({ def: { prop_type: "bool" } }, (entry) => entry),
+const editableEntry = Match.type<Attrs.Entry>().pipe(
+  Match.when({ def: { prop_type: Match.is(...PropQuery.editableTypes) } }, (entry) => entry),
   Match.result,
 );
 
@@ -86,7 +90,7 @@ export function Menu(props: {
                 doc,
                 defs: defs.pipe(Stream.map((rows) => rows.filter((row) => row.id === propId))),
               })
-              .pipe(Stream.map((entries) => Array.filterMap(entries, boolEntry)[0]));
+              .pipe(Stream.map((entries) => Array.filterMap(entries, editableEntry)[0]));
           }),
         );
       }),
@@ -118,58 +122,35 @@ export function Menu(props: {
               </PropPicker.Unavailable>
             }
           >
-            {(entry) => {
-              const value = () => {
-                const state = entry().value;
-
-                return Match.value(state).pipe(
-                  Match.tag("Valid", ({ value }) => value),
-                  Match.orElse(() => undefined),
-                );
-              };
-
-              return (
-                <PropPicker.Bool
-                  def={entry().def}
-                  value={value()}
-                  disabled={mutation().waiting || Predicate.isTagged(entry().value, "Invalid")}
-                  onChange={(value) => void change(value)}
-                >
-                  {(items) => (
-                    <CommandList>
-                      <CommandScroll>{items}</CommandScroll>
-                      <MatchTag
-                        when={entry().value}
-                        cases={{
-                          Invalid: (state) => (
-                            <p class="px-3 py-2 text-sm text-error-fg">
-                              Invalid value
-                              <Show when={state().value}>
-                                {(value) => <>: {JSON.stringify(value())}</>}
-                              </Show>
-                            </p>
-                          ),
-                        }}
+            {(entry) => (
+              <PropPicker.Value
+                label={entry().def.title || "Untitled"}
+                type={entry().def.prop_type}
+                defaultValue={Option.fromNullishOr(entry().def.prop_default)}
+                state={entry().value}
+                disabled={mutation().waiting}
+                onChange={(value) => void change(value)}
+              >
+                {(items) => (
+                  <CommandList>
+                    <CommandScroll>{items}</CommandScroll>
+                    <PropPicker.Invalid state={entry().value} />
+                    <Show when={AsyncResult.isFailure(mutation())}>
+                      <p role="alert" class="px-3 py-2 text-sm text-error-fg">
+                        Unable to update property.
+                      </p>
+                    </Show>
+                    <Picker.Footer>
+                      <Picker.Back onSelect={props.onBack} />
+                      <Picker.Clear
+                        disabled={Predicate.isTagged(entry().value, "Unset") || mutation().waiting}
+                        onSelect={() => void change(undefined)}
                       />
-                      <Show when={AsyncResult.isFailure(mutation())}>
-                        <p role="alert" class="px-3 py-2 text-sm text-error-fg">
-                          Unable to update property.
-                        </p>
-                      </Show>
-                      <Picker.Footer>
-                        <Picker.Back onSelect={props.onBack} />
-                        <Picker.Clear
-                          disabled={
-                            Predicate.isTagged(entry().value, "Unset") || mutation().waiting
-                          }
-                          onSelect={() => void change(undefined)}
-                        />
-                      </Picker.Footer>
-                    </CommandList>
-                  )}
-                </PropPicker.Bool>
-              );
-            }}
+                    </Picker.Footer>
+                  </CommandList>
+                )}
+              </PropPicker.Value>
+            )}
           </Show>
         ),
       }}
@@ -200,14 +181,5 @@ const Edit = bindRt((rt) =>
     }),
   ),
 );
-
-function valueLabel(value: Attrs.Entry<"bool">["value"]): string | undefined {
-  return Match.value(value).pipe(
-    Match.tag("Unset", () => undefined),
-    Match.tag("Valid", ({ value }) => PropQuery.valueLabel(value)),
-    Match.tag("Invalid", () => "Invalid value"),
-    Match.exhaustive,
-  );
-}
 
 export * as NoteProps from "./note-props";

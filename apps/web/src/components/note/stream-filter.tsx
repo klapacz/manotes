@@ -17,7 +17,7 @@ import { Button } from "../ui/button";
 import { Command, CommandItem, CommandList, CommandScroll } from "../ui/command";
 import { Picker } from "../ui/picker";
 import { DateCommand } from "./date-command";
-import { FilterIcon, XIcon, RetryIcon, ApplyIcon, ArrowUpRightIcon } from "../icons";
+import { FilterIcon, XIcon, RetryIcon, ArrowUpRightIcon } from "../icons";
 
 type Filter = StreamSettings.Filter;
 
@@ -455,16 +455,12 @@ function SearchPicker(
       />
       <CommandList>
         <CommandScroll>
-          <CommandItem
-            value="apply"
+          <Picker.Apply
             onSelect={() => {
               props.onChange(text());
               props.onApply();
             }}
-          >
-            <ApplyIcon />
-            Apply
-          </CommandItem>
+          />
         </CommandScroll>
         <Picker.Footer>
           <Picker.Back onSelect={props.onBack} />

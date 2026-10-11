@@ -80,6 +80,137 @@ describe("Archived builtin", () => {
     );
   });
 
+  it("blocks using invalid definitions until their default is corrected", async () => {
+    await run(
+      Effect.gen(function* () {
+        const device = yield* makeDevice();
+        yield* Effect.gen(function* () {
+          const attrs = yield* Attrs.Service;
+          const events = yield* EventRepo.Service;
+          const materializer = yield* Materializer.Service;
+          const notes = yield* NoteRepo.Service;
+          const definitions = yield* PropRecordRepo.Service;
+
+          const makeDoc = () =>
+            Effect.acquireRelease(
+              Effect.sync(() => NoteDoc.make()),
+              ({ doc }) => Effect.sync(() => doc.destroy()),
+            );
+
+          const save = (id: AttrsSchema.NoteId, doc: Y.Doc) =>
+            events
+              .create({
+                noteId: id,
+                type: "update",
+                createdAt,
+                payload: Y.encodeStateAsUpdate(doc),
+              })
+              .pipe(Effect.andThen(materializer.catchUp()));
+
+          const propId = AttrsSchema.NoteId.make("hours");
+          const prop = yield* makeDoc();
+          yield* attrs.initializeProp({
+            doc: prop.doc,
+            builtin: false,
+            defaultValue: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+          });
+          yield* save(propId, prop.doc);
+
+          for (const [id, value] of [
+            ["unset", undefined],
+            ["old-value", AttrsSchema.PropVal.cases.bool.make({ val: false })],
+            ["number", AttrsSchema.PropVal.cases.number.make({ val: 7.5 })],
+          ] as const) {
+            const note = yield* makeDoc();
+            const recordId = AttrsSchema.NoteId.make(id);
+
+            if (value !== undefined) {
+              yield* attrs.setProp({ doc: note.doc, recordId, propId, value });
+            }
+
+            yield* save(recordId, note.doc);
+          }
+
+          yield* attrs.setPropType({ doc: prop.doc, type: "number" });
+          yield* save(propId, prop.doc);
+          const db = yield* DB.Service;
+
+          const stored = (yield* db.query((db) => db.select().from(Tables.notes))).find(
+            (row) => row.id === propId,
+          );
+
+          expect(stored?.attrs_valid).toBe(0);
+          expect(stored?.prop_default).toBe('{"_tag":"bool","val":false}');
+
+          const defs = Option.getOrThrow(
+            yield* (yield* definitions.reactiveDefs()).pipe(Stream.runHead),
+          );
+
+          expect(defs).toEqual([]);
+
+          const properties = Option.getOrThrow(
+            yield* (yield* notes.reactiveStreamList({ type: "prop", sort: "updated" })).pipe(
+              Stream.runHead,
+            ),
+          );
+
+          expect(properties.map(({ id }) => id)).toContain(propId);
+
+          const ids = (val: number) =>
+            Effect.gen(function* () {
+              const rows = Option.getOrThrow(
+                yield* (yield* notes.reactiveStreamList({
+                  type: "notes",
+                  sort: "date",
+                  props: { [propId]: AttrsSchema.PropVal.cases.number.make({ val }) },
+                })).pipe(Stream.runHead),
+              );
+
+              return rows.map(({ id }) => id).toSorted();
+            });
+
+          expect(yield* ids(0)).toEqual(["number", "old-value", "unset"]);
+          expect(yield* ids(7.5)).toEqual(["number", "old-value", "unset"]);
+          yield* attrs.setPropDefault({
+            doc: prop.doc,
+            value: AttrsSchema.PropVal.cases.number.make({ val: 7.5 }),
+          });
+          yield* save(propId, prop.doc);
+          expect(
+            Option.getOrThrow(yield* (yield* definitions.reactiveDefs()).pipe(Stream.runHead)),
+          ).toMatchObject([
+            {
+              id: propId,
+              prop_type: "number",
+              prop_default: AttrsSchema.PropVal.cases.number.make({ val: 7.5 }),
+            },
+          ]);
+          expect(yield* ids(0)).toEqual([]);
+          expect(yield* ids(7.5)).toEqual(["number", "unset"]);
+
+          const rows = Option.getOrThrow(
+            yield* (yield* notes.reactiveStreamList({
+              type: "notes",
+              sort: "date",
+              props: {
+                [propId]: AttrsSchema.PropVal.cases.number.make({ val: 7.5 }),
+                [AttrsSchema.NoteId.make("missing")]: AttrsSchema.PropVal.cases.bool.make({
+                  val: true,
+                }),
+              },
+            })).pipe(Stream.runHead),
+          );
+
+          expect(rows.map(({ id }) => id).toSorted()).toEqual(["number", "unset"]);
+        }).pipe(
+          Effect.provide(Attrs.Service.layer),
+          Effect.provide(PropRecordRepo.Service.layer),
+          Effect.provideContext(device),
+        );
+      }),
+    );
+  });
+
   it("filters tagged values and reacts to assignments and definition defaults", async () => {
     await run(
       Effect.gen(function* () {

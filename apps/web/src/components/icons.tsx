@@ -28,6 +28,7 @@ export {
   Square as StopIcon,
   LoaderCircle as LoadingIcon,
   RotateCcw as RetryIcon,
+  RotateCcw as UseDefaultIcon,
   Search as SearchIcon,
   Terminal as TerminalIcon,
   X as XIcon,
