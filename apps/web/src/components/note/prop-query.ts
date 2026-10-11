@@ -1,12 +1,14 @@
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import type { PropRecordRepo } from "@manotes/shared/prop-record.repo";
+import type { NoteRepo } from "@manotes/shared/note.repo";
 import { Match, Option, pipe, Schema, Stream, String, Types } from "effect";
 import { MenuQuery } from "../../lib/menu-query";
 import { QueryEngine } from "../../lib/query-engine";
 import type { Picker } from "../ui/picker";
+import { NoteQuery } from "./note-query";
 
-export const editableTypes = ["bool", "number", "text"] as const;
+export const editableTypes = ["bool", "number", "text", "link"] as const;
 
 export type EditableType = (typeof editableTypes)[number];
 
@@ -22,7 +24,7 @@ type Choice = Picker.Choice & { propVal: AttrsSchema.PropVal };
 export function values(opts: {
   type: EditableType;
   defaultValue: Option.Option<AttrsSchema.PropVal>;
-}): QueryEngine.Query<Choice> {
+}): QueryEngine.Query<Choice, unknown, NoteRepo.Service> {
   return Match.value(opts.type).pipe(
     Match.when("bool", () =>
       boolQuery({
@@ -39,8 +41,28 @@ export function values(opts: {
         defaultValue: opts.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.text)),
       }),
     ),
+    Match.when("link", () =>
+      linkQuery({
+        defaultValue: opts.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.link)),
+      }),
+    ),
     Match.exhaustive,
   );
+}
+
+export function linkQuery(opts: {
+  defaultValue: Option.Option<Types.ExtractTag<AttrsSchema.PropVal, "link">>;
+}) {
+  return QueryEngine.map(NoteQuery.query, (note) => {
+    const propVal = AttrsSchema.PropVal.cases.link.make({ val: note.value });
+    const isDefault = opts.defaultValue.pipe(Option.contains(propVal));
+
+    return {
+      ...note,
+      propVal,
+      detail: isDefault ? () => "Default" : undefined,
+    };
+  });
 }
 
 export function boolQuery(opts: {
@@ -147,7 +169,9 @@ export function valueLabel(value: AttrsSchema.PropVal): string {
 
       return val;
     }),
-    Match.tag("enum", "link", ({ val }) => val),
+    Match.tag("enum", ({ val }) => val),
+    // Reference labels are resolved reactively by PropPicker.ValueLabel.
+    Match.tag("link", () => "Reference"),
     Match.exhaustive,
   );
 }

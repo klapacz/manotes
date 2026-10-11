@@ -5,14 +5,15 @@
 import { For, Show, Switch, Match, createMemo, createSignal, type JSX } from "solid-js";
 import { Data, Option, Record, Stream } from "effect";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
-import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { StreamPropFilter } from "./stream-prop-filter";
-import { NoteRepo, bindRt, createAtomStore, createSyncedAtom } from "../../lib";
+import type { NoteRepo } from "../../lib";
 import { NoteLink } from "../../lib/note/link-component";
 import { DateSuggestions } from "../../lib/date-suggestions";
 import { QueryEngine } from "../../lib/query-engine";
 import { MenuQuery } from "../../lib/menu-query";
 import { NoteQuery } from "./note-query";
+import { NoteLabel } from "./note-label";
+import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Button } from "../ui/button";
 import { Command, CommandItem, CommandList, CommandScroll } from "../ui/command";
 import { Picker } from "../ui/picker";
@@ -265,6 +266,7 @@ export function StreamFilterEditor(props: {
                             propertyFilters.set({ propId: prop().id, value, close })
                           }
                           onBack={() => open(undefined)}
+                          onOpenNote={(id) => close(() => props.onOpenNote(id))}
                           onClear={() =>
                             propertyFilters.set({ propId: prop().id, value: undefined, close })
                           }
@@ -392,11 +394,33 @@ export function StreamFilterEditor(props: {
               variant="ghost"
               size="chip"
               rounded="none"
-              class="h-full px-2 text-sm font-normal"
+              class="h-full min-w-0 max-w-48 px-2 text-sm font-normal"
               onClick={() => open(Field.prop({ propId: entry.id }))}
             >
-              {entry.detail}
+              <span class="min-w-0 truncate">
+                <StreamPropFilter.ValueLabel entry={entry} />
+              </span>
             </Button>
+            <Show
+              when={Option.getOrUndefined(
+                entry.value.pipe(Option.filter(AttrsSchema.PropVal.guards.link)),
+              )}
+            >
+              {(value) => (
+                <Button
+                  as={NoteLink}
+                  id={value().val}
+                  variant="ghost"
+                  size="icon-xs"
+                  rounded="none"
+                  class="h-full text-fg-subtle"
+                  aria-label={`Open ${entry.label} reference`}
+                  title="Open note"
+                >
+                  <ArrowUpRightIcon />
+                </Button>
+              )}
+            </Show>
           </FilterPill>
         )}
       </For>
@@ -423,7 +447,7 @@ function FilterValue(props: { field: StreamSettings.FilterField; filter: Filter 
           props.filter[props.field]
         }
       >
-        {(id) => <NoteFilterLabel id={id()} />}
+        {(id) => <NoteLabel.Root id={id()} />}
       </Match>
     </Switch>
   );
@@ -513,30 +537,6 @@ function NoteFilterPicker(
         </CommandList>
       )}
     </Picker.Query>
-  );
-}
-
-function NoteFilterLabel(props: { id: string }) {
-  const idAtom = createSyncedAtom(() => props.id);
-
-  const note = createAtomStore(
-    bindRt((rt) =>
-      rt.atom((get) =>
-        NoteRepo.Service.use((repo) => repo.reactiveFindPreviewById(get(idAtom))).pipe(
-          Stream.unwrap,
-          Stream.map((value) => ({ note: Option.getOrNull(value) })),
-        ),
-      ),
-    ),
-    { note: null },
-  );
-
-  const label = () => (note.value.note ? NoteQuery.label(note.value.note) : "Unavailable note");
-
-  return (
-    <span class="truncate" title={label()}>
-      {label()}
-    </span>
   );
 }
 

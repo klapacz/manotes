@@ -49,7 +49,7 @@ export function query(opts: {
                     detail: () =>
                       Match.value(value).pipe(
                         Match.tag("Unset", () => undefined),
-                        Match.orElse(PropQuery.stateLabel),
+                        Match.orElse((state) => <PropPicker.StateLabel state={state} />),
                       ),
                   },
                 },
@@ -72,6 +72,7 @@ export function Menu(props: {
   doc: Y.Doc;
   propId: AttrsSchema.NoteId;
   onBack: () => void;
+  onOpenNote: (id: AttrsSchema.NoteId) => void;
 }) {
   const input = createSyncedAtom(() => ({ doc: props.doc, propId: props.propId }));
 
@@ -130,6 +131,7 @@ export function Menu(props: {
                 state={entry().value}
                 disabled={mutation().waiting}
                 onChange={(value) => void change(value)}
+                onOpenNote={props.onOpenNote}
               >
                 {(items) => (
                   <CommandList>

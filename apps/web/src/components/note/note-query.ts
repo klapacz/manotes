@@ -1,8 +1,9 @@
 import { Effect, Stream } from "effect";
-import { NoteRepo } from "../../lib";
+import { NoteRepo } from "@manotes/shared/note.repo";
+import type { NoteSchema } from "@manotes/shared/note.schema";
 import { QueryEngine } from "../../lib/query-engine";
 
-export type Result = { value: string; label: string };
+export type Result = { value: NoteSchema.Id; label: string };
 
 export function label(note: { title: string | null; text: string }, query = ""): string {
   const text = query.trim().toLowerCase();

@@ -5,8 +5,9 @@ import { Match, Option } from "effect";
 import { Match as Case, Show, Switch, type JSX } from "solid-js";
 import { PropQuery } from "./prop-query";
 import { Command, CommandItem, CommandList } from "../ui/command";
-import { UseDefaultIcon } from "../icons";
+import { UseDefaultIcon, ArrowUpRightIcon } from "../icons";
 import { Picker } from "../ui/picker";
+import { NoteLabel } from "./note-label";
 
 type ValueProps = {
   label: string;
@@ -16,6 +17,7 @@ type ValueProps = {
   search?: string;
   disabled?: boolean;
   onChange: (value: AttrsSchema.PropVal) => void;
+  onOpenNote: (id: AttrsSchema.NoteId) => void;
   children: (items: JSX.Element) => JSX.Element;
 };
 
@@ -45,7 +47,59 @@ export function Value(props: ValueProps) {
       <Case when={props.type === "text"}>
         <TextInput {...props} disabled={disabled()} />
       </Case>
+      <Case when={props.type === "link"}>
+        <ReferenceInput {...props} disabled={disabled()} />
+      </Case>
     </Switch>
+  );
+}
+
+function ReferenceInput(props: ValueProps) {
+  const selected = () =>
+    Match.value(props.state).pipe(
+      Match.when(
+        { _tag: "Valid", value: AttrsSchema.PropVal.guards.link },
+        ({ value }) => value.val,
+      ),
+      Match.orElse(() => undefined),
+    );
+
+  const defaultValue = () =>
+    props.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.link), Option.getOrUndefined);
+
+  return (
+    <Picker.Query
+      label={props.label}
+      query={PropQuery.values({ type: "link", defaultValue: props.defaultValue })}
+      initialSearch={props.search}
+      selected={selected()}
+      disabled={props.disabled}
+      onSelect={(choice) => props.onChange(choice.propVal)}
+    >
+      {(items) =>
+        props.children(
+          <>
+            {items}
+            <Show when={defaultValue()}>
+              {(value) => (
+                <UseDefault value={value()} disabled={props.disabled} onSelect={props.onChange} />
+              )}
+            </Show>
+            <Show when={selected()}>
+              {(id) => (
+                <CommandItem value="open-note" onSelect={() => props.onOpenNote(id())}>
+                  <ArrowUpRightIcon />
+                  Open note
+                  <span class="ml-auto min-w-0 max-w-[50%] text-fg-subtle">
+                    <NoteLabel.Root id={id()} />
+                  </span>
+                </CommandItem>
+              )}
+            </Show>
+          </>,
+        )
+      }
+    </Picker.Query>
   );
 }
 
@@ -153,7 +207,7 @@ function UseDefault(props: {
       <UseDefaultIcon />
       <span class="flex-1">Use Default</span>
       <span class="min-w-0 truncate text-sm text-fg-subtle">
-        {PropQuery.valueLabel(props.value)}
+        <ValueLabel value={props.value} />
       </span>
     </CommandItem>
   );
@@ -162,8 +216,45 @@ function UseDefault(props: {
 export function Invalid(props: { state: Attrs.ValueState<AttrsSchema.PropVal> }) {
   return (
     <Show when={Attrs.ValueState.$is("Invalid")(props.state)}>
-      <p class="px-3 py-2 text-sm text-error-fg">{PropQuery.stateLabel(props.state)}</p>
+      <p class="px-3 py-2 text-sm text-error-fg">
+        <StateLabel state={props.state} />
+      </p>
     </Show>
+  );
+}
+
+export function ValueLabel(props: { value: AttrsSchema.PropVal }) {
+  return (
+    <Show
+      when={AttrsSchema.PropVal.guards.link(props.value) && props.value.val}
+      fallback={PropQuery.valueLabel(props.value)}
+    >
+      {(id) => <NoteLabel.Root id={id()} />}
+    </Show>
+  );
+}
+
+export function StateLabel(props: { state: Attrs.ValueState<AttrsSchema.PropVal> }) {
+  return (
+    <>
+      {Match.value(props.state).pipe(
+        Match.tag("Unset", () => "Choose"),
+        Match.tag("Valid", ({ value }) => <ValueLabel value={value} />),
+        Match.tag("Invalid", ({ value }) => (
+          <>
+            Invalid
+            <Show when={value}>
+              {(value) => (
+                <>
+                  : <ValueLabel value={value()} />
+                </>
+              )}
+            </Show>
+          </>
+        )),
+        Match.exhaustive,
+      )}
+    </>
   );
 }
 

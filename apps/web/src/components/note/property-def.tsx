@@ -1,4 +1,5 @@
 import { useAtom } from "@effect/atom-solid";
+import { getRouteApi } from "@tanstack/solid-router";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { Data, Effect, Match, Option } from "effect";
@@ -13,6 +14,15 @@ import { PropQuery } from "./prop-query";
 import { PropPicker } from "./prop-picker";
 import { Focus } from "./focus";
 import { MenuQuery } from "../../lib/menu-query";
+import { PaneCtx } from "../../lib/note/pane.ctx";
+import { PaneCursor } from "../../lib/note/pane.cursor";
+import { PaneMake } from "@manotes/shared/note/pane.make";
+import { PaneScroll } from "../../lib/note/pane.scroll";
+import { NoteLink } from "../../lib/note/link-component";
+import { Button } from "../ui/button";
+import { ArrowUpRightIcon } from "../icons";
+
+const route = getRouteApi("/$graph/");
 
 const typeLabels = {
   text: "Text",
@@ -40,6 +50,9 @@ export function Root(props: {
   };
 }) {
   const focus = Focus.useNode();
+  const ctx = PaneCtx.use();
+  const scroll = PaneScroll.use();
+  const navigate = route.useNavigate();
   const [mutation, edit] = useAtom(Edit, { mode: "promise" });
 
   const change = async (change: Change) => {
@@ -55,6 +68,23 @@ export function Root(props: {
       type: props.attrs.prop_type,
       value: Option.fromNullishOr(props.attrs.prop_default),
     });
+
+  const defaultLink = () =>
+    Match.value(defaultState()).pipe(
+      Match.when(
+        { _tag: "Valid", value: AttrsSchema.PropVal.guards.link },
+        ({ value }) => value.val,
+      ),
+      Match.orElse(() => undefined),
+    );
+
+  const openNote = (id: AttrsSchema.NoteId) => {
+    const input = PaneMake.note(id);
+
+    if (scroll.scrollToPane(input).found) return;
+
+    void navigate(PaneCtx.linkOptions(ctx, PaneCursor.openNext(input)));
+  };
 
   return (
     <div class="px-4 pb-4">
@@ -106,7 +136,7 @@ export function Root(props: {
                   class="h-7 border-0 px-2 text-sm aria-[invalid=true]:bg-error-control aria-[invalid=true]:text-error-fg aria-[invalid=true]:hover:bg-error-control-hover"
                   disabled={props.attrs.builtin || !editableType() || mutation().waiting}
                 >
-                  {PropQuery.stateLabel(defaultState())}
+                  <PropPicker.StateLabel state={defaultState()} />
                 </Picker.Trigger>
                 <Picker.Content>
                   {(close) => (
@@ -122,6 +152,7 @@ export function Root(props: {
                             void change(Change.Default({ value: Option.some(value) }));
                             close();
                           }}
+                          onOpenNote={(id) => close(() => openNote(id))}
                         >
                           {(items) => (
                             <CommandList>
@@ -144,6 +175,19 @@ export function Root(props: {
                   )}
                 </Picker.Content>
               </Picker.Root>
+              <Show when={defaultLink()}>
+                {(id) => (
+                  <Button
+                    as={NoteLink}
+                    id={id()}
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="Open default reference"
+                  >
+                    <ArrowUpRightIcon />
+                  </Button>
+                )}
+              </Show>
             </DescriptionList.Details>
           </DescriptionList.Row>
         </DescriptionList.Root>

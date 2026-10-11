@@ -31,7 +31,7 @@ describe("number property choices", () => {
   it.each(["0", "-7.5", " 1.25 ", "1e3"])("accepts finite numeric input %s", async (text) => {
     const matches = Option.getOrThrow(
       await Effect.runPromise(
-        PropQuery.values({ type: "number", defaultValue: Option.none() })({ text }).pipe(
+        PropQuery.numberQuery({ defaultValue: Option.none() })({ text }).pipe(
           Stream.runHead,
           Effect.scoped,
         ),
@@ -51,7 +51,7 @@ describe("number property choices", () => {
 
       const matches = Option.getOrThrow(
         await Effect.runPromise(
-          PropQuery.values({ type: "number", defaultValue: Option.none() })({ text }).pipe(
+          PropQuery.numberQuery({ defaultValue: Option.none() })({ text }).pipe(
             Stream.runHead,
             Effect.scoped,
           ),
@@ -65,8 +65,7 @@ describe("number property choices", () => {
   it("offers a zero default without input", async () => {
     const matches = Option.getOrThrow(
       await Effect.runPromise(
-        PropQuery.values({
-          type: "number",
+        PropQuery.numberQuery({
           defaultValue: Option.some(AttrsSchema.PropVal.cases.number.make({ val: 0 })),
         })({ text: "" }).pipe(Stream.runHead, Effect.scoped),
       ),
@@ -79,8 +78,7 @@ describe("number property choices", () => {
   it("does not offer the default for invalid input", async () => {
     const matches = Option.getOrThrow(
       await Effect.runPromise(
-        PropQuery.values({
-          type: "number",
+        PropQuery.numberQuery({
           defaultValue: Option.some(AttrsSchema.PropVal.cases.number.make({ val: 7 })),
         })({ text: "seven" }).pipe(Stream.runHead, Effect.scoped),
       ),
@@ -98,7 +96,7 @@ describe("text property choices", () => {
 
       const matches = Option.getOrThrow(
         await Effect.runPromise(
-          PropQuery.values({ type: "text", defaultValue: Option.none() })({ text }).pipe(
+          PropQuery.textQuery({ defaultValue: Option.none() })({ text }).pipe(
             Stream.runHead,
             Effect.scoped,
           ),
@@ -117,12 +115,12 @@ describe("text property choices", () => {
     expect(PropQuery.stateLabel(Attrs.ValueState.Valid({ value }))).toBe('""');
   });
 
-  it("offers the text default and ignores incompatible defaults", async () => {
+  it("offers the text default", async () => {
     const value = AttrsSchema.PropVal.cases.text.make({ val: "Inbox" });
 
     const matches = Option.getOrThrow(
       await Effect.runPromise(
-        PropQuery.values({ type: "text", defaultValue: Option.some(value) })({ text: "" }).pipe(
+        PropQuery.textQuery({ defaultValue: Option.some(value) })({ text: "" }).pipe(
           Stream.runHead,
           Effect.scoped,
         ),
@@ -131,17 +129,6 @@ describe("text property choices", () => {
 
     expect(matches[0]?.value.propVal).toEqual(value);
     expect(matches[0]?.value.detail?.()).toBe("Default");
-
-    const incompatible = Option.getOrThrow(
-      await Effect.runPromise(
-        PropQuery.values({
-          type: "text",
-          defaultValue: Option.some(AttrsSchema.PropVal.cases.number.make({ val: 7 })),
-        })({ text: "" }).pipe(Stream.runHead, Effect.scoped),
-      ),
-    );
-
-    expect(incompatible).toEqual([]);
   });
 });
 

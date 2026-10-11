@@ -2,7 +2,7 @@ import { PropRecordRepo } from "@manotes/shared/prop-record.repo";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Array, Option, Stream } from "effect";
-import { createMemo } from "solid-js";
+import { createMemo, Show } from "solid-js";
 import { bindRt, createAtomStore } from "../../lib";
 import { MenuQuery } from "../../lib/menu-query";
 import { QueryEngine } from "../../lib/query-engine";
@@ -74,7 +74,7 @@ export function query(opts: {
     },
     suffix: <Picker.Caret />,
     modified: entry.modified,
-    detail: entry.detail === undefined ? undefined : () => entry.detail,
+    detail: entry.detail === undefined ? undefined : () => <ValueLabel entry={entry} />,
     run: (search) => opts.onOpen(entry.id, search),
   }));
 
@@ -100,12 +100,21 @@ export function query(opts: {
   ]);
 }
 
+export function ValueLabel(props: { entry: Entry }) {
+  return (
+    <Show when={Option.getOrUndefined(props.entry.value)} fallback={props.entry.detail}>
+      {(value) => <PropPicker.ValueLabel value={value()} />}
+    </Show>
+  );
+}
+
 export function Menu(props: {
   entry: Entry;
   search?: string;
   onChange: (value: AttrsSchema.PropVal) => void;
   onBack: () => void;
   onClear: () => void;
+  onOpenNote: (id: AttrsSchema.NoteId) => void;
 }) {
   const state = () =>
     PropQuery.valueState({ type: props.entry.def.prop_type, value: props.entry.value });
@@ -125,6 +134,7 @@ export function Menu(props: {
       state={state()}
       search={props.search}
       onChange={props.onChange}
+      onOpenNote={props.onOpenNote}
     >
       {(items) => (
         <CommandList>

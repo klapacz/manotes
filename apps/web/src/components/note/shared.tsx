@@ -360,6 +360,7 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
                           doc={doc()}
                           propId={page().propId}
                           onBack={() => setPage(MenuPage.Actions())}
+                          onOpenNote={(id) => close(() => openNext(PaneMake.note(id)))}
                         />
                       )}
                     </Show>
