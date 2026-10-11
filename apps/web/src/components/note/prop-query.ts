@@ -6,7 +6,7 @@ import { MenuQuery } from "../../lib/menu-query";
 import { QueryEngine } from "../../lib/query-engine";
 import type { Picker } from "../ui/picker";
 
-export const editableTypes = ["bool", "number"] as const;
+export const editableTypes = ["bool", "number", "text"] as const;
 
 export type EditableType = (typeof editableTypes)[number];
 
@@ -32,6 +32,11 @@ export function values(opts: {
     Match.when("number", () =>
       numberQuery({
         defaultValue: opts.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.number)),
+      }),
+    ),
+    Match.when("text", () =>
+      textQuery({
+        defaultValue: opts.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.text)),
       }),
     ),
     Match.exhaustive,
@@ -88,6 +93,39 @@ export function numberQuery(opts: {
     );
 }
 
+export function textQuery(opts: {
+  defaultValue: Option.Option<Types.ExtractTag<AttrsSchema.PropVal, "text">>;
+}): QueryEngine.Query<Choice> {
+  return (request) =>
+    Stream.sync(() =>
+      pipe(
+        request.text,
+        Option.liftPredicate(String.isNonEmpty),
+        Option.match({
+          onNone: () => opts.defaultValue,
+          onSome: (val) => Option.some(AttrsSchema.PropVal.cases.text.make({ val })),
+        }),
+        Option.map((propVal) => {
+          const label = valueLabel(propVal);
+          const isDefault = opts.defaultValue.pipe(Option.contains(propVal));
+
+          return [
+            {
+              score: 1,
+              value: {
+                value: label,
+                label,
+                propVal,
+                detail: isDefault ? () => "Default" : undefined,
+              },
+            },
+          ];
+        }),
+        Option.getOrElse(() => []),
+      ),
+    );
+}
+
 export function parseNumber(text: string) {
   return pipe(
     text,
@@ -99,11 +137,19 @@ export function parseNumber(text: string) {
 }
 
 export function valueLabel(value: AttrsSchema.PropVal): string {
-  if (AttrsSchema.PropVal.guards.bool(value)) {
-    return value.val ? "True" : "False";
-  }
+  return Match.value(value).pipe(
+    Match.tag("bool", ({ val }) => (val ? "True" : "False")),
+    Match.tag("number", ({ val }) => val.toString()),
+    Match.tag("text", ({ val }) => {
+      if (String.isEmpty(val)) {
+        return '""';
+      }
 
-  return value.val.toString();
+      return val;
+    }),
+    Match.tag("enum", "link", ({ val }) => val),
+    Match.exhaustive,
+  );
 }
 
 export function valueState(opts: {
