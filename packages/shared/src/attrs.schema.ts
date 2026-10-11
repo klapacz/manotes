@@ -39,10 +39,6 @@ export type PropValTag = PropVal["_tag"];
 export const Props = YSchema.Map({ schema: Schema.Record(NoteId, PropVal), key: "propId" });
 
 const common = {
-  builtin: Schema.Boolean.pipe(
-    Schema.withDecodingDefault(Effect.succeed(false)),
-    Schema.withConstructorDefault(Effect.succeed(false)),
-  ),
   props: Props.pipe(
     Schema.withDecodingDefault(Effect.sync(() => ({}))),
     Schema.withConstructorDefault(Effect.sync(() => ({}))),
@@ -164,7 +160,7 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *
  * Compose the complete record schema after all field schemas have been defined.
  *
- * Resolved decoded schema. Missing shared fields default to note, false and an empty
+ * Resolved decoded schema. Missing shared fields default to note and an empty
  * props map during decoding only; malformed fields remain invalid and Yjs is untouched.
  *
  * ```ts
@@ -179,7 +175,6 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *   | {
  *       readonly _tag: "note";
  *       // Shared
- *       readonly builtin: boolean;
  *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
  *     }
  *   | {
@@ -187,7 +182,6 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *       readonly prop_type: "text";
  *       readonly prop_default?: { readonly _tag: "text"; readonly val: string };
  *       // Shared
- *       readonly builtin: boolean;
  *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
  *     }
  *   | {
@@ -195,7 +189,6 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *       readonly prop_type: "number";
  *       readonly prop_default?: { readonly _tag: "number"; readonly val: number };
  *       // Shared
- *       readonly builtin: boolean;
  *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
  *     }
  *   | {
@@ -203,7 +196,6 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *       readonly prop_type: "bool";
  *       readonly prop_default?: { readonly _tag: "bool"; readonly val: boolean };
  *       // Shared
- *       readonly builtin: boolean;
  *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
  *     }
  *   | {
@@ -211,7 +203,6 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *       readonly prop_type: "enum";
  *       readonly prop_default?: { readonly _tag: "enum"; readonly val: NoteId };
  *       // Shared
- *       readonly builtin: boolean;
  *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
  *     }
  *   | {
@@ -220,7 +211,6 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *       readonly prop_default?: { readonly _tag: "link"; readonly val: NoteId };
  *       readonly prop_targets?: TargetFilter; // Atomic JSON; invalid predicates are forbidden.
  *       // Shared
- *       readonly builtin: boolean;
  *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
  *     }
  *   | {
@@ -228,7 +218,6 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *       readonly owned_type: "enum_option";
  *       readonly owned_parent: NoteId;
  *       // Shared
- *       readonly builtin: boolean;
  *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
  *     }
  *   | {
@@ -238,7 +227,6 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *         { readonly _tag: "required" } | { readonly _tag: "optional" }
  *       >>;
  *       // Shared
- *       readonly builtin: boolean;
  *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
  *     };
  * ```

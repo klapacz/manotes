@@ -1,12 +1,12 @@
 import { NodeServices } from "@effect/platform-node";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
+import { PropDef } from "@manotes/shared/prop-def.service";
 import { PropRecordRepo } from "@manotes/shared/prop-record.repo";
-import { BuiltinAttrs } from "@manotes/shared/builtin-attrs.service";
+import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
 import { DB } from "@manotes/shared/db.service";
 import { Tables } from "@manotes/shared/db.tables";
 import { EventRepo } from "@manotes/shared/event.repo";
-import { CommittedEvent } from "@manotes/shared/graph-sync/contract/messages";
 import * as GraphSyncContext from "@manotes/shared/graph-sync/context";
 import * as GraphSyncEncryption from "@manotes/shared/graph-sync/encryption/service";
 import * as GraphSyncEventLog from "@manotes/shared/graph-sync/event-log.service";
@@ -17,9 +17,8 @@ import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 import { StreamFilter } from "@manotes/shared/note/stream-filter";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import { YSchema } from "@manotes/shared/y-schema";
-import { DateTime, Effect, Layer, Option, Scope, Stream, Struct } from "effect";
+import { DateTime, Effect, Layer, Option, Scope, Stream } from "effect";
 import * as Reactivity from "effect/unstable/reactivity/Reactivity";
-import { SqlClient } from "effect/unstable/sql";
 import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
 import { CliRuntime } from "./cli.runtime";
@@ -44,7 +43,6 @@ describe("Archived builtin", () => {
 
           yield* attrs.initializeProp({
             doc,
-            builtin: false,
             defaultValue: AttrsSchema.PropVal.cases.bool.make({ val: false }),
           });
           ProsemirrorEncode.initializeDocument({ doc, content: [{ type: "paragraph" }] });
@@ -111,7 +109,6 @@ describe("Archived builtin", () => {
           const prop = yield* makeDoc();
           yield* attrs.initializeProp({
             doc: prop.doc,
-            builtin: false,
             defaultValue: AttrsSchema.PropVal.cases.bool.make({ val: false }),
           });
           yield* save(propId, prop.doc);
@@ -216,12 +213,10 @@ describe("Archived builtin", () => {
       Effect.gen(function* () {
         const device = yield* makeDevice();
         yield* Effect.gen(function* () {
-          const builtins = yield* BuiltinAttrs.Service;
           const attrs = yield* Attrs.Service;
           const events = yield* EventRepo.Service;
           const materializer = yield* Materializer.Service;
           const notes = yield* NoteRepo.Service;
-          yield* builtins.ensureArchived({ createdAt });
 
           const makeDoc = () =>
             Effect.acquireRelease(
@@ -243,7 +238,6 @@ describe("Archived builtin", () => {
           const flag = yield* makeDoc();
           yield* attrs.initializeProp({
             doc: flag.doc,
-            builtin: false,
             defaultValue: AttrsSchema.PropVal.cases.bool.make({ val: true }),
           });
           yield* save(flagId, flag.doc);
@@ -354,7 +348,7 @@ describe("Archived builtin", () => {
           ]) {
             const propId = AttrsSchema.NoteId.make(value._tag);
             const def = yield* makeDoc();
-            yield* attrs.initializeProp({ doc: def.doc, builtin: false, defaultValue: value });
+            yield* attrs.initializeProp({ doc: def.doc, defaultValue: value });
             yield* save(propId, def.doc);
             expect(yield* ids({ [propId]: value })).toEqual([
               "false",
@@ -390,12 +384,10 @@ describe("Archived builtin", () => {
       Effect.gen(function* () {
         const device = yield* makeDevice();
         yield* Effect.gen(function* () {
-          const builtins = yield* BuiltinAttrs.Service;
-          yield* builtins.ensureArchived({ createdAt });
           const attrs = yield* Attrs.Service;
           const events = yield* EventRepo.Service;
           const materializer = yield* Materializer.Service;
-          const defsRepo = yield* PropRecordRepo.Service;
+          const defsRepo = yield* PropDef.Service;
           const db = yield* DB.Service;
           const recordId = AttrsSchema.NoteId.make("editable-note");
 
@@ -428,7 +420,7 @@ describe("Archived builtin", () => {
             {
               id: BuiltinAttrs.archivedId,
               title: "Archived",
-              builtin: true,
+
               prop_type: "bool",
               prop_default: AttrsSchema.PropVal.cases.bool.make({ val: false }),
             },
@@ -534,158 +526,88 @@ describe("Archived builtin", () => {
     );
   });
 
-  it("materializes the def once, using graph creation time, outside ordinary note flows", async () => {
+  it("provides Archived without creating a record or event", async () => {
     await run(
       Effect.gen(function* () {
         const device = yield* makeDevice();
         yield* Effect.gen(function* () {
-          const builtins = yield* BuiltinAttrs.Service;
-          yield* builtins.ensureArchived({ createdAt });
-          yield* builtins.ensureArchived({ createdAt });
-          const materializer = yield* Materializer.Service;
-          yield* materializer.catchUp();
+          const definitions = yield* PropDef.Service;
           const events = yield* EventRepo.Service;
-          expect(yield* events.listAllForBackup()).toHaveLength(1);
-
           const notes = yield* NoteRepo.Service;
-          const note = yield* notes.getById(BuiltinAttrs.archivedId);
-          expect(note.title).toBe("Archived");
-          expect(note.createdAt).toEqual(createdAt);
-          expect(note.updatedAt).toEqual(createdAt);
-
-          const { doc, attrs } = yield* Effect.acquireRelease(
-            Effect.sync(() => NoteDoc.make()),
-            ({ doc }) => Effect.sync(() => doc.destroy()),
-          );
-
-          if (note.materializedYUpdate === null) throw new Error("Missing snapshot");
-          Y.applyUpdate(doc, note.materializedYUpdate);
-          const decoded = yield* YSchema.exportStrict(attrs);
-          expect(decoded._tag).toBe("prop");
-          expect(decoded).toMatchObject({
-            builtin: true,
-            prop_type: "bool",
-            prop_default: AttrsSchema.PropVal.cases.bool.make({ val: false }),
-            props: {},
-          });
-          expect(doc.getMap("attrs").get("props")).toBeInstanceOf(Y.Map);
-
-          const sql = yield* SqlClient.SqlClient;
+          expect(yield* events.listAllForBackup()).toEqual([]);
+          expect(yield* notes.findById(BuiltinAttrs.archivedId)).toEqual(Option.none());
           expect(
-            yield* sql`SELECT _tag AS tag, builtin, prop_type, prop_default, attrs_valid FROM notes`,
-          ).toEqual([
-            {
-              tag: "prop",
-              builtin: 1,
-              prop_type: "bool",
-              prop_default: '{"_tag":"bool","val":false}',
-              attrs_valid: 1,
-            },
-          ]);
-          expect(yield* notes.findAllRecords()).toEqual([]);
-          expect(
-            yield* (yield* notes.reactiveStreamList({ type: "pages", sort: "date" })).pipe(
-              Stream.runHead,
-            ),
-          ).toEqual(Option.some([]));
-          expect(
-            yield* (yield* notes.reactiveSearchPreview("Archived")).pipe(Stream.runHead),
-          ).toEqual(Option.some([]));
+            Option.getOrThrow(yield* (yield* definitions.reactiveDefs()).pipe(Stream.runHead)),
+          ).toEqual([BuiltinAttrs.archived]);
         }).pipe(Effect.provideContext(device));
       }),
     );
   });
 
-  it("preserves the initialization event and timestamp when restoring a backup", async () => {
+  it("rejects builtin-prefixed IDs before inserting events", async () => {
     await run(
       Effect.gen(function* () {
-        const original = yield* makeDevice();
-        yield* BuiltinAttrs.Service.use((builtins) => builtins.ensureArchived({ createdAt })).pipe(
-          Effect.provideContext(original),
-        );
-
-        const backup = yield* EventRepo.Service.use((events) => events.listAllForBackup()).pipe(
-          Effect.provideContext(original),
-        );
-
-        const restored = yield* makeDevice();
+        const device = yield* makeDevice();
         yield* Effect.gen(function* () {
           const events = yield* EventRepo.Service;
-          yield* events.importBackupEvents(backup.map(Struct.omit(["localSeq", "commitSeq"])));
-          const builtins = yield* BuiltinAttrs.Service;
-          yield* builtins.ensureArchived({
-            createdAt: DateTime.makeUnsafe("2026-10-12T09:00:00Z"),
-          });
-          expect(yield* events.listAllForBackup()).toEqual(backup);
-          const materializer = yield* Materializer.Service;
-          yield* materializer.catchUp();
           const notes = yield* NoteRepo.Service;
-          expect((yield* notes.getById(BuiltinAttrs.archivedId)).createdAt).toEqual(createdAt);
-        }).pipe(Effect.provideContext(restored));
-      }),
-    );
-  });
+          const materializer = yield* Materializer.Service;
+          const db = yield* DB.Service;
 
-  it("reconciles two offline seeds through replay and downloads the seed on another device", async () => {
-    await run(
-      Effect.gen(function* () {
-        const a = yield* makeDevice();
-        const b = yield* makeDevice();
-        const c = yield* makeDevice();
+          for (const noteId of [BuiltinAttrs.archivedId, "builtin:anything", "builtin:"]) {
+            const event = {
+              noteId,
+              type: "update" as const,
+              createdAt,
+              payload: new Uint8Array([0, 0]),
+            };
 
-        for (const device of [a, b]) {
-          yield* BuiltinAttrs.Service.use((builtins) =>
-            builtins.ensureArchived({ createdAt }),
-          ).pipe(Effect.provideContext(device));
-        }
+            const createError = yield* events.create(event).pipe(Effect.flip);
+            expect(createError._tag).toBe("SchemaError");
 
-        const aEvents = yield* EventRepo.Service.use((events) => events.listAllForBackup()).pipe(
-          Effect.provideContext(a),
-        );
+            const importError = yield* events
+              .importBackupEvents([{ ...event, noteId: "ordinary" }, event])
+              .pipe(Effect.flip);
 
-        const bEvents = yield* EventRepo.Service.use((events) => events.listAllForBackup()).pipe(
-          Effect.provideContext(b),
-        );
+            expect(importError._tag).toBe("SchemaError");
+          }
 
-        expect(aEvents).toEqual(bEvents);
+          expect(yield* events.listAllForBackup()).toEqual([]);
+          expect(yield* notes.findAllRecords()).toEqual([]);
 
-        const pending = yield* GraphSyncEventLog.Service.use((log) => log.getPendingCommit()).pipe(
-          Effect.provideContext(a),
-        );
-
-        const event = Option.getOrThrow(pending).events[0];
-
-        const committed = new CommittedEvent({
-          id: event.id,
-          streamRef: event.streamRef,
-          payload: event.payload,
-          createdAt: event.createdAt,
-          commitSeq: 1,
-        });
-
-        for (const device of [a, b, c]) {
-          yield* Effect.gen(function* () {
-            const log = yield* GraphSyncEventLog.Service;
-            yield* log.applyCommittedEvents([committed]);
-            expect(yield* log.getPendingCommit()).toEqual(Option.none());
-            const events = yield* EventRepo.Service;
-            const rows = yield* events.listAllForBackup();
-            expect(rows).toHaveLength(1);
-            expect(rows[0]?.commitSeq).toBe(1);
-            expect(rows[0]?.payload).toEqual(aEvents[0]?.payload);
-            const materializer = yield* Materializer.Service;
-            yield* materializer.catchUp();
-            const notes = yield* NoteRepo.Service;
-            expect((yield* notes.getById(BuiltinAttrs.archivedId)).createdAt).toEqual(createdAt);
-          }).pipe(Effect.provideContext(device));
-        }
+          yield* events.create({
+            noteId: "ordinary",
+            type: "update",
+            createdAt,
+            payload: new Uint8Array([0, 0]),
+          });
+          yield* materializer.catchUp();
+          yield* materializer.catchUp();
+          expect(
+            (yield* db.query((db) => db.select({ id: Tables.notes.id }).from(Tables.notes))).map(
+              (row) => row.id,
+            ),
+          ).toEqual(["ordinary"]);
+          expect(yield* events.listAllForBackup()).toHaveLength(1);
+          expect(
+            yield* db.query((db) =>
+              db
+                .select({
+                  lastAppliedLocalSeq: Tables.materializationCheckpoint.lastAppliedLocalSeq,
+                })
+                .from(Tables.materializationCheckpoint),
+            ),
+          ).toEqual([{ lastAppliedLocalSeq: yield* events.getMaxLocalSeq() }]);
+          expect(yield* notes.findById(BuiltinAttrs.archivedId)).toEqual(Option.none());
+          expect(yield* notes.findById("ordinary")).not.toEqual(Option.none());
+        }).pipe(Effect.provideContext(device));
       }),
     );
   });
 });
 
 function makeDevice() {
-  const services = Layer.mergeAll(BuiltinAttrs.Service.layer, GraphSyncEventLog.Service.layer).pipe(
+  const services = Layer.mergeAll(PropDef.Service.layer, GraphSyncEventLog.Service.layer).pipe(
     Layer.provideMerge(GraphSyncEncryption.Service.layer),
     Layer.provideMerge(CliRuntime.layer),
     Layer.provide(

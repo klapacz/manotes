@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { Msgpack } from "effect/unstable/encoding";
 import * as TemporalSchema from "./temporal.schema";
+import { NoteSchema } from "./note.schema";
 
 export const Type = Schema.Literals(["update", "date"]);
 
@@ -31,7 +32,7 @@ export const Record = Schema.Struct({
 export type Record = typeof Record.Type;
 
 export const Create = Schema.Struct({
-  noteId: Schema.NonEmptyString,
+  noteId: NoteSchema.CreateId,
   type: Type,
   payload: Schema.Uint8Array,
   createdAt: Schema.DateTimeUtcFromString,

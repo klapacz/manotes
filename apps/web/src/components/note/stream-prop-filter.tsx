@@ -1,4 +1,5 @@
-import { PropRecordRepo } from "@manotes/shared/prop-record.repo";
+import { PropDef } from "@manotes/shared/prop-def.service";
+import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Array, Option, Stream } from "effect";
@@ -48,7 +49,7 @@ function useDefs() {
   const state = createAtomStore(
     bindRt((rt) =>
       rt.atom(
-        PropRecordRepo.Service.use((repo) => repo.reactiveDefs()).pipe(
+        PropDef.Service.use((repo) => repo.reactiveDefs()).pipe(
           Stream.unwrap,
           Stream.map((defs) => ({ defs: Array.filterMap(defs, PropQuery.editableDef) })),
         ),
@@ -70,7 +71,7 @@ export function query(opts: {
     label: entry.label,
     group: "properties",
     get labelSuffix() {
-      return <PropPicker.BuiltinBadge builtin={entry.def.builtin} />;
+      return <PropPicker.BuiltinBadge builtin={BuiltinAttrs.isBuiltin(entry.id)} />;
     },
     suffix: <Picker.Caret />,
     modified: entry.modified,

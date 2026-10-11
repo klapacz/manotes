@@ -1,4 +1,4 @@
-import { DateTime, Effect, Layer, Context, Schema } from "effect";
+import { Effect, Layer, Context } from "effect";
 import { nanoid } from "nanoid";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
 import { type Graph } from "@manotes/shared/graph-registry/contract";
@@ -31,9 +31,8 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Pr
       displayName,
       events,
     }: CreateLocalInput) {
-      const createdAt = yield* DateTime.now;
       const graph = yield* LocalRegistry.Repo.insertGraph(makeLocalRecord({ displayName }));
-      yield* GraphInitialize.initialize({ localGraphId: graph.localGraphId, createdAt, events });
+      yield* GraphInitialize.initialize({ localGraphId: graph.localGraphId, events });
 
       return graph;
     });
@@ -61,7 +60,6 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Pr
       yield* keyStore.set(wrapped.envelope, wrapped.graphKey);
       yield* GraphInitialize.initialize({
         localGraphId: localGraph.localGraphId,
-        createdAt: yield* Schema.decodeEffect(Schema.DateTimeUtcFromString)(graph.createdAt),
       });
 
       return localGraph;

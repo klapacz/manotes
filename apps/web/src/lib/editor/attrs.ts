@@ -39,9 +39,7 @@ export function use(opts: { doc: Accessor<Y.Doc | undefined> }) {
   const editable = createMemo(() => {
     const current = record();
 
-    // Keep loading documents and builtins readonly. The watcher reads builtin
-    // independently, so malformed assignments don't lock ordinary text editing.
-    return current !== undefined && !current.builtin;
+    return current !== undefined;
   });
 
   const definition = createMemo(() => {
@@ -60,7 +58,6 @@ export function use(opts: { doc: Accessor<Y.Doc | undefined> }) {
     }
 
     return {
-      builtin: current.builtin,
       prop_type,
       prop_default,
     };

@@ -119,7 +119,6 @@ export const prefilledPayload = Effect.fn("ComponentsNoteNoteCreate.prefilledPay
     const attrs = yield* Attrs.Service;
     yield* attrs.initializeProp({
       doc,
-      builtin: false,
       defaultValue: AttrsSchema.PropVal.cases.bool.make({ val: false }),
     });
   }

@@ -4,6 +4,7 @@ import { DB } from "@manotes/shared/db.service";
 import { EventRepo } from "@manotes/shared/event.repo";
 import * as Materializer from "@manotes/shared/materializer.service";
 import { MaterializerAttrs } from "@manotes/shared/materializer/attrs.service";
+import { StreamFilter } from "@manotes/shared/note/stream-filter";
 import { NoteRepo } from "@manotes/shared/note.repo";
 import { DateTime, Effect, Layer, Result, type Scope } from "effect";
 import * as Reactivity from "effect/unstable/reactivity/Reactivity";
@@ -21,8 +22,8 @@ describe("attrs materialization", () => {
         const event = yield* save(doc, "note");
         const sql = yield* SqlClient.SqlClient;
 
-        expect(yield* sql`SELECT _tag AS tag, builtin, attrs_valid, prop_type FROM notes`).toEqual([
-          { tag: "note", builtin: 0, attrs_valid: 1, prop_type: null },
+        expect(yield* sql`SELECT _tag AS tag, attrs_valid, prop_type FROM notes`).toEqual([
+          { tag: "note", attrs_valid: 1, prop_type: null },
         ]);
         expect(yield* sql`SELECT * FROM props`).toEqual([]);
         expect(yield* sql`SELECT * FROM rule_expects`).toEqual([]);
@@ -41,7 +42,6 @@ describe("attrs materialization", () => {
         const doc = yield* makeDoc();
         const attrs = doc.getMap("attrs");
         attrs.set("_tag", 42);
-        attrs.set("builtin", "broken");
         attrs.set("prop_type", "bool");
         const oldDefault = AttrsSchema.PropVal.cases.text.make({ val: "old default" });
         attrs.set("prop_default", oldDefault);
@@ -75,12 +75,11 @@ describe("attrs materialization", () => {
         yield* save(doc, "corrupt");
         const sql = yield* SqlClient.SqlClient;
         expect(
-          yield* sql`SELECT _tag AS tag, builtin, attrs_valid, prop_type,
+          yield* sql`SELECT _tag AS tag, attrs_valid, prop_type,
           prop_default, prop_targets, owned_type, owned_parent, rule_targets FROM notes`,
         ).toEqual([
           {
             tag: "note",
-            builtin: 0,
             attrs_valid: 0,
             prop_type: "bool",
             prop_default: JSON.stringify(oldDefault),
@@ -201,7 +200,8 @@ describe("attrs materialization", () => {
         const beforeExpects = yield* sql`SELECT * FROM rule_expects`;
         const beforeCheckpoint = yield* sql`SELECT * FROM materialization_checkpoint`;
 
-        attrs.set("builtin", true);
+        const targets = StreamFilter.toAttrs({ type: "pages" });
+        attrs.set("rule_targets", targets);
         props.set("priority", AttrsSchema.PropVal.cases.bool.make({ val: true }));
         expects.set("priority", AttrsSchema.RuleExpectation.cases.required.make({}));
         yield* appendEvent(doc, "rule");
@@ -231,7 +231,11 @@ describe("attrs materialization", () => {
 
         yield* sql`DROP TRIGGER reject_expect`;
         yield* materializer.catchUp();
-        expect(yield* sql`SELECT builtin FROM notes`).toEqual([{ builtin: 1 }]);
+        expect(yield* sql`SELECT rule_targets FROM notes`).toEqual([
+          {
+            rule_targets: JSON.stringify(targets),
+          },
+        ]);
         expect(yield* sql`SELECT json_extract(value, '$.val') AS val FROM props`).toEqual([
           { val: 1 },
         ]);

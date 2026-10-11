@@ -1,5 +1,4 @@
-import { Data, DateTime, Effect, Layer } from "effect";
-import { BuiltinAttrs } from "@manotes/shared/builtin-attrs.service";
+import { Data, Effect, Layer } from "effect";
 import { EventRepo } from "@manotes/shared/event.repo";
 import type * as BackupSchema from "@manotes/shared/graph-backup/schema";
 import * as Materializer from "@manotes/shared/materializer.service";
@@ -11,7 +10,6 @@ export class InitializationError extends Data.TaggedError("GraphInitializationEr
 
 export const initialize = Effect.fn("GraphInitialize.initialize")(function* (opts: {
   readonly localGraphId: string;
-  readonly createdAt: DateTime.Utc;
   readonly events?: BackupSchema.Bundle["events"];
 }) {
   yield* Effect.gen(function* () {
@@ -20,17 +18,13 @@ export const initialize = Effect.fn("GraphInitialize.initialize")(function* (opt
       yield* events.importBackupEvents(opts.events);
     }
 
-    const builtins = yield* BuiltinAttrs.Service;
-    yield* builtins.ensureArchived({ createdAt: opts.createdAt });
     const materializer = yield* Materializer.Service;
     yield* materializer.catchUp();
   }).pipe(
     Effect.provide(
-      Layer.mergeAll(
-        EventRepo.Service.layer,
-        BuiltinAttrs.Service.layer,
-        Materializer.Service.layer,
-      ).pipe(Layer.provideMerge(GraphDatabase.layer({ localGraphId: opts.localGraphId }))),
+      Layer.mergeAll(EventRepo.Service.layer, Materializer.Service.layer).pipe(
+        Layer.provideMerge(GraphDatabase.layer({ localGraphId: opts.localGraphId })),
+      ),
     ),
     Effect.mapError((cause) => new InitializationError({ cause })),
   );

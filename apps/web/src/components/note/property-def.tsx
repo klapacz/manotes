@@ -44,7 +44,6 @@ const typeChoices = PropQuery.editableTypes.map((value) => ({ value, label: type
 export function Root(props: {
   doc: Y.Doc;
   attrs: {
-    builtin: boolean;
     prop_type: AttrsSchema.PropValTag;
     prop_default: AttrsSchema.PropVal | undefined;
   };
@@ -94,7 +93,6 @@ export function Root(props: {
       >
         <div class="flex items-center gap-2 px-2 pb-2">
           <span>PROPERTY</span>
-          <PropPicker.BuiltinBadge builtin={props.attrs.builtin} />
         </div>
         <DescriptionList.Root>
           <DescriptionList.Row>
@@ -105,7 +103,7 @@ export function Root(props: {
                   variant="ghost"
                   rounded="default"
                   class="h-7 border-0 px-2 text-sm"
-                  disabled={props.attrs.builtin || mutation().waiting}
+                  disabled={mutation().waiting}
                 >
                   {typeLabels[props.attrs.prop_type]}
                 </Picker.Trigger>
@@ -134,7 +132,7 @@ export function Root(props: {
                   rounded="default"
                   aria-invalid={Attrs.ValueState.$is("Invalid")(defaultState())}
                   class="h-7 border-0 px-2 text-sm aria-[invalid=true]:bg-error-control aria-[invalid=true]:text-error-fg aria-[invalid=true]:hover:bg-error-control-hover"
-                  disabled={props.attrs.builtin || !editableType() || mutation().waiting}
+                  disabled={!editableType() || mutation().waiting}
                 >
                   <PropPicker.StateLabel state={defaultState()} />
                 </Picker.Trigger>

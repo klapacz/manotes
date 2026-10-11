@@ -15,7 +15,7 @@ import * as SyncSessionWatcher from "./sync-session-watcher";
 import * as Lock from "./lock";
 import { GraphDatabase } from "./database";
 import { Attrs } from "@manotes/shared/attrs.service";
-import { PropRecordRepo } from "@manotes/shared/prop-record.repo";
+import { PropDef } from "@manotes/shared/prop-def.service";
 
 export type SetupOpts = {
   localGraphId: string;
@@ -40,7 +40,7 @@ export const makeLayer = (opts: SetupOpts) =>
         EventRepo.Service.layer,
         NoteRepo.Service.layer,
         Attrs.Service.layer,
-        PropRecordRepo.Service.layer,
+        PropDef.Service.layer,
         BacklinkService.Service.layer,
         NoteCache.Service.layer,
         NoteStreamCache.Service.layer,

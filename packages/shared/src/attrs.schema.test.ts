@@ -7,14 +7,12 @@ describe("Attrs defaults", () => {
     const attrs = AttrsSchema.Attrs.members[0].make({});
 
     expect(attrs._tag).toBe("note");
-    expect(attrs.builtin).toBe(false);
     expect(attrs.props).toEqual({});
     expect(Schema.decodeUnknownSync(AttrsSchema.Attrs)({})).toEqual(attrs);
   });
 
   it.each([
     ["_tag", "broken"],
-    ["builtin", "false"],
     ["props", null],
   ])("does not default a malformed %s", (key, value) => {
     expect(Result.isFailure(Schema.decodeUnknownResult(AttrsSchema.Attrs)({ [key]: value }))).toBe(

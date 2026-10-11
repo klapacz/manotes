@@ -21,7 +21,6 @@ describe("Attrs property editing", () => {
             const attrs = yield* Attrs.Service;
             yield* attrs.initializeProp({
               doc,
-              builtin: false,
               defaultValue: AttrsSchema.PropVal.cases.bool.make({ val: false }),
             });
             const pull = yield* Stream.toPull(attrs.watch({ doc }));
@@ -58,7 +57,6 @@ describe("Attrs property editing", () => {
             props.set("broken", "not a property value");
             const [invalid] = yield* pull;
             expect(invalid!.attrs).toEqual(initial!.attrs);
-            expect(invalid!.builtin).toBe(false);
             expect(props.get("broken")).toBe("not a property value");
 
             map.set("prop_default", "broken default");
@@ -88,7 +86,7 @@ describe("Attrs property editing", () => {
     }
   });
 
-  it("rejects builtin defaults, wrong value types and non-properties without changing Yjs", () => {
+  it("rejects wrong default value types and non-properties without changing Yjs", () => {
     const doc = new Y.Doc();
 
     try {
@@ -110,7 +108,6 @@ describe("Attrs property editing", () => {
 
             yield* attrs.initializeProp({
               doc,
-              builtin: false,
               defaultValue: AttrsSchema.PropVal.cases.bool.make({ val: false }),
             });
             const before = Y.encodeStateAsUpdate(doc);
@@ -125,22 +122,6 @@ describe("Attrs property editing", () => {
               ),
             ).toBe(true);
             expect(Y.encodeStateAsUpdate(doc)).toEqual(before);
-
-            doc.getMap("attrs").set("builtin", true);
-            const builtin = Y.encodeStateAsUpdate(doc);
-
-            const result = yield* Effect.result(
-              attrs.setPropDefault({
-                doc,
-                value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
-              }),
-            );
-
-            expect(
-              Result.isFailure(result) &&
-                Predicate.isTagged(result.failure, "Attrs.BuiltinRecordError"),
-            ).toBe(true);
-            expect(Y.encodeStateAsUpdate(doc)).toEqual(builtin);
           }),
         ).pipe(Effect.provide(Attrs.Service.layer)),
       );
@@ -149,63 +130,10 @@ describe("Attrs property editing", () => {
     }
   });
 
-  it.each([true, "malformed"])(
-    "protects records with builtin=%s from all attrs writes",
-    (builtin) => {
-      const doc = new Y.Doc();
-      const propId = AttrsSchema.NoteId.make("example-prop");
-      const value = AttrsSchema.PropVal.cases.bool.make({ val: false });
-
-      try {
-        Effect.runSync(
-          Attrs.Service.use((attrs) =>
-            Effect.gen(function* () {
-              yield* attrs.initializeProp({ doc, builtin: false, defaultValue: value });
-              yield* attrs.setProp({
-                doc,
-                recordId: AttrsSchema.NoteId.make("record"),
-                propId,
-                value,
-              });
-              doc.getMap("attrs").set("builtin", builtin);
-              const before = Y.encodeStateAsUpdate(doc);
-
-              const writes: readonly Effect.Effect<void, unknown>[] = [
-                attrs.setProp({
-                  doc,
-                  recordId: AttrsSchema.NoteId.make("record"),
-                  propId,
-                  value,
-                }),
-                attrs.clearProp({ doc, propId }),
-                attrs.setPropDefault({ doc, value }),
-                attrs.setPropType({ doc, type: "number" }),
-                attrs.clearPropDefault({ doc }),
-                attrs.initializeProp({ doc, builtin: false, defaultValue: value }),
-              ];
-
-              for (const write of writes) {
-                const result = yield* Effect.result(write);
-                expect(
-                  Result.isFailure(result) &&
-                    Predicate.isTagged(result.failure, "Attrs.BuiltinRecordError"),
-                ).toBe(true);
-                expect(Y.encodeStateAsUpdate(doc)).toEqual(before);
-              }
-            }),
-          ).pipe(Effect.provide(Attrs.Service.layer)),
-        );
-      } finally {
-        doc.destroy();
-      }
-    },
-  );
-
   it("decodes SQL cells and rejects incompatible defaults", () => {
     const row: typeof PropRecordRepo.ValidDef.Encoded = {
       id: "archived",
       title: "Archived",
-      builtin: 1,
       prop_type: "bool",
       prop_default: '{"_tag":"bool","val":false}',
     };
@@ -213,13 +141,11 @@ describe("Attrs property editing", () => {
     const def = Schema.decodeSync(PropRecordRepo.ValidDef)(row);
     expect(def).toEqual({
       ...row,
-      builtin: true,
       prop_default: AttrsSchema.PropVal.cases.bool.make({ val: false }),
     });
     expect(Schema.encodeSync(PropRecordRepo.ValidDef)(def)).toEqual(row);
 
     const decode = Schema.decodeUnknownResult(PropRecordRepo.ValidDef);
-    expect(Result.isFailure(decode({ ...row, builtin: 2 }))).toBe(true);
     expect(Result.isFailure(decode({ ...row, prop_type: null }))).toBe(true);
     const incompatible = { ...row, prop_default: '{"_tag":"number","val":1}' };
     expect(Result.isFailure(decode(incompatible))).toBe(true);
@@ -235,7 +161,7 @@ describe("Attrs property editing", () => {
       Effect.runSync(
         Attrs.Service.use((attrs) =>
           Effect.gen(function* () {
-            yield* attrs.initializeProp({ doc, builtin: false, defaultValue: original });
+            yield* attrs.initializeProp({ doc, defaultValue: original });
             yield* attrs.setProp({
               doc,
               recordId: AttrsSchema.NoteId.make("record"),
@@ -310,7 +236,6 @@ describe("Attrs property editing", () => {
     const def: typeof PropRecordRepo.Defs.bool.Type = {
       id: propId,
       title: "Archived",
-      builtin: true,
       prop_type: "bool",
       prop_default: initial,
     };
@@ -399,7 +324,6 @@ describe("Attrs property editing", () => {
     const def: typeof PropRecordRepo.Defs.bool.Type = {
       id: propId,
       title: "Archived",
-      builtin: true,
       prop_type: "bool",
       prop_default: initial,
     };
@@ -446,7 +370,7 @@ describe("Attrs property editing", () => {
             const textDef = PropRecordRepo.Defs.text.make({
               id: propId,
               title: "Description",
-              builtin: false,
+
               prop_type: "text",
               prop_default: null,
             });
@@ -489,7 +413,7 @@ describe("Attrs property editing", () => {
       Schema.decodeSync(PropRecordRepo.ValidDef)({
         id: value._tag,
         title: value._tag,
-        builtin: 0,
+
         prop_type: value._tag,
         prop_default: JSON.stringify(value),
         prop_targets: null,

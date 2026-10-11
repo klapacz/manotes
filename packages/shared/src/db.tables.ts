@@ -7,7 +7,6 @@ export const notes = sqliteTable(
   {
     id: text("id").primaryKey(),
     _tag: text("_tag").$type<AttrsSchema.RecordTag>().notNull().default("note"),
-    builtin: integer("builtin").$type<0 | 1>().notNull().default(0),
 
     prop_type: text("prop_type").$type<AttrsSchema.PropValTag>(),
     prop_default: text("prop_default"),

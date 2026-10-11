@@ -1,7 +1,8 @@
 import { useAtom } from "@effect/atom-solid";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
-import { PropRecordRepo } from "@manotes/shared/prop-record.repo";
+import { PropDef } from "@manotes/shared/prop-def.service";
+import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
 import { Array, Effect, Match, Option, Predicate, Stream } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { Show } from "solid-js";
@@ -24,7 +25,7 @@ export function query(opts: {
     return Stream.unwrap(
       Effect.gen(function* () {
         const attrs = yield* Attrs.Service;
-        const defs = yield* PropRecordRepo.Service.use((repo) => repo.reactiveDefs());
+        const defs = yield* PropDef.Service.use((repo) => repo.reactiveDefs());
 
         return attrs.watchProps({ doc, defs }).pipe(
           Stream.map((entries) => Array.filterMap(entries, editableEntry)),
@@ -45,7 +46,7 @@ export function query(opts: {
                     propId: def.id,
                     label,
                     group: "properties",
-                    builtin: def.builtin,
+                    builtin: BuiltinAttrs.isBuiltin(def.id),
                     detail: () =>
                       Match.value(value).pipe(
                         Match.tag("Unset", () => undefined),
@@ -84,7 +85,7 @@ export function Menu(props: {
         return Stream.unwrap(
           Effect.gen(function* () {
             const attrs = yield* Attrs.Service;
-            const defs = yield* PropRecordRepo.Service.use((repo) => repo.reactiveDefs());
+            const defs = yield* PropDef.Service.use((repo) => repo.reactiveDefs());
 
             return attrs
               .watchProps({

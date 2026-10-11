@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { Effect, Option, Record, Result, Schema } from "effect";
+import { Effect, Option, Result, Schema } from "effect";
 import * as Y from "yjs";
 import { AttrsSchema } from "./attrs.schema";
 import { YSchema } from "./y-schema";
@@ -59,7 +59,7 @@ describe("YSchema bound selections", () => {
   });
 
   it("runs the sandbox flow without requiring a complete record", () => {
-    const { doc, map, attrs } = fixture();
+    const { doc, map } = fixture();
 
     try {
       const link = Effect.runSync(example(doc, []));
@@ -68,7 +68,6 @@ describe("YSchema bound selections", () => {
       expect(map.toJSON()).toMatchObject({ prop_type: "link", prop_targets: [] });
       const targets = Effect.runSync(link.pipe(YSchema.find("prop_targets")));
       expect(Option.getOrThrow(targets).value).toEqual([]);
-      expect(Effect.runSync(attrs.pipe(YSchema.find("builtin")))).toEqual(Option.none());
       Effect.runSync(example(doc, undefined));
       expect(map.has("prop_targets")).toBe(false);
     } finally {
@@ -299,7 +298,7 @@ describe("YSchema bound selections", () => {
         props: { [AttrsSchema.NoteId.make("priority")]: high },
       });
 
-      expect(snapshot).toEqual(Record.remove(decoded, "builtin"));
+      expect(snapshot).toEqual(decoded);
       expect(Schema.decodeUnknownSync(AttrsSchema.Attrs)(snapshot)).toEqual(decoded);
       expect(Effect.runSync(note.pipe(YSchema.find("props")))).toMatchObject({
         value: { value: { priority: high } },
@@ -447,17 +446,15 @@ describe("YSchema bound selections", () => {
       expect(map.get("rule_expects")).toBeInstanceOf(Y.Map);
       expect(map.get("rule_targets")).toEqual([]);
       expect(Effect.runSync(attrs.pipe(YSchema.toJSON))).toEqual(
-        Record.remove(
-          AttrsSchema.Attrs.members[3].make({
-            props: {},
-            rule_targets: [],
-            rule_expects: {
-              [AttrsSchema.NoteId.make("priority")]:
-                AttrsSchema.RuleExpectation.cases.required.make({}),
-            },
-          }),
-          "builtin",
-        ),
+        AttrsSchema.Attrs.members[3].make({
+          props: {},
+          rule_targets: [],
+          rule_expects: {
+            [AttrsSchema.NoteId.make("priority")]: AttrsSchema.RuleExpectation.cases.required.make(
+              {},
+            ),
+          },
+        }),
       );
       const optional = AttrsSchema.RuleExpectation.cases.optional.make({});
       Effect.runSync(
@@ -582,7 +579,6 @@ describe("YSchema bound selections", () => {
 
     try {
       map.set("_tag", 42);
-      map.set("builtin", true);
       map.set("prop_type", "bool");
       map.set("prop_default", AttrsSchema.PropVal.cases.text.make({ val: "old default" }));
       map.set("rule_targets", "broken");
@@ -595,7 +591,6 @@ describe("YSchema bound selections", () => {
       props.set("infinite", { ...value, val: Infinity });
       const raw = Effect.runSync(attrs.pipe(YSchema.toJSON));
       expect(Effect.runSync(attrs.pipe(YSchema.exportLoose))).toEqual({
-        builtin: true,
         prop_type: "bool",
         prop_default: AttrsSchema.PropVal.cases.text.make({ val: "old default" }),
         props: { good: value },

@@ -6,6 +6,14 @@ export const Id = Schema.NonEmptyString.pipe(Schema.brand("NoteId"));
 
 export type Id = typeof Id.Type;
 
+export const CreateId = Schema.NonEmptyString.pipe(
+  Schema.check(
+    Schema.makeFilter((id) =>
+      id.startsWith("builtin:") ? "Record IDs cannot start with builtin:" : undefined,
+    ),
+  ),
+);
+
 const ContentValue = Schema.declare<UnknownNodeJSON>((_x): _x is UnknownNodeJSON => true);
 
 export const Content = Schema.String.pipe(

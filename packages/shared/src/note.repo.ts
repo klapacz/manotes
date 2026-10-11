@@ -19,6 +19,7 @@ import { alias } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 import { LibOption } from "./effect/option";
 import { EffectOption } from "./effect/effect-option";
+import { BuiltinAttrs } from "./builtin-attrs";
 import { AttrsSchema } from "./attrs.schema";
 
 const decodeRecord = Schema.decodeEffect(NoteSchema.Record);
@@ -199,19 +200,50 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
 
         for (const [index, [propId, value]] of Record.toEntries(query.props ?? {}).entries()) {
           const prop = alias(Tables.props, `prop_${index}`);
+          // Each filter gets its own assignment join. LEFT JOIN keeps records with
+          // no stored value so the comparison can use the definition's default.
+          statement = statement.leftJoin(
+            prop,
+            and(eq(prop.recordId, Tables.notes.id), eq(prop.propId, propId)),
+          );
+
+          const builtin = BuiltinAttrs.find(propId);
+
+          if (Option.isSome(builtin)) {
+            const def = builtin.value;
+
+            if (def.prop_type !== value._tag) {
+              conditions.push(sql`0`);
+              continue;
+            }
+
+            // Builtins have code-defined defaults, without a definition row.
+            // Only missing assignments use the default; wrong tags become NULL
+            // and cannot match the requested value.
+            conditions.push(sql`CASE
+              WHEN ${prop.recordId} IS NULL THEN ${propSqlValue(def.prop_default)}
+              WHEN json_extract(${prop.value}, '$._tag') = ${value._tag}
+                THEN json_extract(${prop.value}, '$.val')
+              ELSE NULL
+            END = ${propSqlValue(value)}`);
+            continue;
+          }
+
           const def = alias(Tables.notes, `prop_def_${index}`);
+          statement = statement.leftJoin(
+            def,
+            and(eq(def.id, propId), eq(def._tag, "prop"), eq(def.attrs_valid, 1)),
+          );
 
-          statement = statement
-            .leftJoin(prop, and(eq(prop.recordId, Tables.notes.id), eq(prop.propId, propId)))
-            .leftJoin(def, and(eq(def.id, propId), eq(def._tag, "prop"), eq(def.attrs_valid, 1)));
-
-          // Ignore saved filters while their definition is unavailable or invalid.
+          // An unavailable or invalid definition leaves the saved filter inactive.
+          // Otherwise compare the stored value, or the default when unset. A wrong
+          // definition/value tag cannot match, including when a default exists.
           conditions.push(sql`(${def.id} IS NULL OR (${def.prop_type} = ${value._tag} AND CASE
             WHEN ${prop.recordId} IS NULL THEN json_extract(${def.prop_default}, '$.val')
             WHEN json_extract(${prop.value}, '$._tag') = ${value._tag}
               THEN json_extract(${prop.value}, '$.val')
             ELSE NULL
-          END = ${Predicate.isTagged(value, "bool") ? (value.val ? 1 : 0) : value.val}))`);
+          END = ${propSqlValue(value)}))`);
         }
 
         if (query.backlinksTo !== undefined) {
@@ -318,7 +350,6 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
 
 export const AttrsColumns = Schema.Struct({
   _tag: AttrsSchema.RecordTag,
-  builtin: Schema.BooleanFromBit,
   prop_type: Schema.NullOr(AttrsSchema.PropValTag),
   prop_default: Schema.NullOr(Schema.fromJsonString(AttrsSchema.PropVal)),
   prop_targets: Schema.NullOr(Schema.fromJsonString(AttrsSchema.TargetFilter)),
@@ -392,6 +423,18 @@ function streamFilterConditions(query: StreamListQuery): Array<SQL> {
   }
 
   return conditions;
+}
+
+function propSqlValue(value: AttrsSchema.PropVal | null) {
+  if (value === null) {
+    return null;
+  }
+
+  if (Predicate.isTagged(value, "bool")) {
+    return value.val ? 1 : 0;
+  }
+
+  return value.val;
 }
 
 export * as NoteRepo from "./note.repo";

@@ -9,7 +9,7 @@ import { StreamPropFilterEntries } from "./stream-prop-filter.entries";
 const archived = {
   id: BuiltinAttrs.archivedId,
   title: "Archived",
-  builtin: true,
+
   prop_type: "bool",
   prop_default: AttrsSchema.PropVal.cases.bool.make({ val: false }),
 } satisfies PropRecordRepo.Def<"bool">;

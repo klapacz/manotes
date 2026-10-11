@@ -58,7 +58,6 @@ const project = Effect.fn("MaterializerAttrs.project")(function* (opts: { readon
 
   const columns: NoteRepo.AttrsColumns = {
     _tag: loose._tag ?? "note",
-    builtin: loose.builtin ?? false,
     prop_type: loose.prop_type ?? null,
     prop_default: loose.prop_default ?? null,
     prop_targets: loose.prop_targets ?? null,

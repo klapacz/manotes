@@ -23,7 +23,6 @@ function defSchema<const Tag extends AttrsSchema.PropValTag, const Value extends
   return Schema.Struct({
     id: NoteSchema.Id,
     title: NoteSchema.Record.fields.title,
-    builtin: Schema.BooleanFromBit,
     prop_type: Schema.NullOr(AttrsSchema.PropValTag).pipe(Schema.decodeTo(value.fields._tag)),
     prop_default: Schema.NullOr(Schema.fromJsonString(value)),
   });
@@ -51,7 +50,6 @@ export class Service extends Context.Service<Service>()("PropRecordRepo.Service"
           .select({
             id: Tables.notes.id,
             title: Tables.notes.title,
-            builtin: Tables.notes.builtin,
             prop_type: Tables.notes.prop_type,
             prop_default: Tables.notes.prop_default,
             prop_targets: Tables.notes.prop_targets,
