@@ -4,6 +4,7 @@ import { PaneCursor } from "./pane.cursor";
 import { PaneMake } from "@manotes/shared/note/pane.make";
 import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { NoteSchema } from "@manotes/shared/note.schema";
+import { AttrsSchema } from "@manotes/shared/attrs.schema";
 
 const decodePane = Schema.decodeUnknownSync(PaneSchema.Pane);
 
@@ -61,6 +62,37 @@ describe("PaneCursor.inputMatches", () => {
     expect(PaneCursor.inputMatches(PaneMake.backlink("note-a"))(pane)).toBe(true);
     expect(PaneCursor.inputMatches(PaneMake.backlink("note-b"))(pane)).toBe(false);
     expect(PaneCursor.inputMatches(PaneMake.backlink("note-a"))(differentSort)).toBe(false);
+  });
+
+  it("distinguishes cleared property filters and ignores their insertion order", () => {
+    const pane = decodePane(PaneMake.notes());
+    expect(
+      PaneCursor.inputMatches({ ...PaneMake.notes(), filter: { type: "notes", props: {} } })(pane),
+    ).toBe(false);
+
+    const filtered = decodePane({
+      ...PaneMake.notes(),
+      filter: {
+        type: "notes",
+        props: {
+          a: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+          b: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+        },
+      },
+    });
+
+    expect(
+      PaneCursor.inputMatches({
+        ...PaneMake.notes(),
+        filter: {
+          type: "notes",
+          props: {
+            b: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+            a: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+          },
+        },
+      })(filtered),
+    ).toBe(true);
   });
 });
 

@@ -1,8 +1,10 @@
 import { Effect, Schema } from "effect";
 import { nanoid } from "nanoid";
-import type * as NoteRepo from "../note.repo";
+import type { NoteRepo } from "../note.repo";
 import { NoteSchema } from "../note.schema";
 import * as TemporalSchema from "../temporal.schema";
+import { StreamSettings as Settings } from "./stream-settings";
+import { AttrsSchema } from "../attrs.schema";
 
 const StreamFilterType = Schema.Literals(["notes", "pages"]);
 
@@ -12,6 +14,7 @@ const StreamFilter = Schema.Struct({
   linksFrom: Schema.optional(Schema.String),
   date: Schema.optional(TemporalSchema.PlainDateString),
   search: Schema.optional(Schema.String),
+  props: Schema.optional(Schema.Record(NoteSchema.Id, AttrsSchema.PropVal)),
 });
 
 const StreamSort = Schema.Literals(["date", "updated"]).pipe(
@@ -71,6 +74,7 @@ export function paneToQuery(pane: PaneStream): NoteRepo.StreamListQuery {
     backlinksTo: pane.filter.backlinksTo,
     linksFrom: pane.filter.linksFrom,
     search: pane.filter.search?.trim() || undefined,
+    props: Settings.propFilters(pane.filter),
     sort: pane.sort,
   };
 }

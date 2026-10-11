@@ -1,6 +1,6 @@
-import { Match, Predicate, Schema } from "effect";
+import { Match, Predicate, Record, Schema } from "effect";
 import { AttrsSchema } from "../attrs.schema";
-import type { StreamSettings } from "./stream-settings";
+import { StreamSettings } from "./stream-settings";
 
 const Comparison = Schema.TaggedStruct("cmp", { val: AttrsSchema.TargetFilterCmp });
 
@@ -34,12 +34,16 @@ export function toAttrs(filter: StreamSettings.Filter): AttrsSchema.TargetFilter
     );
   }
 
+  for (const [id, value] of Record.toEntries(StreamSettings.propFilters(filter))) {
+    expressions.push(Comparison.make({ val: [["prop", id], "=", value] }));
+  }
+
   return expressions;
 }
 
 /** Drops OR groups and unsupported comparisons. Repeated fields use the last comparison. */
 export function fromAttrs(expressions: AttrsSchema.Filter): StreamSettings.Filter {
-  return expressions.reduce(applyComparison, { type: "notes" });
+  return expressions.reduce(applyComparison, { type: "notes", props: {} });
 }
 
 function applyComparison(
@@ -66,6 +70,14 @@ function applyComparison(
           ...filter,
           linksFrom,
         })),
+        Match.when(
+          [["prop", Match.string], "=", Schema.is(AttrsSchema.PropVal)],
+          ([[, propId], , value]) =>
+            StreamSettings.changePropFilter(filter, {
+              propId: AttrsSchema.NoteId.make(propId),
+              value,
+            }),
+        ),
         Match.orElse(() => filter),
       ),
     ),

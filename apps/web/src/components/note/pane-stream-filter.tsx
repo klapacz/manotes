@@ -1,4 +1,4 @@
-import { StreamFilterEditor, type StreamFilterMenu } from "./stream-filter";
+import { Field, StreamFilterEditor, type StreamFilterMenu } from "./stream-filter";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import { StreamDisplay } from "./stream-display";
 import { getRouteApi } from "@tanstack/solid-router";
@@ -75,7 +75,7 @@ export function PaneStreamFilter(props: {
     {
       key: [["/"]],
       handler: () => {
-        setFilterMenu({ open: true, field: "search" });
+        setFilterMenu({ open: true, field: Field.search() });
 
         return true;
       },

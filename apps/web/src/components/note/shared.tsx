@@ -32,6 +32,7 @@ import { splitProps, type ComponentProps, type ParentProps } from "solid-js";
 import { MatchTag, type NoteSchema } from "../../lib";
 import { Focus } from "./focus";
 import { NoteProps } from "./note-props";
+import { PropPicker } from "./prop-picker";
 import type * as Y from "yjs";
 
 const route = getRouteApi("/$graph/");
@@ -309,11 +310,7 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
                     ...choice,
                     ...NoteMenuAction.OpenProperty({ propId: choice.propId }),
                     get labelSuffix() {
-                      return (
-                        <Show when={choice.builtin}>
-                          <span class="shrink-0 text-xs text-fg-subtle">builtin</span>
-                        </Show>
-                      );
+                      return <PropPicker.BuiltinBadge builtin={choice.builtin} />;
                     },
                     suffix: <Picker.Caret />,
                   }),

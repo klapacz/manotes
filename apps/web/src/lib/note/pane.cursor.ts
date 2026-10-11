@@ -1,6 +1,8 @@
-import { Array as Arr, Equal, Option, Predicate, pipe } from "effect";
+import { Array as Arr, Equal, Option, Predicate, Record, pipe } from "effect";
 import { PaneMake } from "@manotes/shared/note/pane.make";
 import type { PaneSchema } from "@manotes/shared/note/pane.schema";
+import { StreamSettings } from "@manotes/shared/note/stream-settings";
+import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 
 export type Stack = Arr.NonEmptyReadonlyArray<PaneSchema.Pane>;
 
@@ -71,6 +73,7 @@ type ComparablePane =
       date: string | null,
       search: string | null,
       sort: PaneSchema.StreamSort,
+      props: readonly (readonly [string, typeof AttrsSchema.PropVal.Encoded])[],
     ];
 
 function normalizeToInput(value: PaneSchema.PaneInput | PaneSchema.Pane): ComparablePane {
@@ -86,6 +89,9 @@ function normalizeToInput(value: PaneSchema.PaneInput | PaneSchema.Pane): Compar
     value.filter.date ?? null,
     value.filter.search?.trim() || null,
     value.sort ?? "date",
+    Record.toEntries(value.filter.props ?? StreamSettings.propFilters({})).toSorted(([a], [b]) =>
+      a.localeCompare(b),
+    ),
   ];
 }
 

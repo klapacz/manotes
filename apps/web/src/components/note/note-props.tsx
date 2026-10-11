@@ -1,5 +1,5 @@
 import { useAtom } from "@effect/atom-solid";
-import { AttrsSchema } from "@manotes/shared/attrs.schema";
+import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { PropRecordRepo } from "@manotes/shared/prop-record.repo";
 import { Array, Effect, Match, Predicate, Stream } from "effect";
@@ -7,10 +7,11 @@ import { AsyncResult } from "effect/unstable/reactivity";
 import { Show } from "solid-js";
 import type * as Y from "yjs";
 import { bindRt, createAtomResultStore, createSyncedAtom, MatchTag } from "../../lib";
-import { MenuQuery } from "../../lib/menu-query";
 import { QueryEngine } from "../../lib/query-engine";
-import { Command, CommandList, CommandScroll } from "../ui/command";
+import { CommandList, CommandScroll } from "../ui/command";
 import { Picker } from "../ui/picker";
+import { PropPicker } from "./prop-picker";
+import { PropQuery } from "./prop-query";
 
 export function query(opts: {
   readonly recordId: AttrsSchema.NoteId;
@@ -22,9 +23,8 @@ export function query(opts: {
 
     return Stream.unwrap(
       Effect.gen(function* () {
-        const repo = yield* PropRecordRepo.Service;
         const attrs = yield* Attrs.Service;
-        const defs = yield* repo.reactiveDefs();
+        const defs = yield* PropRecordRepo.Service.use((repo) => repo.reactiveDefs());
 
         return attrs.watchProps({ doc, defs }).pipe(
           Stream.map((entries) => Array.filterMap(entries, boolEntry)),
@@ -78,9 +78,8 @@ export function Menu(props: {
 
         return Stream.unwrap(
           Effect.gen(function* () {
-            const repo = yield* PropRecordRepo.Service;
             const attrs = yield* Attrs.Service;
-            const defs = yield* repo.reactiveDefs();
+            const defs = yield* PropRecordRepo.Service.use((repo) => repo.reactiveDefs());
 
             return attrs
               .watchProps({
@@ -96,7 +95,7 @@ export function Menu(props: {
 
   const [mutation, edit] = useAtom(Edit, { mode: "promise" });
 
-  const change = async (value: boolean | undefined) => {
+  const change = async (value: AttrsSchema.PropVal | undefined) => {
     try {
       await edit({ doc: props.doc, recordId: props.noteId, propId: props.propId, value });
     } catch {}
@@ -112,33 +111,29 @@ export function Menu(props: {
           <Show
             when={state().value}
             fallback={
-              <Command shouldFilter={false}>
-                <CommandList>
-                  <p class="px-3 py-2 text-sm text-fg-subtle">Property is unavailable.</p>
-                  <Picker.Footer>
-                    <Picker.Back onSelect={props.onBack} />
-                  </Picker.Footer>
-                </CommandList>
-              </Command>
+              <PropPicker.Unavailable>
+                <Picker.Footer>
+                  <Picker.Back onSelect={props.onBack} />
+                </Picker.Footer>
+              </PropPicker.Unavailable>
             }
           >
             {(entry) => {
-              const selected = () => {
+              const value = () => {
                 const state = entry().value;
 
                 return Match.value(state).pipe(
-                  Match.tag("Valid", ({ value }) => String(value.val)),
-                  Match.orElse(() => ""),
+                  Match.tag("Valid", ({ value }) => value),
+                  Match.orElse(() => undefined),
                 );
               };
 
               return (
-                <Picker.Query
-                  label={entry().def.title || "Untitled"}
-                  query={boolQuery({ defaultValue: entry().def.prop_default?.val })}
-                  selected={selected()}
+                <PropPicker.Bool
+                  def={entry().def}
+                  value={value()}
                   disabled={mutation().waiting || Predicate.isTagged(entry().value, "Invalid")}
-                  onSelect={(choice) => void change(choice.bool)}
+                  onChange={(value) => void change(value)}
                 >
                   {(items) => (
                     <CommandList>
@@ -172,7 +167,7 @@ export function Menu(props: {
                       </Picker.Footer>
                     </CommandList>
                   )}
-                </Picker.Query>
+                </PropPicker.Bool>
               );
             }}
           </Show>
@@ -188,7 +183,7 @@ const Edit = bindRt((rt) =>
       readonly doc: Y.Doc;
       readonly recordId: AttrsSchema.NoteId;
       readonly propId: AttrsSchema.NoteId;
-      readonly value: boolean | undefined;
+      readonly value: AttrsSchema.PropVal | undefined;
     }) {
       const attrs = yield* Attrs.Service;
 
@@ -200,28 +195,16 @@ const Edit = bindRt((rt) =>
         doc: opts.doc,
         recordId: opts.recordId,
         propId: opts.propId,
-        value: AttrsSchema.PropVal.cases.bool.make({ val: opts.value }),
+        value: opts.value,
       });
     }),
   ),
 );
 
-function boolQuery(opts: { defaultValue: boolean | undefined }) {
-  return MenuQuery.choices(() =>
-    [
-      { value: "true", label: "True", bool: true },
-      { value: "false", label: "False", bool: false },
-    ].map((choice) => ({
-      ...choice,
-      detail: choice.bool === opts.defaultValue ? () => "Default" : undefined,
-    })),
-  );
-}
-
 function valueLabel(value: Attrs.Entry<"bool">["value"]): string | undefined {
   return Match.value(value).pipe(
     Match.tag("Unset", () => undefined),
-    Match.tag("Valid", ({ value }) => (value.val ? "True" : "False")),
+    Match.tag("Valid", ({ value }) => PropQuery.valueLabel(value)),
     Match.tag("Invalid", () => "Invalid value"),
     Match.exhaustive,
   );

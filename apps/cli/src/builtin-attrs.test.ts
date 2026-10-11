@@ -14,6 +14,7 @@ import * as Materializer from "@manotes/shared/materializer.service";
 import { NoteRepo } from "@manotes/shared/note.repo";
 import { NoteDoc } from "@manotes/shared/note/doc";
 import { StreamFilter } from "@manotes/shared/note/stream-filter";
+import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import { YSchema } from "@manotes/shared/y-schema";
 import { DateTime, Effect, Layer, Option, Scope, Stream, Struct } from "effect";
 import * as Reactivity from "effect/unstable/reactivity/Reactivity";
@@ -25,6 +26,180 @@ import { CliRuntime } from "./cli.runtime";
 const createdAt = DateTime.makeUnsafe("2026-10-11T09:00:00Z");
 
 describe("Archived builtin", () => {
+  it("filters tagged values and reacts to assignments and definition defaults", async () => {
+    await run(
+      Effect.gen(function* () {
+        const device = yield* makeDevice();
+        yield* Effect.gen(function* () {
+          const builtins = yield* BuiltinAttrs.Service;
+          const attrs = yield* Attrs.Service;
+          const events = yield* EventRepo.Service;
+          const materializer = yield* Materializer.Service;
+          const notes = yield* NoteRepo.Service;
+          yield* builtins.ensureArchived({ createdAt });
+
+          const makeDoc = () =>
+            Effect.acquireRelease(
+              Effect.sync(() => NoteDoc.make()),
+              ({ doc }) => Effect.sync(() => doc.destroy()),
+            );
+
+          const save = (id: AttrsSchema.NoteId, doc: Y.Doc) =>
+            events
+              .create({
+                noteId: id,
+                type: "update",
+                createdAt,
+                payload: Y.encodeStateAsUpdate(doc),
+              })
+              .pipe(Effect.andThen(materializer.catchUp()));
+
+          const flagId = AttrsSchema.NoteId.make("flag");
+          const flag = yield* makeDoc();
+          yield* attrs.initializeProp({
+            doc: flag.doc,
+            builtin: false,
+            defaultValue: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+          });
+          yield* save(flagId, flag.doc);
+
+          for (const [id, value] of [
+            ["unset", undefined],
+            ["false", AttrsSchema.PropVal.cases.bool.make({ val: false })],
+            ["true", AttrsSchema.PropVal.cases.bool.make({ val: true })],
+            ["wrong-kind", AttrsSchema.PropVal.cases.text.make({ val: "false" })],
+          ] as const) {
+            const note = yield* makeDoc();
+            const recordId = AttrsSchema.NoteId.make(id);
+
+            if (value !== undefined) {
+              yield* attrs.setProp({
+                doc: note.doc,
+                recordId,
+                propId: BuiltinAttrs.archivedId,
+                value,
+              });
+            }
+
+            yield* save(recordId, note.doc);
+          }
+
+          const defaults = StreamSettings.defaults("notes").filter;
+
+          const ids = (props: NonNullable<NoteRepo.StreamListQuery["props"]>) =>
+            Effect.gen(function* () {
+              const rows = Option.getOrThrow(
+                yield* (yield* notes.reactiveStreamList({
+                  type: "notes",
+                  sort: "date",
+                  props,
+                })).pipe(Stream.runHead),
+              );
+
+              return rows.map(({ id }) => id).toSorted();
+            });
+
+          const defaultProps = StreamSettings.propFilters(defaults);
+          expect(yield* ids(defaultProps)).toEqual(["false", "unset"]);
+          expect(
+            yield* ids({
+              [BuiltinAttrs.archivedId]: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+            }),
+          ).toEqual(["true"]);
+          expect(yield* ids({})).toEqual(["false", "true", "unset", "wrong-kind"]);
+          expect(
+            yield* ids({
+              ...defaultProps,
+              [flagId]: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+            }),
+          ).toEqual(["false", "unset"]);
+          expect(
+            yield* ids({
+              ...defaultProps,
+              [flagId]: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+            }),
+          ).toEqual([]);
+
+          const pull = yield* Stream.toPull(
+            yield* notes.reactiveStreamList({ type: "notes", sort: "date", props: defaultProps }),
+          );
+
+          expect((yield* pull)[0]?.map(({ id }) => id).toSorted()).toEqual(["false", "unset"]);
+
+          const changing = yield* makeDoc();
+          const recordId = AttrsSchema.NoteId.make("unset");
+          yield* attrs.setProp({
+            doc: changing.doc,
+            recordId,
+            propId: BuiltinAttrs.archivedId,
+            value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+          });
+          yield* save(recordId, changing.doc);
+          expect((yield* pull)[0]?.map(({ id }) => id)).toEqual(["false"]);
+
+          yield* attrs.clearProp({ doc: changing.doc, propId: BuiltinAttrs.archivedId });
+          yield* save(recordId, changing.doc);
+          expect((yield* pull)[0]?.map(({ id }) => id).toSorted()).toEqual(["false", "unset"]);
+
+          const prop = yield* flag.attrs.pipe(YSchema.set("_tag", "prop"));
+          const flagProp = yield* prop.pipe(YSchema.set("prop_type", "bool"));
+
+          yield* flagProp.pipe(
+            YSchema.set("prop_default", AttrsSchema.PropVal.cases.bool.make({ val: false })),
+          );
+          yield* save(flagId, flag.doc);
+          expect(
+            yield* ids({
+              ...defaultProps,
+              [flagId]: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+            }),
+          ).toEqual([]);
+          expect(
+            yield* ids({
+              ...defaultProps,
+              [flagId]: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+            }),
+          ).toEqual(["false", "unset"]);
+
+          for (const value of [
+            AttrsSchema.PropVal.cases.text.make({ val: "planned" }),
+            AttrsSchema.PropVal.cases.number.make({ val: 7 }),
+            AttrsSchema.PropVal.cases.enum.make({ val: AttrsSchema.NoteId.make("choice") }),
+            AttrsSchema.PropVal.cases.link.make({ val: AttrsSchema.NoteId.make("person") }),
+          ]) {
+            const propId = AttrsSchema.NoteId.make(value._tag);
+            const def = yield* makeDoc();
+            yield* attrs.initializeProp({ doc: def.doc, builtin: false, defaultValue: value });
+            yield* save(propId, def.doc);
+            expect(yield* ids({ [propId]: value })).toEqual([
+              "false",
+              "true",
+              "unset",
+              "wrong-kind",
+            ]);
+
+            const note = yield* makeDoc();
+            const snapshot = Option.getOrThrow(yield* notes.findById("false"));
+
+            if (snapshot.materializedYUpdate === null) throw new Error("Missing snapshot");
+            Y.applyUpdate(note.doc, snapshot.materializedYUpdate);
+            yield* attrs.setProp({
+              doc: note.doc,
+              recordId: AttrsSchema.NoteId.make("false"),
+              propId,
+              value: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+            });
+            yield* save(AttrsSchema.NoteId.make("false"), note.doc);
+            expect(yield* ids({ [propId]: value })).toEqual(["true", "unset", "wrong-kind"]);
+            expect(
+              yield* ids({ [propId]: AttrsSchema.PropVal.cases.bool.make({ val: false }) }),
+            ).toEqual([]);
+          }
+        }).pipe(Effect.provide(Attrs.Service.layer), Effect.provideContext(device));
+      }),
+    );
+  });
+
   it("sets and clears boolean assignments through ordinary update events and SQL projections", async () => {
     await run(
       Effect.gen(function* () {

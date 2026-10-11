@@ -5,10 +5,11 @@ import { Attrs } from "./attrs.service";
 import { EventRepo } from "./event.repo";
 import { NoteDoc } from "./note/doc";
 import { ProsemirrorEncode } from "./prosemirror/encode";
+import { BuiltinAttrs } from "./builtin-attrs";
 
-export const archivedId = AttrsSchema.NoteId.make("builtin:archived");
+export { archivedId } from "./builtin-attrs";
 
-const archivedEventId = "builtin:archived:init:v1";
+const archivedEventId = `${BuiltinAttrs.archivedId}:init:v1`;
 
 export class Service extends Context.Service<Service>()("BuiltinAttrs.Service", {
   make: Effect.gen(function* () {
@@ -54,7 +55,7 @@ export class Service extends Context.Service<Service>()("BuiltinAttrs.Service", 
     }) {
       yield* events.createIfAbsent({
         id: archivedEventId,
-        noteId: archivedId,
+        noteId: BuiltinAttrs.archivedId,
         type: "update",
         createdAt: opts.createdAt,
         payload: yield* initialUpdate(),

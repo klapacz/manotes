@@ -3,6 +3,7 @@ import { describe, expect, expectTypeOf, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
 import { AttrsSchema } from "./attrs.schema";
 import { Attrs } from "./attrs.service";
+import { BuiltinAttrs } from "./builtin-attrs";
 import { PropRecordRepo } from "./prop-record.repo";
 
 describe("Attrs property editing", () => {
@@ -296,7 +297,7 @@ describe("Attrs property editing", () => {
 
   it("rejects assigning a property to its own def before changing the document", () => {
     const doc = new Y.Doc();
-    const propId = AttrsSchema.NoteId.make("builtin:archived");
+    const propId = BuiltinAttrs.archivedId;
 
     try {
       const result = Effect.runSync(

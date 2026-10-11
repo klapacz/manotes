@@ -50,5 +50,6 @@ function cacheKey(query: NoteRepo.StreamListQuery): NoteRepo.StreamListQuery {
     linksFrom: query.linksFrom,
     search: query.search,
     sort: query.sort,
+    props: query.props && { ...query.props },
   };
 }

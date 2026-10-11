@@ -3,8 +3,10 @@
 // Why: searchable filter menus and segmented pills. Ported to Solid/Kobalte with
 // Manotes stream filters and bounded repository search.
 import { For, Show, Switch, Match, createMemo, createSignal, type JSX } from "solid-js";
-import { Option, Stream } from "effect";
+import { Data, Option, Stream } from "effect";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
+import type { AttrsSchema } from "@manotes/shared/attrs.schema";
+import { StreamPropFilter } from "./stream-prop-filter";
 import { NoteRepo, bindRt, createAtomStore, createSyncedAtom } from "../../lib";
 import { NoteLink } from "../../lib/note/link-component";
 import { DateSuggestions } from "../../lib/date-suggestions";
@@ -19,15 +21,24 @@ import { FilterIcon, XIcon, RetryIcon, ApplyIcon, ArrowUpRightIcon } from "../ic
 
 type Filter = StreamSettings.Filter;
 
-const fields = [
-  { value: "type", label: "Type" },
-  { value: "search", label: "Search" },
-  { value: "date", label: "Date" },
-  { value: "backlinksTo", label: "Links to" },
-  { value: "linksFrom", label: "Links from" },
-] as const;
+export type Field = Data.TaggedEnum<{
+  type: {};
+  search: {};
+  date: {};
+  backlinksTo: {};
+  linksFrom: {};
+  prop: { propId: AttrsSchema.NoteId };
+}>;
 
-type Field = (typeof fields)[number]["value"];
+export const Field = Data.taggedEnum<Field>();
+
+const fields = [
+  { value: "type", label: "Type", field: Field.type() },
+  { value: "search", label: "Search", field: Field.search() },
+  { value: "date", label: "Date", field: Field.date() },
+  { value: "backlinksTo", label: "Links to", field: Field.backlinksTo() },
+  { value: "linksFrom", label: "Links from", field: Field.linksFrom() },
+] as const;
 
 export type StreamFilterMenu = { open: boolean; field: Field | undefined; search?: string };
 
@@ -47,14 +58,25 @@ export function StreamFilterEditor(props: {
 }) {
   const selectedField = () => props.menu.field;
 
+  const propertyFilters = StreamPropFilter.use({
+    filter: () => props.filter,
+    propId: () => {
+      const field = selectedField();
+
+      return field && Field.$is("prop")(field) ? field.propId : undefined;
+    },
+    onChange: (filter) => props.onChange(filter),
+  });
+
   const open = (field: Field | undefined, search?: string) =>
     props.onMenuChange({ open: true, field, search });
 
   const changedFields = createMemo(() => StreamSettings.changedFilters(props.filter));
-  const hasCondition = (field: Field) => changedFields().includes(field);
-  const changed = () => changedFields().length > 0;
+  const hasCondition = (field: StreamSettings.FilterField) => changedFields().includes(field);
 
-  const clear = (field: Field, close: () => void) =>
+  const changed = () => changedFields().length > 0 || propertyFilters.modified();
+
+  const clear = (field: StreamSettings.FilterField, close: () => void) =>
     hasCondition(field)
       ? () => {
           props.onChange(StreamSettings.clearFilter(props.filter, field));
@@ -136,12 +158,15 @@ export function StreamFilterEditor(props: {
           const notePicker = createMemo(() => {
             const field = selectedField();
 
-            if (field !== "backlinksTo" && field !== "linksFrom") return;
+            if (!field || !(Field.$is("backlinksTo")(field) || Field.$is("linksFrom")(field)))
+              return;
+
+            const key = field._tag;
 
             return {
-              query: noteQueries[field],
-              value: props.filter[field],
-              onClear: clear(field, close),
+              query: noteQueries[key],
+              value: props.filter[key],
+              onClear: clear(key, close),
             };
           });
 
@@ -168,14 +193,14 @@ export function StreamFilterEditor(props: {
                 field.value === "type" || hasCondition(field.value)
                   ? () => <FilterValue field={field.value} filter={props.filter} />
                   : undefined,
-              run: (search) => open(field.value, search),
+              run: (search) => open(field.field, search),
             })),
           );
 
           const query = createMemo(() => {
             const choices = actions();
 
-            return QueryEngine.combine([
+            const builtins = QueryEngine.combine([
               MenuQuery.actions(() => choices),
               MenuQuery.nested({ label: "Type", query: types }),
               MenuQuery.nested({ label: "Date", query: dates }),
@@ -183,6 +208,17 @@ export function StreamFilterEditor(props: {
               MenuQuery.nested({ label: "Links from", query: noteQueries.linksFrom }),
               MenuQuery.nested({ label: "Open note", query: noteQueries.openNote }),
             ]);
+
+            const properties = StreamPropFilter.query({
+              entries: propertyFilters.entries(),
+              onOpen: (propId, search) => open(Field.prop({ propId }), search),
+              onSet: (propId, value) => propertyFilters.set({ propId, value, close }),
+            });
+
+            return (request: QueryEngine.Request) =>
+              Stream.zipLatestAll(builtins(request), properties(request)).pipe(
+                Stream.map(([builtins, properties]) => [...builtins, ...properties]),
+              );
           });
 
           return (
@@ -218,10 +254,27 @@ export function StreamFilterEditor(props: {
               {(field) => (
                 <>
                   <div class="border-b border-border-subtle px-3 py-2 text-sm">
-                    {fields.find((item) => item.value === field())?.label}
+                    {propertyFilters.selected()
+                      ? propertyFilters.selected()?.label
+                      : fields.find((item) => item.value === field()._tag)?.label}
                   </div>
                   <Switch>
-                    <Match when={field() === "type"}>
+                    <Match when={propertyFilters.selected()}>
+                      {(prop) => (
+                        <StreamPropFilter.Menu
+                          entry={prop()}
+                          search={props.menu.search}
+                          onChange={(value) =>
+                            propertyFilters.set({ propId: prop().id, value, close })
+                          }
+                          onBack={() => open(undefined)}
+                          onClear={() =>
+                            propertyFilters.set({ propId: prop().id, value: undefined, close })
+                          }
+                        />
+                      )}
+                    </Match>
+                    <Match when={Field.$is("type")(field())}>
                       <Picker.Query
                         label="Search types"
                         query={types}
@@ -240,7 +293,7 @@ export function StreamFilterEditor(props: {
                         )}
                       </Picker.Query>
                     </Match>
-                    <Match when={field() === "search"}>
+                    <Match when={Field.$is("search")(field())}>
                       <SearchPicker
                         value={props.filter.search}
                         initialSearch={props.menu.search}
@@ -250,7 +303,7 @@ export function StreamFilterEditor(props: {
                         onClear={clear("search", close)}
                       />
                     </Match>
-                    <Match when={field() === "date"}>
+                    <Match when={Field.$is("date")(field())}>
                       <DateFilterPicker
                         value={props.filter.date}
                         search={props.menu.search}
@@ -281,61 +334,85 @@ export function StreamFilterEditor(props: {
   );
 
   const filters = (
-    <For each={fields.filter((field) => hasCondition(field.value))}>
-      {(field) => (
-        <FilterPill
-          label={field.label}
-          onClear={() => {
-            props.onChange(StreamSettings.clearFilter(props.filter, field.value));
-          }}
-        >
-          <Show when={field.value === "type" || field.value === "search"}>
-            <span class="px-2 text-sm text-fg-subtle">
-              {field.value === "type" ? "is" : "contains"}
-            </span>
-          </Show>
-          <Button
-            variant="ghost"
-            size="chip"
-            rounded="none"
-            class="h-full min-w-0 max-w-48 px-2 text-sm font-normal"
-            aria-label={`Change ${field.label.toLowerCase()} filter`}
-            onClick={() => open(field.value)}
+    <>
+      <For each={fields.filter((field) => hasCondition(field.value))}>
+        {(field) => (
+          <FilterPill
+            label={field.label}
+            onClear={() => {
+              props.onChange(StreamSettings.clearFilter(props.filter, field.value));
+            }}
           >
-            <span class="min-w-0 truncate">
-              <FilterValue field={field.value} filter={props.filter} />
-            </span>
-          </Button>
-          <Show
-            when={
-              (field.value === "backlinksTo" || field.value === "linksFrom") &&
-              props.filter[field.value]
-            }
+            <Show when={field.value === "type" || field.value === "search"}>
+              <span class="px-2 text-sm text-fg-subtle">
+                {field.value === "type" ? "is" : "contains"}
+              </span>
+            </Show>
+            <Button
+              variant="ghost"
+              size="chip"
+              rounded="none"
+              class="h-full min-w-0 max-w-48 px-2 text-sm font-normal"
+              aria-label={`Change ${field.label.toLowerCase()} filter`}
+              onClick={() => open(field.field)}
+            >
+              <span class="min-w-0 truncate">
+                <FilterValue field={field.value} filter={props.filter} />
+              </span>
+            </Button>
+            <Show
+              when={
+                (field.value === "backlinksTo" || field.value === "linksFrom") &&
+                props.filter[field.value]
+              }
+            >
+              {(id) => (
+                <Button
+                  as={NoteLink}
+                  id={id()}
+                  variant="ghost"
+                  size="icon-xs"
+                  rounded="none"
+                  class="h-full text-fg-subtle"
+                  aria-label={`Open ${field.label.toLowerCase()} note`}
+                  title="Open note"
+                >
+                  <ArrowUpRightIcon />
+                </Button>
+              )}
+            </Show>
+          </FilterPill>
+        )}
+      </For>
+      <For each={propertyFilters.entries().filter((entry) => entry.showChip)}>
+        {(entry) => (
+          <FilterPill
+            label={entry.label}
+            onClear={() => propertyFilters.set({ propId: entry.id, value: undefined })}
           >
-            {(id) => (
-              <Button
-                as={NoteLink}
-                id={id()}
-                variant="ghost"
-                size="icon-xs"
-                rounded="none"
-                class="h-full text-fg-subtle"
-                aria-label={`Open ${field.label.toLowerCase()} note`}
-                title="Open note"
-              >
-                <ArrowUpRightIcon />
-              </Button>
-            )}
-          </Show>
-        </FilterPill>
-      )}
-    </For>
+            <span class="px-2 text-sm text-fg-subtle">is</span>
+            <Button
+              variant="ghost"
+              size="chip"
+              rounded="none"
+              class="h-full px-2 text-sm font-normal"
+              onClick={() => open(Field.prop({ propId: entry.id }))}
+            >
+              {entry.detail}
+            </Button>
+          </FilterPill>
+        )}
+      </For>
+    </>
   );
 
-  return props.children(trigger, filters, changed);
+  const hasFilters = () =>
+    changedFields().length > 0 || propertyFilters.entries().some((entry) => entry.showChip);
+
+  return props.children(trigger, filters, hasFilters);
 }
 
-function FilterValue(props: { field: Field; filter: Filter }) {
+function FilterValue(props: { field: StreamSettings.FilterField; filter: Filter }) {
   return (
     <Switch>
       <Match when={props.field === "type"}>

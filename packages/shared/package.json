@@ -6,6 +6,7 @@
     "./attrs.schema": "./dist/attrs.schema.mjs",
     "./attrs.service": "./dist/attrs.service.mjs",
     "./browser-extension/contract": "./dist/browser-extension/contract.mjs",
+    "./builtin-attrs": "./dist/builtin-attrs.mjs",
     "./builtin-attrs.service": "./dist/builtin-attrs.service.mjs",
     "./db.service": "./dist/db.service.mjs",
     "./db.tables": "./dist/db.tables.mjs",

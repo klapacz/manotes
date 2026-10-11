@@ -1,7 +1,19 @@
-import { Array, Effect, flow, Layer, Option, pipe, Schema, Context, Stream } from "effect";
-import * as DB from "./db.service";
-import * as NoteSchema from "./note.schema";
-import * as Tables from "./db.tables";
+import {
+  Array,
+  Effect,
+  flow,
+  Layer,
+  Option,
+  pipe,
+  Schema,
+  Context,
+  Stream,
+  Record,
+  Predicate,
+} from "effect";
+import { DB } from "./db.service";
+import { NoteSchema } from "./note.schema";
+import { Tables } from "./db.tables";
 import { and, asc, desc, eq, isNotNull, isNull, like, ne, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
@@ -185,6 +197,30 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
 
         let statement = db.select(streamColumns).from(Tables.notes).$dynamic();
 
+        for (const [index, [propId, value]] of Record.toEntries(query.props ?? {}).entries()) {
+          const prop = alias(Tables.props, `prop_${index}`);
+          const def = alias(Tables.notes, `prop_def_${index}`);
+
+          statement = statement
+            .leftJoin(prop, and(eq(prop.recordId, Tables.notes.id), eq(prop.propId, propId)))
+            .innerJoin(
+              def,
+              and(
+                eq(def.id, propId),
+                eq(def._tag, "prop"),
+                eq(def.prop_type, value._tag),
+                eq(def.attrs_valid, 1),
+              ),
+            );
+
+          conditions.push(sql`CASE
+            WHEN ${prop.recordId} IS NULL THEN json_extract(${def.prop_default}, '$.val')
+            WHEN json_extract(${prop.value}, '$._tag') = ${value._tag}
+              THEN json_extract(${prop.value}, '$.val')
+            ELSE NULL
+          END = ${Predicate.isTagged(value, "bool") ? (value.val ? 1 : 0) : value.val}`);
+        }
+
         if (query.backlinksTo !== undefined) {
           const incoming = alias(Tables.backlinks, "incoming");
           statement = statement.innerJoin(
@@ -329,6 +365,7 @@ export type StreamListQuery = {
   readonly backlinksTo?: string;
   readonly linksFrom?: string;
   readonly search?: string;
+  readonly props?: Readonly<Record<NoteSchema.Id, AttrsSchema.PropVal>>;
   readonly sort: "date" | "updated";
 };
 
