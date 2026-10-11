@@ -1,8 +1,19 @@
 import { eq } from "drizzle-orm";
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Schema } from "effect";
 import { DB } from "./db.service";
 import { Tables } from "./db.tables";
 import { NoteSchema } from "./note.schema";
+import { AttrsSchema } from "./attrs.schema";
+
+export const RuleExpectRow = Schema.Struct({
+  ruleId: NoteSchema.Id,
+  propId: NoteSchema.Id,
+  value: Schema.NullOr(Schema.fromJsonString(AttrsSchema.RuleExpectation)),
+});
+
+export type RuleExpectRow = typeof RuleExpectRow.Type;
+
+const encodeRows = Schema.encodeEffect(Schema.Array(RuleExpectRow));
 
 export class Service extends Context.Service<Service>()("RuleExpectRepo.Service", {
   make: Effect.gen(function* () {
@@ -17,9 +28,10 @@ export class Service extends Context.Service<Service>()("RuleExpectRepo.Service"
     });
 
     const insert = Effect.fn("RuleExpectRepo.insert")(function* (opts: {
-      readonly rows: ReadonlyArray<Tables.RuleExpectRow>;
+      readonly rows: ReadonlyArray<RuleExpectRow>;
     }) {
-      yield* db.execute((db) => db.insert(Tables.ruleExpects).values([...opts.rows]));
+      const rows = yield* encodeRows(opts.rows);
+      yield* db.execute((db) => db.insert(Tables.ruleExpects).values([...rows]));
     });
 
     return { deleteForRule, insert };

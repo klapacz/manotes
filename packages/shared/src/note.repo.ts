@@ -7,6 +7,7 @@ import { alias } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 import { LibOption } from "./effect/option";
 import { EffectOption } from "./effect/effect-option";
+import { AttrsSchema } from "./attrs.schema";
 
 const decodeRecord = Schema.decodeEffect(NoteSchema.Record);
 
@@ -66,8 +67,9 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       readonly id: NoteSchema.Id;
       readonly columns: AttrsColumns;
     }) {
+      const columns = yield* encodeAttrsColumns(opts.columns);
       yield* db.execute((db) =>
-        db.update(Tables.notes).set(opts.columns).where(eq(Tables.notes.id, opts.id)),
+        db.update(Tables.notes).set(columns).where(eq(Tables.notes.id, opts.id)),
       );
     });
 
@@ -285,18 +287,21 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
 
-export type AttrsColumns = Pick<
-  typeof Tables.notes.$inferSelect,
-  | "_tag"
-  | "builtin"
-  | "prop_type"
-  | "prop_default"
-  | "prop_targets"
-  | "owned_type"
-  | "owned_parent"
-  | "rule_targets"
-  | "attrs_valid"
->;
+export const AttrsColumns = Schema.Struct({
+  _tag: AttrsSchema.RecordTag,
+  builtin: Schema.BooleanFromBit,
+  prop_type: Schema.NullOr(AttrsSchema.PropValTag),
+  prop_default: Schema.NullOr(Schema.fromJsonString(AttrsSchema.PropVal)),
+  prop_targets: Schema.NullOr(Schema.fromJsonString(AttrsSchema.TargetFilter)),
+  owned_type: Schema.NullOr(Schema.Literal("enum_option")),
+  owned_parent: Schema.NullOr(NoteSchema.Id),
+  rule_targets: Schema.NullOr(Schema.fromJsonString(AttrsSchema.TargetFilter)),
+  attrs_valid: Schema.BooleanFromBit,
+});
+
+export type AttrsColumns = typeof AttrsColumns.Type;
+
+const encodeAttrsColumns = Schema.encodeEffect(AttrsColumns);
 
 export type NoteWithBacklinks = {
   readonly record: NoteSchema.Record;

@@ -7,20 +7,20 @@ export const notes = sqliteTable(
   {
     id: text("id").primaryKey(),
     _tag: text("_tag").$type<AttrsSchema.RecordTag>().notNull().default("note"),
-    builtin: integer("builtin", { mode: "boolean" }).notNull().default(false),
+    builtin: integer("builtin").$type<0 | 1>().notNull().default(0),
 
     prop_type: text("prop_type").$type<AttrsSchema.PropValTag>(),
-    prop_default: text("prop_default", { mode: "json" }).$type<AttrsSchema.PropVal>(),
-    prop_targets: text("prop_targets", { mode: "json" }).$type<AttrsSchema.TargetFilter>(),
+    prop_default: text("prop_default"),
+    prop_targets: text("prop_targets"),
 
     owned_type:
       text("owned_type").$type<Extract<AttrsSchema.Attrs, { _tag: "owned" }>["owned_type"]>(),
-    owned_parent: text("owned_parent").$type<AttrsSchema.NoteId>(),
+    owned_parent: text("owned_parent"),
 
-    rule_targets: text("rule_targets", { mode: "json" }).$type<AttrsSchema.TargetFilter>(),
+    rule_targets: text("rule_targets"),
 
     // Strict attrs validity, separate from semantic property validation.
-    attrs_valid: integer("attrs_valid", { mode: "boolean" }).notNull().default(false),
+    attrs_valid: integer("attrs_valid").notNull().default(0),
 
     title: text("title"),
     content: text("content").notNull(),
@@ -45,9 +45,9 @@ export const notes = sqliteTable(
 export const props = sqliteTable(
   "props",
   {
-    recordId: text("recordId").$type<AttrsSchema.NoteId>().notNull(),
-    propId: text("propId").$type<AttrsSchema.NoteId>().notNull(),
-    value: text("value", { mode: "json" }).$type<AttrsSchema.PropVal>(),
+    recordId: text("recordId").notNull(),
+    propId: text("propId").notNull(),
+    value: text("value"),
   },
   (table) => [
     primaryKey({ columns: [table.recordId, table.propId] }),
@@ -55,22 +55,18 @@ export const props = sqliteTable(
   ],
 );
 
-export type PropRow = typeof props.$inferSelect;
-
 export const ruleExpects = sqliteTable(
   "rule_expects",
   {
-    ruleId: text("ruleId").$type<AttrsSchema.NoteId>().notNull(),
-    propId: text("propId").$type<AttrsSchema.NoteId>().notNull(),
-    value: text("value", { mode: "json" }).$type<AttrsSchema.RuleExpectation>(),
+    ruleId: text("ruleId").notNull(),
+    propId: text("propId").notNull(),
+    value: text("value"),
   },
   (table) => [
     primaryKey({ columns: [table.ruleId, table.propId] }),
     index("rule_expects_prop_id_idx").on(table.propId),
   ],
 );
-
-export type RuleExpectRow = typeof ruleExpects.$inferSelect;
 
 export const events = sqliteTable("events", {
   localSeq: integer("localSeq").primaryKey({ autoIncrement: true }),

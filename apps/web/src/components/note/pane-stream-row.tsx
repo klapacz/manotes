@@ -121,6 +121,18 @@ function NoteContent(props: { note: NoteSchema.Meta; groupKey: string; firstInGr
     return AsyncResult.isSuccess(slot) && BootState.$is("Ready")(slot.value.bootState());
   };
 
+  const doc = () => {
+    const slot = slotResult();
+
+    if (!AsyncResult.isSuccess(slot)) return;
+
+    return BootState.$match(slot.value.bootState(), {
+      Ready: ({ doc }) => doc,
+      Loading: () => undefined,
+      Error: () => undefined,
+    });
+  };
+
   const fnode = Focus.createNoteNode(
     () => props.note.id,
     () => ({
@@ -159,7 +171,7 @@ function NoteContent(props: { note: NoteSchema.Meta; groupKey: string; firstInGr
         </Show>
 
         <NoteShell>
-          <NoteActions note={props.note} />
+          <NoteActions note={props.note} doc={doc()} />
           <MatchAsyncResult
             when={slotResult()}
             onSuccess={(slot) => {

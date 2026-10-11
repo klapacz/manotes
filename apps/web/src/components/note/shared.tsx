@@ -1,6 +1,6 @@
 import { getRouteApi } from "@tanstack/solid-router";
 import { Data } from "effect";
-import { Show, createSignal } from "solid-js";
+import { Show, createMemo, createSignal } from "solid-js";
 import { NoteFormat } from "../../lib/note";
 import { PaneCursor } from "../../lib/note/pane.cursor";
 import { PaneCtx } from "../../lib/note/pane.ctx";
@@ -29,8 +29,10 @@ import { QueryEngine } from "../../lib/query-engine";
 import { MenuQuery } from "../../lib/menu-query";
 import { DateSuggestions } from "../../lib/date-suggestions";
 import { splitProps, type ComponentProps, type ParentProps } from "solid-js";
-import type { NoteSchema } from "../../lib";
+import { MatchTag, type NoteSchema } from "../../lib";
 import { Focus } from "./focus";
+import { NoteProps } from "./note-props";
+import type * as Y from "yjs";
 
 const route = getRouteApi("/$graph/");
 
@@ -150,7 +152,7 @@ function PaneActions(props: PaneActionsProps) {
   );
 }
 
-export function NoteActions(props: { note: NoteSchema.Meta }) {
+export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefined }) {
   const ctx = PaneCtx.use();
   const scroll = PaneScroll.use();
   const navigate = route.useNavigate();
@@ -172,10 +174,13 @@ export function NoteActions(props: { note: NoteSchema.Meta }) {
   };
 
   const [menuOpen, setMenuOpen] = createSignal(false);
-  const [changingDate, setChangingDate] = createSignal(false);
+  const [page, setPage] = createSignal<MenuPage>(MenuPage.Actions());
 
   const changeMenuOpen = (open: boolean) => {
-    if (open) setChangingDate(false);
+    if (open) {
+      setPage(MenuPage.Actions());
+    }
+
     setMenuOpen(open);
   };
 
@@ -294,47 +299,83 @@ export function NoteActions(props: { note: NoteSchema.Meta }) {
               },
             ];
 
-            const query = QueryEngine.combine([
-              MenuQuery.choices(() => actions),
-              MenuQuery.nested({ label: "Change date", query: dates }),
-            ]);
+            const query = createMemo(() =>
+              QueryEngine.combine([
+                MenuQuery.choices(() => actions),
+                MenuQuery.nested({ label: "Change date", query: dates }),
+                QueryEngine.map(
+                  NoteProps.query({ recordId: props.note.id, doc: props.doc }),
+                  (choice): NoteMenuChoice => ({
+                    ...choice,
+                    ...NoteMenuAction.OpenProperty({ propId: choice.propId }),
+                    get labelSuffix() {
+                      return (
+                        <Show when={choice.builtin}>
+                          <span class="shrink-0 text-xs text-fg-subtle">builtin</span>
+                        </Show>
+                      );
+                    },
+                    suffix: <Picker.Caret />,
+                  }),
+                ),
+              ]),
+            );
 
             return (
-              <Show
-                when={changingDate()}
-                fallback={
-                  <>
-                    <Picker.Query
-                      label="Note actions"
-                      query={query}
-                      onSelect={(choice) =>
-                        NoteMenuAction.$match(choice, {
-                          Navigate: ({ run }) => close(run),
-                          OpenDatePicker: () => setChangingDate(true),
-                          SetDate: ({ date }) => void changeDate(date),
-                        })
-                      }
+              <MatchTag
+                when={page()}
+                cases={{
+                  Actions: () => (
+                    <>
+                      <Picker.Query
+                        label="Note actions"
+                        query={query()}
+                        onSelect={(choice) =>
+                          NoteMenuAction.$match(choice, {
+                            Navigate: ({ run }) => close(run),
+                            OpenDatePicker: () => setPage(MenuPage.ChangeDate()),
+                            SetDate: ({ date }) => void changeDate(date),
+                            OpenProperty: ({ propId }) => {
+                              if (props.doc) setPage(MenuPage.Property({ propId }));
+                            },
+                          })
+                        }
+                      />
+
+                      <div class="border-t border-border-subtle px-3 py-2 text-xs text-fg-subtle">
+                        <p>
+                          Dated{" "}
+                          <time dateTime={props.note.date}>
+                            {NoteFormat.formatShortDate(props.note.date)}
+                          </time>
+                        </p>
+                        <p>
+                          Edited <time>{NoteFormat.formatUpdatedAt(props.note.updatedAt)}</time>
+                        </p>
+                      </div>
+                    </>
+                  ),
+                  Property: (page) => (
+                    <Show when={props.doc}>
+                      {(doc) => (
+                        <NoteProps.Menu
+                          noteId={props.note.id}
+                          doc={doc()}
+                          propId={page().propId}
+                          onBack={() => setPage(MenuPage.Actions())}
+                        />
+                      )}
+                    </Show>
+                  ),
+                  ChangeDate: () => (
+                    <NoteDatePicker.Menu
+                      date={props.note.date}
+                      onChange={(date) => void changeDate(date)}
+                      onBack={() => setPage(MenuPage.Actions())}
                     />
-                    <div class="border-t border-border-subtle px-3 py-2 text-xs text-fg-subtle">
-                      <p>
-                        Dated{" "}
-                        <time dateTime={props.note.date}>
-                          {NoteFormat.formatShortDate(props.note.date)}
-                        </time>
-                      </p>
-                      <p>
-                        Edited <time>{NoteFormat.formatUpdatedAt(props.note.updatedAt)}</time>
-                      </p>
-                    </div>
-                  </>
-                }
-              >
-                <NoteDatePicker.Menu
-                  date={props.note.date}
-                  onChange={(date) => void changeDate(date)}
-                  onBack={() => setChangingDate(false)}
-                />
-              </Show>
+                  ),
+                }}
+              />
             );
           }}
         </Picker.Content>
@@ -343,10 +384,19 @@ export function NoteActions(props: { note: NoteSchema.Meta }) {
   );
 }
 
+type MenuPage = Data.TaggedEnum<{
+  Actions: {};
+  ChangeDate: {};
+  Property: { propId: NoteSchema.Id };
+}>;
+
+const MenuPage = Data.taggedEnum<MenuPage>();
+
 type NoteMenuAction = Data.TaggedEnum<{
   Navigate: { run: () => void };
   OpenDatePicker: {};
   SetDate: { date: string };
+  OpenProperty: { propId: NoteSchema.Id };
 }>;
 
 const NoteMenuAction = Data.taggedEnum<NoteMenuAction>();

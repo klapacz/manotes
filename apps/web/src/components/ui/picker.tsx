@@ -39,6 +39,7 @@ import {
 export type Choice = {
   value: string;
   label: string;
+  labelSuffix?: JSX.Element;
   group?: string;
   icon?: JSX.Element;
   shortcut?: string;
@@ -314,6 +315,7 @@ export function Query<Option extends Choice>(
                   )}
                 </For>
                 <span class="min-w-0 truncate">{choice.label}</span>
+                {choice.labelSuffix}
               </span>
               <Show when={choice.detail}>
                 {(detail) => (

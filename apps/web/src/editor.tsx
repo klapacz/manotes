@@ -30,7 +30,7 @@ import { defineSearchHighlight, setSearchHighlight } from "./lib/editor/search-h
 
 export type BootState = Data.TaggedEnum<{
   Loading: {};
-  Ready: {};
+  Ready: { doc: Y.Doc };
   Error: { message: string };
 }>;
 
@@ -114,7 +114,7 @@ export default function Editor(props: Props): JSX.Element {
               Effect.scoped(service.setupDoc(doc, { noteId }, ready)),
               Effect.gen(function* () {
                 yield* Deferred.await(ready);
-                yield* SubscriptionRef.set(bootStateRef, { doc, state: BootState.Ready() });
+                yield* SubscriptionRef.set(bootStateRef, { doc, state: BootState.Ready({ doc }) });
               }),
             ],
             { concurrency: "unbounded" },

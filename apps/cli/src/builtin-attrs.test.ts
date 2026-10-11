@@ -1,7 +1,10 @@
 import { NodeServices } from "@effect/platform-node";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
+import { Attrs } from "@manotes/shared/attrs.service";
+import { PropRecordRepo } from "@manotes/shared/prop-record.repo";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs.service";
 import { DB } from "@manotes/shared/db.service";
+import { Tables } from "@manotes/shared/db.tables";
 import { EventRepo } from "@manotes/shared/event.repo";
 import { CommittedEvent } from "@manotes/shared/graph-sync/contract/messages";
 import * as GraphSyncContext from "@manotes/shared/graph-sync/context";
@@ -10,6 +13,7 @@ import * as GraphSyncEventLog from "@manotes/shared/graph-sync/event-log.service
 import * as Materializer from "@manotes/shared/materializer.service";
 import { NoteRepo } from "@manotes/shared/note.repo";
 import { NoteDoc } from "@manotes/shared/note/doc";
+import { StreamFilter } from "@manotes/shared/note/stream-filter";
 import { YSchema } from "@manotes/shared/y-schema";
 import { DateTime, Effect, Layer, Option, Scope, Stream, Struct } from "effect";
 import * as Reactivity from "effect/unstable/reactivity/Reactivity";
@@ -21,7 +25,156 @@ import { CliRuntime } from "./cli.runtime";
 const createdAt = DateTime.makeUnsafe("2026-10-11T09:00:00Z");
 
 describe("Archived builtin", () => {
-  it("materializes the definition once, using graph creation time, outside ordinary note flows", async () => {
+  it("sets and clears boolean assignments through ordinary update events and SQL projections", async () => {
+    await run(
+      Effect.gen(function* () {
+        const device = yield* makeDevice();
+        yield* Effect.gen(function* () {
+          const builtins = yield* BuiltinAttrs.Service;
+          yield* builtins.ensureArchived({ createdAt });
+          const attrs = yield* Attrs.Service;
+          const events = yield* EventRepo.Service;
+          const materializer = yield* Materializer.Service;
+          const defsRepo = yield* PropRecordRepo.Service;
+          const db = yield* DB.Service;
+          const recordId = AttrsSchema.NoteId.make("editable-note");
+
+          const { doc } = yield* Effect.acquireRelease(
+            Effect.sync(() => NoteDoc.make()),
+            ({ doc }) => Effect.sync(() => doc.destroy()),
+          );
+
+          const save = () =>
+            events
+              .create({
+                noteId: recordId,
+                type: "update",
+                createdAt,
+                payload: Y.encodeStateAsUpdate(doc),
+              })
+              .pipe(Effect.andThen(materializer.catchUp()));
+
+          yield* attrs.setProp({
+            doc,
+            recordId,
+            propId: BuiltinAttrs.archivedId,
+            value: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+          });
+          yield* save();
+
+          const defs = yield* (yield* defsRepo.reactiveDefs()).pipe(Stream.runHead);
+
+          expect(Option.getOrThrow(defs)).toEqual([
+            {
+              id: BuiltinAttrs.archivedId,
+              title: "Archived",
+              builtin: true,
+              prop_type: "bool",
+              prop_default: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+            },
+          ]);
+
+          const values = db.query((db) => db.select().from(Tables.props));
+
+          expect(yield* values).toEqual([
+            {
+              recordId,
+              propId: BuiltinAttrs.archivedId,
+              value: JSON.stringify(AttrsSchema.PropVal.cases.bool.make({ val: false })),
+            },
+          ]);
+
+          yield* attrs.setProp({
+            doc,
+            recordId,
+            propId: BuiltinAttrs.archivedId,
+            value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+          });
+          yield* save();
+          expect(yield* values).toEqual([
+            {
+              recordId,
+              propId: BuiltinAttrs.archivedId,
+              value: JSON.stringify(AttrsSchema.PropVal.cases.bool.make({ val: true })),
+            },
+          ]);
+
+          yield* attrs.clearProp({ doc, propId: BuiltinAttrs.archivedId });
+          yield* save();
+          expect(yield* values).toEqual([]);
+          expect(doc.getMap("attrs").toJSON()).toEqual({ props: {} });
+        }).pipe(
+          Effect.provide(Attrs.Service.layer),
+          Effect.provide(PropRecordRepo.Service.layer),
+          Effect.provideContext(device),
+        );
+      }),
+    );
+  });
+
+  it("queries every def kind with matching defaults and link targets", async () => {
+    await run(
+      Effect.gen(function* () {
+        const device = yield* makeDevice();
+        yield* Effect.gen(function* () {
+          const events = yield* EventRepo.Service;
+          const materializer = yield* Materializer.Service;
+          const repo = yield* PropRecordRepo.Service;
+
+          const values = [
+            AttrsSchema.PropVal.cases.text.make({ val: "hello" }),
+            AttrsSchema.PropVal.cases.number.make({ val: 7 }),
+            AttrsSchema.PropVal.cases.bool.make({ val: false }),
+            AttrsSchema.PropVal.cases.enum.make({ val: AttrsSchema.NoteId.make("option") }),
+            AttrsSchema.PropVal.cases.link.make({ val: AttrsSchema.NoteId.make("target") }),
+          ];
+
+          const targets = StreamFilter.toAttrs({ type: "pages" });
+
+          for (const value of values) {
+            const { doc, attrs } = yield* Effect.acquireRelease(
+              Effect.sync(() => NoteDoc.make()),
+              ({ doc }) => Effect.sync(() => doc.destroy()),
+            );
+
+            const prop = yield* attrs.pipe(YSchema.set("_tag", "prop"));
+            yield* prop.pipe(YSchema.set("prop_type", value._tag));
+            yield* prop.pipe(YSchema.set("prop_default", value));
+
+            if (AttrsSchema.PropVal.guards.link(value)) {
+              const link = yield* prop.pipe(YSchema.set("prop_type", "link"));
+              yield* link.pipe(YSchema.set("prop_targets", targets));
+            }
+
+            yield* events.create({
+              noteId: AttrsSchema.NoteId.make(value._tag),
+              type: "update",
+              createdAt,
+              payload: Y.encodeStateAsUpdate(doc),
+            });
+          }
+
+          yield* materializer.catchUp();
+
+          const defs = Option.getOrThrow(yield* (yield* repo.reactiveDefs()).pipe(Stream.runHead));
+
+          expect(defs).toHaveLength(values.length);
+
+          for (const value of values) {
+            expect(defs.find((def) => def.prop_type === value._tag)).toMatchObject({
+              prop_default: value,
+            });
+          }
+
+          expect(defs.find((def) => def.prop_type === "link")).toMatchObject({
+            prop_targets: targets,
+          });
+        }).pipe(Effect.provide(PropRecordRepo.Service.layer), Effect.provideContext(device));
+      }),
+    );
+  });
+
+  it("materializes the def once, using graph creation time, outside ordinary note flows", async () => {
     await run(
       Effect.gen(function* () {
         const device = yield* makeDevice();

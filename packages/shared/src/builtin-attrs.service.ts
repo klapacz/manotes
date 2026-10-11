@@ -27,7 +27,11 @@ export class Service extends Context.Service<Service>()("BuiltinAttrs.Service", 
         ({ doc }) => Effect.sync(() => doc.destroy()),
       );
 
-      yield* attrs.initializeBoolProp({ doc, builtin: true, defaultValue: false });
+      yield* attrs.initializeProp({
+        doc,
+        builtin: true,
+        defaultValue: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+      });
 
       return yield* Effect.sync(() => {
         ProsemirrorEncode.initializeDocument({

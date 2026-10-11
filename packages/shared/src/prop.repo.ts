@@ -1,8 +1,19 @@
 import { eq } from "drizzle-orm";
-import { Context, Effect, Layer, Array } from "effect";
+import { Context, Effect, Layer, Array, Schema } from "effect";
 import { DB } from "./db.service";
 import { Tables } from "./db.tables";
 import { NoteSchema } from "./note.schema";
+import { AttrsSchema } from "./attrs.schema";
+
+export const PropRow = Schema.Struct({
+  recordId: NoteSchema.Id,
+  propId: NoteSchema.Id,
+  value: Schema.NullOr(Schema.fromJsonString(AttrsSchema.PropVal)),
+});
+
+export type PropRow = typeof PropRow.Type;
+
+const encodeRows = Schema.encodeEffect(Schema.Array(PropRow));
 
 export class Service extends Context.Service<Service>()("PropRepo.Service", {
   make: Effect.gen(function* () {
@@ -17,9 +28,10 @@ export class Service extends Context.Service<Service>()("PropRepo.Service", {
     });
 
     const insert = Effect.fn("PropRepo.insert")(function* (opts: {
-      readonly rows: Array.NonEmptyReadonlyArray<Tables.PropRow>;
+      readonly rows: Array.NonEmptyReadonlyArray<PropRow>;
     }) {
-      yield* db.execute((db) => db.insert(Tables.props).values([...opts.rows]));
+      const rows = yield* encodeRows(opts.rows);
+      yield* db.execute((db) => db.insert(Tables.props).values([...rows]));
     });
 
     return { deleteForRecord, insert };

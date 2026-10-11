@@ -1,7 +1,7 @@
 import { getRouteApi } from "@tanstack/solid-router";
 import { Option, Stream } from "effect";
-import { Show, type ComponentProps } from "solid-js";
-import Editor from "../../editor";
+import { Show, createSignal, type ComponentProps } from "solid-js";
+import Editor, { BootState } from "../../editor";
 import {
   MatchTag,
   NoteCache,
@@ -96,6 +96,15 @@ export function PaneNote(props: ComponentProps<"section">) {
 }
 
 function PaneNoteInner(props: { note: NoteSchema.Meta }) {
+  const [bootState, setBootState] = createSignal<BootState>(BootState.Loading());
+
+  const doc = () =>
+    BootState.$match(bootState(), {
+      Ready: ({ doc }) => doc,
+      Loading: () => undefined,
+      Error: () => undefined,
+    });
+
   const fnode = Focus.createNoteNode(
     () => props.note.id,
     () => ({ focus: Focus.focusBrowseTarget }),
@@ -106,8 +115,12 @@ function PaneNoteInner(props: { note: NoteSchema.Meta }) {
       <Focus.Element class="overflow-y-auto outline-none group">
         <NoteDivider date={props.note.date} />
         <NoteShell>
-          <NoteActions note={props.note} />
-          <Editor noteId={props.note.id} style={{ "min-height": "30svh" }} />
+          <NoteActions note={props.note} doc={doc()} />
+          <Editor
+            noteId={props.note.id}
+            onBootStateChange={setBootState}
+            style={{ "min-height": "30svh" }}
+          />
         </NoteShell>
       </Focus.Element>
     </Focus.NodeProvider>

@@ -36,12 +36,14 @@ export type PropValTag = PropVal["_tag"];
  *
  * Shared fields and record tags must exist before filters can compare them.
  */
+export const Props = YSchema.Map({ schema: Schema.Record(NoteId, PropVal), key: "propId" });
+
 const common = {
   builtin: Schema.Boolean.pipe(
     Schema.withDecodingDefault(Effect.succeed(false)),
     Schema.withConstructorDefault(Effect.succeed(false)),
   ),
-  props: YSchema.Map({ schema: Schema.Record(NoteId, PropVal), key: "propId" }).pipe(
+  props: Props.pipe(
     Schema.withDecodingDefault(Effect.sync(() => ({}))),
     Schema.withConstructorDefault(Effect.sync(() => ({}))),
   ),
@@ -136,7 +138,7 @@ export const RuleExpectation = Schema.TaggedUnion({
 
 export type RuleExpectation = typeof RuleExpectation.Type;
 
-const PropAttrs = Schema.Union([
+export const PropAttrs = Schema.Union([
   propAttrs(PropVal.cases.text),
   propAttrs(PropVal.cases.number),
   propAttrs(PropVal.cases.bool),
