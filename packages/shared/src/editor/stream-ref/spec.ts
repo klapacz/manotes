@@ -1,6 +1,7 @@
 import { Option, Schema } from "effect";
 import { defineCommands, defineNodeSpec, insertNode } from "prosekit/core";
 import { PaneSchema } from "../../note/pane.schema";
+import { StreamSettings } from "../../note/stream-settings";
 
 export const StreamRefAttrs = PaneSchema.StreamSettings;
 
@@ -56,12 +57,12 @@ export function streamRefLabel(
   noteLabel: (id: string) => string = (id) => id,
 ): string {
   return [
-    filter.type === "pages" ? "Pages" : "Notes",
+    StreamSettings.typeLabels[filter.type],
     filter.search && `“${filter.search}”`,
     filter.backlinksTo && `Backlinks to ${noteLabel(filter.backlinksTo)}`,
     filter.linksFrom && `Links from ${noteLabel(filter.linksFrom)}`,
     filter.date,
-    sort !== (filter.type === "pages" ? "updated" : "date") && sort,
+    sort !== StreamSettings.defaults(filter.type).sort && sort,
     view !== "full" && view,
   ]
     .filter(Boolean)

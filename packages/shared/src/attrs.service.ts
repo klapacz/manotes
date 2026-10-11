@@ -31,7 +31,14 @@ export type Entry<Tag extends AttrsSchema.PropValTag = AttrsSchema.PropValTag> =
 }[Tag];
 
 export class Service extends Context.Service<Service>()("Attrs.Service", {
-  make: Effect.sync(() => ({ initializeProp, watchProps, setProp, clearProp })),
+  make: Effect.sync(() => ({
+    initializeProp,
+    watch,
+    watchProps,
+    setProp,
+    clearProp,
+    setPropDefault,
+  })),
 }) {
   static readonly layer = Layer.effect(this, this.make);
 }
@@ -40,14 +47,42 @@ export class SelfAssignmentError extends Data.TaggedError("Attrs.SelfAssignmentE
   readonly propId: AttrsSchema.NoteId;
 }> {}
 
+function watch(opts: { readonly doc: Y.Doc }) {
+  const { attrs } = NoteDoc.fromDoc(opts);
+
+  return changes(opts.doc).pipe(
+    Stream.mapEffect(() =>
+      Effect.gen(function* () {
+        const builtin = yield* isBuiltin(attrs);
+        const snapshot = yield* YSchema.exportLoose(attrs);
+
+        return { doc: opts.doc, builtin, attrs: snapshot };
+      }),
+    ),
+  );
+}
+
 function watchProps<E, R>(opts: {
   readonly doc: Y.Doc;
   readonly defs: Stream.Stream<readonly PropRecordRepo.Def[], E, R>;
 }) {
-  const map = opts.doc.getMap("attrs");
   const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
 
-  const changes = Stream.callback<void>((queue) => {
+  return Stream.zipLatestWith(opts.defs, changes(opts.doc), (defs) => defs).pipe(
+    Stream.mapEffect((defs) =>
+      Effect.gen(function* () {
+        const props = yield* attrs.pipe(YSchema.findMap("props"));
+
+        return yield* Effect.forEach(defs, (def) => readEntry({ props, def }));
+      }),
+    ),
+  );
+}
+
+function changes(doc: Y.Doc) {
+  const map = doc.getMap("attrs");
+
+  return Stream.callback<void>((queue) => {
     const emit = () => Queue.offerUnsafe(queue, undefined);
 
     return Effect.acquireRelease(
@@ -58,16 +93,6 @@ function watchProps<E, R>(opts: {
       () => Effect.sync(() => map.unobserveDeep(emit)).pipe(Effect.andThen(Queue.end(queue))),
     );
   });
-
-  return Stream.zipLatestWith(opts.defs, changes, (defs) => defs).pipe(
-    Stream.mapEffect((defs) =>
-      Effect.gen(function* () {
-        const props = yield* attrs.pipe(YSchema.findMap("props"));
-
-        return yield* Effect.forEach(defs, (def) => readEntry({ props, def }));
-      }),
-    ),
-  );
 }
 
 const readEntry = Effect.fn("Attrs.readEntry")(function* <K extends AttrsSchema.PropValTag>(opts: {
@@ -116,7 +141,7 @@ const setProp = Effect.fn("Attrs.setProp")(function* (opts: {
     return yield* Effect.fail(new SelfAssignmentError({ propId: opts.propId }));
   }
 
-  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const attrs = yield* editableAttrs({ doc: opts.doc });
   const props = yield* attrs.pipe(YSchema.upsertMap("props"));
   yield* props.pipe(YSchema.set({ propId: opts.propId }, opts.value));
 });
@@ -125,7 +150,7 @@ const clearProp = Effect.fn("Attrs.clearProp")(function* (opts: {
   readonly doc: Y.Doc;
   readonly propId: AttrsSchema.NoteId;
 }) {
-  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const attrs = yield* editableAttrs({ doc: opts.doc });
   const props = yield* attrs.pipe(YSchema.findMap("props"));
 
   if (Option.isSome(props)) {
@@ -138,13 +163,51 @@ const initializeProp = Effect.fn("Attrs.initializeProp")(function* (opts: {
   readonly builtin: boolean;
   readonly defaultValue: AttrsSchema.PropVal;
 }) {
-  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const attrs = yield* editableAttrs({ doc: opts.doc });
   const prop = yield* attrs.pipe(YSchema.set("_tag", "prop"));
   yield* prop.pipe(YSchema.set("prop_type", opts.defaultValue._tag));
 
   yield* prop.pipe(YSchema.set("builtin", opts.builtin));
   yield* prop.pipe(YSchema.set("prop_default", opts.defaultValue));
   yield* prop.pipe(YSchema.upsertMap("props"));
+});
+
+const setPropDefault = Effect.fn("Attrs.setPropDefault")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly value: AttrsSchema.PropVal;
+}) {
+  const attrs = yield* editableAttrs({ doc: opts.doc });
+
+  const prop = yield* attrs.pipe(
+    YSchema.find("_tag"),
+    Effect.flatMap(Effect.fromOption),
+    Effect.flatMap(YSchema.expect("prop")),
+  );
+
+  yield* prop.pipe(YSchema.set("prop_default", opts.value));
+});
+
+export class BuiltinRecordError extends Data.TaggedError("Attrs.BuiltinRecordError")<{}> {}
+
+const editableAttrs = Effect.fn("Attrs.editableAttrs")(function* (opts: { readonly doc: Y.Doc }) {
+  const { attrs } = NoteDoc.fromDoc(opts);
+
+  if (yield* isBuiltin(attrs)) {
+    return yield* Effect.fail(new BuiltinRecordError());
+  }
+
+  return attrs;
+});
+
+const isBuiltin = Effect.fn("Attrs.isBuiltin")((
+  attrs: ReturnType<typeof NoteDoc.fromDoc>["attrs"],
+) => {
+  // Missing means ordinary; malformed flags stay protected without repairing Yjs.
+  return attrs.pipe(
+    YSchema.find("builtin"),
+    Effect.map(Option.match({ onNone: () => false, onSome: (field) => field.value })),
+    Effect.catchTag("YSchemaError", () => Effect.succeed(true)),
+  );
 });
 
 export * as Attrs from "./attrs.service";

@@ -100,13 +100,10 @@ export function PaneStream(props: ComponentProps<"section">) {
 
   const createNoteOn = (date: string | undefined) => {
     if (!Predicate.isTagged(state, "Success")) return;
-    createNote(
-      { date, pool: state.value.pool, payload: NoteCreate.prefilledPayload(pane()) },
-      (note) => {
-        refresh();
-        focus.request(fid.editor(note.id), { reveal: "always" });
-      },
-    );
+    createNote({ date, pool: state.value.pool, pane: pane() }, (note) => {
+      refresh();
+      focus.request(fid.editor(note.id), { reveal: "always" });
+    });
   };
 
   const handleCreate = () => createNoteOn(pane().filter.date);
@@ -128,7 +125,9 @@ export function PaneStream(props: ComponentProps<"section">) {
   const [lastFocused, setLastFocused] = createSignal<NoteSchema.Id>();
 
   const record = recording.createControls({
-    enabled: () => Predicate.isTagged(state, "Success"),
+    enabled: () =>
+      Predicate.isTagged(state, "Success") &&
+      (pane().filter.type === "notes" || pane().filter.type === "pages"),
     getFocusedRow() {
       if (!Predicate.isTagged(state, "Success")) return;
 

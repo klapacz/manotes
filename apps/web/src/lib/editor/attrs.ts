@@ -1,0 +1,72 @@
+import { useAtomValue } from "@effect/atom-solid";
+import { Attrs } from "@manotes/shared/attrs.service";
+import { Effect, Predicate, Stream } from "effect";
+import { AsyncResult } from "effect/unstable/reactivity";
+import { createMemo, type Accessor } from "solid-js";
+import type * as Y from "yjs";
+import { bindRt, createSyncedAtom } from "..";
+
+export function use(opts: { doc: Accessor<Y.Doc | undefined> }) {
+  // The caller supplies a document only after its initial Yjs updates have loaded.
+  // Changing it releases the previous attrs subscription through the atom's scope.
+  const docAtom = createSyncedAtom(opts.doc);
+
+  const attrsAtom = bindRt((rt) =>
+    rt.atom((get) => {
+      const doc = get(docAtom);
+
+      if (!doc) {
+        return Stream.succeed(undefined);
+      }
+
+      return Attrs.Service.use((attrs) => Effect.succeed(attrs.watch({ doc }))).pipe(Stream.unwrap);
+    }),
+  );
+
+  const attrs = useAtomValue(attrsAtom);
+
+  const record = createMemo(() => {
+    const result = attrs();
+
+    // Atoms retain the previous success while loading; never use another note's attrs.
+    if (!AsyncResult.isSuccess(result) || result.value?.doc !== opts.doc()) {
+      return undefined;
+    }
+
+    return result.value;
+  });
+
+  const editable = createMemo(() => {
+    const current = record();
+
+    // Keep loading documents and builtins readonly. The watcher reads builtin
+    // independently, so malformed assignments don't lock ordinary text editing.
+    return current !== undefined && !current.builtin;
+  });
+
+  const definition = createMemo(() => {
+    const current = record();
+
+    if (!current) {
+      return undefined;
+    }
+
+    const snapshot = current.attrs;
+    const { prop_type, prop_default } = snapshot;
+
+    // Only kind and value type are needed; other malformed fields stay replaceable.
+    if (!Predicate.isTagged(snapshot, "prop") || prop_type === undefined) {
+      return undefined;
+    }
+
+    return {
+      builtin: current.builtin,
+      prop_type,
+      prop_default,
+    };
+  });
+
+  return { editable, definition };
+}
+
+export * as EditorAttrs from "./attrs";

@@ -13,7 +13,7 @@ const And = Schema.TaggedStruct("and", { val: Schema.Array(AttrsSchema.FilterExp
 const Or = Schema.TaggedStruct("or", { val: Schema.Array(AttrsSchema.FilterExpr) });
 
 describe("StreamFilter conversion", () => {
-  it.each(["notes", "pages"] as const)("round-trips a %s pane filter", (type) => {
+  it.each(["notes", "pages", "prop"] as const)("round-trips a %s pane filter", (type) => {
     const filter: StreamSettings.Filter = {
       type,
       search: "sleep log",
@@ -27,8 +27,8 @@ describe("StreamFilter conversion", () => {
 
     expect(Schema.decodeUnknownSync(AttrsSchema.TargetFilter)(attrs)).toEqual(attrs);
     expect(attrs.map(({ val }) => val)).toEqual([
-      ["_tag", "=", "note"],
-      ["title", "exists", type === "pages"],
+      ["_tag", "=", type === "prop" ? "prop" : "note"],
+      ...(type === "prop" ? [] : [["title", "exists", type === "pages"]]),
       ["body", "contains", "sleep log"],
       ["date", "=", "2026-10-09"],
       [["link", "->", "sleep-log"], "exists", true],
@@ -37,7 +37,7 @@ describe("StreamFilter conversion", () => {
     expect(StreamFilter.fromAttrs(attrs)).toEqual(filter);
   });
 
-  it.each(["notes", "pages"] as const)("round-trips a minimal %s filter", (type) => {
+  it.each(["notes", "pages", "prop"] as const)("round-trips a minimal %s filter", (type) => {
     const filter = StreamSettings.defaults(type).filter;
     expect(StreamFilter.fromAttrs(StreamFilter.toAttrs(filter))).toEqual(filter);
   });

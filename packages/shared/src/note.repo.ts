@@ -360,7 +360,7 @@ export const bootResultEmpty = (): BootResult => ({
 });
 
 export type StreamListQuery = {
-  readonly type?: "notes" | "pages";
+  readonly type?: "notes" | "pages" | "prop";
   readonly date?: string;
   readonly backlinksTo?: string;
   readonly linksFrom?: string;
@@ -379,7 +379,7 @@ const streamColumns = {
 } as const;
 
 function streamFilterConditions(query: StreamListQuery): Array<SQL> {
-  const conditions: Array<SQL> = [eq(Tables.notes._tag, "note")];
+  const conditions: Array<SQL> = [eq(Tables.notes._tag, query.type === "prop" ? "prop" : "note")];
 
   if (query.type === "pages") conditions.push(isNotNull(Tables.notes.title));
 

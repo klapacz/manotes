@@ -8,6 +8,11 @@ export type Settings = PaneSchema.StreamSettings;
 
 export type Filter = Settings["filter"];
 
+export const typeLabels = { notes: "Notes", pages: "Pages", prop: "Properties" } satisfies Record<
+  Filter["type"],
+  string
+>;
+
 type PropFilters = NonNullable<Filter["props"]>;
 
 export type FilterField = Exclude<keyof Filter, "props">;

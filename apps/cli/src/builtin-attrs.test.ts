@@ -13,6 +13,7 @@ import * as GraphSyncEventLog from "@manotes/shared/graph-sync/event-log.service
 import * as Materializer from "@manotes/shared/materializer.service";
 import { NoteRepo } from "@manotes/shared/note.repo";
 import { NoteDoc } from "@manotes/shared/note/doc";
+import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 import { StreamFilter } from "@manotes/shared/note/stream-filter";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import { YSchema } from "@manotes/shared/y-schema";
@@ -26,6 +27,59 @@ import { CliRuntime } from "./cli.runtime";
 const createdAt = DateTime.makeUnsafe("2026-10-11T09:00:00Z");
 
 describe("Archived builtin", () => {
+  it("lists properties independently of their title and excludes them from notes and pages", async () => {
+    await run(
+      Effect.gen(function* () {
+        const device = yield* makeDevice();
+        yield* Effect.gen(function* () {
+          const attrs = yield* Attrs.Service;
+          const events = yield* EventRepo.Service;
+          const materializer = yield* Materializer.Service;
+          const notes = yield* NoteRepo.Service;
+
+          const { doc } = yield* Effect.acquireRelease(
+            Effect.sync(() => NoteDoc.make()),
+            ({ doc }) => Effect.sync(() => doc.destroy()),
+          );
+
+          yield* attrs.initializeProp({
+            doc,
+            builtin: false,
+            defaultValue: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+          });
+          ProsemirrorEncode.initializeDocument({ doc, content: [{ type: "paragraph" }] });
+          yield* events.create({
+            noteId: "untitled-prop",
+            type: "update",
+            createdAt,
+            payload: Y.encodeStateAsUpdate(doc),
+          });
+          yield* materializer.catchUp();
+
+          expect((yield* notes.getById("untitled-prop")).title).toBeNull();
+
+          const properties = Option.getOrThrow(
+            yield* (yield* notes.reactiveStreamList({ type: "prop", sort: "updated" })).pipe(
+              Stream.runHead,
+            ),
+          );
+
+          expect(properties.map(({ id }) => id)).toEqual(["untitled-prop"]);
+
+          for (const type of ["notes", "pages"] as const) {
+            expect(
+              Option.getOrThrow(
+                yield* (yield* notes.reactiveStreamList({ type, sort: "date" })).pipe(
+                  Stream.runHead,
+                ),
+              ),
+            ).toEqual([]);
+          }
+        }).pipe(Effect.provide(Attrs.Service.layer), Effect.provideContext(device));
+      }),
+    );
+  });
+
   it("filters tagged values and reacts to assignments and definition defaults", async () => {
     await run(
       Effect.gen(function* () {

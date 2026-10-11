@@ -2,7 +2,7 @@ import "./editor.css";
 
 import { createEditor, Priority, union, withPriority } from "prosekit/core";
 import { ProseKit } from "prosekit/solid";
-import { createEffect, createMemo, on, Show, type JSX } from "solid-js";
+import { createEffect, createMemo, on, onCleanup, Show, type JSX } from "solid-js";
 import * as Y from "yjs";
 import {
   defineYjsCommands,
@@ -14,6 +14,8 @@ import {
 } from "prosekit/extensions/yjs";
 import { defineAppExtension } from "./editor.extension";
 import { EditorSyncService, MatchTag, bindRt, createSyncedAtom } from "./lib";
+import { defineReadonly } from "prosekit/extensions/readonly";
+import { PropertyDef } from "./components/note/property-def";
 import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
 import { Cause, Data, Deferred, Effect, SubscriptionRef } from "effect";
 import { AsyncResult, type Atom } from "effect/unstable/reactivity";
@@ -22,6 +24,7 @@ import { useAtomValue } from "@effect/atom-solid";
 import { Focus } from "./components/note/focus";
 import type { NoteSchema } from "@manotes/shared/note.schema";
 import { EditorFocus } from "./lib/editor/focus.extension";
+import { EditorAttrs } from "./lib/editor/attrs";
 import { createLinkEdit, LinkMenu } from "./lib/editor/link/menu";
 import { MobileToolbar } from "./lib/editor/mobile-toolbar";
 import { SlashMenu } from "./lib/editor/slash-menu";
@@ -157,6 +160,22 @@ export default function Editor(props: Props): JSX.Element {
     });
   });
 
+  const attrs = EditorAttrs.use({
+    doc: () => {
+      const current = bootState();
+
+      if (!BootState.$is("Ready")(current)) {
+        return undefined;
+      }
+
+      return current.doc;
+    },
+  });
+
+  createEffect(() => {
+    if (!attrs.editable()) onCleanup(state().editor.use(defineReadonly()));
+  });
+
   createEffect(() => {
     props.onBootStateChange?.(bootState());
   });
@@ -209,6 +228,9 @@ export default function Editor(props: Props): JSX.Element {
                 class="outline-none p-4"
                 style={props.style}
               />
+              <Show when={attrs.definition()}>
+                {(definition) => <PropertyDef.Root doc={current.doc} attrs={definition()} />}
+              </Show>
               <BacklinkMenu currentNoteId={props.noteId} />
               <TabMenu />
               <StreamRefMenu />

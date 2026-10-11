@@ -3,7 +3,7 @@
 // Why: searchable filter menus and segmented pills. Ported to Solid/Kobalte with
 // Manotes stream filters and bounded repository search.
 import { For, Show, Switch, Match, createMemo, createSignal, type JSX } from "solid-js";
-import { Data, Option, Stream } from "effect";
+import { Data, Option, Record, Stream } from "effect";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { StreamPropFilter } from "./stream-prop-filter";
@@ -42,10 +42,7 @@ const fields = [
 
 export type StreamFilterMenu = { open: boolean; field: Field | undefined; search?: string };
 
-const typeChoices = [
-  { value: "notes", label: "Notes" },
-  { value: "pages", label: "Pages" },
-] as const;
+const typeChoices = Record.collect(StreamSettings.typeLabels, (value, label) => ({ value, label }));
 
 export function StreamFilterEditor(props: {
   filter: Filter;
@@ -415,9 +412,7 @@ export function StreamFilterEditor(props: {
 function FilterValue(props: { field: StreamSettings.FilterField; filter: Filter }) {
   return (
     <Switch>
-      <Match when={props.field === "type"}>
-        {props.filter.type === "notes" ? "Notes" : "Pages"}
-      </Match>
+      <Match when={props.field === "type"}>{StreamSettings.typeLabels[props.filter.type]}</Match>
       <Match when={props.field === "search"}>{props.filter.search}</Match>
       <Match keyed when={props.field === "date" && props.filter.date}>
         {(date) => DateSuggestions.formatDate(date)}

@@ -7,6 +7,198 @@ import { BuiltinAttrs } from "./builtin-attrs";
 import { PropRecordRepo } from "./prop-record.repo";
 
 describe("Attrs property editing", () => {
+  it("watches local and synced definition defaults and releases its observer", async () => {
+    const doc = new Y.Doc();
+    const remote = new Y.Doc();
+    const map = doc.getMap("attrs");
+    const observe = vi.spyOn(map, "observeDeep");
+    const unobserve = vi.spyOn(map, "unobserveDeep");
+
+    try {
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const attrs = yield* Attrs.Service;
+            yield* attrs.initializeProp({
+              doc,
+              builtin: false,
+              defaultValue: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+            });
+            const pull = yield* Stream.toPull(attrs.watch({ doc }));
+            const [initial] = yield* pull;
+            expect(initial!.attrs).toEqual(
+              AttrsSchema.PropAttrs.cases.bool.make({
+                prop_type: "bool",
+                prop_default: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+              }),
+            );
+
+            yield* attrs.setPropDefault({
+              doc,
+              value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+            });
+            const [local] = yield* pull;
+            expect(local!.attrs).toMatchObject({
+              prop_default: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+            });
+
+            Y.applyUpdate(remote, Y.encodeStateAsUpdate(doc));
+            yield* attrs.setPropDefault({
+              doc: remote,
+              value: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+            });
+            Y.applyUpdate(doc, Y.encodeStateAsUpdate(remote));
+            const [synced] = yield* pull;
+            expect(synced!.attrs).toEqual(initial!.attrs);
+
+            const props = doc.getMap("attrs").get("props");
+            expect(props).toBeInstanceOf(Y.Map);
+
+            if (!(props instanceof Y.Map)) throw new Error("Missing props map");
+            props.set("broken", "not a property value");
+            const [invalid] = yield* pull;
+            expect(invalid!.attrs).toEqual(initial!.attrs);
+            expect(invalid!.builtin).toBe(false);
+            expect(props.get("broken")).toBe("not a property value");
+
+            map.set("prop_default", "broken default");
+            const [invalidDefault] = yield* pull;
+            expect(invalidDefault!.attrs.prop_type).toBe("bool");
+            expect(invalidDefault!.attrs).not.toHaveProperty("prop_default");
+            expect(map.get("prop_default")).toBe("broken default");
+
+            yield* attrs.setPropDefault({
+              doc,
+              value: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+            });
+            const [replaced] = yield* pull;
+            expect(replaced!.attrs).toEqual(initial!.attrs);
+
+            props.delete("broken");
+            const [recovered] = yield* pull;
+            expect(recovered!.attrs).toEqual(initial!.attrs);
+          }),
+        ).pipe(Effect.provide(Attrs.Service.layer)),
+      );
+      expect(observe).toHaveBeenCalledOnce();
+      expect(unobserve).toHaveBeenCalledWith(observe.mock.calls[0]![0]);
+    } finally {
+      doc.destroy();
+      remote.destroy();
+    }
+  });
+
+  it("rejects builtin defaults, wrong value types and non-properties without changing Yjs", () => {
+    const doc = new Y.Doc();
+
+    try {
+      Effect.runSync(
+        Attrs.Service.use((attrs) =>
+          Effect.gen(function* () {
+            const original = Y.encodeStateAsUpdate(doc);
+            expect(
+              Result.isFailure(
+                yield* Effect.result(
+                  attrs.setPropDefault({
+                    doc,
+                    value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+                  }),
+                ),
+              ),
+            ).toBe(true);
+            expect(Y.encodeStateAsUpdate(doc)).toEqual(original);
+
+            yield* attrs.initializeProp({
+              doc,
+              builtin: false,
+              defaultValue: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+            });
+            const before = Y.encodeStateAsUpdate(doc);
+            expect(
+              Result.isFailure(
+                yield* Effect.result(
+                  attrs.setPropDefault({
+                    doc,
+                    value: AttrsSchema.PropVal.cases.text.make({ val: "wrong" }),
+                  }),
+                ),
+              ),
+            ).toBe(true);
+            expect(Y.encodeStateAsUpdate(doc)).toEqual(before);
+
+            doc.getMap("attrs").set("builtin", true);
+            const builtin = Y.encodeStateAsUpdate(doc);
+
+            const result = yield* Effect.result(
+              attrs.setPropDefault({
+                doc,
+                value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+              }),
+            );
+
+            expect(
+              Result.isFailure(result) &&
+                Predicate.isTagged(result.failure, "Attrs.BuiltinRecordError"),
+            ).toBe(true);
+            expect(Y.encodeStateAsUpdate(doc)).toEqual(builtin);
+          }),
+        ).pipe(Effect.provide(Attrs.Service.layer)),
+      );
+    } finally {
+      doc.destroy();
+    }
+  });
+
+  it.each([true, "malformed"])(
+    "protects records with builtin=%s from all attrs writes",
+    (builtin) => {
+      const doc = new Y.Doc();
+      const propId = AttrsSchema.NoteId.make("example-prop");
+      const value = AttrsSchema.PropVal.cases.bool.make({ val: false });
+
+      try {
+        Effect.runSync(
+          Attrs.Service.use((attrs) =>
+            Effect.gen(function* () {
+              yield* attrs.initializeProp({ doc, builtin: false, defaultValue: value });
+              yield* attrs.setProp({
+                doc,
+                recordId: AttrsSchema.NoteId.make("record"),
+                propId,
+                value,
+              });
+              doc.getMap("attrs").set("builtin", builtin);
+              const before = Y.encodeStateAsUpdate(doc);
+
+              const writes: readonly Effect.Effect<void, unknown>[] = [
+                attrs.setProp({
+                  doc,
+                  recordId: AttrsSchema.NoteId.make("record"),
+                  propId,
+                  value,
+                }),
+                attrs.clearProp({ doc, propId }),
+                attrs.setPropDefault({ doc, value }),
+                attrs.initializeProp({ doc, builtin: false, defaultValue: value }),
+              ];
+
+              for (const write of writes) {
+                const result = yield* Effect.result(write);
+                expect(
+                  Result.isFailure(result) &&
+                    Predicate.isTagged(result.failure, "Attrs.BuiltinRecordError"),
+                ).toBe(true);
+                expect(Y.encodeStateAsUpdate(doc)).toEqual(before);
+              }
+            }),
+          ).pipe(Effect.provide(Attrs.Service.layer)),
+        );
+      } finally {
+        doc.destroy();
+      }
+    },
+  );
+
   it("decodes SQL cells, encodes them back and rejects invalid definition defaults", () => {
     const row: typeof PropRecordRepo.ValidDef.Encoded = {
       id: "archived",

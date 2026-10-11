@@ -6,9 +6,12 @@ const Comparison = Schema.TaggedStruct("cmp", { val: AttrsSchema.TargetFilterCmp
 
 export function toAttrs(filter: StreamSettings.Filter): AttrsSchema.TargetFilter {
   const expressions = [
-    Comparison.make({ val: ["_tag", "=", "note"] }),
-    Comparison.make({ val: ["title", "exists", filter.type === "pages"] }),
+    Comparison.make({ val: ["_tag", "=", filter.type === "prop" ? "prop" : "note"] }),
   ];
+
+  if (filter.type !== "prop") {
+    expressions.push(Comparison.make({ val: ["title", "exists", filter.type === "pages"] }));
+  }
 
   if (filter.search !== undefined) {
     expressions.push(Comparison.make({ val: ["body", "contains", filter.search] }));
@@ -56,6 +59,14 @@ function applyComparison(
     ),
     Match.tag("cmp", ({ val }) =>
       Match.value(val).pipe(
+        Match.when(["_tag", "=", "prop"], (): StreamSettings.Filter => ({
+          ...filter,
+          type: "prop",
+        })),
+        Match.when(["_tag", "=", "note"], (): StreamSettings.Filter => ({
+          ...filter,
+          type: "notes",
+        })),
         Match.when(["title", "exists", Match.boolean], ([, , value]): StreamSettings.Filter => ({
           ...filter,
           type: value ? "pages" : "notes",

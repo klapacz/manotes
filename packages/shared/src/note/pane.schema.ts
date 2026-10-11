@@ -6,7 +6,9 @@ import * as TemporalSchema from "../temporal.schema";
 import { StreamSettings as Settings } from "./stream-settings";
 import { AttrsSchema } from "../attrs.schema";
 
-const StreamFilterType = Schema.Literals(["notes", "pages"]);
+export const StreamFilterType = Schema.Literals(["notes", "pages", "prop"]);
+
+export type StreamFilterType = typeof StreamFilterType.Type;
 
 const StreamFilter = Schema.Struct({
   type: StreamFilterType.pipe(Schema.withDecodingDefault(Effect.sync(() => "notes" as const))),

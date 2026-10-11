@@ -4,6 +4,10 @@ import * as Y from "yjs";
 import * as MaterializedEventService from "../../lib/materialized-event.service";
 import { NoteSchema } from "@manotes/shared/note.schema";
 import { PaneSchema } from "@manotes/shared/note/pane.schema";
+import { Attrs } from "@manotes/shared/attrs.service";
+import { AttrsSchema } from "@manotes/shared/attrs.schema";
+import { NoteDoc } from "@manotes/shared/note/doc";
+import { YSchema } from "@manotes/shared/y-schema";
 import { yDocToNodeJSON } from "@manotes/shared/prosemirror-materializer.utils";
 import { NOTE_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
 import { MdSerialize } from "@manotes/shared/prosemirror/md/serialize";
@@ -57,6 +61,39 @@ vi.mock("@effect/atom-solid", () => ({
 vi.mock("somoto", () => ({ toast: { promise: <T>(promise: Promise<T>) => promise } }));
 
 describe("blank note creation", () => {
+  it("seeds a property with an editable title and false default in the same Yjs update", () => {
+    const payload = Effect.runSync(
+      prefilledPayload(
+        PaneSchema.Pane.cases.stream.make({
+          paneId: PaneSchema.Id.make("prop"),
+          filter: { type: "prop" },
+          sort: "updated",
+          view: "full",
+        }),
+      ).pipe(Effect.provide(Attrs.Service.layer)),
+    );
+
+    const { doc, attrs } = NoteDoc.make();
+
+    try {
+      Y.applyUpdate(doc, payload);
+      expect(Effect.runSync(YSchema.exportStrict(attrs))).toEqual(
+        AttrsSchema.PropAttrs.cases.bool.make({
+          prop_type: "bool",
+          prop_default: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+        }),
+      );
+      expect(yDocToNodeJSON({ yDoc: doc })).toEqual({
+        type: "doc",
+        content: [
+          { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Untitled" }] },
+        ],
+      });
+    } finally {
+      doc.destroy();
+    }
+  });
+
   it("persists an empty paragraph before editor preload", async () => {
     const onCreated = vi.fn();
     useCreateNote()({}, onCreated);
@@ -65,13 +102,15 @@ describe("blank note creation", () => {
 
   it("seeds an ordinary stream with an empty paragraph", () => {
     expectBlankPayload(
-      prefilledPayload(
-        PaneSchema.Pane.cases.stream.make({
-          paneId: PaneSchema.Id.make("stream"),
-          filter: { type: "notes" },
-          sort: "date",
-          view: "full",
-        }),
+      Effect.runSync(
+        prefilledPayload(
+          PaneSchema.Pane.cases.stream.make({
+            paneId: PaneSchema.Id.make("stream"),
+            filter: { type: "notes" },
+            sort: "date",
+            view: "full",
+          }),
+        ).pipe(Effect.provide(Attrs.Service.layer)),
       ),
     );
   });
@@ -86,7 +125,7 @@ function expectBlankPayload(payload: Uint8Array<ArrayBufferLike>): void {
     expect(content).toEqual({ type: "doc", content: [{ type: "paragraph" }] });
     const doc = NOTE_SCHEMA.nodeFromJSON(content);
     doc.check();
-    expect(MdSerialize.serialize(doc)).toBe("\n");
+    expect(MdSerialize.serialize(doc)).toBe("<!-- manotes:empty-paragraph -->\n");
   } finally {
     yDoc.destroy();
   }
