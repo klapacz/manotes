@@ -1,0 +1,166 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #233327;
+  background: #f5f3ed;
+  font-synthesis: none;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 1080px;
+  margin: auto;
+  padding: 64px 28px;
+}
+h1 {
+  font-size: clamp(30px, 5vw, 48px);
+  letter-spacing: -0.04em;
+  margin: 12px 0;
+}
+h2 {
+  font-size: 18px;
+  margin: 0 0 28px;
+}
+p {
+  line-height: 1.6;
+}
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+  color: #667467;
+}
+.locale {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin: 32px 0;
+}
+.examples {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+section {
+  background: #fff;
+  padding: 28px;
+  border: 1px solid #e2e5dc;
+  border-radius: 12px;
+  min-width: 0;
+}
+[data-date-input] {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  border: 1px solid #a9b7a6;
+  border-radius: 6px;
+  padding: 8px;
+  width: fit-content;
+  margin: 10px 0;
+  min-height: 44px;
+  font-variant-numeric: tabular-nums;
+}
+[data-date-input]:focus-within {
+  outline: 2px solid #35754c;
+  outline-offset: 2px;
+}
+[data-segment] {
+  padding: 3px 2px;
+  border-radius: 3px;
+  outline: none;
+}
+[data-segment]:focus {
+  background: #daeada;
+  color: #164529;
+}
+[data-placeholder] {
+  color: #7b827a;
+}
+[role="alert"] {
+  color: #a43d2d;
+  font-size: 13px;
+  margin: 8px 0;
+}
+[id$="-description"] {
+  font-size: 13px;
+  color: #677167;
+  line-height: 1.5;
+}
+button,
+select {
+  font: inherit;
+  border: 1px solid #ccd5c9;
+  border-radius: 5px;
+  background: #fff;
+  color: inherit;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+button:hover {
+  background: #edf3e9;
+}
+button:focus-visible,
+select:focus-visible {
+  outline: 2px solid #35754c;
+  outline-offset: 2px;
+}
+button:disabled,
+[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+output {
+  display: block;
+  padding-top: 20px;
+  font:
+    12px/1.6 ui-monospace,
+    monospace;
+  overflow-wrap: anywhere;
+  color: #456149;
+}
+[data-calendar] {
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #d2dbcd;
+  box-shadow: 0 10px 35px #23332720;
+  border-radius: 10px;
+}
+[data-calendar] header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 12px;
+}
+[data-calendar] table {
+  border-collapse: collapse;
+}
+[data-calendar] th {
+  font-size: 12px;
+  font-weight: 500;
+  color: #75806f;
+  height: 30px;
+}
+[data-calendar] td {
+  padding: 2px;
+}
+[data-date] {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+}
+[data-outside-month] {
+  color: #9ca799;
+}
+[data-selected] {
+  background: #35754c;
+  color: white;
+}
+form > button {
+  margin-top: 12px;
+}
