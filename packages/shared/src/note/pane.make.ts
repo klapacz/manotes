@@ -23,6 +23,17 @@ export function enumOptions(opts: { readonly enum_parent: NoteSchema.Id }) {
   );
 }
 
+export function propScope(opts: {
+  readonly propId: NoteSchema.Id;
+  readonly filter: StreamSettings.Filter;
+}) {
+  return make.stream({
+    ...StreamSettings.defaults(opts.filter.type),
+    filter: opts.filter,
+    scope: { propId: opts.propId },
+  });
+}
+
 // Incoming backlinks: notes that link to `targetId`.
 export function backlink(targetId: string) {
   const settings = StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({}));

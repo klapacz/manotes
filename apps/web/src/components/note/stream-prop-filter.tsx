@@ -90,6 +90,7 @@ export function query(opts: {
           PropQuery.values({
             propId: entry.id,
             type: entry.def.prop_type,
+            targets: PropQuery.targets(entry.def),
             defaultValue: Option.fromNullishOr(entry.def.prop_default),
           }),
           (choice) => ({
@@ -135,6 +136,7 @@ export function Menu(props: {
       propId={props.entry.id}
       label={props.entry.label}
       type={props.entry.def.prop_type}
+      targets={PropQuery.targets(props.entry.def)}
       defaultValue={Option.fromNullishOr(props.entry.def.prop_default)}
       state={state()}
       search={props.search}

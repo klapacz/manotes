@@ -80,7 +80,7 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
 
         if (!get(openAtom)) return Stream.succeed(EMPTY_BACKLINK_NOTES);
 
-        return NoteRepo.Service.use((repo) => repo.reactiveSearchPreview(query)).pipe(
+        return NoteRepo.Service.use((repo) => repo.reactiveSearchPreview({ search: query })).pipe(
           Stream.unwrap,
           Stream.map(
             flow(

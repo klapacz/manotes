@@ -63,6 +63,7 @@ export const Pane = Schema.TaggedUnion({
   stream: {
     paneId: PaneId,
     ...StreamSettings.fields,
+    scope: Schema.optional(Schema.Struct({ propId: NoteSchema.Id })),
   },
 });
 

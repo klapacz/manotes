@@ -57,7 +57,12 @@ export function toAttrs(filter: StreamSettings.Filter): AttrsSchema.TargetFilter
 }
 
 /** Drops OR groups and unsupported comparisons. Repeated fields use the last comparison. */
-export function fromAttrs(expressions: AttrsSchema.Filter): StreamSettings.Filter {
+export function fromAttrs(expressions: AttrsSchema.Filter | undefined): StreamSettings.Filter {
+  // An unset scope uses the same unarchived Notes filter as a new stream pane.
+  if (expressions === undefined) {
+    return StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({})).filter;
+  }
+
   // Both passes need the same comparisons, including those nested inside AND groups.
   const comparisons = flattenComparisons(expressions);
 

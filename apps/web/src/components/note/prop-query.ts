@@ -7,6 +7,7 @@ import { Match, Option, pipe, Schema, Stream, String, Types } from "effect";
 import { MenuQuery } from "../../lib/menu-query";
 import { QueryEngine } from "../../lib/query-engine";
 import type { Picker } from "../ui/picker";
+import { StreamFilter } from "@manotes/shared/note/stream-filter";
 import { NoteQuery } from "./note-query";
 
 export const editableTypes = ["bool", "number", "text", "link", "enum"] as const;
@@ -25,6 +26,7 @@ type Choice = Picker.Choice & { propVal: AttrsSchema.PropVal };
 export function values(opts: {
   propId: AttrsSchema.NoteId;
   type: EditableType;
+  targets: AttrsSchema.TargetFilter | undefined;
   defaultValue: Option.Option<AttrsSchema.PropVal>;
 }): QueryEngine.Query<Choice, unknown, NoteRepo.Service | EnumOptionRepo.Service> {
   return Match.value(opts.type).pipe(
@@ -45,6 +47,7 @@ export function values(opts: {
     ),
     Match.when("link", () =>
       linkQuery({
+        targets: opts.targets,
         defaultValue: opts.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.link)),
       }),
     ),
@@ -56,6 +59,12 @@ export function values(opts: {
     ),
     Match.exhaustive,
   );
+}
+
+export function targets(def: Def): AttrsSchema.TargetFilter | undefined {
+  if (def.prop_type !== "link") return undefined;
+
+  return def.prop_targets ?? undefined;
 }
 
 export function enumQuery(opts: {
@@ -92,9 +101,12 @@ export function enumQuery(opts: {
 }
 
 export function linkQuery(opts: {
+  targets: AttrsSchema.TargetFilter | undefined;
   defaultValue: Option.Option<Types.ExtractTag<AttrsSchema.PropVal, "link">>;
 }) {
-  return QueryEngine.map(NoteQuery.query, (note) => {
+  const query = NoteQuery.scoped({ filter: StreamFilter.fromAttrs(opts.targets) });
+
+  return QueryEngine.map(query, (note) => {
     const propVal = AttrsSchema.PropVal.cases.link.make({ val: note.value });
     const isDefault = opts.defaultValue.pipe(Option.contains(propVal));
 

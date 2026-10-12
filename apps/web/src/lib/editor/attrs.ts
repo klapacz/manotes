@@ -50,7 +50,7 @@ export function use(opts: { doc: Accessor<Y.Doc | undefined> }) {
     }
 
     const snapshot = current.attrs;
-    const { prop_type, prop_default } = snapshot;
+    const { prop_type, prop_default, prop_targets } = snapshot;
 
     // Only kind and value type are needed; other malformed fields stay replaceable.
     if (!Predicate.isTagged(snapshot, "prop") || prop_type === undefined) {
@@ -60,6 +60,7 @@ export function use(opts: { doc: Accessor<Y.Doc | undefined> }) {
     return {
       prop_type,
       prop_default,
+      prop_targets,
     };
   });
 

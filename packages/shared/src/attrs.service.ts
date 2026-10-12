@@ -41,6 +41,7 @@ export class Service extends Context.Service<Service>()("Attrs.Service", {
     setPropType,
     setPropDefault,
     clearPropDefault,
+    setPropTargets,
   })),
 }) {
   static readonly layer = Layer.effect(this, this.make);
@@ -206,6 +207,25 @@ const clearPropDefault = Effect.fn("Attrs.clearPropDefault")(function* (opts: {
 }) {
   const prop = yield* editablePropAttrs(opts);
   yield* prop.pipe(YSchema.clear("prop_default"));
+});
+
+const setPropTargets = Effect.fn("Attrs.setPropTargets")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly targets: AttrsSchema.TargetFilter | undefined;
+}) {
+  const prop = yield* editablePropAttrs({ doc: opts.doc });
+
+  const link = yield* prop.pipe(
+    YSchema.find("prop_type"),
+    Effect.flatMap(Effect.fromOption),
+    Effect.flatMap(YSchema.expect("link")),
+  );
+
+  if (opts.targets === undefined) {
+    return yield* link.pipe(YSchema.clear("prop_targets"));
+  }
+
+  yield* link.pipe(YSchema.set("prop_targets", opts.targets));
 });
 
 const editablePropAttrs = Effect.fn("Attrs.editablePropAttrs")(function* (opts: {

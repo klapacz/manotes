@@ -72,6 +72,7 @@ export function query(opts: {
                   PropQuery.values({
                     propId: def.id,
                     type: def.prop_type,
+                    targets: PropQuery.targets(def),
                     defaultValue: Option.fromNullishOr(def.prop_default),
                   }),
                   (choice): Choice => ({
@@ -166,6 +167,7 @@ export function Menu(props: {
                 propId={entry().def.id}
                 label={entry().def.title || "Untitled"}
                 type={entry().def.prop_type}
+                targets={PropQuery.targets(entry().def)}
                 defaultValue={Option.fromNullishOr(entry().def.prop_default)}
                 state={entry().value}
                 disabled={mutation().waiting}

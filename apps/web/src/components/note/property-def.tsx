@@ -21,6 +21,7 @@ import { PaneScroll } from "../../lib/note/pane.scroll";
 import { NoteLink } from "../../lib/note/link-component";
 import { Button } from "../ui/button";
 import { ArrowUpRightIcon } from "../icons";
+import { PropScope } from "./prop-scope";
 import { EnumOptions } from "./enum-options";
 
 const route = getRouteApi("/$graph/");
@@ -48,6 +49,7 @@ export function Root(props: {
   attrs: {
     prop_type: AttrsSchema.PropValTag;
     prop_default: AttrsSchema.PropVal | undefined;
+    prop_targets: AttrsSchema.TargetFilter | undefined;
   };
 }) {
   const focus = Focus.useNode();
@@ -154,6 +156,9 @@ export function Root(props: {
                           propId={props.recordId}
                           label="Default value"
                           type={type()}
+                          targets={
+                            props.attrs.prop_type === "link" ? props.attrs.prop_targets : undefined
+                          }
                           defaultValue={Option.none()}
                           state={defaultState()}
                           disabled={mutation().waiting}
@@ -199,6 +204,14 @@ export function Root(props: {
               </Show>
             </DescriptionList.Details>
           </DescriptionList.Row>
+          <Show when={props.attrs.prop_type === "link"}>
+            <DescriptionList.Row>
+              <DescriptionList.Term>Scope</DescriptionList.Term>
+              <DescriptionList.Details>
+                <PropScope.Link propId={props.recordId} targets={props.attrs.prop_targets} />
+              </DescriptionList.Details>
+            </DescriptionList.Row>
+          </Show>
           <Show when={props.attrs.prop_type === "enum"}>
             <DescriptionList.Row>
               <DescriptionList.Term>Options</DescriptionList.Term>

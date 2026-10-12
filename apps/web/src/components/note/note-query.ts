@@ -1,5 +1,6 @@
 import { Effect, Stream } from "effect";
 import { NoteRepo } from "@manotes/shared/note.repo";
+import type { StreamSettings } from "@manotes/shared/note/stream-settings";
 import type { NoteSchema } from "@manotes/shared/note.schema";
 import { QueryEngine } from "../../lib/query-engine";
 
@@ -20,28 +21,36 @@ export function label(note: { title: string | null; text: string }, query = ""):
   );
 }
 
-const search = Effect.fn("ComponentsNoteNoteQuery.search")(function* (
-  request: QueryEngine.Request,
-) {
-  const repo = yield* NoteRepo.Service;
+export const query = searchQuery(undefined);
 
-  return yield* repo.reactiveSearchPreview(request.text);
-});
+export function scoped(opts: { readonly filter: StreamSettings.Filter }) {
+  return searchQuery(opts.filter);
+}
 
-export const query = QueryEngine.share((request) =>
-  Stream.unwrap(search(request)).pipe(
-    Stream.map((notes) =>
-      notes.map((note) => ({
-        value: { value: note.id, label: label(note, request.text) },
-        // Body-only hits rank below menu actions and matching page titles.
-        score: !request.text.trim()
-          ? 1
-          : note.title?.toLowerCase().includes(request.text.trim().toLowerCase())
-            ? QueryEngine.score({ text: request.text, label: note.title })
-            : 0.1,
-      })),
+function searchQuery(filter: StreamSettings.Filter | undefined) {
+  const search = Effect.fn("ComponentsNoteNoteQuery.search")(function* (
+    request: QueryEngine.Request,
+  ) {
+    const repo = yield* NoteRepo.Service;
+
+    return yield* repo.reactiveSearchPreview({ search: request.text, filter });
+  });
+
+  return QueryEngine.share((request) =>
+    Stream.unwrap(search(request)).pipe(
+      Stream.map((notes) =>
+        notes.map((note) => ({
+          value: { value: note.id, label: label(note, request.text) },
+          // Body-only hits rank below menu actions and matching page titles.
+          score: !request.text.trim()
+            ? 1
+            : note.title?.toLowerCase().includes(request.text.trim().toLowerCase())
+              ? QueryEngine.score({ text: request.text, label: note.title })
+              : 0.1,
+        })),
+      ),
     ),
-  ),
-);
+  );
+}
 
 export * as NoteQuery from "./note-query";

@@ -68,6 +68,7 @@ type ComparablePane =
   | readonly [
       variant: "stream",
       type: typeof PaneSchema.StreamFilterType.Encoded,
+      scope: string | null,
       backlinksTo: string | null,
       linksFrom: string | null,
       date: string | null,
@@ -84,6 +85,7 @@ function normalizeToInput(value: PaneSchema.PaneInput | PaneSchema.Pane): Compar
   return [
     "stream",
     value.filter.type ?? PaneSchema.StreamFilterType.cases.notes.make({}),
+    value.scope?.propId ?? null,
     value.filter.backlinksTo ?? null,
     value.filter.linksFrom ?? null,
     value.filter.date ?? null,

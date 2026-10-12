@@ -16,13 +16,14 @@ import { DB } from "./db.service";
 import { NoteSchema } from "./note.schema";
 import { Tables } from "./db.tables";
 import { and, asc, desc, eq, isNotNull, isNull, like, ne, or, sql, type SQL } from "drizzle-orm";
-import { alias } from "drizzle-orm/sqlite-core";
+import { alias, type SQLiteSelect } from "drizzle-orm/sqlite-core";
+import type { PaneSchema } from "./note/pane.schema";
+import { StreamSettings } from "./note/stream-settings";
 import { nanoid } from "nanoid";
 import { LibOption } from "./effect/option";
 import { EffectOption } from "./effect/effect-option";
 import { BuiltinAttrs } from "./builtin-attrs";
 import { AttrsSchema } from "./attrs.schema";
-import type { PaneSchema } from "./note/pane.schema";
 
 const decodeRecord = Schema.decodeEffect(NoteSchema.Record);
 
@@ -189,82 +190,16 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       query: StreamListQuery,
     ) {
       const stream = yield* db.reactiveQuery((db) => {
-        const conditions = streamFilterConditions(query);
-
-        // Within a date, newest-created first — createdAt keeps positions
-        // stable across edits, unlike updatedAt.
+        // Within a date, newest-created first; edits should not move rows.
         const orderBy =
           query.sort === "date"
             ? [desc(Tables.notes.date), desc(Tables.notes.createdAt)]
             : [desc(Tables.notes.updatedAt)];
 
-        let statement = db.select(streamColumns).from(Tables.notes).$dynamic();
-
-        for (const [index, [propId, value]] of Record.toEntries(query.props ?? {}).entries()) {
-          const prop = alias(Tables.props, `prop_${index}`);
-          // Each filter gets its own assignment join. LEFT JOIN keeps records with
-          // no stored value so the comparison can use the definition's default.
-          statement = statement.leftJoin(
-            prop,
-            and(eq(prop.recordId, Tables.notes.id), eq(prop.propId, propId)),
-          );
-
-          const builtin = BuiltinAttrs.find(propId);
-
-          if (Option.isSome(builtin)) {
-            const def = builtin.value;
-
-            if (def.prop_type !== value._tag) {
-              conditions.push(sql`0`);
-              continue;
-            }
-
-            // Builtins have code-defined defaults, without a definition row.
-            // Only missing assignments use the default; wrong tags become NULL
-            // and cannot match the requested value.
-            conditions.push(sql`CASE
-              WHEN ${prop.recordId} IS NULL THEN ${propSqlValue(def.prop_default)}
-              WHEN json_extract(${prop.value}, '$._tag') = ${value._tag}
-                THEN json_extract(${prop.value}, '$.val')
-              ELSE NULL
-            END = ${propSqlValue(value)}`);
-            continue;
-          }
-
-          const def = alias(Tables.notes, `prop_def_${index}`);
-          statement = statement.leftJoin(
-            def,
-            and(eq(def.id, propId), eq(def._tag, "prop"), eq(def.attrs_valid, 1)),
-          );
-
-          // An unavailable or invalid definition leaves the saved filter inactive.
-          // Otherwise compare the stored value, or the default when unset. A wrong
-          // definition/value tag cannot match, including when a default exists.
-          conditions.push(sql`(${def.id} IS NULL OR (${def.prop_type} = ${value._tag} AND CASE
-            WHEN ${prop.recordId} IS NULL THEN json_extract(${def.prop_default}, '$.val')
-            WHEN json_extract(${prop.value}, '$._tag') = ${value._tag}
-              THEN json_extract(${prop.value}, '$.val')
-            ELSE NULL
-          END = ${propSqlValue(value)}))`);
-        }
-
-        if (query.backlinksTo !== undefined) {
-          const incoming = alias(Tables.backlinks, "incoming");
-          statement = statement.innerJoin(
-            incoming,
-            and(eq(incoming.sourceId, Tables.notes.id), eq(incoming.targetId, query.backlinksTo)),
-          );
-        }
-
-        if (query.linksFrom !== undefined) {
-          const outgoing = alias(Tables.backlinks, "outgoing");
-          statement = statement.innerJoin(
-            outgoing,
-            and(eq(outgoing.targetId, Tables.notes.id), eq(outgoing.sourceId, query.linksFrom)),
-          );
-        }
-
-        return statement.where(and(...conditions)).orderBy(...orderBy);
+        return filterStatement(db.select(streamColumns).from(Tables.notes).$dynamic(), {
+          query,
+          conditions: [],
+        }).orderBy(...orderBy);
       });
 
       return stream.pipe(Stream.mapEffect((n) => decodeMetaArray(n)));
@@ -292,30 +227,43 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       return stream;
     });
 
-    const reactiveSearchPreview = Effect.fn("NoteRepo.reactiveSearch")(function* (filter: string) {
+    const reactiveSearchPreview = Effect.fn("NoteRepo.reactiveSearch")(function* (
+      opts: SearchPreviewQuery,
+    ) {
       const stream = yield* db.reactiveQuery((db) => {
-        const trimmed = filter.trim();
+        const trimmed = opts.search.trim();
 
-        const where = and(
-          eq(Tables.notes._tag, "note"),
+        const conditions = [
           ne(Tables.notes.text, ""),
           trimmed.length > 0
             ? or(like(Tables.notes.title, `%${trimmed}%`), like(Tables.notes.text, `%${trimmed}%`))
             : undefined,
-        );
+        ].filter((condition) => condition !== undefined);
 
-        return db
-          .select({
-            id: Tables.notes.id,
-            title: Tables.notes.title,
-            text: Tables.notes.text,
-            date: Tables.notes.date,
-            createdAt: Tables.notes.createdAt,
-            updatedAt: Tables.notes.updatedAt,
-          })
-          .from(Tables.notes)
+        const query =
+          opts.filter === undefined
+            ? { sort: "updated" as const }
+            : {
+                ...opts.filter,
+                props: StreamSettings.propFilters(opts.filter),
+                sort: "updated" as const,
+              };
+
+        return filterStatement(
+          db
+            .select({
+              id: Tables.notes.id,
+              title: Tables.notes.title,
+              text: Tables.notes.text,
+              date: Tables.notes.date,
+              createdAt: Tables.notes.createdAt,
+              updatedAt: Tables.notes.updatedAt,
+            })
+            .from(Tables.notes)
+            .$dynamic(),
+          { query, conditions },
+        )
           .limit(100)
-          .where(where)
           .orderBy(
             // Prefer title matches over body-only matches for non-empty searches,
             // then keep the result order deterministic by creation time. An empty
@@ -385,6 +333,11 @@ export const bootResultEmpty = (): BootResult => ({
   backlinks: [],
 });
 
+export type SearchPreviewQuery = {
+  readonly search: string;
+  readonly filter?: StreamSettings.Filter;
+};
+
 export type StreamListQuery = {
   readonly type?: PaneSchema.StreamFilterType;
   readonly date?: string;
@@ -403,6 +356,79 @@ const streamColumns = {
   createdAt: Tables.notes.createdAt,
   updatedAt: Tables.notes.updatedAt,
 } as const;
+
+// Shared by stream lists and reference searches, before their sorting or result limit.
+// Dynamic builders mutate in place; explicit projections keep joined columns out of the result.
+function filterStatement<T extends SQLiteSelect>(
+  statement: T,
+  opts: {
+    readonly query: StreamListQuery;
+    readonly conditions: readonly SQL[];
+  },
+) {
+  const { query } = opts;
+  const conditions = [...streamFilterConditions(query), ...opts.conditions];
+
+  for (const [index, [propId, value]] of Record.toEntries(query.props ?? {}).entries()) {
+    const prop = alias(Tables.props, `prop_${index}`);
+    // Each filter gets its own assignment join. LEFT JOIN keeps records with
+    // no stored value so the comparison can use the definition's default.
+    statement.leftJoin(prop, and(eq(prop.recordId, Tables.notes.id), eq(prop.propId, propId)));
+
+    const builtin = BuiltinAttrs.find(propId);
+
+    if (Option.isSome(builtin)) {
+      const def = builtin.value;
+
+      if (def.prop_type !== value._tag) {
+        conditions.push(sql`0`);
+        continue;
+      }
+
+      // Builtins have code-defined defaults, without a definition row.
+      // Only missing assignments use the default; wrong tags become NULL
+      // and cannot match the requested value.
+      conditions.push(sql`CASE
+        WHEN ${prop.recordId} IS NULL THEN ${propSqlValue(def.prop_default)}
+        WHEN json_extract(${prop.value}, '$._tag') = ${value._tag}
+          THEN json_extract(${prop.value}, '$.val')
+        ELSE NULL
+      END = ${propSqlValue(value)}`);
+      continue;
+    }
+
+    const def = alias(Tables.notes, `prop_def_${index}`);
+    statement.leftJoin(def, and(eq(def.id, propId), eq(def._tag, "prop"), eq(def.attrs_valid, 1)));
+
+    // An unavailable or invalid definition leaves the saved filter inactive.
+    // Otherwise compare the stored value, or the default when unset. A wrong
+    // definition/value tag cannot match, including when a default exists.
+    conditions.push(sql`(${def.id} IS NULL OR (${def.prop_type} = ${value._tag} AND CASE
+      WHEN ${prop.recordId} IS NULL THEN json_extract(${def.prop_default}, '$.val')
+      WHEN json_extract(${prop.value}, '$._tag') = ${value._tag}
+        THEN json_extract(${prop.value}, '$.val')
+      ELSE NULL
+    END = ${propSqlValue(value)}))`);
+  }
+
+  if (query.backlinksTo !== undefined) {
+    const incoming = alias(Tables.backlinks, "incoming");
+    statement.innerJoin(
+      incoming,
+      and(eq(incoming.sourceId, Tables.notes.id), eq(incoming.targetId, query.backlinksTo)),
+    );
+  }
+
+  if (query.linksFrom !== undefined) {
+    const outgoing = alias(Tables.backlinks, "outgoing");
+    statement.innerJoin(
+      outgoing,
+      and(eq(outgoing.targetId, Tables.notes.id), eq(outgoing.sourceId, query.linksFrom)),
+    );
+  }
+
+  return statement.where(and(...conditions));
+}
 
 function streamFilterConditions(query: StreamListQuery): Array<SQL> {
   const conditions = Match.value(query.type).pipe(

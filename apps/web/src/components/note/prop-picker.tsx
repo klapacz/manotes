@@ -13,6 +13,7 @@ type ValueProps = {
   propId: AttrsSchema.NoteId;
   label: string;
   type: PropQuery.EditableType;
+  targets: AttrsSchema.TargetFilter | undefined;
   defaultValue: Option.Option<AttrsSchema.PropVal>;
   state: Attrs.ValueState<AttrsSchema.PropVal>;
   search?: string;
@@ -31,6 +32,7 @@ export function Value(props: ValueProps) {
           query={PropQuery.values({
             propId: props.propId,
             type: "bool",
+            targets: undefined,
             defaultValue: props.defaultValue,
           })}
           initialSearch={props.search}
@@ -81,6 +83,7 @@ function RecordInput(props: ValueProps) {
       query={PropQuery.values({
         propId: props.propId,
         type: props.type,
+        targets: props.targets,
         defaultValue: props.defaultValue,
       })}
       initialSearch={props.search}
