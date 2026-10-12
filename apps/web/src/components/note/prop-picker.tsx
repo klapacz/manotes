@@ -23,8 +23,6 @@ type ValueProps = {
 };
 
 export function Value(props: ValueProps) {
-  const disabled = () => props.disabled || Attrs.ValueState.$is("Invalid")(props.state);
-
   return (
     <Switch>
       <Case when={props.type === "bool"}>
@@ -40,20 +38,20 @@ export function Value(props: ValueProps) {
             Match.tag("Valid", ({ value }) => PropQuery.valueLabel(value)),
             Match.orElse(() => undefined),
           )}
-          disabled={disabled()}
+          disabled={props.disabled}
           onSelect={(choice) => props.onChange(choice.propVal)}
         >
           {props.children}
         </Picker.Query>
       </Case>
       <Case when={props.type === "number"}>
-        <NumberInput {...props} disabled={disabled()} />
+        <NumberInput {...props} />
       </Case>
       <Case when={props.type === "text"}>
-        <TextInput {...props} disabled={disabled()} />
+        <TextInput {...props} />
       </Case>
       <Case when={props.type === "link" || props.type === "enum"}>
-        <RecordInput {...props} disabled={disabled()} />
+        <RecordInput {...props} />
       </Case>
     </Switch>
   );

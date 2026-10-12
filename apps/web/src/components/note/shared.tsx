@@ -263,6 +263,7 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
                   propId: action.propId,
                   value: action.propVal,
                 });
+                setPage(MenuPage.Property({ propId: action.propId }));
               } catch {}
             };
 

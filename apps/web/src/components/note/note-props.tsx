@@ -65,30 +65,25 @@ export function query(opts: {
               })),
             );
 
-            const values = editable.flatMap(({ def, value }) => {
-              // Invalid fields must be cleared through their submenu before accepting a value.
-              if (Attrs.ValueState.$is("Invalid")(value)) return [];
-
-              return [
-                MenuQuery.nested({
-                  label: def.title || "Untitled",
-                  query: QueryEngine.map(
-                    PropQuery.values({
-                      propId: def.id,
-                      type: def.prop_type,
-                      defaultValue: Option.fromNullishOr(def.prop_default),
-                    }),
-                    (choice): Choice => ({
-                      ...choice,
-                      ...Action.SetProperty({ propId: def.id, propVal: choice.propVal }),
-                      value: `prop:${def.id}:${choice.value}`,
-                      group: "properties",
-                      builtin: BuiltinAttrs.isBuiltin(def.id),
-                    }),
-                  ),
-                }),
-              ];
-            });
+            const values = editable.map(({ def }) =>
+              MenuQuery.nested({
+                label: def.title || "Untitled",
+                query: QueryEngine.map(
+                  PropQuery.values({
+                    propId: def.id,
+                    type: def.prop_type,
+                    defaultValue: Option.fromNullishOr(def.prop_default),
+                  }),
+                  (choice): Choice => ({
+                    ...choice,
+                    ...Action.SetProperty({ propId: def.id, propVal: choice.propVal }),
+                    value: `prop:${def.id}:${choice.value}`,
+                    group: "properties",
+                    builtin: BuiltinAttrs.isBuiltin(def.id),
+                  }),
+                ),
+              }),
+            );
 
             return QueryEngine.combine([properties, ...values])(request).pipe(
               // Browse actions first; searches rank property names and values normally.
