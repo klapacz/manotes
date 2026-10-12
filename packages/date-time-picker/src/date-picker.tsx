@@ -77,6 +77,10 @@ export function DatePicker<T extends DateValue = Temporal.PlainDate>(props: Date
         setOpen(next);
       }}
       modal
+      preventScroll={false}
+      placement="bottom-start"
+      gutter={8}
+      getAnchorRect={(anchor) => anchor?.closest("[data-date-input]")?.getBoundingClientRect()}
     >
       <FieldInput
         {...props}
@@ -94,7 +98,17 @@ export function DatePicker<T extends DateValue = Temporal.PlainDate>(props: Date
           aria-label={props.calendarLabel ?? `Choose date, ${props.label}`}
           disabled={props.isDisabled || props.isReadOnly}
         >
-          ▦
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
         </Popover.Trigger>
       </FieldInput>
       <Popover.Portal>
@@ -103,15 +117,20 @@ export function DatePicker<T extends DateValue = Temporal.PlainDate>(props: Date
             content = element;
           }}
           class={props.calendarClass}
+          data-picker-popover=""
           aria-label={props.calendarLabel ?? `Choose date, ${props.label}`}
           onOpenAutoFocus={(event) => {
             event.preventDefault();
-            content?.querySelector<HTMLElement>("[data-focused='true']")?.focus();
+            content
+              ?.querySelector<HTMLElement>("[data-focused='true']")
+              ?.focus({ preventScroll: true });
           }}
         >
           <CalendarView
             state={calendar}
             locale={props.locale}
+            isDisabled={props.isDisabled}
+            isReadOnly={props.isReadOnly}
             minValue={props.minValue ? toPlainDate(props.minValue) : undefined}
             maxValue={props.maxValue ? toPlainDate(props.maxValue) : undefined}
           />

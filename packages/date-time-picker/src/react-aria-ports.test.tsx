@@ -359,6 +359,25 @@ describe("React Aria picker regressions, ported to Solid and Temporal", () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+  it("selects a visible adjacent-month day with a pointer", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    const { getByRole } = render(() => (
+      <DatePicker
+        label="Date"
+        defaultValue={new Temporal.PlainDate(2024, 10, 12)}
+        onChange={onChange}
+      />
+    ));
+
+    await user.click(getByRole("button", { name: "Choose date, Date" }));
+    await user.click(screen.getByRole("button", { name: "Friday, November 1, 2024" }));
+    const value: Temporal.PlainDate = onChange.mock.calls.at(-1)?.[0];
+    expect(value.toString()).toBe("2024-11-01");
+    await waitFor(() => expect(screen.queryByRole("grid")).toBeNull());
+  });
+
   it("preserves time and zone when choosing a calendar date", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

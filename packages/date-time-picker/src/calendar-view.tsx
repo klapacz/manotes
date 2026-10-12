@@ -1,8 +1,9 @@
-import { For, createEffect, createUniqueId, onMount } from "solid-js";
+import { For, createEffect, createUniqueId, onMount, untrack } from "solid-js";
 import { Intl, Temporal } from "temporal-polyfill";
 import { createCalendarState } from "./calendar";
 import type { CalendarOptions, CalendarState } from "./calendar";
 import { isRTL } from "./locale";
+import type { DateRange } from "./range-state";
 
 export interface CalendarProps extends CalendarOptions {
   label?: string;
@@ -18,12 +19,26 @@ export function Calendar(props: CalendarProps) {
   return <CalendarView {...props} state={state} />;
 }
 
-export function CalendarView(props: CalendarProps & { state: CalendarState }) {
+export function CalendarView(
+  props: CalendarProps & {
+    state: CalendarState;
+    range?: DateRange | null;
+    onDateHover?: (date: Temporal.PlainDate) => void;
+  },
+) {
   const state = props.state;
   const headingId = `calendar-${createUniqueId()}`;
   let root!: HTMLDivElement;
   let shouldFocus = false;
   const locale = () => props.locale ?? "en-US";
+
+  const isSelected = (date: Temporal.PlainDate) => {
+    return props.range !== undefined
+      ? !!props.range &&
+          Temporal.PlainDate.compare(date, props.range.start) >= 0 &&
+          Temporal.PlainDate.compare(date, props.range.end) <= 0
+      : (state.value()?.equals(date) ?? false);
+  };
 
   const monthLabel = () => {
     return state.visibleMonth().toLocaleString(locale(), {
@@ -64,6 +79,7 @@ export function CalendarView(props: CalendarProps & { state: CalendarState }) {
         root = element;
       }}
       class={props.class}
+      dir={isRTL(locale()) ? "rtl" : "ltr"}
       data-calendar=""
       aria-label={props.label ?? "Calendar"}
     >
@@ -81,7 +97,17 @@ export function CalendarView(props: CalendarProps & { state: CalendarState }) {
           }
           onClick={() => navigate(state.previousMonth)}
         >
-          ‹
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
         </button>
         <span id={headingId} aria-live="polite">
           {monthLabel()}
@@ -99,13 +125,24 @@ export function CalendarView(props: CalendarProps & { state: CalendarState }) {
           }
           onClick={() => navigate(state.nextMonth)}
         >
-          ›
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
         </button>
       </header>
       <table
         role="grid"
         aria-labelledby={headingId}
         aria-readonly={props.isReadOnly || undefined}
+        aria-multiselectable={props.range !== undefined || undefined}
         onKeyDown={onKeyDown}
       >
         <thead>
@@ -132,7 +169,7 @@ export function CalendarView(props: CalendarProps & { state: CalendarState }) {
                   {(date) => (
                     <td
                       role="gridcell"
-                      aria-selected={state.value()?.equals(date) ?? false}
+                      aria-selected={isSelected(date)}
                       aria-disabled={state.isUnavailable(date) || undefined}
                     >
                       <button
@@ -140,7 +177,10 @@ export function CalendarView(props: CalendarProps & { state: CalendarState }) {
                         data-date={date.toString()}
                         data-focused={state.focusedDate().equals(date)}
                         data-outside-month={state.isOutsideMonth(date) || undefined}
-                        data-selected={state.value()?.equals(date) || undefined}
+                        data-selected={isSelected(date) || undefined}
+                        data-unavailable={props.isDateUnavailable?.(date) || undefined}
+                        data-range-start={props.range?.start.equals(date) || undefined}
+                        data-range-end={props.range?.end.equals(date) || undefined}
                         aria-label={new Intl.DateTimeFormat(locale(), {
                           dateStyle: "full",
                           calendar: date.calendarId === "iso8601" ? "gregory" : date.calendarId,
@@ -149,11 +189,16 @@ export function CalendarView(props: CalendarProps & { state: CalendarState }) {
                         tabIndex={state.focusedDate().equals(date) && !props.isDisabled ? 0 : -1}
                         onFocus={() => {
                           shouldFocus = false;
-                          state.focusDate(date);
+                          // A popover may focus this cell inside an effect; don't subscribe that effect to selection.
+                          untrack(() => state.focusDate(date));
                         }}
-                        onClick={() => state.selectDate(date)}
+                        onPointerDown={(event) => {
+                          if (event.button === 0) event.preventDefault();
+                        }}
+                        onPointerEnter={() => props.onDateHover?.(date)}
+                        onClick={() => navigate(() => state.selectDate(date))}
                       >
-                        {new globalThis.Intl.NumberFormat(locale()).format(date.day)}
+                        <span>{new globalThis.Intl.NumberFormat(locale()).format(date.day)}</span>
                       </button>
                     </td>
                   )}

@@ -464,7 +464,7 @@ export function toPlainDate(value: DateValue): Temporal.PlainDate {
   return value instanceof Temporal.PlainDate ? value : value.toPlainDate();
 }
 
-function compare(left: FieldValue, right: FieldValue, mode: "date" | "time"): number {
+export function compare(left: FieldValue, right: FieldValue, mode: "date" | "time"): number {
   if (mode === "time" && "hour" in left && "hour" in right) {
     return Temporal.PlainTime.compare(
       left instanceof Temporal.PlainTime ? left : left.toPlainTime(),

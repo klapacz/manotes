@@ -15,6 +15,7 @@ import type {
 export interface FieldProps<T extends FieldValue> extends FieldOptions<T> {
   label: string;
   description?: string;
+  "aria-describedby"?: string;
   errorMessage?: string;
   name?: string;
   form?: string;
@@ -50,6 +51,7 @@ export function FieldInput<T extends FieldValue>(
   const describedBy = () => {
     return (
       [
+        props["aria-describedby"],
         props.description ? `${id}-description` : undefined,
         state.isInvalid() && error() ? `${id}-error` : undefined,
       ]
@@ -59,10 +61,14 @@ export function FieldInput<T extends FieldValue>(
   };
 
   const editableElements = () => {
-    return Array.from(root.querySelectorAll<HTMLElement>("[data-segment][tabindex='0']"));
+    return Array.from(
+      (root.closest("[data-range-inputs]") ?? root).querySelectorAll<HTMLElement>(
+        "[data-segment][tabindex='0']",
+      ),
+    );
   };
 
-  const focus = () => editableElements()[0]?.focus();
+  const focus = () => root.querySelector<HTMLElement>("[data-segment][tabindex='0']")?.focus();
 
   onMount(() => {
     const form = input.form;

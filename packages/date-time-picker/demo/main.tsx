@@ -1,7 +1,8 @@
 import { render } from "solid-js/web";
 import { createSignal } from "solid-js";
 import { Temporal } from "temporal-polyfill";
-import { DateField, DatePicker, TimeField } from "../src";
+import { DateField, DatePicker, DateRangePicker, RangeCalendar, TimeField } from "../src";
+import type { DateRange } from "../src";
 import "./style.css";
 
 function Demo() {
@@ -16,6 +17,11 @@ function Demo() {
   );
 
   const [locale, setLocale] = createSignal("en-US");
+
+  const [trip, setTrip] = createSignal<DateRange | null>({
+    start: Temporal.PlainDate.from("2024-10-12"),
+    end: Temporal.PlainDate.from("2024-10-18"),
+  });
 
   return (
     <main>
@@ -43,6 +49,21 @@ function Demo() {
             name="date"
           />
           <output>{date()?.toString() ?? "No date"}</output>
+        </section>
+        <section>
+          <h2>Date range picker</h2>
+          <DateRangePicker
+            label="Trip"
+            locale={locale()}
+            value={trip()}
+            onChange={setTrip}
+            description="Open the calendar and choose two days, or edit each endpoint."
+          />
+          <output>
+            {trip()
+              ? `${trip()!.start.toString()} / ${trip()!.end.toString()}`
+              : "Incomplete range"}
+          </output>
         </section>
         <section>
           <h2>Time field</h2>
@@ -101,6 +122,46 @@ function Demo() {
             />
             <button type="reset">Reset to 08:30</button>
           </form>
+        </section>
+        <section>
+          <h2>Date-time range</h2>
+          <form>
+            <DateRangePicker
+              label="Booking"
+              locale={locale()}
+              startName="booking-start"
+              endName="booking-end"
+              isRequired
+              defaultValue={{
+                start: Temporal.PlainDateTime.from("2024-10-12T09:30"),
+                end: Temporal.PlainDateTime.from("2024-10-12T17:00"),
+              }}
+              description="Dates and times are independently editable. Reset restores both endpoints."
+            />
+            <button type="reset">Reset booking</button>
+          </form>
+        </section>
+        <section>
+          <h2>Range calendar</h2>
+          <RangeCalendar
+            label="Availability"
+            locale={locale()}
+            defaultValue={{
+              start: Temporal.PlainDate.from("2024-10-14"),
+              end: Temporal.PlainDate.from("2024-10-18"),
+            }}
+            minValue={Temporal.PlainDate.from("2024-10-01")}
+            maxValue={Temporal.PlainDate.from("2024-11-30")}
+            isDateUnavailable={(date) => date.dayOfWeek > 5}
+          />
+          <p>
+            Choose a start and end. Weekends are unavailable, so ranges stay within one working
+            week.
+          </p>
+        </section>
+        <section>
+          <h2>Empty range picker</h2>
+          <DateRangePicker label="New trip" locale={locale()} />
         </section>
       </div>
     </main>
