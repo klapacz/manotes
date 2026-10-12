@@ -1,3 +1,4 @@
+import { PaneSchema } from "../../note/pane.schema";
 import dedent from "dedent";
 import { createEditor, union } from "prosekit/core";
 import { defineAppSchema } from "../../editor.schema";
@@ -144,7 +145,7 @@ describe("app Markdown conversion", () => {
       paneId: "source-pane",
       href: "https://old-device.example/graph",
       filter: {
-        type: "pages",
+        type: PaneSchema.StreamFilterType.cases.pages.make({}),
         search: "a & b [x] (é)!",
         backlinksTo: "project",
         linksFrom: "article",
@@ -170,12 +171,24 @@ describe("app Markdown conversion", () => {
     expect(attrs).not.toHaveProperty("href");
     expect(MdParse.parse(markdown).toJSON()).toEqual(doc.toJSON());
     expect(markdown).toContain("stream:");
-    expect(streamRefLabel({ filter: { type: "pages" }, sort: "updated", view: "full" })).toBe(
-      "Pages",
-    );
-    expect(streamRefLabel({ filter: { type: "notes" }, sort: "date", view: "full" })).toBe("Notes");
+    expect(
+      streamRefLabel({
+        filter: { type: PaneSchema.StreamFilterType.cases.pages.make({}) },
+        sort: "updated",
+        view: "full",
+      }),
+    ).toBe("Pages");
+    expect(
+      streamRefLabel({
+        filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) },
+        sort: "date",
+        view: "full",
+      }),
+    ).toBe("Notes");
     expect(streamRefLabel(attrs)).toContain("snippets");
-    expect(decodeStreamRefAttrs({ filter: { type: "notes" } })).toMatchObject({
+    expect(
+      decodeStreamRefAttrs({ filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) } }),
+    ).toMatchObject({
       sort: "date",
       view: "full",
     });
@@ -339,7 +352,12 @@ describe("app Markdown conversion", () => {
         cell("tableCell", [
           NOTE_SCHEMA.text("pipe |", [NOTE_SCHEMA.mark("bold")]),
           NOTE_SCHEMA.text(" "),
-          NOTE_SCHEMA.node("streamRef", decodeStreamRefAttrs({ filter: { type: "notes" } })),
+          NOTE_SCHEMA.node(
+            "streamRef",
+            decodeStreamRefAttrs({
+              filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) },
+            }),
+          ),
         ]),
       ),
     ]);

@@ -21,6 +21,7 @@ import { LibOption } from "./effect/option";
 import { EffectOption } from "./effect/effect-option";
 import { BuiltinAttrs } from "./builtin-attrs";
 import { AttrsSchema } from "./attrs.schema";
+import type { PaneSchema } from "./note/pane.schema";
 
 const decodeRecord = Schema.decodeEffect(NoteSchema.Record);
 
@@ -384,7 +385,7 @@ export const bootResultEmpty = (): BootResult => ({
 });
 
 export type StreamListQuery = {
-  readonly type?: "notes" | "pages" | "prop";
+  readonly type?: PaneSchema.StreamFilterType;
   readonly date?: string;
   readonly backlinksTo?: string;
   readonly linksFrom?: string;
@@ -403,11 +404,13 @@ const streamColumns = {
 } as const;
 
 function streamFilterConditions(query: StreamListQuery): Array<SQL> {
-  const conditions: Array<SQL> = [eq(Tables.notes._tag, query.type === "prop" ? "prop" : "note")];
+  const conditions: Array<SQL> = [
+    eq(Tables.notes._tag, Predicate.isTagged(query.type, "prop") ? "prop" : "note"),
+  ];
 
-  if (query.type === "pages") conditions.push(isNotNull(Tables.notes.title));
+  if (Predicate.isTagged(query.type, "pages")) conditions.push(isNotNull(Tables.notes.title));
 
-  if (query.type === "notes") conditions.push(isNull(Tables.notes.title));
+  if (Predicate.isTagged(query.type, "notes")) conditions.push(isNull(Tables.notes.title));
 
   if (query.date) conditions.push(eq(Tables.notes.date, query.date));
 

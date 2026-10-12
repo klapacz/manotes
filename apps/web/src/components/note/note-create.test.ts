@@ -66,7 +66,7 @@ describe("blank note creation", () => {
       prefilledPayload(
         PaneSchema.Pane.cases.stream.make({
           paneId: PaneSchema.Id.make("prop"),
-          filter: { type: "prop" },
+          filter: { type: PaneSchema.StreamFilterType.cases.prop.make({}) },
           sort: "updated",
           view: "full",
         }),
@@ -106,7 +106,7 @@ describe("blank note creation", () => {
         prefilledPayload(
           PaneSchema.Pane.cases.stream.make({
             paneId: PaneSchema.Id.make("stream"),
-            filter: { type: "notes" },
+            filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) },
             sort: "date",
             view: "full",
           }),

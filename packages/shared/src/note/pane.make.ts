@@ -9,7 +9,7 @@ export function recordings() {
 }
 
 export function notes() {
-  return make.stream(StreamSettings.defaults("notes"));
+  return make.stream(StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({})));
 }
 
 export function note(id: string) {
@@ -18,20 +18,20 @@ export function note(id: string) {
 
 // Incoming backlinks: notes that link to `targetId`.
 export function backlink(targetId: string) {
-  const settings = StreamSettings.defaults("notes");
+  const settings = StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({}));
 
   return make.stream({ ...settings, filter: { ...settings.filter, backlinksTo: targetId } });
 }
 
 // Outgoing links: notes that `sourceId` links to.
 export function outgoing(sourceId: string) {
-  const settings = StreamSettings.defaults("pages");
+  const settings = StreamSettings.defaults(PaneSchema.StreamFilterType.cases.pages.make({}));
 
   return make.stream({ ...settings, filter: { ...settings.filter, linksFrom: sourceId } });
 }
 
 export function date(date: string) {
-  const settings = StreamSettings.defaults("notes");
+  const settings = StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({}));
 
   return make.stream({ ...settings, filter: { ...settings.filter, date } });
 }

@@ -6,12 +6,18 @@ import * as TemporalSchema from "../temporal.schema";
 import { StreamSettings as Settings } from "./stream-settings";
 import { AttrsSchema } from "../attrs.schema";
 
-export const StreamFilterType = Schema.Literals(["notes", "pages", "prop"]);
+export const StreamFilterType = Schema.TaggedUnion({
+  notes: {},
+  pages: {},
+  prop: {},
+});
 
 export type StreamFilterType = typeof StreamFilterType.Type;
 
 const StreamFilter = Schema.Struct({
-  type: StreamFilterType.pipe(Schema.withDecodingDefault(Effect.sync(() => "notes" as const))),
+  type: StreamFilterType.pipe(
+    Schema.withDecodingDefault(Effect.sync(() => StreamFilterType.cases.notes.make({}))),
+  ),
   backlinksTo: Schema.optional(Schema.String),
   linksFrom: Schema.optional(Schema.String),
   date: Schema.optional(TemporalSchema.PlainDateString),

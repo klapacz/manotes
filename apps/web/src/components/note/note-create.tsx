@@ -1,5 +1,5 @@
 import { useAtom } from "@effect/atom-solid";
-import { DateTime, Effect } from "effect";
+import { DateTime, Effect, Predicate } from "effect";
 import { nanoid } from "nanoid";
 import { toast } from "somoto";
 import { MaterializedEventService, NoteSchema, bindRt } from "../../lib";
@@ -91,7 +91,10 @@ export const prefilledPayload = Effect.fn("ComponentsNoteNoteCreate.prefilledPay
 ) {
   const content = new Array<UnknownNodeJSON>();
 
-  if (pane.filter.type === "pages" || pane.filter.type === "prop") {
+  if (
+    Predicate.isTagged(pane.filter.type, "pages") ||
+    Predicate.isTagged(pane.filter.type, "prop")
+  ) {
     content.push({
       type: "heading",
       attrs: { level: 1 },
@@ -115,7 +118,7 @@ export const prefilledPayload = Effect.fn("ComponentsNoteNoteCreate.prefilledPay
 
   yield* Effect.sync(() => ProsemirrorEncode.initializeDocument({ doc, content }));
 
-  if (pane.filter.type === "prop") {
+  if (Predicate.isTagged(pane.filter.type, "prop")) {
     const attrs = yield* Attrs.Service;
     yield* attrs.initializeProp({
       doc,

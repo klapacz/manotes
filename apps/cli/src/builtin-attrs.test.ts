@@ -1,3 +1,4 @@
+import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { NodeServices } from "@effect/platform-node";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
@@ -57,9 +58,10 @@ describe("Archived builtin", () => {
           expect((yield* notes.getById("untitled-prop")).title).toBeNull();
 
           const properties = Option.getOrThrow(
-            yield* (yield* notes.reactiveStreamList({ type: "prop", sort: "updated" })).pipe(
-              Stream.runHead,
-            ),
+            yield* (yield* notes.reactiveStreamList({
+              type: PaneSchema.StreamFilterType.cases.prop.make({}),
+              sort: "updated",
+            })).pipe(Stream.runHead),
           );
 
           expect(properties.map(({ id }) => id)).toEqual(["untitled-prop"]);
@@ -67,9 +69,10 @@ describe("Archived builtin", () => {
           for (const type of ["notes", "pages"] as const) {
             expect(
               Option.getOrThrow(
-                yield* (yield* notes.reactiveStreamList({ type, sort: "date" })).pipe(
-                  Stream.runHead,
-                ),
+                yield* (yield* notes.reactiveStreamList({
+                  type: PaneSchema.StreamFilterType.cases[type].make({}),
+                  sort: "date",
+                })).pipe(Stream.runHead),
               ),
             ).toEqual([]);
           }
@@ -146,9 +149,10 @@ describe("Archived builtin", () => {
           expect(defs).toEqual([]);
 
           const properties = Option.getOrThrow(
-            yield* (yield* notes.reactiveStreamList({ type: "prop", sort: "updated" })).pipe(
-              Stream.runHead,
-            ),
+            yield* (yield* notes.reactiveStreamList({
+              type: PaneSchema.StreamFilterType.cases.prop.make({}),
+              sort: "updated",
+            })).pipe(Stream.runHead),
           );
 
           expect(properties.map(({ id }) => id)).toContain(propId);
@@ -157,7 +161,7 @@ describe("Archived builtin", () => {
             Effect.gen(function* () {
               const rows = Option.getOrThrow(
                 yield* (yield* notes.reactiveStreamList({
-                  type: "notes",
+                  type: PaneSchema.StreamFilterType.cases.notes.make({}),
                   sort: "date",
                   props: { [propId]: AttrsSchema.PropVal.cases.number.make({ val }) },
                 })).pipe(Stream.runHead),
@@ -187,7 +191,7 @@ describe("Archived builtin", () => {
 
           const rows = Option.getOrThrow(
             yield* (yield* notes.reactiveStreamList({
-              type: "notes",
+              type: PaneSchema.StreamFilterType.cases.notes.make({}),
               sort: "date",
               props: {
                 [propId]: AttrsSchema.PropVal.cases.number.make({ val: 7.5 }),
@@ -263,13 +267,15 @@ describe("Archived builtin", () => {
             yield* save(recordId, note.doc);
           }
 
-          const defaults = StreamSettings.defaults("notes").filter;
+          const defaults = StreamSettings.defaults(
+            PaneSchema.StreamFilterType.cases.notes.make({}),
+          ).filter;
 
           const ids = (props: NonNullable<NoteRepo.StreamListQuery["props"]>) =>
             Effect.gen(function* () {
               const rows = Option.getOrThrow(
                 yield* (yield* notes.reactiveStreamList({
-                  type: "notes",
+                  type: PaneSchema.StreamFilterType.cases.notes.make({}),
                   sort: "date",
                   props,
                 })).pipe(Stream.runHead),
@@ -300,7 +306,11 @@ describe("Archived builtin", () => {
           ).toEqual([]);
 
           const pull = yield* Stream.toPull(
-            yield* notes.reactiveStreamList({ type: "notes", sort: "date", props: defaultProps }),
+            yield* notes.reactiveStreamList({
+              type: PaneSchema.StreamFilterType.cases.notes.make({}),
+              sort: "date",
+              props: defaultProps,
+            }),
           );
 
           expect((yield* pull)[0]?.map(({ id }) => id).toSorted()).toEqual(["false", "unset"]);
@@ -481,7 +491,9 @@ describe("Archived builtin", () => {
             AttrsSchema.PropVal.cases.link.make({ val: AttrsSchema.NoteId.make("target") }),
           ];
 
-          const targets = StreamFilter.toAttrs({ type: "pages" });
+          const targets = StreamFilter.toAttrs({
+            type: PaneSchema.StreamFilterType.cases.pages.make({}),
+          });
 
           for (const value of values) {
             const { doc, attrs } = yield* Effect.acquireRelease(

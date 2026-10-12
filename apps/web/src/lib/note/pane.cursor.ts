@@ -1,6 +1,6 @@
 import { Array as Arr, Equal, Option, Predicate, Record, pipe } from "effect";
 import { PaneMake } from "@manotes/shared/note/pane.make";
-import type { PaneSchema } from "@manotes/shared/note/pane.schema";
+import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 
@@ -83,7 +83,7 @@ function normalizeToInput(value: PaneSchema.PaneInput | PaneSchema.Pane): Compar
 
   return [
     "stream",
-    value.filter.type ?? "notes",
+    value.filter.type ?? PaneSchema.StreamFilterType.cases.notes.make({}),
     value.filter.backlinksTo ?? null,
     value.filter.linksFrom ?? null,
     value.filter.date ?? null,

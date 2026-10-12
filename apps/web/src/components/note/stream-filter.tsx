@@ -5,6 +5,7 @@
 import { For, Show, Switch, Match, createMemo, createSignal, type JSX } from "solid-js";
 import { Data, Option, Record, Stream } from "effect";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
+import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { StreamPropFilter } from "./stream-prop-filter";
 import type { NoteRepo } from "../../lib";
 import { NoteLink } from "../../lib/note/link-component";
@@ -43,7 +44,11 @@ const fields = [
 
 export type StreamFilterMenu = { open: boolean; field: Field | undefined; search?: string };
 
-const typeChoices = Record.collect(StreamSettings.typeLabels, (value, label) => ({ value, label }));
+const typeChoices = Record.collect(StreamSettings.typeLabels, (value, label) => ({
+  value,
+  label,
+  type: PaneSchema.StreamFilterType.cases[value].make({}),
+}));
 
 export function StreamFilterEditor(props: {
   filter: Filter;
@@ -171,7 +176,7 @@ export function StreamFilterEditor(props: {
           const types = MenuQuery.choices(() =>
             typeChoices.map((choice) => ({
               ...choice,
-              run: () => setType(choice.value, close),
+              run: () => setType(choice.type, close),
             })),
           );
 
@@ -236,7 +241,11 @@ export function StreamFilterEditor(props: {
                           value="reset"
                           disabled={!changed()}
                           onSelect={() => {
-                            props.onChange(StreamSettings.defaults("notes").filter);
+                            props.onChange(
+                              StreamSettings.defaults(
+                                PaneSchema.StreamFilterType.cases.notes.make({}),
+                              ).filter,
+                            );
                             close();
                           }}
                         >
@@ -278,7 +287,7 @@ export function StreamFilterEditor(props: {
                         label="Search types"
                         query={types}
                         initialSearch={props.menu.search}
-                        selected={props.filter.type}
+                        selected={props.filter.type._tag}
                         onSelect={(choice) => choice.run()}
                       >
                         {(items) => (
@@ -436,7 +445,9 @@ export function StreamFilterEditor(props: {
 function FilterValue(props: { field: StreamSettings.FilterField; filter: Filter }) {
   return (
     <Switch>
-      <Match when={props.field === "type"}>{StreamSettings.typeLabels[props.filter.type]}</Match>
+      <Match when={props.field === "type"}>
+        {StreamSettings.typeLabels[props.filter.type._tag]}
+      </Match>
       <Match when={props.field === "search"}>{props.filter.search}</Match>
       <Match keyed when={props.field === "date" && props.filter.date}>
         {(date) => DateSuggestions.formatDate(date)}

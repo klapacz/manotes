@@ -57,7 +57,7 @@ export function streamRefLabel(
   noteLabel: (id: string) => string = (id) => id,
 ): string {
   return [
-    StreamSettings.typeLabels[filter.type],
+    StreamSettings.typeLabels[filter.type._tag],
     filter.search && `“${filter.search}”`,
     filter.backlinksTo && `Backlinks to ${noteLabel(filter.backlinksTo)}`,
     filter.linksFrom && `Links from ${noteLabel(filter.linksFrom)}`,

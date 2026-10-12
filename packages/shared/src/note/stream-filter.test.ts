@@ -13,9 +13,44 @@ const And = Schema.TaggedStruct("and", { val: Schema.Array(AttrsSchema.FilterExp
 const Or = Schema.TaggedStruct("or", { val: Schema.Array(AttrsSchema.FilterExpr) });
 
 describe("StreamFilter conversion", () => {
+  it("does not mark a decoded default type as modified", () => {
+    const settings = StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({}));
+
+    const decoded = Schema.decodeSync(PaneSchema.StreamSettings)(
+      Schema.encodeSync(PaneSchema.StreamSettings)(settings),
+    );
+
+    expect(StreamSettings.changedFilters(decoded.filter)).toEqual([]);
+    expect(Schema.decodeUnknownSync(PaneSchema.StreamSettings.fields.filter)({}).type).toEqual(
+      settings.filter.type,
+    );
+  });
+
+  it("preserves sorting for an equal type and resets it when the tag changes", () => {
+    const current: StreamSettings.Settings = {
+      ...StreamSettings.defaults(PaneSchema.StreamFilterType.cases.pages.make({})),
+      sort: "date",
+    };
+
+    const decoded = Schema.decodeSync(PaneSchema.StreamSettings)(
+      Schema.encodeSync(PaneSchema.StreamSettings)(current),
+    );
+
+    expect(StreamSettings.changeFilter(current, decoded.filter)).toMatchObject({
+      typeChanged: false,
+      settings: { sort: "date" },
+    });
+    expect(
+      StreamSettings.changeFilter(current, {
+        ...decoded.filter,
+        type: PaneSchema.StreamFilterType.cases.prop.make({}),
+      }),
+    ).toMatchObject({ typeChanged: true, settings: { sort: "updated" } });
+  });
+
   it.each(["notes", "pages", "prop"] as const)("round-trips a %s pane filter", (type) => {
     const filter: StreamSettings.Filter = {
-      type,
+      type: PaneSchema.StreamFilterType.cases[type].make({}),
       search: "sleep log",
       date: "2026-10-09",
       backlinksTo: "sleep-log",
@@ -38,12 +73,17 @@ describe("StreamFilter conversion", () => {
   });
 
   it.each(["notes", "pages", "prop"] as const)("round-trips a minimal %s filter", (type) => {
-    const filter = StreamSettings.defaults(type).filter;
+    const filter = StreamSettings.defaults(PaneSchema.StreamFilterType.cases[type].make({})).filter;
     expect(StreamFilter.fromAttrs(StreamFilter.toAttrs(filter))).toEqual(filter);
   });
 
   it("preserves an empty search without adding unset fields", () => {
-    const filter: StreamSettings.Filter = { type: "notes", search: "", props: {} };
+    const filter: StreamSettings.Filter = {
+      type: PaneSchema.StreamFilterType.cases.notes.make({}),
+      search: "",
+      props: {},
+    };
+
     expect(StreamFilter.fromAttrs(StreamFilter.toAttrs(filter))).toEqual(filter);
   });
 
@@ -55,13 +95,23 @@ describe("StreamFilter conversion", () => {
       Comparison.make({ val: ["body", "contains", "old"] }),
       And.make({
         val: [
-          And.make({ val: StreamFilter.toAttrs({ type: "pages", search: "new" }) }),
+          And.make({
+            val: StreamFilter.toAttrs({
+              type: PaneSchema.StreamFilterType.cases.pages.make({}),
+              search: "new",
+            }),
+          }),
           Comparison.make({
             val: [["prop", propId], "=", AttrsSchema.PropVal.cases.number.make({ val: 2 })],
           }),
           Comparison.make({ val: [["prop", propId], "exists", true] }),
           Comparison.make({ val: [["prop", propId], "invalid", true] }),
-          Or.make({ val: StreamFilter.toAttrs({ type: "notes", search: "ignored" }) }),
+          Or.make({
+            val: StreamFilter.toAttrs({
+              type: PaneSchema.StreamFilterType.cases.notes.make({}),
+              search: "ignored",
+            }),
+          }),
         ],
       }),
     ];
@@ -69,7 +119,7 @@ describe("StreamFilter conversion", () => {
     const filter = StreamFilter.fromAttrs(expressions);
 
     expect(filter).toEqual({
-      type: "pages",
+      type: PaneSchema.StreamFilterType.cases.pages.make({}),
       search: "new",
       props: {
         ...StreamSettings.propFilters({}),
@@ -82,13 +132,19 @@ describe("StreamFilter conversion", () => {
   });
 
   it("falls back to notes when no supported comparisons remain", () => {
-    expect(StreamFilter.fromAttrs([])).toEqual({ type: "notes", props: {} });
-    expect(StreamFilter.fromAttrs([Or.make({ val: [] })])).toEqual({ type: "notes", props: {} });
+    expect(StreamFilter.fromAttrs([])).toEqual({
+      type: PaneSchema.StreamFilterType.cases.notes.make({}),
+      props: {},
+    });
+    expect(StreamFilter.fromAttrs([Or.make({ val: [] })])).toEqual({
+      type: PaneSchema.StreamFilterType.cases.notes.make({}),
+      props: {},
+    });
   });
 
   it("round-trips every property value kind through attrs and URL encoding", () => {
     const filter: StreamSettings.Filter = {
-      type: "pages",
+      type: PaneSchema.StreamFilterType.cases.pages.make({}),
       props: {
         [BuiltinAttrs.archivedId]: AttrsSchema.PropVal.cases.bool.make({ val: false }),
         [AttrsSchema.NoteId.make("important")]: AttrsSchema.PropVal.cases.bool.make({ val: true }),
@@ -109,7 +165,10 @@ describe("StreamFilter conversion", () => {
   });
 
   it("keeps a cleared default cleared through attrs and URL encoding", () => {
-    const defaults = StreamSettings.defaults("notes").filter;
+    const defaults = StreamSettings.defaults(
+      PaneSchema.StreamFilterType.cases.notes.make({}),
+    ).filter;
+
     expect(StreamSettings.changedProps(defaults)).toEqual([]);
     const codec = PaneSchema.StreamSettings.fields.filter;
     const decoded = Schema.decodeSync(codec)(Schema.encodeSync(codec)(defaults));

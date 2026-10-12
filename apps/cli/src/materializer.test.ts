@@ -1,3 +1,4 @@
+import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { NodeServices } from "@effect/platform-node";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { DB } from "@manotes/shared/db.service";
@@ -200,7 +201,10 @@ describe("attrs materialization", () => {
         const beforeExpects = yield* sql`SELECT * FROM rule_expects`;
         const beforeCheckpoint = yield* sql`SELECT * FROM materialization_checkpoint`;
 
-        const targets = StreamFilter.toAttrs({ type: "pages" });
+        const targets = StreamFilter.toAttrs({
+          type: PaneSchema.StreamFilterType.cases.pages.make({}),
+        });
+
         attrs.set("rule_targets", targets);
         props.set("priority", AttrsSchema.PropVal.cases.bool.make({ val: true }));
         expects.set("priority", AttrsSchema.RuleExpectation.cases.required.make({}));

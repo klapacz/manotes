@@ -1,3 +1,4 @@
+import { PaneSchema } from "./pane.schema";
 import { Match, Predicate, Record, Schema } from "effect";
 import { AttrsSchema } from "../attrs.schema";
 import { StreamSettings } from "./stream-settings";
@@ -6,11 +7,15 @@ const Comparison = Schema.TaggedStruct("cmp", { val: AttrsSchema.TargetFilterCmp
 
 export function toAttrs(filter: StreamSettings.Filter): AttrsSchema.TargetFilter {
   const expressions = [
-    Comparison.make({ val: ["_tag", "=", filter.type === "prop" ? "prop" : "note"] }),
+    Comparison.make({
+      val: ["_tag", "=", Predicate.isTagged(filter.type, "prop") ? "prop" : "note"],
+    }),
   ];
 
-  if (filter.type !== "prop") {
-    expressions.push(Comparison.make({ val: ["title", "exists", filter.type === "pages"] }));
+  if (!Predicate.isTagged(filter.type, "prop")) {
+    expressions.push(
+      Comparison.make({ val: ["title", "exists", Predicate.isTagged(filter.type, "pages")] }),
+    );
   }
 
   if (filter.search !== undefined) {
@@ -46,7 +51,10 @@ export function toAttrs(filter: StreamSettings.Filter): AttrsSchema.TargetFilter
 
 /** Drops OR groups and unsupported comparisons. Repeated fields use the last comparison. */
 export function fromAttrs(expressions: AttrsSchema.Filter): StreamSettings.Filter {
-  return expressions.reduce(applyComparison, { type: "notes", props: {} });
+  return expressions.reduce(applyComparison, {
+    type: PaneSchema.StreamFilterType.cases.notes.make({}),
+    props: {},
+  });
 }
 
 function applyComparison(
@@ -61,15 +69,17 @@ function applyComparison(
       Match.value(val).pipe(
         Match.when(["_tag", "=", "prop"], (): StreamSettings.Filter => ({
           ...filter,
-          type: "prop",
+          type: PaneSchema.StreamFilterType.cases.prop.make({}),
         })),
         Match.when(["_tag", "=", "note"], (): StreamSettings.Filter => ({
           ...filter,
-          type: "notes",
+          type: PaneSchema.StreamFilterType.cases.notes.make({}),
         })),
         Match.when(["title", "exists", Match.boolean], ([, , value]): StreamSettings.Filter => ({
           ...filter,
-          type: value ? "pages" : "notes",
+          type: value
+            ? PaneSchema.StreamFilterType.cases.pages.make({})
+            : PaneSchema.StreamFilterType.cases.notes.make({}),
         })),
         Match.when(["body", "contains", Match.string], ([, , search]) => ({ ...filter, search })),
         Match.when(["date", "=", Match.string], ([, , date]) => ({ ...filter, date })),

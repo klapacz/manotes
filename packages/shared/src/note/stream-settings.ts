@@ -1,6 +1,6 @@
-import type { PaneSchema } from "./pane.schema";
+import { PaneSchema } from "./pane.schema";
 import { BuiltinAttrs } from "../builtin-attrs";
-import { Equal, Option, Record } from "effect";
+import { Equal, Option, Predicate, Record } from "effect";
 import type { NoteSchema } from "../note.schema";
 import { AttrsSchema } from "../attrs.schema";
 
@@ -9,7 +9,7 @@ export type Settings = PaneSchema.StreamSettings;
 export type Filter = Settings["filter"];
 
 export const typeLabels = { notes: "Notes", pages: "Pages", prop: "Properties" } satisfies Record<
-  Filter["type"],
+  Filter["type"]["_tag"],
   string
 >;
 
@@ -22,7 +22,7 @@ export type Display = Pick<Settings, "sort" | "view">;
 export function defaults(type: Filter["type"]): Settings {
   return {
     filter: { type, props: defaultProps() },
-    sort: type === "notes" ? "date" : "updated",
+    sort: Predicate.isTagged(type, "notes") ? "date" : "updated",
     view: "full",
   };
 }
@@ -74,10 +74,10 @@ export function changePropFilter(
 
 export function changedFilters(filter: Filter): FilterField[] {
   const fields = ["type", "search", "date", "backlinksTo", "linksFrom"] as const;
-  const initial = defaults("notes").filter;
+  const initial = defaults(PaneSchema.StreamFilterType.cases.notes.make({})).filter;
 
   return fields.filter((field) =>
-    field === "type" ? filter.type !== initial.type : Boolean(filter[field]),
+    field === "type" ? !Equal.equals(filter.type, initial.type) : Boolean(filter[field]),
   );
 }
 
@@ -88,11 +88,14 @@ export function changedDisplay(settings: Settings): (keyof Display)[] {
 }
 
 export function clearFilter(filter: Filter, field: FilterField): Filter {
-  return { ...filter, [field]: defaults("notes").filter[field] };
+  return {
+    ...filter,
+    [field]: defaults(PaneSchema.StreamFilterType.cases.notes.make({})).filter[field],
+  };
 }
 
 export function changeFilter(current: Settings, filter: Filter) {
-  const typeChanged = current.filter.type !== filter.type;
+  const typeChanged = !Equal.equals(current.filter.type, filter.type);
 
   return {
     settings: {

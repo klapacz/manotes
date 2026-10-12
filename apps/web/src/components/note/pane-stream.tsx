@@ -127,7 +127,8 @@ export function PaneStream(props: ComponentProps<"section">) {
   const record = recording.createControls({
     enabled: () =>
       Predicate.isTagged(state, "Success") &&
-      (pane().filter.type === "notes" || pane().filter.type === "pages"),
+      (Predicate.isTagged(pane().filter.type, "notes") ||
+        Predicate.isTagged(pane().filter.type, "pages")),
     getFocusedRow() {
       if (!Predicate.isTagged(state, "Success")) return;
 

@@ -22,14 +22,14 @@ describe("PaneCursor.inputMatches", () => {
   it("matches stream inputs with omitted defaults or explicit undefined fields", () => {
     const pane = PaneSchema.Pane.cases.stream.make({
       paneId: PaneSchema.Id.make("pane-a"),
-      filter: { type: "notes" },
+      filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) },
       sort: "date",
     });
 
     const explicitUndefined = {
       ...PaneMake.notes(),
       filter: {
-        type: "notes",
+        type: PaneSchema.StreamFilterType.cases.notes.make({}),
         backlinksTo: undefined,
         linksFrom: undefined,
         date: undefined,
@@ -49,13 +49,13 @@ describe("PaneCursor.inputMatches", () => {
   it("distinguishes stream filters and sort order", () => {
     const pane = PaneSchema.Pane.cases.stream.make({
       paneId: PaneSchema.Id.make("pane-a"),
-      filter: { type: "notes", backlinksTo: "note-a" },
+      filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}), backlinksTo: "note-a" },
       sort: "date",
     });
 
     const differentSort = PaneSchema.Pane.cases.stream.make({
       paneId: PaneSchema.Id.make("pane-b"),
-      filter: { type: "notes", backlinksTo: "note-a" },
+      filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}), backlinksTo: "note-a" },
       sort: "updated",
     });
 
@@ -67,13 +67,16 @@ describe("PaneCursor.inputMatches", () => {
   it("distinguishes cleared property filters and ignores their insertion order", () => {
     const pane = decodePane(PaneMake.notes());
     expect(
-      PaneCursor.inputMatches({ ...PaneMake.notes(), filter: { type: "notes", props: {} } })(pane),
+      PaneCursor.inputMatches({
+        ...PaneMake.notes(),
+        filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}), props: {} },
+      })(pane),
     ).toBe(false);
 
     const filtered = decodePane({
       ...PaneMake.notes(),
       filter: {
-        type: "notes",
+        type: PaneSchema.StreamFilterType.cases.notes.make({}),
         props: {
           a: AttrsSchema.PropVal.cases.bool.make({ val: true }),
           b: AttrsSchema.PropVal.cases.bool.make({ val: false }),
@@ -85,7 +88,7 @@ describe("PaneCursor.inputMatches", () => {
       PaneCursor.inputMatches({
         ...PaneMake.notes(),
         filter: {
-          type: "notes",
+          type: PaneSchema.StreamFilterType.cases.notes.make({}),
           props: {
             b: AttrsSchema.PropVal.cases.bool.make({ val: false }),
             a: AttrsSchema.PropVal.cases.bool.make({ val: true }),

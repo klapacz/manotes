@@ -1,3 +1,4 @@
+import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
@@ -18,7 +19,7 @@ describe("property filter entries", () => {
   it("keeps default comparisons selectable while hiding their chips", () => {
     const entries = StreamPropFilterEntries.make({
       defs: [archived],
-      filter: StreamSettings.defaults("notes").filter,
+      filter: StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({})).filter,
     });
 
     expect(entries).toEqual([
@@ -38,10 +39,13 @@ describe("property filter entries", () => {
   it("marks a cleared default as modified without displaying an empty chip", () => {
     const entries = StreamPropFilterEntries.make({
       defs: [archived],
-      filter: StreamSettings.changePropFilter(StreamSettings.defaults("notes").filter, {
-        propId: archived.id,
-        value: undefined,
-      }),
+      filter: StreamSettings.changePropFilter(
+        StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({})).filter,
+        {
+          propId: archived.id,
+          value: undefined,
+        },
+      ),
     });
 
     expect(entries[0]).toMatchObject({
@@ -59,10 +63,13 @@ describe("property filter entries", () => {
 
     const entries = StreamPropFilterEntries.make({
       defs: [archived],
-      filter: StreamSettings.changePropFilter(StreamSettings.defaults("notes").filter, {
-        propId: missingId,
-        value,
-      }),
+      filter: StreamSettings.changePropFilter(
+        StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({})).filter,
+        {
+          propId: missingId,
+          value,
+        },
+      ),
     });
 
     expect(entries.map((entry) => entry.id)).toEqual([archived.id]);
