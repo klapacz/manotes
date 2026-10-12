@@ -16,6 +16,7 @@ import * as Lock from "./lock";
 import { GraphDatabase } from "./database";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { PropDef } from "@manotes/shared/prop-def.service";
+import { EnumOptionRepo } from "@manotes/shared/enum-option.repo";
 
 export type SetupOpts = {
   localGraphId: string;
@@ -41,6 +42,7 @@ export const makeLayer = (opts: SetupOpts) =>
         NoteRepo.Service.layer,
         Attrs.Service.layer,
         PropDef.Service.layer,
+        EnumOptionRepo.Service.layer,
         BacklinkService.Service.layer,
         NoteCache.Service.layer,
         NoteStreamCache.Service.layer,

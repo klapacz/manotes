@@ -8,10 +8,12 @@ export type Settings = PaneSchema.StreamSettings;
 
 export type Filter = Settings["filter"];
 
-export const typeLabels = { notes: "Notes", pages: "Pages", prop: "Properties" } satisfies Record<
-  Filter["type"]["_tag"],
-  string
->;
+export const typeLabels = {
+  notes: "Notes",
+  pages: "Pages",
+  prop: "Properties",
+  enum_option: "Enum options",
+} satisfies Record<Filter["type"]["_tag"], string>;
 
 type PropFilters = NonNullable<Filter["props"]>;
 

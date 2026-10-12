@@ -13,6 +13,37 @@ const And = Schema.TaggedStruct("and", { val: Schema.Array(AttrsSchema.FilterExp
 const Or = Schema.TaggedStruct("or", { val: Schema.Array(AttrsSchema.FilterExpr) });
 
 describe("StreamFilter conversion", () => {
+  it("requires an enum parent and round-trips ownership through nested filters", () => {
+    const type = PaneSchema.StreamFilterType.cases.enum_option.make({
+      enum_parent: AttrsSchema.NoteId.make("priority"),
+    });
+
+    const filter = { ...StreamSettings.defaults(type).filter, search: "high" };
+    const attrs = StreamFilter.toAttrs(filter);
+
+    expect(attrs.slice(0, 3).map(({ val }) => val)).toEqual([
+      ["_tag", "=", "owned"],
+      ["owned_type", "=", "enum_option"],
+      ["owned_parent", "=", "priority"],
+    ]);
+    expect(StreamFilter.fromAttrs([And.make({ val: attrs })])).toEqual(filter);
+    expect(
+      Schema.decodeSync(PaneSchema.StreamSettings.fields.filter)(
+        Schema.encodeSync(PaneSchema.StreamSettings.fields.filter)(filter),
+      ),
+    ).toEqual(filter);
+    const encoded = Schema.encodeSync(PaneSchema.StreamFilterType)(type);
+    expect(() =>
+      Schema.decodeUnknownSync(PaneSchema.StreamFilterType)({ ...encoded, enum_parent: undefined }),
+    ).toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(PaneSchema.StreamFilterType)({
+        ...encoded,
+        enum_parent: "",
+      }),
+    ).toThrow();
+  });
+
   it("does not mark a decoded default type as modified", () => {
     const settings = StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({}));
 

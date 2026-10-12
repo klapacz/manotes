@@ -10,6 +10,7 @@ import {
   Stream,
   Record,
   Predicate,
+  Match,
 } from "effect";
 import { DB } from "./db.service";
 import { NoteSchema } from "./note.schema";
@@ -404,9 +405,15 @@ const streamColumns = {
 } as const;
 
 function streamFilterConditions(query: StreamListQuery): Array<SQL> {
-  const conditions: Array<SQL> = [
-    eq(Tables.notes._tag, Predicate.isTagged(query.type, "prop") ? "prop" : "note"),
-  ];
+  const conditions = Match.value(query.type).pipe(
+    Match.tag("enum_option", ({ enum_parent }) => [
+      eq(Tables.notes._tag, "owned"),
+      eq(Tables.notes.owned_type, "enum_option"),
+      eq(Tables.notes.owned_parent, enum_parent),
+    ]),
+    Match.tag("prop", () => [eq(Tables.notes._tag, "prop")]),
+    Match.orElse(() => [eq(Tables.notes._tag, "note")]),
+  );
 
   if (Predicate.isTagged(query.type, "pages")) conditions.push(isNotNull(Tables.notes.title));
 

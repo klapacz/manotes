@@ -10,6 +10,7 @@ import { Picker } from "../ui/picker";
 import { NoteLabel } from "./note-label";
 
 type ValueProps = {
+  propId: AttrsSchema.NoteId;
   label: string;
   type: PropQuery.EditableType;
   defaultValue: Option.Option<AttrsSchema.PropVal>;
@@ -29,7 +30,11 @@ export function Value(props: ValueProps) {
       <Case when={props.type === "bool"}>
         <Picker.Query
           label={props.label}
-          query={PropQuery.values({ type: "bool", defaultValue: props.defaultValue })}
+          query={PropQuery.values({
+            propId: props.propId,
+            type: "bool",
+            defaultValue: props.defaultValue,
+          })}
           initialSearch={props.search}
           selected={Match.value(props.state).pipe(
             Match.tag("Valid", ({ value }) => PropQuery.valueLabel(value)),
@@ -47,30 +52,39 @@ export function Value(props: ValueProps) {
       <Case when={props.type === "text"}>
         <TextInput {...props} disabled={disabled()} />
       </Case>
-      <Case when={props.type === "link"}>
-        <ReferenceInput {...props} disabled={disabled()} />
+      <Case when={props.type === "link" || props.type === "enum"}>
+        <RecordInput {...props} disabled={disabled()} />
       </Case>
     </Switch>
   );
 }
 
-function ReferenceInput(props: ValueProps) {
+function RecordInput(props: ValueProps) {
   const selected = () =>
     Match.value(props.state).pipe(
       Match.when(
-        { _tag: "Valid", value: AttrsSchema.PropVal.guards.link },
+        { _tag: "Valid", value: { _tag: Match.is("link", "enum") } },
         ({ value }) => value.val,
       ),
       Match.orElse(() => undefined),
     );
 
   const defaultValue = () =>
-    props.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.link), Option.getOrUndefined);
+    props.defaultValue.pipe(
+      Option.filter(
+        (value) => AttrsSchema.PropVal.guards.link(value) || AttrsSchema.PropVal.guards.enum(value),
+      ),
+      Option.getOrUndefined,
+    );
 
   return (
     <Picker.Query
       label={props.label}
-      query={PropQuery.values({ type: "link", defaultValue: props.defaultValue })}
+      query={PropQuery.values({
+        propId: props.propId,
+        type: props.type,
+        defaultValue: props.defaultValue,
+      })}
       initialSearch={props.search}
       selected={selected()}
       disabled={props.disabled}
@@ -226,7 +240,11 @@ export function Invalid(props: { state: Attrs.ValueState<AttrsSchema.PropVal> })
 export function ValueLabel(props: { value: AttrsSchema.PropVal }) {
   return (
     <Show
-      when={AttrsSchema.PropVal.guards.link(props.value) && props.value.val}
+      when={
+        (AttrsSchema.PropVal.guards.link(props.value) ||
+          AttrsSchema.PropVal.guards.enum(props.value)) &&
+        props.value.val
+      }
       fallback={PropQuery.valueLabel(props.value)}
     >
       {(id) => <NoteLabel.Root id={id()} />}

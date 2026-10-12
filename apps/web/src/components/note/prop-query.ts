@@ -2,13 +2,14 @@ import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import type { PropRecordRepo } from "@manotes/shared/prop-record.repo";
 import type { NoteRepo } from "@manotes/shared/note.repo";
+import { EnumOptionRepo } from "@manotes/shared/enum-option.repo";
 import { Match, Option, pipe, Schema, Stream, String, Types } from "effect";
 import { MenuQuery } from "../../lib/menu-query";
 import { QueryEngine } from "../../lib/query-engine";
 import type { Picker } from "../ui/picker";
 import { NoteQuery } from "./note-query";
 
-export const editableTypes = ["bool", "number", "text", "link"] as const;
+export const editableTypes = ["bool", "number", "text", "link", "enum"] as const;
 
 export type EditableType = (typeof editableTypes)[number];
 
@@ -22,9 +23,10 @@ export const editableDef = Match.type<PropRecordRepo.Def>().pipe(
 type Choice = Picker.Choice & { propVal: AttrsSchema.PropVal };
 
 export function values(opts: {
+  propId: AttrsSchema.NoteId;
   type: EditableType;
   defaultValue: Option.Option<AttrsSchema.PropVal>;
-}): QueryEngine.Query<Choice, unknown, NoteRepo.Service> {
+}): QueryEngine.Query<Choice, unknown, NoteRepo.Service | EnumOptionRepo.Service> {
   return Match.value(opts.type).pipe(
     Match.when("bool", () =>
       boolQuery({
@@ -46,8 +48,47 @@ export function values(opts: {
         defaultValue: opts.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.link)),
       }),
     ),
+    Match.when("enum", () =>
+      enumQuery({
+        propId: opts.propId,
+        defaultValue: opts.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.enum)),
+      }),
+    ),
     Match.exhaustive,
   );
+}
+
+export function enumQuery(opts: {
+  propId: AttrsSchema.NoteId;
+  defaultValue: Option.Option<Types.ExtractTag<AttrsSchema.PropVal, "enum">>;
+}): QueryEngine.Query<Choice, unknown, EnumOptionRepo.Service> {
+  return (request) =>
+    Stream.unwrap(
+      EnumOptionRepo.Service.use((repo) => repo.reactiveOptions({ enum_parent: opts.propId })),
+    ).pipe(
+      Stream.map((options) =>
+        options.flatMap((option) => {
+          const label = NoteQuery.label(option, request.text);
+          const score = QueryEngine.score({ text: request.text, label });
+
+          if (!score) return [];
+
+          const propVal = AttrsSchema.PropVal.cases.enum.make({ val: option.id });
+
+          return [
+            {
+              score,
+              value: {
+                value: option.id,
+                label,
+                propVal,
+                detail: Option.contains(opts.defaultValue, propVal) ? () => "Default" : undefined,
+              },
+            },
+          ];
+        }),
+      ),
+    );
 }
 
 export function linkQuery(opts: {
@@ -169,7 +210,7 @@ export function valueLabel(value: AttrsSchema.PropVal): string {
 
       return val;
     }),
-    Match.tag("enum", ({ val }) => val),
+    Match.tag("enum", () => "Enum option"),
     // Reference labels are resolved reactively by PropPicker.ValueLabel.
     Match.tag("link", () => "Reference"),
     Match.exhaustive,

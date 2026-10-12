@@ -67,7 +67,7 @@ type ComparablePane =
   | readonly [variant: "note", id: string]
   | readonly [
       variant: "stream",
-      type: PaneSchema.StreamFilterType,
+      type: typeof PaneSchema.StreamFilterType.Encoded,
       backlinksTo: string | null,
       linksFrom: string | null,
       date: string | null,

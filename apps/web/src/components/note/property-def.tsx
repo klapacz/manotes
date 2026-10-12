@@ -21,6 +21,7 @@ import { PaneScroll } from "../../lib/note/pane.scroll";
 import { NoteLink } from "../../lib/note/link-component";
 import { Button } from "../ui/button";
 import { ArrowUpRightIcon } from "../icons";
+import { EnumOptions } from "./enum-options";
 
 const route = getRouteApi("/$graph/");
 
@@ -42,6 +43,7 @@ const Change = Data.taggedEnum<Change>();
 const typeChoices = PropQuery.editableTypes.map((value) => ({ value, label: typeLabels[value] }));
 
 export function Root(props: {
+  recordId: AttrsSchema.NoteId;
   doc: Y.Doc;
   attrs: {
     prop_type: AttrsSchema.PropValTag;
@@ -71,7 +73,7 @@ export function Root(props: {
   const defaultLink = () =>
     Match.value(defaultState()).pipe(
       Match.when(
-        { _tag: "Valid", value: AttrsSchema.PropVal.guards.link },
+        { _tag: "Valid", value: { _tag: Match.is("link", "enum") } },
         ({ value }) => value.val,
       ),
       Match.orElse(() => undefined),
@@ -79,6 +81,14 @@ export function Root(props: {
 
   const openNote = (id: AttrsSchema.NoteId) => {
     const input = PaneMake.note(id);
+
+    if (scroll.scrollToPane(input).found) return;
+
+    void navigate(PaneCtx.linkOptions(ctx, PaneCursor.openNext(input)));
+  };
+
+  const openOptions = () => {
+    const input = PaneMake.enumOptions({ enum_parent: props.recordId });
 
     if (scroll.scrollToPane(input).found) return;
 
@@ -141,6 +151,7 @@ export function Root(props: {
                     <Show when={editableType()}>
                       {(type) => (
                         <PropPicker.Value
+                          propId={props.recordId}
                           label="Default value"
                           type={type()}
                           defaultValue={Option.none()}
@@ -188,6 +199,14 @@ export function Root(props: {
               </Show>
             </DescriptionList.Details>
           </DescriptionList.Row>
+          <Show when={props.attrs.prop_type === "enum"}>
+            <DescriptionList.Row>
+              <DescriptionList.Term>Options</DescriptionList.Term>
+              <DescriptionList.Details>
+                <EnumOptions.Link propId={props.recordId} onOpen={openOptions} />
+              </DescriptionList.Details>
+            </DescriptionList.Row>
+          </Show>
         </DescriptionList.Root>
         <Show when={AsyncResult.isFailure(mutation())}>
           <p role="alert" class="px-2 pt-2 text-error-fg">

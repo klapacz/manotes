@@ -93,7 +93,8 @@ export const prefilledPayload = Effect.fn("ComponentsNoteNoteCreate.prefilledPay
 
   if (
     Predicate.isTagged(pane.filter.type, "pages") ||
-    Predicate.isTagged(pane.filter.type, "prop")
+    Predicate.isTagged(pane.filter.type, "prop") ||
+    Predicate.isTagged(pane.filter.type, "enum_option")
   ) {
     content.push({
       type: "heading",
@@ -124,6 +125,11 @@ export const prefilledPayload = Effect.fn("ComponentsNoteNoteCreate.prefilledPay
       doc,
       defaultValue: AttrsSchema.PropVal.cases.bool.make({ val: false }),
     });
+  }
+
+  if (Predicate.isTagged(pane.filter.type, "enum_option")) {
+    const attrs = yield* Attrs.Service;
+    yield* attrs.initializeEnumOption({ doc, enum_parent: pane.filter.type.enum_parent });
   }
 
   return yield* Effect.sync(() => Y.encodeStateAsUpdate(doc));

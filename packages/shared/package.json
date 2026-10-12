@@ -18,6 +18,7 @@
     "./editor/table/spec": "./dist/editor/table/spec.mjs",
     "./effect/effect-option": "./dist/effect/effect-option.mjs",
     "./effect/option": "./dist/effect/option.mjs",
+    "./enum-option.repo": "./dist/enum-option.repo.mjs",
     "./event.repo": "./dist/event.repo.mjs",
     "./event.schema": "./dist/event.schema.mjs",
     "./graph-backup/schema": "./dist/graph-backup/schema.mjs",

@@ -126,6 +126,7 @@ export function Menu(props: {
           >
             {(entry) => (
               <PropPicker.Value
+                propId={entry().def.id}
                 label={entry().def.title || "Untitled"}
                 type={entry().def.prop_type}
                 defaultValue={Option.fromNullishOr(entry().def.prop_default)}

@@ -5,6 +5,7 @@ import { Attrs } from "@manotes/shared/attrs.service";
 import { PropDef } from "@manotes/shared/prop-def.service";
 import { PropRecordRepo } from "@manotes/shared/prop-record.repo";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
+import { EnumOptionRepo } from "@manotes/shared/enum-option.repo";
 import { DB } from "@manotes/shared/db.service";
 import { Tables } from "@manotes/shared/db.tables";
 import { EventRepo } from "@manotes/shared/event.repo";
@@ -13,6 +14,7 @@ import * as GraphSyncEncryption from "@manotes/shared/graph-sync/encryption/serv
 import * as GraphSyncEventLog from "@manotes/shared/graph-sync/event-log.service";
 import * as Materializer from "@manotes/shared/materializer.service";
 import { NoteRepo } from "@manotes/shared/note.repo";
+import { NoteSchema } from "@manotes/shared/note.schema";
 import { NoteDoc } from "@manotes/shared/note/doc";
 import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 import { StreamFilter } from "@manotes/shared/note/stream-filter";
@@ -27,6 +29,90 @@ import { CliRuntime } from "./cli.runtime";
 const createdAt = DateTime.makeUnsafe("2026-10-11T09:00:00Z");
 
 describe("Archived builtin", () => {
+  it("lists active enum options for one parent while preserving archived and untitled options", async () => {
+    await run(
+      Effect.gen(function* () {
+        const device = yield* makeDevice();
+        yield* Effect.gen(function* () {
+          const attrs = yield* Attrs.Service;
+          const events = yield* EventRepo.Service;
+          const materializer = yield* Materializer.Service;
+          const options = yield* EnumOptionRepo.Service;
+          const notes = yield* NoteRepo.Service;
+          const parent = NoteSchema.Id.make("priority");
+
+          for (const input of [
+            { id: "high", parent, archived: false },
+            { id: "untitled", parent, archived: false },
+            { id: "old", parent, archived: true },
+            { id: "other", parent: NoteSchema.Id.make("status"), archived: false },
+          ]) {
+            const { doc } = yield* Effect.acquireRelease(
+              Effect.sync(() => NoteDoc.make()),
+              ({ doc }) => Effect.sync(() => doc.destroy()),
+            );
+
+            yield* attrs.initializeEnumOption({ doc, enum_parent: input.parent });
+            ProsemirrorEncode.initializeDocument({
+              doc,
+              content:
+                input.id === "untitled"
+                  ? [{ type: "paragraph" }]
+                  : [
+                      {
+                        type: "heading",
+                        attrs: { level: 1 },
+                        content: [{ type: "text", text: input.id }],
+                      },
+                    ],
+            });
+
+            if (input.archived) {
+              yield* attrs.setProp({
+                doc,
+                recordId: NoteSchema.Id.make(input.id),
+                propId: BuiltinAttrs.archivedId,
+                value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+              });
+            }
+
+            yield* events.create({
+              noteId: input.id,
+              type: "update",
+              createdAt,
+              payload: Y.encodeStateAsUpdate(doc),
+            });
+          }
+
+          yield* materializer.catchUp();
+
+          const rows = Option.getOrThrow(
+            yield* (yield* options.reactiveOptions({ enum_parent: parent })).pipe(Stream.runHead),
+          );
+
+          expect(rows.map(({ id }) => id).toSorted()).toEqual(["high", "untitled"]);
+
+          const type = PaneSchema.StreamFilterType.cases.enum_option.make({ enum_parent: parent });
+
+          const list = (props: NonNullable<NoteRepo.StreamListQuery["props"]>) =>
+            notes.reactiveStreamList({ type, props, sort: "updated" }).pipe(
+              Effect.flatMap(Stream.runHead),
+              Effect.map(Option.getOrThrow),
+              Effect.map((rows) => rows.map(({ id }) => id).toSorted()),
+            );
+
+          expect(yield* list(StreamSettings.propFilters({}))).toEqual(["high", "untitled"]);
+          expect(yield* list({})).toEqual(["high", "old", "untitled"]);
+          expect(yield* notes.findAllRecords()).toEqual([]);
+        }).pipe(
+          Effect.provide(Attrs.Service.layer),
+          Effect.provide(EnumOptionRepo.Service.layer),
+          Effect.provideContext(device),
+        );
+      }),
+    );
+  });
+
   it("lists properties independently of their title and excludes them from notes and pages", async () => {
     await run(
       Effect.gen(function* () {

@@ -33,6 +33,7 @@ export type Entry<Tag extends AttrsSchema.PropValTag = AttrsSchema.PropValTag> =
 export class Service extends Context.Service<Service>()("Attrs.Service", {
   make: Effect.sync(() => ({
     initializeProp,
+    initializeEnumOption,
     watch,
     watchProps,
     setProp,
@@ -167,6 +168,17 @@ const initializeProp = Effect.fn("Attrs.initializeProp")(function* (opts: {
 
   yield* prop.pipe(YSchema.set("prop_default", opts.defaultValue));
   yield* prop.pipe(YSchema.upsertMap("props"));
+});
+
+const initializeEnumOption = Effect.fn("Attrs.initializeEnumOption")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly enum_parent: AttrsSchema.NoteId;
+}) {
+  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const owned = yield* attrs.pipe(YSchema.set("_tag", "owned"));
+  yield* owned.pipe(YSchema.set("owned_type", "enum_option"));
+  yield* owned.pipe(YSchema.set("owned_parent", opts.enum_parent));
+  yield* owned.pipe(YSchema.upsertMap("props"));
 });
 
 const setPropDefault = Effect.fn("Attrs.setPropDefault")(function* (opts: {

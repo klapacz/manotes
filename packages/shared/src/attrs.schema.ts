@@ -65,6 +65,8 @@ const PropTarget = Schema.Tuple([Schema.Literal("prop"), NoteId]);
 
 export const TargetFilterCmp = Schema.Union([
   Schema.Tuple([Schema.Literal("_tag"), Schema.Literal("="), RecordTag]),
+  Schema.Tuple([Schema.Literal("owned_type"), Schema.Literal("="), Schema.Literal("enum_option")]),
+  Schema.Tuple([Schema.Literal("owned_parent"), Schema.Literal("="), NoteId]),
   Schema.Tuple([Schema.Literal("title"), Schema.Literal("exists"), Schema.Boolean]),
   Schema.Tuple([Schema.Literal("body"), Schema.Literal("contains"), Schema.String]),
   Schema.Tuple([Schema.Literal("date"), Schema.Literal("="), PlainDateString]),

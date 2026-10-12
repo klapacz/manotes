@@ -1,6 +1,7 @@
 import { Data } from "effect";
 import { StreamSettings } from "./stream-settings";
 import { PaneSchema } from "./pane.schema";
+import type { NoteSchema } from "../note.schema";
 
 const make = Data.taggedEnum<PaneSchema.PaneInput>();
 
@@ -14,6 +15,12 @@ export function notes() {
 
 export function note(id: string) {
   return make.note({ id });
+}
+
+export function enumOptions(opts: { readonly enum_parent: NoteSchema.Id }) {
+  return make.stream(
+    StreamSettings.defaults(PaneSchema.StreamFilterType.cases.enum_option.make(opts)),
+  );
 }
 
 // Incoming backlinks: notes that link to `targetId`.

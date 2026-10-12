@@ -229,7 +229,13 @@ export default function Editor(props: Props): JSX.Element {
                 style={props.style}
               />
               <Show when={attrs.definition()}>
-                {(definition) => <PropertyDef.Root doc={current.doc} attrs={definition()} />}
+                {(definition) => (
+                  <PropertyDef.Root
+                    recordId={props.noteId}
+                    doc={current.doc}
+                    attrs={definition()}
+                  />
+                )}
               </Show>
               <BacklinkMenu currentNoteId={props.noteId} />
               <TabMenu />

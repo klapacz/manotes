@@ -3,7 +3,7 @@
 // Why: searchable filter menus and segmented pills. Ported to Solid/Kobalte with
 // Manotes stream filters and bounded repository search.
 import { For, Show, Switch, Match, createMemo, createSignal, type JSX } from "solid-js";
-import { Data, Option, Record, Stream } from "effect";
+import { Data, Match as EffectMatch, Option, Predicate, Record, Stream } from "effect";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { StreamPropFilter } from "./stream-prop-filter";
@@ -25,6 +25,8 @@ type Filter = StreamSettings.Filter;
 
 export type Field = Data.TaggedEnum<{
   type: {};
+  // Menu navigation only; the chosen parent is stored inside filter.type.
+  enumParent: {};
   search: {};
   date: {};
   backlinksTo: {};
@@ -44,11 +46,12 @@ const fields = [
 
 export type StreamFilterMenu = { open: boolean; field: Field | undefined; search?: string };
 
-const typeChoices = Record.collect(StreamSettings.typeLabels, (value, label) => ({
-  value,
-  label,
-  type: PaneSchema.StreamFilterType.cases[value].make({}),
-}));
+// Enum options need a parent, so their type is constructed after the second picker.
+const typeChoices = Record.collect(StreamSettings.typeLabels, (value, label) => {
+  if (value === "enum_option") return [];
+
+  return [{ value, label, type: PaneSchema.StreamFilterType.cases[value].make({}) }];
+}).flat();
 
 export function StreamFilterEditor(props: {
   filter: Filter;
@@ -69,6 +72,23 @@ export function StreamFilterEditor(props: {
       return field && Field.$is("prop")(field) ? field.propId : undefined;
     },
     onChange: (filter) => props.onChange(filter),
+  });
+
+  // Keep the submenu heading reactive when navigation or a property definition changes.
+  const selectedLabel = createMemo(() => {
+    // Property fields carry an ID; their label comes from the live definitions query.
+    const property = propertyFilters.selected();
+
+    if (property) return property.label;
+
+    const field = selectedField();
+
+    if (!field) return;
+
+    // The parent chooser is nested under Type and has no entry in the top-level fields list.
+    if (Field.$is("enumParent")(field)) return "Enum options";
+
+    return fields.find((item) => item.value === field._tag)?.label;
   });
 
   const open = (field: Field | undefined, search?: string) =>
@@ -173,12 +193,33 @@ export function StreamFilterEditor(props: {
             };
           });
 
-          const types = MenuQuery.choices(() =>
-            typeChoices.map((choice) => ({
+          const types = MenuQuery.choices<MenuQuery.Action>(() => [
+            ...typeChoices.map((choice) => ({
               ...choice,
               run: () => setType(choice.type, close),
             })),
-          );
+            {
+              value: "enum_option",
+              label: StreamSettings.typeLabels.enum_option,
+              suffix: <Picker.Caret />,
+              run: () => open(Field.enumParent()),
+            },
+          ]);
+
+          // Replace the query when definitions change so an open parent picker updates too.
+          const enumParents = createMemo(() => {
+            const choices = propertyFilters.enums().map((entry) => ({
+              value: entry.id,
+              label: entry.label,
+              run: () =>
+                setType(
+                  PaneSchema.StreamFilterType.cases.enum_option.make({ enum_parent: entry.id }),
+                  close,
+                ),
+            }));
+
+            return MenuQuery.choices(() => choices);
+          });
 
           const dates = QueryEngine.map(DateSuggestions.query, (date) => ({
             value: date.id,
@@ -206,6 +247,8 @@ export function StreamFilterEditor(props: {
             const builtins = QueryEngine.combine([
               MenuQuery.actions(() => choices),
               MenuQuery.nested({ label: "Type", query: types }),
+              // Share the parent choices with top-level search, bypassing submenu navigation.
+              MenuQuery.nested({ label: "Enum options", query: enumParents() }),
               MenuQuery.nested({ label: "Date", query: dates }),
               MenuQuery.nested({ label: "Links to", query: noteQueries.backlinksTo }),
               MenuQuery.nested({ label: "Links from", query: noteQueries.linksFrom }),
@@ -261,9 +304,7 @@ export function StreamFilterEditor(props: {
               {(field) => (
                 <>
                   <div class="border-b border-border-subtle px-3 py-2 text-sm">
-                    {propertyFilters.selected()
-                      ? propertyFilters.selected()?.label
-                      : fields.find((item) => item.value === field()._tag)?.label}
+                    {selectedLabel()}
                   </div>
                   <Switch>
                     <Match when={propertyFilters.selected()}>
@@ -295,6 +336,29 @@ export function StreamFilterEditor(props: {
                             <CommandScroll>{items}</CommandScroll>
                             <Picker.Footer>
                               <Picker.Back onSelect={() => open(undefined)} />
+                              <Picker.Clear onSelect={clear("type", close)} />
+                            </Picker.Footer>
+                          </CommandList>
+                        )}
+                      </Picker.Query>
+                    </Match>
+                    <Match when={Field.$is("enumParent")(field())}>
+                      <Picker.Query
+                        label="Search enums"
+                        query={enumParents()}
+                        initialSearch={props.menu.search}
+                        selected={
+                          Predicate.isTagged(props.filter.type, "enum_option")
+                            ? props.filter.type.enum_parent
+                            : undefined
+                        }
+                        onSelect={(choice) => choice.run()}
+                      >
+                        {(items) => (
+                          <CommandList>
+                            <CommandScroll>{items}</CommandScroll>
+                            <Picker.Footer>
+                              <Picker.Back onSelect={() => open(Field.type())} />
                               <Picker.Clear onSelect={clear("type", close)} />
                             </Picker.Footer>
                           </CommandList>
@@ -443,10 +507,25 @@ export function StreamFilterEditor(props: {
 }
 
 function FilterValue(props: { field: StreamSettings.FilterField; filter: Filter }) {
+  // Include the parent's live label to distinguish streams for different enums.
+  const enumParent = () =>
+    EffectMatch.value(props.filter.type).pipe(
+      EffectMatch.tag("enum_option", ({ enum_parent }) => enum_parent),
+      EffectMatch.orElse(() => undefined),
+    );
+
   return (
     <Switch>
       <Match when={props.field === "type"}>
         {StreamSettings.typeLabels[props.filter.type._tag]}
+        <Show when={enumParent()}>
+          {(id) => (
+            <>
+              {" "}
+              · <NoteLabel.Root id={id()} />
+            </>
+          )}
+        </Show>
       </Match>
       <Match when={props.field === "search"}>{props.filter.search}</Match>
       <Match keyed when={props.field === "date" && props.filter.date}>

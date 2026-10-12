@@ -28,6 +28,8 @@ export function use(opts: {
     StreamPropFilterEntries.make({ defs: defs(), filter: opts.filter() }),
   );
 
+  const enums = createMemo(() => entries().filter((entry) => entry.def.prop_type === "enum"));
+
   const selected = createMemo(() => entries().find((entry) => entry.id === opts.propId()));
   const modified = createMemo(() => entries().some((entry) => entry.modified));
 
@@ -40,7 +42,7 @@ export function use(opts: {
     update.close?.();
   };
 
-  return { entries, selected, modified, set };
+  return { entries, enums, selected, modified, set };
 }
 
 function useDefs() {
@@ -86,6 +88,7 @@ export function query(opts: {
         label: entry.label,
         query: QueryEngine.map(
           PropQuery.values({
+            propId: entry.id,
             type: entry.def.prop_type,
             defaultValue: Option.fromNullishOr(entry.def.prop_default),
           }),
@@ -129,6 +132,7 @@ export function Menu(props: {
 
   return (
     <PropPicker.Value
+      propId={props.entry.id}
       label={props.entry.label}
       type={props.entry.def.prop_type}
       defaultValue={Option.fromNullishOr(props.entry.def.prop_default)}

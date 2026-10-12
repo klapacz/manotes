@@ -10,6 +10,7 @@ export const StreamFilterType = Schema.TaggedUnion({
   notes: {},
   pages: {},
   prop: {},
+  enum_option: { enum_parent: NoteSchema.Id },
 });
 
 export type StreamFilterType = typeof StreamFilterType.Type;

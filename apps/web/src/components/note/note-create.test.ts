@@ -61,6 +61,39 @@ vi.mock("@effect/atom-solid", () => ({
 vi.mock("somoto", () => ({ toast: { promise: <T>(promise: Promise<T>) => promise } }));
 
 describe("blank note creation", () => {
+  it("creates an owned enum option with its parent and editable title in one update", () => {
+    const enum_parent = NoteSchema.Id.make("priority");
+
+    const payload = Effect.runSync(
+      prefilledPayload(
+        PaneSchema.Pane.cases.stream.make({
+          paneId: PaneSchema.Id.make("options"),
+          filter: { type: PaneSchema.StreamFilterType.cases.enum_option.make({ enum_parent }) },
+          sort: "updated",
+          view: "full",
+        }),
+      ).pipe(Effect.provide(Attrs.Service.layer)),
+    );
+
+    const { doc, attrs } = NoteDoc.make();
+
+    try {
+      Y.applyUpdate(doc, payload);
+      const snapshot = Effect.runSync(YSchema.exportStrict(attrs));
+      expect(snapshot._tag).toBe("owned");
+      expect(snapshot).toMatchObject({
+        owned_type: "enum_option",
+        owned_parent: enum_parent,
+        props: {},
+      });
+      expect(yDocToNodeJSON({ yDoc: doc })).toMatchObject({
+        content: [{ type: "heading", attrs: { level: 1 }, content: [{ text: "Untitled" }] }],
+      });
+    } finally {
+      doc.destroy();
+    }
+  });
+
   it("seeds a property with an editable title and false default in the same Yjs update", () => {
     const payload = Effect.runSync(
       prefilledPayload(

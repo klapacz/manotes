@@ -53,5 +53,16 @@ Agree on necessary deviations before implementing them.
 
 After implementation, verify the final changes and hand over for review.
 
+Before handing over, run this command from the workspace for the completed
+Jujutsu change:
+
+```sh
+hunk-review --rule 'Match every hunk in test files: filenames containing .test. or .spec., or files under test, tests, or __tests__ directories. Match all changes in those files regardless of their content. For other files, match syntactic import-only edits: all added and removed lines must belong to import declarations. Adding, removing, reordering, or changing named, default, namespace, or type imports qualifies. Ignore unchanged context and whether imported bindings are used outside this hunk. Reject bare side-effect imports with no bindings (such as import "polyfill"), mixed import/code changes, and uncertain cases.' <change-id>
+```
+
+This combines all test changes with the CLI's default import-only rule. It
+marks matching hunks reviewed in tuicr without removing changes from the diff.
+Run it after final edits and verification.
+
 Do not rewrite the plan to match the implementation or review fixes
 unless explicitly requested.
