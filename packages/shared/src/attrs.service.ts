@@ -160,13 +160,16 @@ const clearProp = Effect.fn("Attrs.clearProp")(function* (opts: {
 
 const initializeProp = Effect.fn("Attrs.initializeProp")(function* (opts: {
   readonly doc: Y.Doc;
-  readonly defaultValue: AttrsSchema.PropVal;
+  readonly defaultValue?: AttrsSchema.PropVal;
 }) {
   const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
   const prop = yield* attrs.pipe(YSchema.set("_tag", "prop"));
-  yield* prop.pipe(YSchema.set("prop_type", opts.defaultValue._tag));
+  yield* prop.pipe(YSchema.set("prop_type", opts.defaultValue?._tag ?? "bool"));
 
-  yield* prop.pipe(YSchema.set("prop_default", opts.defaultValue));
+  if (opts.defaultValue !== undefined) {
+    yield* prop.pipe(YSchema.set("prop_default", opts.defaultValue));
+  }
+
   yield* prop.pipe(YSchema.upsertMap("props"));
 });
 

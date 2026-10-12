@@ -94,7 +94,7 @@ describe("blank note creation", () => {
     }
   });
 
-  it("seeds a property with an editable title and false default in the same Yjs update", () => {
+  it("seeds a bool property with an editable title and no default in the same Yjs update", () => {
     const payload = Effect.runSync(
       prefilledPayload(
         PaneSchema.Pane.cases.stream.make({
@@ -113,7 +113,6 @@ describe("blank note creation", () => {
       expect(Effect.runSync(YSchema.exportStrict(attrs))).toEqual(
         AttrsSchema.PropAttrs.cases.bool.make({
           prop_type: "bool",
-          prop_default: AttrsSchema.PropVal.cases.bool.make({ val: false }),
         }),
       );
       expect(yDocToNodeJSON({ yDoc: doc })).toEqual({

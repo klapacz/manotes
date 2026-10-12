@@ -1,5 +1,7 @@
 import { getRouteApi } from "@tanstack/solid-router";
 import { Data } from "effect";
+import { useAtom } from "@effect/atom-solid";
+import { AsyncResult } from "effect/unstable/reactivity";
 import { Show, createMemo, createSignal } from "solid-js";
 import { NoteFormat } from "../../lib/note";
 import { PaneCursor } from "../../lib/note/pane.cursor";
@@ -249,6 +251,21 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
               onChanged: close,
             });
 
+            const [propertyMutation, editProperty] = useAtom(NoteProps.Edit, { mode: "promise" });
+
+            const setProperty = async (action: NoteProps.Action & { _tag: "SetProperty" }) => {
+              if (!props.doc || propertyMutation().waiting) return;
+
+              try {
+                await editProperty({
+                  doc: props.doc,
+                  recordId: props.note.id,
+                  propId: action.propId,
+                  value: action.propVal,
+                });
+              } catch {}
+            };
+
             const dates = QueryEngine.map(DateSuggestions.query, (date): NoteMenuChoice => ({
               ...NoteMenuAction.SetDate({ date: date.id }),
               value: date.id,
@@ -308,11 +325,9 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
                   NoteProps.query({ recordId: props.note.id, doc: props.doc }),
                   (choice): NoteMenuChoice => ({
                     ...choice,
-                    ...NoteMenuAction.OpenProperty({ propId: choice.propId }),
                     get labelSuffix() {
                       return <PropPicker.BuiltinBadge builtin={choice.builtin} />;
                     },
-                    suffix: <Picker.Caret />,
                   }),
                 ),
               ]),
@@ -335,9 +350,16 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
                             OpenProperty: ({ propId }) => {
                               if (props.doc) setPage(MenuPage.Property({ propId }));
                             },
+                            SetProperty: (action) => void setProperty(action),
                           })
                         }
                       />
+
+                      <Show when={AsyncResult.isFailure(propertyMutation())}>
+                        <p role="alert" class="px-3 py-2 text-sm text-error-fg">
+                          Unable to update property.
+                        </p>
+                      </Show>
 
                       <div class="border-t border-border-subtle px-3 py-2 text-xs text-fg-subtle">
                         <p>
@@ -390,12 +412,13 @@ type MenuPage = Data.TaggedEnum<{
 
 const MenuPage = Data.taggedEnum<MenuPage>();
 
-type NoteMenuAction = Data.TaggedEnum<{
-  Navigate: { run: () => void };
-  OpenDatePicker: {};
-  SetDate: { date: string };
-  OpenProperty: { propId: NoteSchema.Id };
-}>;
+type NoteMenuAction =
+  | Data.TaggedEnum<{
+      Navigate: { run: () => void };
+      OpenDatePicker: {};
+      SetDate: { date: string };
+    }>
+  | NoteProps.Action;
 
 const NoteMenuAction = Data.taggedEnum<NoteMenuAction>();
 

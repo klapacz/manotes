@@ -7,7 +7,6 @@ import type { PaneSchema } from "@manotes/shared/note/pane.schema";
 import type { UnknownNodeJSON } from "@manotes/shared/node-json";
 import type { Hotkey } from "@tanstack/hotkeys";
 import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
-import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { NoteDoc } from "@manotes/shared/note/doc";
 import * as Y from "yjs";
@@ -121,10 +120,7 @@ export const prefilledPayload = Effect.fn("ComponentsNoteNoteCreate.prefilledPay
 
   if (Predicate.isTagged(pane.filter.type, "prop")) {
     const attrs = yield* Attrs.Service;
-    yield* attrs.initializeProp({
-      doc,
-      defaultValue: AttrsSchema.PropVal.cases.bool.make({ val: false }),
-    });
+    yield* attrs.initializeProp({ doc });
   }
 
   if (Predicate.isTagged(pane.filter.type, "enum_option")) {

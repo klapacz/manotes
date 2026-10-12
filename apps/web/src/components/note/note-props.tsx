@@ -3,21 +3,37 @@ import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { PropDef } from "@manotes/shared/prop-def.service";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
-import { Array, Effect, Match, Option, Predicate, Stream } from "effect";
+import type { NoteRepo } from "@manotes/shared/note.repo";
+import type { EnumOptionRepo } from "@manotes/shared/enum-option.repo";
+import { Array, Data, Effect, Match, Option, Predicate, Stream } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { Show } from "solid-js";
 import type * as Y from "yjs";
 import { bindRt, createAtomResultStore, createSyncedAtom, MatchTag } from "../../lib";
 import { QueryEngine } from "../../lib/query-engine";
+import { MenuQuery } from "../../lib/menu-query";
 import { CommandList, CommandScroll } from "../ui/command";
 import { Picker } from "../ui/picker";
 import { PropPicker } from "./prop-picker";
 import { PropQuery } from "./prop-query";
 
+export type Action = Data.TaggedEnum<{
+  OpenProperty: { propId: AttrsSchema.NoteId };
+  SetProperty: { propId: AttrsSchema.NoteId; propVal: AttrsSchema.PropVal };
+}>;
+
+export const Action = Data.taggedEnum<Action>();
+
+export type Choice = Picker.Choice & Action & { builtin: boolean };
+
 export function query(opts: {
   readonly recordId: AttrsSchema.NoteId;
   readonly doc: Y.Doc | undefined;
-}) {
+}): QueryEngine.Query<
+  Choice,
+  unknown,
+  Attrs.Service | PropDef.Service | NoteRepo.Service | EnumOptionRepo.Service
+> {
   return (request: QueryEngine.Request) => {
     if (!opts.doc) return Stream.succeed([]);
     const doc = opts.doc;
@@ -28,35 +44,61 @@ export function query(opts: {
         const defs = yield* PropDef.Service.use((repo) => repo.reactiveDefs());
 
         return attrs.watchProps({ doc, defs }).pipe(
-          Stream.map((entries) => Array.filterMap(entries, editableEntry)),
-          Stream.map((entries) =>
-            entries.flatMap(({ def, value }) => {
-              if (def.id === opts.recordId) return [];
-              const label = def.title || "Untitled";
-              const score = QueryEngine.score({ text: request.text, label });
+          Stream.switchMap((entries) => {
+            const editable = Array.filterMap(entries, editableEntry).filter(
+              ({ def }) => def.id !== opts.recordId,
+            );
 
-              if (!score) return [];
+            const properties = MenuQuery.choices<Choice>(() =>
+              editable.map(({ def, value }) => ({
+                ...Action.OpenProperty({ propId: def.id }),
+                value: def.id,
+                label: def.title || "Untitled",
+                group: "properties",
+                builtin: BuiltinAttrs.isBuiltin(def.id),
+                suffix: <Picker.Caret />,
+                detail: () =>
+                  Match.value(value).pipe(
+                    Match.tag("Unset", () => undefined),
+                    Match.orElse((state) => <PropPicker.StateLabel state={state} />),
+                  ),
+              })),
+            );
+
+            const values = editable.flatMap(({ def, value }) => {
+              // Invalid fields must be cleared through their submenu before accepting a value.
+              if (Attrs.ValueState.$is("Invalid")(value)) return [];
 
               return [
-                {
-                  // Browse actions first; searches rank property names normally.
-                  score: request.text.trim() ? score : 0.5,
-                  value: {
-                    value: def.id,
-                    propId: def.id,
-                    label,
-                    group: "properties",
-                    builtin: BuiltinAttrs.isBuiltin(def.id),
-                    detail: () =>
-                      Match.value(value).pipe(
-                        Match.tag("Unset", () => undefined),
-                        Match.orElse((state) => <PropPicker.StateLabel state={state} />),
-                      ),
-                  },
-                },
+                MenuQuery.nested({
+                  label: def.title || "Untitled",
+                  query: QueryEngine.map(
+                    PropQuery.values({
+                      propId: def.id,
+                      type: def.prop_type,
+                      defaultValue: Option.fromNullishOr(def.prop_default),
+                    }),
+                    (choice): Choice => ({
+                      ...choice,
+                      ...Action.SetProperty({ propId: def.id, propVal: choice.propVal }),
+                      value: `prop:${def.id}:${choice.value}`,
+                      group: "properties",
+                      builtin: BuiltinAttrs.isBuiltin(def.id),
+                    }),
+                  ),
+                }),
               ];
-            }),
-          ),
+            });
+
+            return QueryEngine.combine([properties, ...values])(request).pipe(
+              // Browse actions first; searches rank property names and values normally.
+              Stream.map((matches) => {
+                if (request.text.trim()) return matches;
+
+                return matches.map((match) => ({ ...match, score: 0.5 }));
+              }),
+            );
+          }),
         );
       }),
     );
@@ -162,7 +204,7 @@ export function Menu(props: {
   );
 }
 
-const Edit = bindRt((rt) =>
+export const Edit = bindRt((rt) =>
   rt.fn(
     Effect.fn("ComponentsNoteNoteProps.edit")(function* (opts: {
       readonly doc: Y.Doc;
