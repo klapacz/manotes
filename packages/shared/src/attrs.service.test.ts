@@ -537,6 +537,7 @@ describe("Attrs rule editing", () => {
           expect(yield* YSchema.exportStrict(cursor)).toEqual(
             Data.taggedEnum<AttrsSchema.Attrs>().rule({
               props: {},
+              rule_storage: AttrsSchema.RuleStorage.cases.top.make({}),
               rule_targets: targets,
               rule_expects: { [priority]: required, [assignee]: optional },
             }),
@@ -552,6 +553,56 @@ describe("Attrs rule editing", () => {
       );
     } finally {
       doc.destroy();
+    }
+  });
+
+  it("watches storage edits and synced replacements without changing targets or expectations", async () => {
+    const { doc, attrs: cursor } = NoteDoc.make();
+    const remote = new Y.Doc();
+    const top = AttrsSchema.RuleStorage.cases.top.make({});
+    const group = AttrsSchema.RuleStorage.cases.group.make({});
+    const priority = AttrsSchema.NoteId.make("priority");
+    const required = AttrsSchema.RuleExpectation.cases.required.make({});
+    const targets = AttrsSchema.TargetFilter.make([]);
+
+    try {
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const attrs = yield* Attrs.Service;
+          yield* attrs.initializeRule({ doc, targets });
+          yield* attrs.setRuleExpectation({ doc, propId: priority, value: required });
+          const pull = yield* Stream.toPull(attrs.watch({ doc }));
+          const [initial] = yield* pull;
+          expect(initial!.attrs.rule_storage).toEqual(top);
+
+          yield* attrs.setRuleStorage({ doc, storage: group });
+          const [local] = yield* pull;
+          expect(local!.attrs.rule_storage).toEqual(group);
+          expect(doc.getMap("attrs").get("rule_storage")).not.toBeInstanceOf(Y.Map);
+
+          Y.applyUpdate(remote, Y.encodeStateAsUpdate(doc));
+          yield* attrs.setRuleStorage({ doc: remote, storage: top });
+          Y.applyUpdate(doc, Y.encodeStateAsUpdate(remote));
+          const [synced] = yield* pull;
+          expect(synced!.attrs).toEqual(initial!.attrs);
+
+          doc.getMap("attrs").set("rule_storage", "broken");
+          const [invalid] = yield* pull;
+          expect(invalid!.attrs.rule_storage).toBeUndefined();
+          expect(doc.getMap("attrs").get("rule_storage")).toBe("broken");
+          expect(Result.isFailure(yield* YSchema.exportStrict(cursor).pipe(Effect.result))).toBe(
+            true,
+          );
+
+          yield* attrs.setRuleStorage({ doc, storage: group });
+          const [replaced] = yield* pull;
+          expect(replaced!.attrs).toEqual({ ...initial!.attrs, rule_storage: group });
+          expect(yield* YSchema.exportStrict(cursor)).toEqual(replaced!.attrs);
+        }).pipe(Effect.provide(Attrs.Service.layer), Effect.scoped),
+      );
+    } finally {
+      doc.destroy();
+      remote.destroy();
     }
   });
 });

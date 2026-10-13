@@ -69,11 +69,11 @@ export function use(opts: { doc: Accessor<Y.Doc | undefined> }) {
 
     if (!current) return undefined;
 
-    const { rule_targets, rule_expects } = current.attrs;
+    const { rule_storage, rule_targets, rule_expects } = current.attrs;
 
     if (!Predicate.isTagged(current.attrs, "rule")) return undefined;
 
-    return { rule_targets, rule_expects };
+    return { rule_storage, rule_targets, rule_expects };
   });
 
   return { editable, definition, rule };

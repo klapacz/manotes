@@ -136,6 +136,13 @@ export const RuleExpectation = Schema.TaggedUnion({
 
 export type RuleExpectation = typeof RuleExpectation.Type;
 
+export const RuleStorage = Schema.TaggedUnion({
+  top: {},
+  group: {},
+});
+
+export type RuleStorage = typeof RuleStorage.Type;
+
 export const PropAttrs = Schema.Union([
   propAttrs(PropVal.cases.text),
   propAttrs(PropVal.cases.number),
@@ -224,6 +231,7 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *     }
  *   | {
  *       readonly _tag: "rule";
+ *       readonly rule_storage: { readonly _tag: "top" } | { readonly _tag: "group" }; // Atomic JSON.
  *       readonly rule_targets: TargetFilter; // Atomic JSON; invalid predicates are forbidden.
  *       readonly rule_expects: Readonly<Record<NoteId, // Y.Map in live Yjs; each entry is atomic JSON.
  *         { readonly _tag: "required" } | { readonly _tag: "optional" }
@@ -249,6 +257,7 @@ export const Attrs = Schema.Union([
   }),
   Schema.Struct({
     ...records.cases.rule.fields,
+    rule_storage: RuleStorage,
     rule_targets: TargetFilter,
     rule_expects: YSchema.Map({ schema: Schema.Record(NoteId, RuleExpectation), key: "propId" }),
   }),

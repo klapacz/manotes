@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "5dfc23d0-0db4-49be-bc30-c9323df26b12",
+  "id": "3c73b8f9-ca6a-4932-bc51-113ad22efc92",
   "prevId": "1d43d34d-0f62-4ae2-894b-de0b05dc2f47",
   "tables": {
     "backlinks": {
@@ -197,6 +197,13 @@
         },
         "owned_parent": {
           "name": "owned_parent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "rule_storage": {
+          "name": "rule_storage",
           "type": "text",
           "primaryKey": false,
           "notNull": false,

@@ -118,6 +118,7 @@ describe("attrs materialization", () => {
         const doc = yield* makeDoc();
         const attrs = doc.getMap("attrs");
         attrs.set("_tag", "rule");
+        attrs.set("rule_storage", AttrsSchema.RuleStorage.cases.top.make({}));
         attrs.set("rule_targets", []);
         const props = new Y.Map<unknown>();
         attrs.set("props", props);
@@ -166,6 +167,7 @@ describe("attrs materialization", () => {
         ]);
 
         attrs.set("_tag", "note");
+        attrs.delete("rule_storage");
         attrs.delete("rule_targets");
         attrs.delete("rule_expects");
         attrs.delete("props");
@@ -181,12 +183,62 @@ describe("attrs materialization", () => {
     );
   });
 
+  it("projects rule storage as JSON or NULL without repairing missing or malformed Yjs values", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        const doc = yield* makeDoc();
+        const attrs = doc.getMap("attrs");
+        const group = AttrsSchema.RuleStorage.cases.group.make({});
+        const top = AttrsSchema.RuleStorage.cases.top.make({});
+        attrs.set("_tag", "rule");
+        attrs.set("rule_targets", []);
+        attrs.set("rule_storage", group);
+        attrs.set("props", new Y.Map());
+        const expects = new Y.Map();
+        attrs.set("rule_expects", expects);
+        expects.set("priority", AttrsSchema.RuleExpectation.cases.required.make({}));
+        yield* save(doc, "rule");
+        const sql = yield* SqlClient.SqlClient;
+
+        expect(yield* sql`SELECT rule_storage, attrs_valid FROM notes`).toEqual([
+          { rule_storage: JSON.stringify(group), attrs_valid: 1 },
+        ]);
+
+        attrs.delete("rule_storage");
+        yield* save(doc, "rule");
+        expect(yield* sql`SELECT rule_storage, attrs_valid FROM notes`).toEqual([
+          { rule_storage: null, attrs_valid: 0 },
+        ]);
+        expect(attrs.has("rule_storage")).toBe(false);
+
+        attrs.set("rule_storage", "broken");
+        const malformedUpdate = Y.encodeStateAsUpdate(doc);
+        yield* save(doc, "rule");
+        expect(yield* sql`SELECT rule_storage, attrs_valid FROM notes`).toEqual([
+          { rule_storage: null, attrs_valid: 0 },
+        ]);
+        expect(attrs.get("rule_storage")).toBe("broken");
+        yield* expectSnapshot("rule", malformedUpdate);
+
+        attrs.set("rule_storage", top);
+        yield* save(doc, "rule");
+        expect(yield* sql`SELECT rule_storage, attrs_valid FROM notes`).toEqual([
+          { rule_storage: JSON.stringify(top), attrs_valid: 1 },
+        ]);
+        expect(yield* sql`SELECT ruleId, propId FROM rule_expects`).toEqual([
+          { ruleId: "rule", propId: "priority" },
+        ]);
+      }),
+    );
+  });
+
   it("rolls back columns, both linking tables and the checkpoint when a query fails", async () => {
     await runIntegration(
       Effect.gen(function* () {
         const doc = yield* makeDoc();
         const attrs = doc.getMap("attrs");
         attrs.set("_tag", "rule");
+        attrs.set("rule_storage", AttrsSchema.RuleStorage.cases.top.make({}));
         attrs.set("rule_targets", []);
         const props = new Y.Map<unknown>();
         attrs.set("props", props);

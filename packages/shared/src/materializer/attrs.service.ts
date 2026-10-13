@@ -63,6 +63,7 @@ const project = Effect.fn("MaterializerAttrs.project")(function* (opts: { readon
     prop_targets: loose.prop_targets ?? null,
     owned_type: loose.owned_type ?? null,
     owned_parent: loose.owned_parent ?? null,
+    rule_storage: loose.rule_storage ?? null,
     rule_targets: loose.rule_targets ?? null,
     attrs_valid: Result.isSuccess(strict),
   };

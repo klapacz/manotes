@@ -319,6 +319,7 @@ export const AttrsColumns = Schema.Struct({
   prop_targets: Schema.NullOr(Schema.fromJsonString(AttrsSchema.TargetFilter)),
   owned_type: Schema.NullOr(Schema.Literal("enum_option")),
   owned_parent: Schema.NullOr(NoteSchema.Id),
+  rule_storage: Schema.NullOr(Schema.fromJsonString(AttrsSchema.RuleStorage)),
   rule_targets: Schema.NullOr(Schema.fromJsonString(AttrsSchema.TargetFilter)),
   attrs_valid: Schema.BooleanFromBit,
 });

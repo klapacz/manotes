@@ -35,6 +35,7 @@ export class Service extends Context.Service<Service>()("Attrs.Service", {
     initializeProp,
     initializeEnumOption,
     initializeRule,
+    setRuleStorage,
     setRuleTargets,
     setRuleExpectation,
     clearRuleExpectation,
@@ -250,9 +251,18 @@ const initializeRule = Effect.fn("Attrs.initializeRule")(function* (opts: {
 }) {
   const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
   const rule = yield* attrs.pipe(YSchema.set("_tag", "rule"));
+  yield* rule.pipe(YSchema.set("rule_storage", AttrsSchema.RuleStorage.cases.top.make({})));
   yield* rule.pipe(YSchema.set("rule_targets", opts.targets));
   yield* rule.pipe(YSchema.upsertMap("rule_expects"));
   yield* rule.pipe(YSchema.upsertMap("props"));
+});
+
+const setRuleStorage = Effect.fn("Attrs.setRuleStorage")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly storage: AttrsSchema.RuleStorage;
+}) {
+  const rule = yield* editableRuleAttrs({ doc: opts.doc });
+  yield* rule.pipe(YSchema.set("rule_storage", opts.storage));
 });
 
 const setRuleTargets = Effect.fn("Attrs.setRuleTargets")(function* (opts: {

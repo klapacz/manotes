@@ -20,6 +20,7 @@ import { NoteLabel } from "./note-label";
 import { RuleTargets } from "./rule-targets";
 
 export type Snapshot = {
+  readonly rule_storage: AttrsSchema.RuleStorage | undefined;
   readonly rule_targets: AttrsSchema.TargetFilter | undefined;
   readonly rule_expects:
     | Readonly<Record<AttrsSchema.NoteId, AttrsSchema.RuleExpectation | undefined>>
@@ -27,11 +28,25 @@ export type Snapshot = {
 };
 
 type Change = Data.TaggedEnum<{
+  Storage: { storage: AttrsSchema.RuleStorage };
   Set: { propId: AttrsSchema.NoteId; value: AttrsSchema.RuleExpectation };
   Remove: { propId: AttrsSchema.NoteId };
 }>;
 
 const Change = Data.taggedEnum<Change>();
+
+const storageChoices = [
+  {
+    value: "top",
+    label: "Top level",
+    storage: AttrsSchema.RuleStorage.cases.top.make({}),
+  },
+  {
+    value: "group",
+    label: "Group",
+    storage: AttrsSchema.RuleStorage.cases.group.make({}),
+  },
+];
 
 const expectationChoices = [
   {
@@ -80,6 +95,36 @@ export function Root(props: { recordId: AttrsSchema.NoteId; doc: Y.Doc; attrs: S
       >
         <div class="px-2 pb-2">RULE</div>
         <DescriptionList.Root>
+          <DescriptionList.Row>
+            <DescriptionList.Term>Storage</DescriptionList.Term>
+            <DescriptionList.Details>
+              <Picker.Root label="Storage">
+                <Picker.Trigger
+                  variant="ghost"
+                  rounded="default"
+                  class="h-7 border-0 px-2 text-sm"
+                  disabled={mutation().waiting}
+                >
+                  {storageChoices.find((choice) => choice.value === props.attrs.rule_storage?._tag)
+                    ?.label ?? "Invalid"}
+                </Picker.Trigger>
+                <Picker.Content>
+                  {(close) => (
+                    <Picker.Query<(typeof storageChoices)[number]>
+                      label="Storage"
+                      query={MenuQuery.choices(() => storageChoices)}
+                      selected={props.attrs.rule_storage?._tag}
+                      disabled={mutation().waiting}
+                      onSelect={(choice) => {
+                        change(Change.Storage({ storage: choice.storage }));
+                        close();
+                      }}
+                    />
+                  )}
+                </Picker.Content>
+              </Picker.Root>
+            </DescriptionList.Details>
+          </DescriptionList.Row>
           <DescriptionList.Row>
             <DescriptionList.Term>Matches</DescriptionList.Term>
             <DescriptionList.Details>
@@ -193,6 +238,7 @@ const Edit = bindRt((rt) =>
       const attrs = yield* Attrs.Service;
 
       yield* Match.value(opts.change).pipe(
+        Match.tag("Storage", ({ storage }) => attrs.setRuleStorage({ doc: opts.doc, storage })),
         Match.tag("Set", ({ propId, value }) =>
           attrs.setRuleExpectation({ doc: opts.doc, propId, value }),
         ),

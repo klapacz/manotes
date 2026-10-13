@@ -16,6 +16,7 @@ export const notes = sqliteTable(
       text("owned_type").$type<Extract<AttrsSchema.Attrs, { _tag: "owned" }>["owned_type"]>(),
     owned_parent: text("owned_parent"),
 
+    rule_storage: text("rule_storage"),
     rule_targets: text("rule_targets"),
 
     // Strict attrs validity, separate from semantic property validation.

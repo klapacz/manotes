@@ -20,6 +20,7 @@ ALTER TABLE `notes` ADD `prop_default` text;--> statement-breakpoint
 ALTER TABLE `notes` ADD `prop_targets` text;--> statement-breakpoint
 ALTER TABLE `notes` ADD `owned_type` text;--> statement-breakpoint
 ALTER TABLE `notes` ADD `owned_parent` text;--> statement-breakpoint
+ALTER TABLE `notes` ADD `rule_storage` text;--> statement-breakpoint
 ALTER TABLE `notes` ADD `rule_targets` text;--> statement-breakpoint
 ALTER TABLE `notes` ADD `attrs_valid` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 CREATE INDEX `notes_tag_idx` ON `notes` (`_tag`);--> statement-breakpoint

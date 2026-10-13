@@ -443,11 +443,15 @@ describe("YSchema bound selections", () => {
         ),
       );
       Effect.runSync(rule.pipe(YSchema.set("rule_targets", [])));
+      Effect.runSync(
+        rule.pipe(YSchema.set("rule_storage", AttrsSchema.RuleStorage.cases.top.make({}))),
+      );
       expect(map.get("rule_expects")).toBeInstanceOf(Y.Map);
       expect(map.get("rule_targets")).toEqual([]);
       expect(Effect.runSync(attrs.pipe(YSchema.toJSON))).toEqual(
         AttrsSchema.Attrs.members[3].make({
           props: {},
+          rule_storage: AttrsSchema.RuleStorage.cases.top.make({}),
           rule_targets: [],
           rule_expects: {
             [AttrsSchema.NoteId.make("priority")]: AttrsSchema.RuleExpectation.cases.required.make(
@@ -463,6 +467,7 @@ describe("YSchema bound selections", () => {
       expect(Effect.runSync(rule.pipe(YSchema.exportStrict))).toEqual(
         AttrsSchema.Attrs.members[3].make({
           props: {},
+          rule_storage: AttrsSchema.RuleStorage.cases.top.make({}),
           rule_targets: [],
           rule_expects: { [AttrsSchema.NoteId.make("priority")]: optional },
         }),

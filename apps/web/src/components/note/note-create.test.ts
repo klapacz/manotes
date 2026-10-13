@@ -81,6 +81,7 @@ describe("blank note creation", () => {
       expect(Effect.runSync(YSchema.exportStrict(attrs))).toEqual(
         Data.taggedEnum<AttrsSchema.Attrs>().rule({
           props: {},
+          rule_storage: AttrsSchema.RuleStorage.cases.top.make({}),
           rule_expects: {},
           rule_targets: [
             filter.cmp({ val: ["_tag", "=", "note"] }),
