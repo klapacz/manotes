@@ -8,13 +8,14 @@
   "type": "module",
   "scripts": {
     "build": "vp pack",
-    "db": "drizzle-kit",
-    "test": "vp test run"
+    "test": "vp test run",
+    "db": "effectdb migrate generate"
   },
   "dependencies": {
     "@earendil-works/pi-codemode": "^1.2.0",
     "@effect/platform-node": "catalog:",
     "@effect/sql-sqlite-node": "catalog:",
+    "@manotes/effect-db-sqlite": "workspace:*",
     "@manotes/shared": "workspace:*",
     "effect": "catalog:",
     "nanoid": "^5.1.6",
@@ -28,7 +29,7 @@
     "@types/ws": "^8.18.1",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "dedent": "^1.7.2",
-    "drizzle-kit": "^0.31.7",
+    "effect-qb": "0.24.1",
     "esbuild": "^0.28.2",
     "tsx": "^4.21.0",
     "vite": "catalog:",

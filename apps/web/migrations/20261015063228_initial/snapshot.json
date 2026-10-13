@@ -1,0 +1,610 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "30c6ee73-f6b1-49b6-895b-0aba515b7b31",
+  "prevIds": ["00000000-0000-0000-0000-000000000000"],
+  "ddl": [
+    {
+      "name": "backlinks",
+      "entityType": "tables"
+    },
+    {
+      "name": "events",
+      "entityType": "tables"
+    },
+    {
+      "name": "materialization_checkpoint",
+      "entityType": "tables"
+    },
+    {
+      "name": "notes",
+      "entityType": "tables"
+    },
+    {
+      "name": "props",
+      "entityType": "tables"
+    },
+    {
+      "name": "recordings",
+      "entityType": "tables"
+    },
+    {
+      "name": "rule_expects",
+      "entityType": "tables"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "sourceId",
+      "entityType": "columns",
+      "table": "backlinks"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "targetId",
+      "entityType": "columns",
+      "table": "backlinks"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": true,
+      "default": null,
+      "generated": null,
+      "name": "localSeq",
+      "entityType": "columns",
+      "table": "events"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "noteId",
+      "entityType": "columns",
+      "table": "events"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "type",
+      "entityType": "columns",
+      "table": "events"
+    },
+    {
+      "type": "BLOB",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payload",
+      "entityType": "columns",
+      "table": "events"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "table": "events"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "events"
+    },
+    {
+      "type": "INTEGER",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "commitSeq",
+      "entityType": "columns",
+      "table": "events"
+    },
+    {
+      "type": "INTEGER",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "materialization_checkpoint"
+    },
+    {
+      "type": "INTEGER",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lastAppliedLocalSeq",
+      "entityType": "columns",
+      "table": "materialization_checkpoint"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "table": "materialization_checkpoint"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "('note')",
+      "generated": null,
+      "name": "_tag",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "prop_type",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "prop_default",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "prop_targets",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "owned_type",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "owned_parent",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "rule_storage",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "rule_targets",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "INTEGER",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(0)",
+      "generated": null,
+      "name": "attrs_valid",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "content",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "text",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "date",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "BLOB",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "materializedYUpdate",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "INTEGER",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lastEventLocalSeq",
+      "entityType": "columns",
+      "table": "notes"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "recordId",
+      "entityType": "columns",
+      "table": "props"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "path",
+      "entityType": "columns",
+      "table": "props"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "propId",
+      "entityType": "columns",
+      "table": "props"
+    },
+    {
+      "type": "TEXT",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "value",
+      "entityType": "columns",
+      "table": "props"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "path",
+      "entityType": "columns",
+      "table": "recordings"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "recordedAt",
+      "entityType": "columns",
+      "table": "recordings"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "mimeType",
+      "entityType": "columns",
+      "table": "recordings"
+    },
+    {
+      "type": "INTEGER",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "durationMs",
+      "entityType": "columns",
+      "table": "recordings"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "state",
+      "entityType": "columns",
+      "table": "recordings"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "noteId",
+      "entityType": "columns",
+      "table": "recordings"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "intent",
+      "entityType": "columns",
+      "table": "recordings"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ruleId",
+      "entityType": "columns",
+      "table": "rule_expects"
+    },
+    {
+      "type": "TEXT",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "propId",
+      "entityType": "columns",
+      "table": "rule_expects"
+    },
+    {
+      "type": "TEXT",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "value",
+      "entityType": "columns",
+      "table": "rule_expects"
+    },
+    {
+      "columns": ["sourceId", "targetId"],
+      "nameExplicit": false,
+      "name": "backlinks_pk",
+      "entityType": "pks",
+      "table": "backlinks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "materialization_checkpoint_pk",
+      "entityType": "pks",
+      "table": "materialization_checkpoint"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "notes_pk",
+      "entityType": "pks",
+      "table": "notes"
+    },
+    {
+      "columns": ["recordId", "path", "propId"],
+      "nameExplicit": false,
+      "name": "props_pk",
+      "entityType": "pks",
+      "table": "props"
+    },
+    {
+      "columns": ["path"],
+      "nameExplicit": false,
+      "name": "recordings_pk",
+      "entityType": "pks",
+      "table": "recordings"
+    },
+    {
+      "columns": ["ruleId", "propId"],
+      "nameExplicit": false,
+      "name": "rule_expects_pk",
+      "entityType": "pks",
+      "table": "rule_expects"
+    },
+    {
+      "columns": ["localSeq"],
+      "nameExplicit": false,
+      "name": "events_pk",
+      "table": "events",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "targetId",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "backlinks_target_id_idx",
+      "entityType": "indexes",
+      "table": "backlinks"
+    },
+    {
+      "columns": [
+        {
+          "value": "_tag",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "notes_tag_idx",
+      "entityType": "indexes",
+      "table": "notes"
+    },
+    {
+      "columns": [
+        {
+          "value": "owned_parent",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "notes_owned_parent_idx",
+      "entityType": "indexes",
+      "table": "notes"
+    },
+    {
+      "columns": [
+        {
+          "value": "propId",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "props_prop_id_idx",
+      "entityType": "indexes",
+      "table": "props"
+    },
+    {
+      "columns": [
+        {
+          "value": "propId",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "rule_expects_prop_id_idx",
+      "entityType": "indexes",
+      "table": "rule_expects"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "events_id_unique",
+      "entityType": "uniques",
+      "table": "events"
+    },
+    {
+      "columns": ["commitSeq"],
+      "nameExplicit": false,
+      "name": "events_commitSeq_unique",
+      "entityType": "uniques",
+      "table": "events"
+    }
+  ],
+  "renames": []
+}

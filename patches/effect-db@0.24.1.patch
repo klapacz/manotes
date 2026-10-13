@@ -1,0 +1,70 @@
+diff --git a/dist/cli.js b/dist/cli.js
+index d9cfeac51022344120e2992882e455738c20c002..92fb51ca8d929edfdab550810c6a709ef4238233 100755
+--- a/dist/cli.js
++++ b/dist/cli.js
+@@ -5618,4 +5618,8 @@ var migrate = Command.make("migrate", {}, () => Effect10.void).pipe(Command.with
+ var root = Command.make("effectdb", {}, () => Effect10.void).pipe(Command.withSubcommands([push, pull, migrate]));
+ 
+ // src/cli.ts
++import { EffectDbSqliteCli } from "@manotes/effect-db-sqlite/cli";
++if (!await EffectDbSqliteCli.runIfSqlite(process.argv.slice(2))) {
+ Command2.run(root, { version: "0.24.1" }).pipe(Effect11.tapCause((cause) => Effect11.logError(cause)), Effect11.provideService(Logger.LogToStderr, true), Effect11.provide(NodeServices2.layer), NodeRuntime.runMain({ disableErrorReporting: true }));
++
++}
+diff --git a/dist/sqlite.d.ts b/dist/sqlite.d.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..b1dcb8110f998af55ff83ec2701f4a0c47d03dd1
+--- /dev/null
++++ b/dist/sqlite.d.ts
+@@ -0,0 +1 @@
++export * from "@manotes/effect-db-sqlite";
+diff --git a/dist/sqlite.js b/dist/sqlite.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..b1dcb8110f998af55ff83ec2701f4a0c47d03dd1
+--- /dev/null
++++ b/dist/sqlite.js
+@@ -0,0 +1 @@
++export * from "@manotes/effect-db-sqlite";
+diff --git a/package.json b/package.json
+index 66a2553a412a4158013aaf8c6eeed07e53d0cf13..84f93b2d7f7c45880bba239b75dac6c5d532952c 100644
+--- a/package.json
++++ b/package.json
+@@ -45,7 +45,11 @@
+       "types": "./dist/postgres/migrate.d.ts",
+       "import": "./dist/postgres/migrate.js"
+     },
+-    "./package.json": "./package.json"
++    "./package.json": "./package.json",
++    "./sqlite": {
++      "types": "./dist/sqlite.d.ts",
++      "import": "./dist/sqlite.js"
++    }
+   },
+   "publishConfig": {
+     "access": "public"
+diff --git a/src/cli.ts b/src/cli.ts
+index f7b362956c8bc2bcd22204f392f98b11fbabad97..0734ccd29243c01856beda28eaa86bf868e0eadb 100644
+--- a/src/cli.ts
++++ b/src/cli.ts
+@@ -5,10 +5,14 @@ import * as Effect from "effect/Effect"
+ import * as Logger from "effect/Logger"
+ 
+ import { root } from "./commands.js"
++import { EffectDbSqliteCli } from "@manotes/effect-db-sqlite/cli"
+ 
++if (!await EffectDbSqliteCli.runIfSqlite(process.argv.slice(2))) {
+ Command.run(root, { version: "0.24.1" }).pipe(
+   Effect.tapCause((cause) => Effect.logError(cause)),
+   Effect.provideService(Logger.LogToStderr, true),
+   Effect.provide(NodeServices.layer),
+   NodeRuntime.runMain({ disableErrorReporting: true })
+ )
++
++}
+diff --git a/src/sqlite.ts b/src/sqlite.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..8744d3e42844f672dd087b50c2a6ce80d137d832
+--- /dev/null
++++ b/src/sqlite.ts
+@@ -0,0 +1 @@
++export * from "@manotes/effect-db-sqlite"

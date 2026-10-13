@@ -9,6 +9,8 @@
     "./builtin-attrs": "./dist/builtin-attrs.mjs",
     "./db.service": "./dist/db.service.mjs",
     "./db.tables": "./dist/db.tables.mjs",
+    "./db.used-tables": "./dist/db.used-tables.mjs",
+    "./db.values": "./dist/db.values.mjs",
     "./dev-env": "./dist/dev-env.mjs",
     "./editor.schema": "./dist/editor.schema.mjs",
     "./editor/backlink/spec": "./dist/editor/backlink/spec.mjs",
@@ -56,6 +58,7 @@
     "./note.repo": "./dist/note.repo.mjs",
     "./note.schema": "./dist/note.schema.mjs",
     "./note/doc": "./dist/note/doc.mjs",
+    "./note/filter": "./dist/note/filter.mjs",
     "./note/format": "./dist/note/format.mjs",
     "./note/pane.make": "./dist/note/pane.make.mjs",
     "./note/pane.schema": "./dist/note/pane.schema.mjs",
@@ -94,8 +97,9 @@
     "dev": "vp pack --watch --no-clean"
   },
   "dependencies": {
-    "drizzle-orm": "^0.44.7",
+    "@manotes/effect-db-sqlite": "workspace:*",
     "effect": "catalog:",
+    "effect-qb": "0.24.1",
     "markdown-it": "^14.3.1",
     "msgpackr": "2.1.0",
     "nanoid": "^5.1.6",

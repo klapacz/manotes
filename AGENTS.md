@@ -14,7 +14,8 @@
 - Use Jujutsu. Pass `--git` to diff-style commands, including `jj diff` and `jj log -p`.
 - Change descriptions must follow Conventional Commits.
 - Run development commands through `scripts/nix-develop -c <command>` from the workspace, not the main checkout. The wrapper uses the main checkout's Nix devshell.
-- Generate Drizzle migrations with `drizzle-kit generate`; never handwrite migration SQL.
+- See [database maintenance](docs/database.md) for column codecs, query helpers, and migration/patch references.
+- Generate SQLite migrations with `effectdb migrate generate --config apps/cli/effectdb.config.ts` or `apps/web/effectdb.config.ts` from the workspace root. Rebuild `@manotes/shared` and `@manotes/effect-db-sqlite` after schema/tool changes. Never edit applied SQL files.
 - After dependency or pnpm changes, use [nix-deps](.agents/skills/nix-deps/SKILL.md).
 - After making changes, run exactly `vp check --fix` with no additional arguments. When changing a Jujutsu stack, run it on every revision whose contents changed. Get explicit permission before running any other typechecking, linting, or testing command.
 

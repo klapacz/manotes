@@ -1,10 +1,11 @@
 import { fileURLToPath } from "node:url";
-import { Effect, FileSystem, Layer, Schema } from "effect";
+import { Effect, Layer } from "effect";
 import * as Reactivity from "effect/reactivity/Reactivity";
 import { SqlClient } from "effect/sql";
 import * as SqliteClient from "@effect/sql-sqlite-node/SqliteClient";
 import * as DB from "@manotes/shared/db.service";
 import * as Migrator from "@manotes/shared/migrator";
+import { EffectDbSqliteFiles } from "@manotes/effect-db-sqlite/files";
 
 const layerSQL = Layer.effect(
   SqlClient.SqlClient,
@@ -32,27 +33,10 @@ export const layer = Layer.effectContext(
   }),
 );
 
-// Node reads the CLI's generated migration journal and SQL files directly.
-const MigrationJournal = Schema.Struct({
-  entries: Schema.Array(Schema.Struct({ tag: Schema.String })),
-});
-
-const decodeMigrationJournal = Schema.decodeUnknownEffect(MigrationJournal);
-
 const migrateNode = Effect.fn("CliDB.migrateNode")(function* () {
-  const fs = yield* FileSystem.FileSystem;
-
-  const journalText = yield* fs.readFileString(
-    fileURLToPath(new URL("../drizzle/meta/_journal.json", import.meta.url)),
+  const migrations = yield* EffectDbSqliteFiles.readMigrations(
+    fileURLToPath(new URL("../migrations", import.meta.url)),
   );
-
-  const journal = yield* decodeMigrationJournal(JSON.parse(journalText));
-
-  const migrations = yield* Effect.forEach(journal.entries, ({ tag }) => {
-    return fs
-      .readFileString(fileURLToPath(new URL(`../drizzle/${tag}.sql`, import.meta.url)))
-      .pipe(Effect.map((sql) => ({ tag, sql })));
-  });
 
   yield* Migrator.migrate(migrations);
 });
@@ -102,6 +86,13 @@ const installReactivityHooks = Effect.fn("CliDB.installReactivityHooks")(functio
   }
 });
 
-const REACTIVE_TABLES = ["notes", "events", "materialization_checkpoint", "backlinks"] as const;
+const REACTIVE_TABLES = [
+  "notes",
+  "props",
+  "rule_expects",
+  "events",
+  "materialization_checkpoint",
+  "backlinks",
+] as const;
 
 export * as CliDB from "./cli.db";

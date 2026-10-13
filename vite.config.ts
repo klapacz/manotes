@@ -5,8 +5,6 @@ export default defineConfig({
   // oxfmt doesn't support nested configs yet
   fmt: {
     ignorePatterns: [
-      "apps/web/drizzle/meta/**",
-      "apps/cli/drizzle/meta/**",
       "apps/worker/worker-configuration.d.ts",
       ".workspace/**",
       ".agents/**",

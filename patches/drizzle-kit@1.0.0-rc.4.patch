@@ -1,0 +1,210 @@
+diff --git a/bin.cjs b/bin.cjs
+index 24e49917fb4adc172cbb2c411a00b6ad40b54c26..aab64f3d0906df3be112eb66bc2954b0a786e7b7 100755
+--- a/bin.cjs
++++ b/bin.cjs
+@@ -85628,11 +85628,15 @@ var init_convertor$2 = __esmMin((() => {
+ 			const { columns: columnsFrom } = st.from;
+ 			const columnNames = columnsFrom.filter((it) => {
+ 				const newColumn = st.to.columns.find((col) => col.name === it.name);
+-				return !it.generated && newColumn && !newColumn.generated;
++				return newColumn && !newColumn.generated;
+ 			}).map((it) => `\`${it.name}\``).join(", ");
+ 			const newTableName = `__new_${name}`;
++			const preserveSequence = columnsFrom.some((c) => c.autoincrement) && st.to.columns.some((c) => c.autoincrement);
++			const savedSequence = `${newTableName}__sequence`;
++			const sequenceName = `'${name.replaceAll("'", "''")}'`;
+ 			const sqlStatements = [];
+ 			sqlStatements.push(`PRAGMA foreign_keys=OFF;`);
++			if (preserveSequence) sqlStatements.push(`CREATE TEMP TABLE \`${savedSequence}\` AS SELECT seq FROM sqlite_sequence WHERE name = ${sequenceName};`);
+ 			const tmpTable = {
+ 				...st.to,
+ 				name: newTableName,
+@@ -85648,6 +85652,11 @@ var init_convertor$2 = __esmMin((() => {
+ 				from: newTableName,
+ 				to: name
+ 			}));
++			if (preserveSequence) {
++			  sqlStatements.push(`INSERT INTO sqlite_sequence (name, seq) SELECT ${sequenceName}, seq FROM \`${savedSequence}\` WHERE NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name = ${sequenceName});`);
++			  sqlStatements.push(`UPDATE sqlite_sequence SET seq = max(seq, coalesce((SELECT max(seq) FROM \`${savedSequence}\`), seq)) WHERE name = ${sequenceName};`);
++			  sqlStatements.push(`DROP TABLE \`${savedSequence}\`;`);
++			}
+ 			sqlStatements.push(`PRAGMA foreign_keys=ON;`);
+ 			return sqlStatements;
+ 		})
+@@ -85849,7 +85858,7 @@ var init_diff$3 = __esmMin((() => {
+ 			...uniquesAlters,
+ 			...checksAlters
+ 		]) {
+-			if (it.entityType === "columns" && (it.type || it.default || it.autoincrement || it.notNull)) setOfTablesToRecereate.add(it.table);
++			if (it.entityType === "columns" && (it.type || it.default || it.autoincrement || it.notNull || (it.generated && it.generated.from !== null && it.generated.to === null))) setOfTablesToRecereate.add(it.table);
+ 			if (pksAlters.length > 0 && it.entityType === "pks") setOfTablesToRecereate.add(it.table);
+ 			if (fksAlters.length > 0 && it.entityType === "fks") setOfTablesToRecereate.add(it.table);
+ 			if (uniquesAlters.length > 0 && it.entityType === "uniques") setOfTablesToRecereate.add(it.table);
+diff --git a/cli.js b/cli.js
+index 137fd541240ff5b8ff0aa9b94b4b032ae6a10c2f..265cef5191c8534f6956b42530618eb9b70c17d5 100644
+--- a/cli.js
++++ b/cli.js
+@@ -84507,11 +84507,15 @@ var init_convertor$2 = __esmMin((() => {
+ 			const { columns: columnsFrom } = st.from;
+ 			const columnNames = columnsFrom.filter((it) => {
+ 				const newColumn = st.to.columns.find((col) => col.name === it.name);
+-				return !it.generated && newColumn && !newColumn.generated;
++				return newColumn && !newColumn.generated;
+ 			}).map((it) => `\`${it.name}\``).join(", ");
+ 			const newTableName = `__new_${name}`;
++			const preserveSequence = columnsFrom.some((c) => c.autoincrement) && st.to.columns.some((c) => c.autoincrement);
++			const savedSequence = `${newTableName}__sequence`;
++			const sequenceName = `'${name.replaceAll("'", "''")}'`;
+ 			const sqlStatements = [];
+ 			sqlStatements.push(`PRAGMA foreign_keys=OFF;`);
++			if (preserveSequence) sqlStatements.push(`CREATE TEMP TABLE \`${savedSequence}\` AS SELECT seq FROM sqlite_sequence WHERE name = ${sequenceName};`);
+ 			const tmpTable = {
+ 				...st.to,
+ 				name: newTableName,
+@@ -84527,6 +84531,11 @@ var init_convertor$2 = __esmMin((() => {
+ 				from: newTableName,
+ 				to: name
+ 			}));
++			if (preserveSequence) {
++			  sqlStatements.push(`INSERT INTO sqlite_sequence (name, seq) SELECT ${sequenceName}, seq FROM \`${savedSequence}\` WHERE NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name = ${sequenceName});`);
++			  sqlStatements.push(`UPDATE sqlite_sequence SET seq = max(seq, coalesce((SELECT max(seq) FROM \`${savedSequence}\`), seq)) WHERE name = ${sequenceName};`);
++			  sqlStatements.push(`DROP TABLE \`${savedSequence}\`;`);
++			}
+ 			sqlStatements.push(`PRAGMA foreign_keys=ON;`);
+ 			return sqlStatements;
+ 		})
+@@ -84728,7 +84737,7 @@ var init_diff$3 = __esmMin((() => {
+ 			...uniquesAlters,
+ 			...checksAlters
+ 		]) {
+-			if (it.entityType === "columns" && (it.type || it.default || it.autoincrement || it.notNull)) setOfTablesToRecereate.add(it.table);
++			if (it.entityType === "columns" && (it.type || it.default || it.autoincrement || it.notNull || (it.generated && it.generated.from !== null && it.generated.to === null))) setOfTablesToRecereate.add(it.table);
+ 			if (pksAlters.length > 0 && it.entityType === "pks") setOfTablesToRecereate.add(it.table);
+ 			if (fksAlters.length > 0 && it.entityType === "fks") setOfTablesToRecereate.add(it.table);
+ 			if (uniquesAlters.length > 0 && it.entityType === "uniques") setOfTablesToRecereate.add(it.table);
+diff --git a/cli.mjs b/cli.mjs
+index faff54ab177f7df1b9d2a7f019d2cab072d860a0..01dfc9472f21b8be243dbcc1b9349845eacef58c 100644
+--- a/cli.mjs
++++ b/cli.mjs
+@@ -84492,11 +84492,15 @@ var init_convertor$2 = __esmMin((() => {
+ 			const { columns: columnsFrom } = st.from;
+ 			const columnNames = columnsFrom.filter((it) => {
+ 				const newColumn = st.to.columns.find((col) => col.name === it.name);
+-				return !it.generated && newColumn && !newColumn.generated;
++				return newColumn && !newColumn.generated;
+ 			}).map((it) => `\`${it.name}\``).join(", ");
+ 			const newTableName = `__new_${name}`;
++			const preserveSequence = columnsFrom.some((c) => c.autoincrement) && st.to.columns.some((c) => c.autoincrement);
++			const savedSequence = `${newTableName}__sequence`;
++			const sequenceName = `'${name.replaceAll("'", "''")}'`;
+ 			const sqlStatements = [];
+ 			sqlStatements.push(`PRAGMA foreign_keys=OFF;`);
++			if (preserveSequence) sqlStatements.push(`CREATE TEMP TABLE \`${savedSequence}\` AS SELECT seq FROM sqlite_sequence WHERE name = ${sequenceName};`);
+ 			const tmpTable = {
+ 				...st.to,
+ 				name: newTableName,
+@@ -84512,6 +84516,11 @@ var init_convertor$2 = __esmMin((() => {
+ 				from: newTableName,
+ 				to: name
+ 			}));
++			if (preserveSequence) {
++			  sqlStatements.push(`INSERT INTO sqlite_sequence (name, seq) SELECT ${sequenceName}, seq FROM \`${savedSequence}\` WHERE NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name = ${sequenceName});`);
++			  sqlStatements.push(`UPDATE sqlite_sequence SET seq = max(seq, coalesce((SELECT max(seq) FROM \`${savedSequence}\`), seq)) WHERE name = ${sequenceName};`);
++			  sqlStatements.push(`DROP TABLE \`${savedSequence}\`;`);
++			}
+ 			sqlStatements.push(`PRAGMA foreign_keys=ON;`);
+ 			return sqlStatements;
+ 		})
+@@ -84713,7 +84722,7 @@ var init_diff$3 = __esmMin((() => {
+ 			...uniquesAlters,
+ 			...checksAlters
+ 		]) {
+-			if (it.entityType === "columns" && (it.type || it.default || it.autoincrement || it.notNull)) setOfTablesToRecereate.add(it.table);
++			if (it.entityType === "columns" && (it.type || it.default || it.autoincrement || it.notNull || (it.generated && it.generated.from !== null && it.generated.to === null))) setOfTablesToRecereate.add(it.table);
+ 			if (pksAlters.length > 0 && it.entityType === "pks") setOfTablesToRecereate.add(it.table);
+ 			if (fksAlters.length > 0 && it.entityType === "fks") setOfTablesToRecereate.add(it.table);
+ 			if (uniquesAlters.length > 0 && it.entityType === "uniques") setOfTablesToRecereate.add(it.table);
+diff --git a/payload-sqlite.js b/payload-sqlite.js
+index 80bfba59fd635834d6b9ecd0315e2e5612801d91..f170127a5b740c927cf27eecaac25c13c1440d66 100644
+--- a/payload-sqlite.js
++++ b/payload-sqlite.js
+@@ -76481,11 +76481,15 @@ var init_convertor = __esmMin((() => {
+ 			const { columns: columnsFrom } = st.from;
+ 			const columnNames = columnsFrom.filter((it) => {
+ 				const newColumn = st.to.columns.find((col) => col.name === it.name);
+-				return !it.generated && newColumn && !newColumn.generated;
++				return newColumn && !newColumn.generated;
+ 			}).map((it) => `\`${it.name}\``).join(", ");
+ 			const newTableName = `__new_${name}`;
++			const preserveSequence = columnsFrom.some((c) => c.autoincrement) && st.to.columns.some((c) => c.autoincrement);
++			const savedSequence = `${newTableName}__sequence`;
++			const sequenceName = `'${name.replaceAll("'", "''")}'`;
+ 			const sqlStatements = [];
+ 			sqlStatements.push(`PRAGMA foreign_keys=OFF;`);
++			if (preserveSequence) sqlStatements.push(`CREATE TEMP TABLE \`${savedSequence}\` AS SELECT seq FROM sqlite_sequence WHERE name = ${sequenceName};`);
+ 			const tmpTable = {
+ 				...st.to,
+ 				name: newTableName,
+@@ -76501,6 +76505,11 @@ var init_convertor = __esmMin((() => {
+ 				from: newTableName,
+ 				to: name
+ 			}));
++			if (preserveSequence) {
++			  sqlStatements.push(`INSERT INTO sqlite_sequence (name, seq) SELECT ${sequenceName}, seq FROM \`${savedSequence}\` WHERE NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name = ${sequenceName});`);
++			  sqlStatements.push(`UPDATE sqlite_sequence SET seq = max(seq, coalesce((SELECT max(seq) FROM \`${savedSequence}\`), seq)) WHERE name = ${sequenceName};`);
++			  sqlStatements.push(`DROP TABLE \`${savedSequence}\`;`);
++			}
+ 			sqlStatements.push(`PRAGMA foreign_keys=ON;`);
+ 			return sqlStatements;
+ 		})
+@@ -76706,7 +76715,7 @@ var init_diff = __esmMin((() => {
+ 			...uniquesAlters,
+ 			...checksAlters
+ 		]) {
+-			if (it.entityType === "columns" && (it.type || it.default || it.autoincrement || it.notNull)) setOfTablesToRecereate.add(it.table);
++			if (it.entityType === "columns" && (it.type || it.default || it.autoincrement || it.notNull || (it.generated && it.generated.from !== null && it.generated.to === null))) setOfTablesToRecereate.add(it.table);
+ 			if (pksAlters.length > 0 && it.entityType === "pks") setOfTablesToRecereate.add(it.table);
+ 			if (fksAlters.length > 0 && it.entityType === "fks") setOfTablesToRecereate.add(it.table);
+ 			if (uniquesAlters.length > 0 && it.entityType === "uniques") setOfTablesToRecereate.add(it.table);
+diff --git a/payload-sqlite.mjs b/payload-sqlite.mjs
+index 0cb54942c43cf65592618c4b4ec857ee247745e4..c329c2fc6b1031cac06ebdf372f58800a8259bf6 100644
+--- a/payload-sqlite.mjs
++++ b/payload-sqlite.mjs
+@@ -76466,11 +76466,15 @@ var init_convertor = __esmMin((() => {
+ 			const { columns: columnsFrom } = st.from;
+ 			const columnNames = columnsFrom.filter((it) => {
+ 				const newColumn = st.to.columns.find((col) => col.name === it.name);
+-				return !it.generated && newColumn && !newColumn.generated;
++				return newColumn && !newColumn.generated;
+ 			}).map((it) => `\`${it.name}\``).join(", ");
+ 			const newTableName = `__new_${name}`;
++			const preserveSequence = columnsFrom.some((c) => c.autoincrement) && st.to.columns.some((c) => c.autoincrement);
++			const savedSequence = `${newTableName}__sequence`;
++			const sequenceName = `'${name.replaceAll("'", "''")}'`;
+ 			const sqlStatements = [];
+ 			sqlStatements.push(`PRAGMA foreign_keys=OFF;`);
++			if (preserveSequence) sqlStatements.push(`CREATE TEMP TABLE \`${savedSequence}\` AS SELECT seq FROM sqlite_sequence WHERE name = ${sequenceName};`);
+ 			const tmpTable = {
+ 				...st.to,
+ 				name: newTableName,
+@@ -76486,6 +76490,11 @@ var init_convertor = __esmMin((() => {
+ 				from: newTableName,
+ 				to: name
+ 			}));
++			if (preserveSequence) {
++			  sqlStatements.push(`INSERT INTO sqlite_sequence (name, seq) SELECT ${sequenceName}, seq FROM \`${savedSequence}\` WHERE NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name = ${sequenceName});`);
++			  sqlStatements.push(`UPDATE sqlite_sequence SET seq = max(seq, coalesce((SELECT max(seq) FROM \`${savedSequence}\`), seq)) WHERE name = ${sequenceName};`);
++			  sqlStatements.push(`DROP TABLE \`${savedSequence}\`;`);
++			}
+ 			sqlStatements.push(`PRAGMA foreign_keys=ON;`);
+ 			return sqlStatements;
+ 		})
+@@ -76691,7 +76700,7 @@ var init_diff = __esmMin((() => {
+ 			...uniquesAlters,
+ 			...checksAlters
+ 		]) {
+-			if (it.entityType === "columns" && (it.type || it.default || it.autoincrement || it.notNull)) setOfTablesToRecereate.add(it.table);
++			if (it.entityType === "columns" && (it.type || it.default || it.autoincrement || it.notNull || (it.generated && it.generated.from !== null && it.generated.to === null))) setOfTablesToRecereate.add(it.table);
+ 			if (pksAlters.length > 0 && it.entityType === "pks") setOfTablesToRecereate.add(it.table);
+ 			if (fksAlters.length > 0 && it.entityType === "fks") setOfTablesToRecereate.add(it.table);
+ 			if (uniquesAlters.length > 0 && it.entityType === "uniques") setOfTablesToRecereate.add(it.table);

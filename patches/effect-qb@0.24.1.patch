@@ -1,0 +1,386 @@
+diff --git a/dist/internal/dialect-renderers/sqlite.js b/dist/internal/dialect-renderers/sqlite.js
+index d8170bd2cf8d32205de8032bb96e01e60253c4d5..424f1e7106fdb3db6c3229bb2619ec97c37273b3 100644
+--- a/dist/internal/dialect-renderers/sqlite.js
++++ b/dist/internal/dialect-renderers/sqlite.js
+@@ -109,9 +109,18 @@ const renderColumnDefinition = (dialect, state, columnName, column, tableName, c
+     const clauses = [
+         quoteColumn(columnName, state, dialect, tableName),
+         column.metadata.ddlType === undefined
+-            ? renderDbType(dialect, column.metadata.dbType)
++            ? column.metadata.dbType.kind === "int" ? "integer"
++              : column.metadata.dbType.kind === "json" ? "text"
++              : renderDbType(dialect, column.metadata.dbType)
+             : renderDbTypeName(column.metadata.ddlType)
+     ];
++    if (Schema.resolveAnnotations(column.schema)?.["effect-db/sqlite/autoIncrement"] === true) {
++        if (!column.metadata.primaryKey || column.metadata.generated || column.metadata.dbType.kind !== "int") {
++            throw new Error("SQLite AUTOINCREMENT requires an integer primary key");
++        }
++        clauses.push("primary key autoincrement not null");
++        return clauses.join(" ");
++    }
+     if (column.metadata.identity) {
+         throw new Error("Unsupported sqlite identity column options");
+     }
+@@ -119,7 +128,7 @@ const renderColumnDefinition = (dialect, state, columnName, column, tableName, c
+         clauses.push(`generated always as (${renderDdlExpression(column.metadata.generatedValue, expressionState, dialect)}) stored`);
+     }
+     else if (column.metadata.defaultValue) {
+-        clauses.push(`default ${renderDdlExpression(column.metadata.defaultValue, expressionState, dialect)}`);
++        clauses.push(`default (${renderDdlExpression(column.metadata.defaultValue, expressionState, dialect)})`);
+     }
+     if (!column.metadata.nullable) {
+         clauses.push("not null");
+@@ -141,6 +150,10 @@ const renderCreateTableSql = (targetSource, state, dialect, ifNotExists) => {
+         }
+         switch (option.kind) {
+             case "primaryKey":
++                if (option.columns.some((name) => (fields[name] !== undefined && Schema.resolveAnnotations(fields[name].schema)?.["effect-db/sqlite/autoIncrement"]) === true)) {
++                    if (option.columns.length !== 1) throw new Error("SQLite AUTOINCREMENT cannot use a composite primary key");
++                    break;
++                }
+                 if (option.deferrable || option.initiallyDeferred) {
+                     throw new Error("Unsupported sqlite primary key constraint options");
+                 }
+diff --git a/dist/internal/standard-dsl.js b/dist/internal/standard-dsl.js
+index bb6c7472e8e1e687c7af0f987eb4d52564e1b697..0a7c6b6ab70be2c7c0f312cb7909de73ae790cf7 100644
+--- a/dist/internal/standard-dsl.js
++++ b/dist/internal/standard-dsl.js
+@@ -1359,7 +1359,7 @@ const buildMutationAssignments = (target, values) => {
+     const targets = normalizeMutationTargets(target);
+     if (targets.length === 1 && !Array.isArray(target)) {
+         const columns = target;
+-        return Object.entries(values).map(([columnName, value]) => ({
++        return Object.entries(values).filter(([, value]) => value !== undefined).map(([columnName, value]) => ({
+             columnName,
+             value: toMutationValueExpression(value, getMutationColumn(columns, columnName))
+         }));
+diff --git a/dist/sqlite/column-extension.js b/dist/sqlite/column-extension.js
+index d9c5fb25297351d5f830b0f79e2b70e2326f45a0..c599eae0c81442da38789fc9cd2804ba5bf8f123 100644
+--- a/dist/sqlite/column-extension.js
++++ b/dist/sqlite/column-extension.js
+@@ -1 +1,12 @@
+ export { custom } from "./column.js";
++
++import { remapColumnDefinition } from "../internal/column-state.js";
++export const autoIncrement = (column) => {
++  if (!column.metadata.primaryKey || column.metadata.dbType.kind !== "int" || column.metadata.generated) {
++    throw new Error("SQLite AUTOINCREMENT requires an integer primary key");
++  }
++  return remapColumnDefinition(column, {
++    schema: column.schema.annotate({ "effect-db/sqlite/autoIncrement": true }),
++    metadata: { ...column.metadata, hasDefault: true, defaultValue: undefined, ddlType: "integer" }
++  });
++};
+diff --git a/dist/standard.js b/dist/standard.js
+index 463907e495adb36f336c2ecd1a09cedceda4e68b..99742f40068e38e723e5d9d18a6e5a952b8ebf98 100644
+--- a/dist/standard.js
++++ b/dist/standard.js
+@@ -34,3 +34,7 @@ export * as ForeignKey from "./standard/foreign-key.js";
+ export * as Check from "./standard/check.js";
+ /** Standard SQL built-in renderer entrypoint. */
+ export * as Renderer from "./standard/renderer.js";
++
++export * as QueryAst from "./internal/query-ast.js";
++export * as ExpressionAst from "./internal/expression-ast.js";
++export { makeExpression } from "./internal/query.js";
+diff --git a/package.json b/package.json
+index 7fe4276397ee52d914aa561ce049119f63603cc8..a02ca09777baf89b84edc65e5776fea0b8494b15 100644
+--- a/package.json
++++ b/package.json
+@@ -41,7 +41,11 @@
+       "types": "./src/sqlite.ts",
+       "import": "./dist/sqlite.js"
+     },
+-    "./package.json": "./package.json"
++    "./package.json": "./package.json",
++    "./*": {
++      "types": "./src/*.ts",
++      "import": "./dist/*.js"
++    }
+   },
+   "imports": {
+     "#standard": "./src/standard.ts",
+diff --git a/src/internal/column.ts b/src/internal/column.ts
+index 3b8196142d688207828bd2247c96078c5fb2671a..875ae2446928d286e4d2c5bf1d3158be07dcdc9d 100644
+--- a/src/internal/column.ts
++++ b/src/internal/column.ts
+@@ -99,7 +99,7 @@ type UniqueColumn<Column extends AnyColumnDefinition> = ColumnDefinition<
+ 
+ type IndexedColumn<Column extends AnyColumnDefinition> = Column
+ 
+-type HasDefaultColumn<Column extends AnyColumnDefinition> = ColumnDefinition<
++export type HasDefaultColumn<Column extends AnyColumnDefinition> = ColumnDefinition<
+   SelectType<Column>,
+   InsertType<Column>,
+   UpdateType<Column>,
+diff --git a/src/internal/dialect-renderers/sqlite.ts b/src/internal/dialect-renderers/sqlite.ts
+index 1512d5709305e7ae2a7bf6a2c33f799139c7c79c..27bb9c04240c4514c9bba275655bc6e2306106d0 100644
+--- a/src/internal/dialect-renderers/sqlite.ts
++++ b/src/internal/dialect-renderers/sqlite.ts
+@@ -151,15 +151,24 @@ const renderColumnDefinition = (
+   const clauses = [
+     quoteColumn(columnName, state, dialect, tableName),
+     column.metadata.ddlType === undefined
+-      ? renderDbType(dialect, column.metadata.dbType)
++      ? column.metadata.dbType.kind === "int" ? "integer"
++        : column.metadata.dbType.kind === "json" ? "text"
++        : renderDbType(dialect, column.metadata.dbType)
+       : renderDbTypeName(column.metadata.ddlType)
+   ]
++  if (Schema.resolveAnnotations(column.schema)?.["effect-db/sqlite/autoIncrement"] === true) {
++    if (!column.metadata.primaryKey || column.metadata.generated || column.metadata.dbType.kind !== "int") {
++      throw new Error("SQLite AUTOINCREMENT requires an integer primary key")
++    }
++    clauses.push("primary key autoincrement not null")
++    return clauses.join(" ")
++  }
+   if (column.metadata.identity) {
+     throw new Error("Unsupported sqlite identity column options")
+   } else if (column.metadata.generatedValue) {
+     clauses.push(`generated always as (${renderDdlExpression(column.metadata.generatedValue, expressionState, dialect)}) stored`)
+   } else if (column.metadata.defaultValue) {
+-    clauses.push(`default ${renderDdlExpression(column.metadata.defaultValue, expressionState, dialect)}`)
++    clauses.push(`default (${renderDdlExpression(column.metadata.defaultValue, expressionState, dialect)})`)
+   }
+   if (!column.metadata.nullable) {
+     clauses.push("not null")
+@@ -189,6 +198,10 @@ const renderCreateTableSql = (
+     }
+     switch (option.kind) {
+       case "primaryKey":
++        if (option.columns.some((name) => (fields[name] !== undefined && Schema.resolveAnnotations(fields[name].schema)?.["effect-db/sqlite/autoIncrement"]) === true)) {
++          if (option.columns.length !== 1) throw new Error("SQLite AUTOINCREMENT cannot use a composite primary key")
++          break
++        }
+         if (option.deferrable || option.initiallyDeferred) {
+           throw new Error("Unsupported sqlite primary key constraint options")
+         }
+diff --git a/src/internal/json/storage.ts b/src/internal/json/storage.ts
+index 7e6372b32d9445cb6a9102b6e4c37d94ba5b019b..b025933ecb3b2325c6267b4edbf5917ad1b62b90 100644
+--- a/src/internal/json/storage.ts
++++ b/src/internal/json/storage.ts
+@@ -1,6 +1,6 @@
+ import type * as Expression from "../scalar.js"
+ 
+-declare const StoredShape: unique symbol
++export declare const StoredShape: unique symbol
+ 
+ /** Schema encoding belongs to a whole JSON value, not to a SQL path result. */
+ export type WithStoredJson<Db extends Expression.DbType.Any, Encoded> =
+diff --git a/src/internal/query.ts b/src/internal/query.ts
+index 2931ac1f5c1f26b01d15b8899a2d99de2c892fc3..a2877e8865807f869521c0c1560c11582ba1292c 100644
+--- a/src/internal/query.ts
++++ b/src/internal/query.ts
+@@ -983,10 +983,14 @@ type MutationValueShape<
+   Target extends MutationTargetLike,
+   Values extends Record<string, unknown>
+ > = {
+-  readonly [K in Extract<keyof Values, string>]:
+-    K extends Extract<keyof Shape, string>
+-      ? MutationExpectedValue<MutationColumnAt<Target, K>, Values[K], K>
+-      : MutationUnknownColumnError<K>
++  readonly [K in keyof Values]:
++    K extends string
++      ? K extends Extract<keyof Shape, string>
++        ? {} extends Pick<Shape, K>
++          ? MutationExpectedValue<MutationColumnAt<Target, K>, Exclude<Values[K], undefined>, K> | Extract<Values[K], undefined>
++          : MutationExpectedValue<MutationColumnAt<Target, K>, Values[K], K>
++        : MutationUnknownColumnError<K>
++      : never
+ }
+ 
+ type MutationKeyShape<Shape> = {
+diff --git a/src/internal/standard-dsl.ts b/src/internal/standard-dsl.ts
+index 74acdcc22e144c0f85057f1292ba969047632bcb..e5b6720e7e89994d1049ca6891cedc3cad958a8c 100644
+--- a/src/internal/standard-dsl.ts
++++ b/src/internal/standard-dsl.ts
+@@ -66,6 +66,7 @@ import {
+   type LiteralValue,
+   type MergeAggregation,
+   type MergeNullabilityTuple,
++  type NormalizeDialect,
+   type NumericExpressionInput,
+   type OrderDirection,
+   type OutstandingOfPlan,
+@@ -582,7 +583,7 @@ type DialectOfDialectInput<
+   BoolDb extends Expression.DbType.Any,
+   TimestampDb extends Expression.DbType.Any,
+   NullDb extends Expression.DbType.Any
+-> = DialectOf<DialectAsExpression<Value, Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>>
++> = [Value] extends [never] ? never : DialectOf<DialectAsExpression<Value, Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>>
+ 
+ /** Dependency map carried by a dialect-specialized scalar input. */
+ type DependenciesOfDialectInput<
+@@ -1205,6 +1206,23 @@ type CaseAstBranches<
+     : never
+ } & readonly ExpressionAst.CaseBranchNode[]
+ 
++type CaseResults<Branches extends readonly CaseBranch[], Else extends Expression.Any> =
++  CaseResultUnion<Branches> | Else
++
++type CaseInputs<Branches extends readonly CaseBranch[], Else extends Expression.Any> =
++  CasePredicateUnion<Branches> | CaseResults<Branches, Else>
++
++type CaseExpression<Branches extends readonly CaseBranch[], Else extends Expression.Any> = AstBackedExpression<
++  Expression.RuntimeOf<CaseResults<Branches, Else>> |
++    (CaseNullabilityOfUnion<CaseResults<Branches, Else>> extends "never" ? never : null),
++  Expression.DbTypeOf<CaseResults<Branches, Else>>,
++  CaseNullabilityOfUnion<CaseResults<Branches, Else>>,
++  NormalizeDialect<DialectOf<CaseInputs<Branches, Else>>>,
++  MergeAggregationUnion<CaseInputs<Branches, Else>>,
++  DependenciesOf<CaseInputs<Branches, Else>>,
++  ExpressionAst.CaseNode<CaseAstBranches<Branches>, Else>
++>
++
+ type CaseBuilder<
+   Branches extends readonly [CaseBranch<any, any>, ...CaseBranch<any, any>[]],
+   Dialect extends string,
+@@ -1231,14 +1249,9 @@ type CaseBuilder<
+   >
+   else<Else extends ExpressionInput>(
+     fallback: Else
+-  ): AstBackedExpression<
+-    Expression.RuntimeOf<CaseResultTupleWithElse<Branches, DialectAsExpression<Else, Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>>[number]>,
+-    Expression.DbTypeOf<CaseResultTupleWithElse<Branches, DialectAsExpression<Else, Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>>[number]>,
+-    CaseNullabilityOfUnion<CaseResultTupleWithElse<Branches, DialectAsExpression<Else, Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>>[number]>,
+-    TupleDialect<CaseAllTuple<Branches, DialectAsExpression<Else, Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>>>,
+-    MergeAggregationTuple<CaseAllTuple<Branches, DialectAsExpression<Else, Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>>>,
+-    TupleDependencies<CaseAllTuple<Branches, DialectAsExpression<Else, Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>>>,
+-    ExpressionAst.CaseNode<CaseAstBranches<Branches>, DialectAsExpression<Else, Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>>
++  ): CaseExpression<
++    Branches,
++    DialectAsExpression<Else, Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>
+   >
+ }
+ 
+@@ -4250,7 +4263,7 @@ type BinaryPredicateExpression<
+     const targets = normalizeMutationTargets(target)
+     if (targets.length === 1 && !Array.isArray(target)) {
+       const columns = target as unknown as Record<string, Expression.Any>
+-      return Object.entries(values as Record<string, unknown>).map(([columnName, value]) => ({
++      return Object.entries(values as Record<string, unknown>).filter(([, value]) => value !== undefined).map(([columnName, value]) => ({
+         columnName,
+         value: toMutationValueExpression(value, getMutationColumn(columns, columnName))
+       }))
+@@ -4977,8 +4990,8 @@ type MutationDialectFromValues<
+   TimestampDb extends Expression.DbType.Any,
+   NullDb extends Expression.DbType.Any
+ > = {
+-  [K in keyof Values]: Values[K] extends ExpressionInput
+-    ? DialectOfDialectInput<Values[K], Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>
++  [K in keyof Values]-?: Exclude<Values[K], undefined> extends ExpressionInput
++    ? DialectOfDialectInput<Exclude<Values[K], undefined>, Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>
+     : never
+ }[keyof Values]
+ 
+@@ -5097,7 +5110,7 @@ type MutationTargetTupleDialectConstraint<
+ > = Dialect extends "standard" ? unknown : Exclude<TableDialectOf<Targets[number]>, Dialect> extends never ? unknown : never
+ 
+ type MutationRequiredFromValues<Values extends Record<string, unknown>> = {
+-  [K in keyof Values]: Values[K] extends Expression.Any ? RequiredFromDependencies<DependenciesOf<Values[K]>> : never
++  [K in keyof Values]-?: Exclude<Values[K], undefined> extends Expression.Any ? RequiredFromDependencies<DependenciesOf<Exclude<Values[K], undefined>>> : never
+ }[keyof Values]
+ 
+ type NestedMutationRequiredFromValues<Values> =
+@@ -5105,7 +5118,7 @@ type NestedMutationRequiredFromValues<Values> =
+     ? RequiredFromDependencies<DependenciesOf<Values>>
+     : Values extends Record<string, unknown>
+       ? {
+-          [K in keyof Values]: NestedMutationRequiredFromValues<Values[K]>
++          [K in keyof Values]-?: NestedMutationRequiredFromValues<Exclude<Values[K], undefined>>
+         }[keyof Values]
+       : never
+ 
+@@ -5122,7 +5135,7 @@ type NestedMutationDialectFromValues<
+     ? DialectOfDialectInput<Values, Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>
+     : Values extends Record<string, unknown>
+       ? {
+-          [K in keyof Values]: NestedMutationDialectFromValues<Values[K], Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>
++          [K in keyof Values]-?: NestedMutationDialectFromValues<Exclude<Values[K], undefined>, Dialect, TextDb, NumericDb, BoolDb, TimestampDb, NullDb>
+         }[keyof Values]
+       : never
+ 
+@@ -6263,7 +6276,13 @@ type AsCurriedResult<
+     source: AnyValuesInput | AnyValuesSource | AnyUnnestSource | CompletePlan<QueryPlan<any, any, any, any, any, any, any, any, any, any>>
+   ) => QueryPlan<any, any, any, any, any, any, any, any, any, "insert", MutationTargetLike, "ready">
+ 
+-  type OnConflictApi = <
++  interface OnConflictApi {
++    <const Columns extends DdlColumnInput>(target: Columns):
++      <PlanValue extends QueryPlan<any, any, any, any, any, any, any, any, any, any>>(
++        plan: PlanValue & RequireInsertStatement<PlanValue> & ConflictColumnPlanConstraint<MutationTargetOfPlan<PlanValue>, Columns, false>
++      ) => PlanValue
++
++    <
+     Target extends MutationTargetLike,
+     const Columns extends DdlColumnInput,
+     UpdateValues extends MutationInputOf<Table.UpdateOf<Target>> | undefined = MutationInputOf<Table.UpdateOf<Target>> | undefined,
+@@ -6272,7 +6291,7 @@ type AsCurriedResult<
+   >(
+     target: ConflictTarget & ConflictConstraintNameConstraint<ConflictTarget>,
+     options?: Options & ConflictActionUpdateNonEmptyConstraint<Options>
+-  ) =>
++  ):
+     <PlanValue extends QueryPlan<any, any, any, any, any, any, any, any, any, any>>(
+       plan: PlanValue & RequireInsertStatement<PlanValue> & ConflictTargetPlanConstraint<MutationTargetOfPlan<PlanValue>, ConflictTarget>
+     ) => QueryPlan<
+@@ -6291,6 +6310,8 @@ type AsCurriedResult<
+       FactsOfPlan<PlanValue>
+     >
+ 
++  }
++
+   interface UpdateApi {
+     <Targets extends MutationTargetTuple, Values extends UpdateInputOfTarget<Targets>>(
+       target: Dialect extends "mysql" ? Targets & MutationTargetTupleDialectConstraint<Targets, Dialect> : never,
+diff --git a/src/sqlite/column-extension.ts b/src/sqlite/column-extension.ts
+index 2fcc08e1e910b39d1859bb297b0fb4c89893d32f..e8c4f0e8a728ee89dff76e114ef11a94f11896c2 100644
+--- a/src/sqlite/column-extension.ts
++++ b/src/sqlite/column-extension.ts
+@@ -1,3 +1,21 @@
+ export { custom } from "./column.js"
+ 
+ export type { Any, AnyBound } from "./column.js"
++
++import { ColumnTypeId, remapColumnDefinition, type AnyColumnDefinition } from "../internal/column-state.js"
++import type { HasDefaultColumn } from "../internal/column.js"
++
++/** SQLite INTEGER PRIMARY KEY AUTOINCREMENT; omitting the value allocates a row ID. */
++export const autoIncrement = <C extends AnyColumnDefinition>(
++  column: C[typeof ColumnTypeId]["primaryKey"] extends true
++    ? C["metadata"]["dbType"]["kind"] extends "int" ? C : never
++    : never
++): HasDefaultColumn<C> => {
++  if (!column.metadata.primaryKey || column.metadata.dbType.kind !== "int" || column.metadata.generated) {
++    throw new Error("SQLite AUTOINCREMENT requires an integer primary key")
++  }
++  return remapColumnDefinition(column as AnyColumnDefinition, {
++    schema: column.schema.annotate({ "effect-db/sqlite/autoIncrement": true }),
++    metadata: { ...column.metadata, hasDefault: true, defaultValue: undefined, ddlType: "integer" }
++  }) as HasDefaultColumn<C>
++}
+diff --git a/src/standard/query.ts b/src/standard/query.ts
+index a8ebb9a5344bd84f3adfd1862f8652f5f5df8b89..029d841a4e8423383971d2275cd6c6445e1b7bf9 100644
+--- a/src/standard/query.ts
++++ b/src/standard/query.ts
+@@ -145,6 +145,7 @@ export type {
+   OutputOfSelection,
+   PredicateInput,
+   QueryCapability,
++  Plan,
+   QueryPlan,
+   QueryRequirement,
+   QueryStatement,
+diff --git a/src/standard.ts b/src/standard.ts
+index 931fb4dcd926446b979bb61ac2ce27d193c94787..ac53b93f1df046b0941e2c7334e11240ca1b5bba 100644
+--- a/src/standard.ts
++++ b/src/standard.ts
+@@ -34,3 +34,7 @@ export * as ForeignKey from "./standard/foreign-key.js"
+ export * as Check from "./standard/check.js"
+ /** Standard SQL built-in renderer entrypoint. */
+ export * as Renderer from "./standard/renderer.js"
++
++export * as QueryAst from "./internal/query-ast.js"
++export * as ExpressionAst from "./internal/expression-ast.js"
++export { makeExpression } from "./internal/query.js"

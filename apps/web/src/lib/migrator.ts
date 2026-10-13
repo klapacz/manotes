@@ -1,12 +1,11 @@
-import { Data, Effect, Schema } from "effect";
-import { SqlError } from "effect/sql";
+import { Data, Effect } from "effect";
 import * as Migrator from "@manotes/shared/migrator";
-import { migrations } from "../../drizzle/migrations";
+import { Migrations } from "../../migrations/migrations";
 
 class Error extends Data.TaggedError("Migrator.Error")<{
-  cause: SqlError.SqlError | Schema.SchemaError;
+  cause: Effect.Error<ReturnType<typeof Migrator.migrate>>;
 }> {}
 
-export const migrate = Migrator.migrate(migrations).pipe(
+export const migrate = Migrator.migrate(Migrations.migrations).pipe(
   Effect.mapError((cause) => new Error({ cause })),
 );

@@ -12,5 +12,5 @@
   },
   // sw.ts uses the WebWorker lib which conflicts with DOM — compiled via tsconfig.sw.json
   "exclude": ["src/sw.ts"],
-  "include": ["src/**/*.ts", "src/**/*.tsx", "drizzle/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "migrations/**/*.ts"]
 }
