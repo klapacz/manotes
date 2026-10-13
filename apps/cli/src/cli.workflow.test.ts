@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { NodeServices } from "@effect/platform-node";
 import dedent from "dedent";
 import { DateTime, Effect, Layer } from "effect";
-import * as Reactivity from "effect/unstable/reactivity/Reactivity";
+import * as Reactivity from "effect/reactivity/Reactivity";
 import { describe, expect, it } from "vite-plus/test";
 import { prosemirrorJSONToYDoc } from "y-prosemirror";
 import * as Y from "yjs";

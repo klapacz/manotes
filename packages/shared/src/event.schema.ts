@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Msgpack } from "effect/unstable/encoding";
+import * as Msgpack from "./msgpack";
 import * as TemporalSchema from "./temporal.schema";
 import { NoteSchema } from "./note.schema";
 

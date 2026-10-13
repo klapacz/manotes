@@ -3,7 +3,7 @@ import { Data, Effect, Layer, Option, Context, Predicate, Schema } from "effect"
 import type { RunnableQuery as DrizzleQuery } from "drizzle-orm/runnable-query";
 
 import { drizzle as createDrizzle } from "drizzle-orm/sqlite-proxy";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 import type { Query } from "drizzle-orm";
 
 export class Error extends Data.TaggedError("DB.Error")<{ cause: unknown }> {}

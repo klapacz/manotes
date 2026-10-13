@@ -1,6 +1,6 @@
 import { Data, Predicate } from "effect";
-import type { SqlError } from "effect/unstable/sql";
-import type { SqlErrorReason } from "effect/unstable/sql/SqlError";
+import type { SqlError } from "effect/sql";
+import type { SqlErrorReason } from "effect/sql/SqlError";
 
 export class DisplayNameTakenError extends Data.TaggedError("LocalRegistry.DisplayNameTakenError")<{
   displayName: string;

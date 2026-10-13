@@ -4,7 +4,7 @@ import * as LocalRegistry from "../local-registry";
 import * as SessionService from "../session/service";
 import * as SessionApi from "@manotes/shared/session/api";
 import type { SchemaError } from "effect/Schema";
-import type { SqlError } from "effect/unstable/sql/SqlError";
+import type { SqlError } from "effect/sql/SqlError";
 
 export type Resolution = Data.TaggedEnum<{
   Missing: {};

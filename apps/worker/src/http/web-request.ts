@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { HttpServerRequest } from "effect/unstable/http";
+import { HttpServerRequest } from "effect/http";
 
 export const get = Effect.fn("HttpWebRequest.get")(function* () {
   const request = yield* HttpServerRequest.HttpServerRequest;

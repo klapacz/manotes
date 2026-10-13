@@ -4,7 +4,7 @@ import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Output from "alchemy/Output";
 import { Effect, Layer } from "effect";
-import { HttpMiddleware, HttpRouter, HttpServer, HttpServerRequest } from "effect/unstable/http";
+import { HttpMiddleware, HttpRouter, HttpServer, HttpServerRequest } from "effect/http";
 import { AuthService } from "./auth/auth.ts";
 import { EmailService } from "./auth/email.ts";
 import { OtpService } from "./auth/otp.ts";

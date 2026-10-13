@@ -1,5 +1,5 @@
 import { Effect, Exit, Fiber, Layer, Scope } from "effect";
-import { Atom } from "effect/unstable/reactivity";
+import { Atom } from "effect/reactivity";
 
 export interface ManagedRuntime<R, ER> {
   readonly scope: Scope.Closeable;

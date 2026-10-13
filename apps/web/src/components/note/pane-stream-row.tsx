@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-solid";
-import { AsyncResult } from "effect/unstable/reactivity";
+import { AsyncResult } from "effect/reactivity";
 import { LiveDoc } from "../../lib/live-doc.service";
 import { LiveDocAtom } from "../../lib/live-doc.atom";
 import { Equal, Option, Stream } from "effect";

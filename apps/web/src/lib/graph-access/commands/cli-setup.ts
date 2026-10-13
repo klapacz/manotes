@@ -1,5 +1,5 @@
 import { Effect, Option, Schema } from "effect";
-import { HttpApiClient } from "effect/unstable/httpapi";
+import { HttpApiClient } from "effect/http-api";
 import * as SessionApi from "@manotes/shared/session/api";
 import * as KeyStore from "../key-store/service";
 import type * as LocalRegistry from "../local-registry/schema";

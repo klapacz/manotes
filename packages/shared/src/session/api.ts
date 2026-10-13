@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { HttpApi, HttpApiEndpoint, HttpApiGroup, HttpApiError } from "effect/unstable/httpapi";
+import { HttpApi, HttpApiEndpoint, HttpApiGroup, HttpApiError } from "effect/http-api";
 import * as EmailSchema from "../schema/email";
 import * as SessionAuth from "./auth";
 

@@ -1,6 +1,6 @@
 import { Cause, Effect, Exit, Layer, PlatformError, Result } from "effect";
-import { CliError } from "effect/unstable/cli";
-import { ChildProcessSpawner } from "effect/unstable/process";
+import { CliError } from "effect/cli";
+import { ChildProcessSpawner } from "effect/process";
 import { expect, it } from "vite-plus/test";
 import { CliUrl } from "./url";
 

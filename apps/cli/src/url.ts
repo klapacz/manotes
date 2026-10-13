@@ -1,6 +1,6 @@
 import { Effect, Match } from "effect";
-import { CliError } from "effect/unstable/cli";
-import { ChildProcess } from "effect/unstable/process";
+import { CliError } from "effect/cli";
+import { ChildProcess } from "effect/process";
 import type { NoteSearch } from "@manotes/shared/note/search";
 import { PaneMake } from "@manotes/shared/note/pane.make";
 import type { CliConfig } from "./cli.config";

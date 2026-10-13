@@ -1,5 +1,5 @@
 import { Data, Effect, Schema } from "effect";
-import { SqlError } from "effect/unstable/sql";
+import { SqlError } from "effect/sql";
 import * as Migrator from "@manotes/shared/migrator";
 import { migrations } from "../../drizzle/migrations";
 

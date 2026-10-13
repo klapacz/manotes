@@ -1,6 +1,6 @@
 import { Effect, HashMap, Layer, Schema, Context, Stream, SubscriptionRef, Option } from "effect";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 import * as LocalRegistry from "../local-registry";
 import * as LocalRegistryLayer from "../local-registry/layer";
 

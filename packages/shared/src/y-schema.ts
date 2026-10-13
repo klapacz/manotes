@@ -559,7 +559,7 @@ function unionAst(asts: readonly SchemaAST.AST[]): SchemaAST.AST {
 
   if (asts.length === 1) return first;
 
-  return new SchemaAST.Union(asts, "anyOf");
+  return new SchemaAST.Union(asts, { mode: "anyOf" });
 }
 
 function narrowAst(ast: SchemaAST.AST, members: readonly SchemaAST.Objects[]): SchemaAST.AST {
@@ -573,7 +573,7 @@ function narrowAst(ast: SchemaAST.AST, members: readonly SchemaAST.Objects[]): S
 
   return new SchemaAST.Union(
     branches,
-    ast.mode,
+    ast.options,
     ast.annotations,
     ast.checks,
     ast.encoding,

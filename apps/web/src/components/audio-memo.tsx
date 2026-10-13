@@ -3,7 +3,7 @@ import { createEventListener } from "@solid-primitives/event-listener";
 import { keyArray } from "@solid-primitives/keyed";
 import { Link, getRouteApi } from "@tanstack/solid-router";
 import { Array, DateTime, Effect, Match as EffectMatch, Option, Stream } from "effect";
-import { AsyncResult, Atom } from "effect/unstable/reactivity";
+import { AsyncResult, Atom } from "effect/reactivity";
 import { For, Match, Show, Switch, createMemo, onMount, type ParentProps } from "solid-js";
 import { toast } from "somoto";
 import { MatchAsyncResult, NoteCache, NoteSchema, bindRt } from "../lib";

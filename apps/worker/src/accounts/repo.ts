@@ -1,7 +1,7 @@
 import { DateTime, Effect, Layer, Schema as S, Context } from "effect";
 import { EffectOption } from "@manotes/shared/effect/effect-option";
 import { nanoid } from "nanoid";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 import * as Schema from "./schema.ts";
 
 const ACCOUNT_ID_LENGTH = 12;

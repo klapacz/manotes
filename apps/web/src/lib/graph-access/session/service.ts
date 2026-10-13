@@ -1,5 +1,5 @@
 import { Effect, Layer, Context } from "effect";
-import { AtomRegistry, Atom as A } from "effect/unstable/reactivity";
+import { AtomRegistry, Atom as A } from "effect/reactivity";
 import * as Atom from "./atom";
 
 export class Service extends Context.Service<Service>()("GraphAccess.Session.Service", {

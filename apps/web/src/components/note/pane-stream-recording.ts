@@ -1,6 +1,6 @@
 import { useAtomSubscribe } from "@effect/atom-solid";
 import { DateTime, Effect, Option, Stream } from "effect";
-import { AsyncResult } from "effect/unstable/reactivity";
+import { AsyncResult } from "effect/reactivity";
 import { nanoid } from "nanoid";
 import { type Accessor } from "solid-js";
 import { NoteCache, NoteSchema, bindRt, createAtomState } from "../../lib";

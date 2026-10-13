@@ -1,9 +1,9 @@
 import { Layer, Effect } from "effect";
-import { HttpClient, FetchHttpClient } from "effect/unstable/http";
-import { RpcClient, RpcSerialization } from "effect/unstable/rpc";
+import { HttpClient, FetchHttpClient } from "effect/http";
+import { RpcClient, RpcSerialization } from "effect/rpc";
 import * as SessionService from "../session/service";
 import * as SessionAtom from "../session/atom";
-import type { Atom } from "effect/unstable/reactivity";
+import type { Atom } from "effect/reactivity";
 
 export const layer = Effect.gen(function* () {
   const sessionService = yield* SessionService.Service;

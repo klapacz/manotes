@@ -1,6 +1,6 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-solid";
 import { Effect, HashMap, Stream } from "effect";
-import { AsyncResult, Atom } from "effect/unstable/reactivity";
+import { AsyncResult, Atom } from "effect/reactivity";
 import { onCleanup } from "solid-js";
 
 export interface Target<Id, Options> {

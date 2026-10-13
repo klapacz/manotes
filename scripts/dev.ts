@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { randomBytes, randomUUID } from "node:crypto";
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { Effect, Option } from "effect";
-import { Command, Flag } from "effect/unstable/cli";
+import { Command, Flag } from "effect/cli";
 // Bootstrap must load before the shared package has been built.
 import { DevEnv } from "../packages/shared/src/dev-env.ts";
 import { DevPorts } from "./dev-ports.ts";
@@ -14,11 +14,11 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 export const cli = Command.make(
   "dev",
   {
-    extension: Flag.boolean("extension").pipe(
+    extension: Flag.Boolean("extension").pipe(
       Flag.withDefault(false),
       Flag.withDescription("Also run the browser extension dev server."),
     ),
-    seedType: Flag.choice("seed-type", ["demo"]).pipe(Flag.optional),
+    seedType: Flag.Literals("seed-type", ["demo"]).pipe(Flag.optional),
   },
   ({ extension, seedType }) => launch(extension, seedType),
 ).pipe(Command.withDescription("Run Manotes in the current Jujutsu workspace through Portless."));

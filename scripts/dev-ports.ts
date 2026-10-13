@@ -37,7 +37,7 @@ const claimPort = Effect.fn("DevPorts.claimPort")(function* (store: RouteStore) 
   const { address } = yield* NodeSocketServer.make({ host: "127.0.0.1", port: 0 });
 
   const port = yield* Match.value(address).pipe(
-    Match.tag("TcpAddress", ({ port }) => Effect.succeed(port)),
+    Match.tag("InetAddressV4", "InetAddressV6", ({ port }) => Effect.succeed(port)),
     Match.orElse(() => Effect.fail(new Error("The TCP probe did not return an IP address."))),
   );
 

@@ -1,6 +1,6 @@
 import path from "node:path";
 import { Context, Effect, Layer, Option, FileSystem } from "effect";
-import { Flag, GlobalFlag } from "effect/unstable/cli";
+import { Flag, GlobalFlag } from "effect/cli";
 
 export const MANOTES_DIR = ".manotes";
 
@@ -17,8 +17,8 @@ export type Paths = {
 
 export class Service extends Context.Service<Service, Paths>()("CliPaths.Service") {}
 
-export const DirFlag = GlobalFlag.setting("dir")({
-  flag: Flag.string("dir").pipe(
+export const DirFlag = GlobalFlag.Setting("dir")({
+  flag: Flag.String("dir").pipe(
     Flag.optional,
     Flag.withDescription(
       "Materialized notes directory (defaults to the current working directory).",

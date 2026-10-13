@@ -4,7 +4,7 @@ import { Attrs } from "@manotes/shared/attrs.service";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
 import { PropDef } from "@manotes/shared/prop-def.service";
 import { Data, Effect, Match, Option, Record, Stream } from "effect";
-import { AsyncResult } from "effect/unstable/reactivity";
+import { AsyncResult } from "effect/reactivity";
 import { For, Show } from "solid-js";
 import type * as Y from "yjs";
 import { bindRt } from "../../lib";

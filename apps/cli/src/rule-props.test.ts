@@ -21,7 +21,7 @@ import {
   SubscriptionRef,
   type Scope,
 } from "effect";
-import * as Reactivity from "effect/unstable/reactivity/Reactivity";
+import * as Reactivity from "effect/reactivity/Reactivity";
 import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
 import { CliRuntime } from "./cli.runtime";

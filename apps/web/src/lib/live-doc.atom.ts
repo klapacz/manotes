@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-solid";
 import type { NoteSchema } from "@manotes/shared/note.schema";
-import { Atom, AsyncResult } from "effect/unstable/reactivity";
+import { Atom, AsyncResult } from "effect/reactivity";
 import { createMemo, type Accessor } from "solid-js";
 import { LiveDoc } from "./live-doc.service";
 import { bindRt } from "./rt-atom";

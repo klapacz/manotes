@@ -1,7 +1,7 @@
 import { DevEnv } from "@manotes/shared/dev-env";
 import * as Alchemy from "alchemy";
 import { Config, Effect, Layer, Option, Redacted, Schema } from "effect";
-import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
+import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http";
 import AccountsDurableObject, { NAMESPACE_KEY } from "./accounts/durable-object.ts";
 import { SessionKvService } from "./auth/session-kv.ts";
 
@@ -11,7 +11,7 @@ export const layer = Layer.unwrap(
 
     if (!DEV) return Layer.empty;
 
-    const secret = yield* Config.redacted(DevEnv.names.seedSecret).pipe(Config.option);
+    const secret = yield* Config.Redacted(DevEnv.names.seedSecret).pipe(Config.option);
 
     if (Option.isNone(secret) || Redacted.value(secret.value).length === 0) return Layer.empty;
 

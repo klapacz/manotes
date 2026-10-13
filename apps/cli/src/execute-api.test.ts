@@ -4,7 +4,7 @@ import path from "node:path";
 import { NodeServices } from "@effect/platform-node";
 import dedent from "dedent";
 import { DateTime, Effect, type FileSystem, Layer, Result } from "effect";
-import * as Reactivity from "effect/unstable/reactivity/Reactivity";
+import * as Reactivity from "effect/reactivity/Reactivity";
 import { describe, expect, it } from "vite-plus/test";
 import { initProseMirrorDoc, prosemirrorJSONToYDoc, updateYFragment } from "y-prosemirror";
 import * as Y from "yjs";

@@ -1,6 +1,6 @@
 import { useAtom } from "@effect/atom-solid";
 import { Effect } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 import { onCleanup, onMount } from "solid-js";
 import { bindRt } from "../lib";
 import { connectStudioBridge, type ResultSet, type StudioRunner } from "./studio-bridge";

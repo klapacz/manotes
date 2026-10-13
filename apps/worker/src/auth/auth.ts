@@ -1,5 +1,5 @@
 import { Context, Effect, Layer, Schema } from "effect";
-import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
+import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import * as Accounts from "../accounts/durable-object.ts";
 import { EmailService } from "./email.ts";
 import * as Errors from "./errors.ts";

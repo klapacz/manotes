@@ -1,7 +1,7 @@
 import path from "node:path";
 import { Console, Effect, Option, Redacted, Result, Schema, flow } from "effect";
-import * as Reactivity from "effect/unstable/reactivity/Reactivity";
-import { Argument, CliError, Command, Flag } from "effect/unstable/cli";
+import * as Reactivity from "effect/reactivity/Reactivity";
+import { Argument, CliError, Command, Flag } from "effect/cli";
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { CliConfig } from "./cli.config";
 import { CliPaths } from "./cli.paths";
@@ -16,16 +16,16 @@ import * as EventRepo from "@manotes/shared/event.repo";
 const init = Command.make(
   "init",
   {
-    origin: Flag.string("origin"),
-    token: Flag.string("token"),
-    graphId: Flag.string("graph-id"),
-    autoSync: Flag.boolean("auto-sync").pipe(
+    origin: Flag.String("origin"),
+    token: Flag.String("token"),
+    graphId: Flag.String("graph-id"),
+    autoSync: Flag.Boolean("auto-sync").pipe(
       Flag.withDefault(false),
       Flag.withDescription(
         "Enable auto sync after successful edits. Can be changed later in .manotes/config.",
       ),
     ),
-    graphKey: Flag.redacted("graph-key").pipe(
+    graphKey: Flag.Redacted("graph-key").pipe(
       Flag.mapEffect(
         flow(
           Redacted.value,
@@ -88,7 +88,7 @@ const sync = Command.make(
 const execute = Command.make(
   "execute",
   {
-    script: Argument.file("script", { mustExist: true }).pipe(
+    script: Argument.File("script", { mustExist: true }).pipe(
       Argument.optional,
       Argument.withDescription("JavaScript script to run in a sandbox. Reads stdin when omitted."),
     ),
@@ -169,11 +169,11 @@ const status = Command.make("status", {}, () => {
 const url = Command.make(
   "url",
   {
-    id: Argument.string("id").pipe(
+    id: Argument.String("id").pipe(
       Argument.optional,
       Argument.withDescription("Note ID to open. Omit to show the graph root URL."),
     ),
-    open: Flag.boolean("open").pipe(
+    open: Flag.Boolean("open").pipe(
       Flag.withDefault(false),
       Flag.withDescription("Open the URL in the default browser."),
     ),

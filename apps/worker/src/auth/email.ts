@@ -10,8 +10,8 @@ export type EmailMessage = {
 
 export class EmailService extends Context.Service<EmailService>()("Auth.EmailService", {
   make: Effect.gen(function* () {
-    const EMAIL_ADDRESS = yield* Config.nonEmptyString("EMAIL_ADDRESS");
-    const IS_DEV = yield* Config.boolean("IS_DEV");
+    const EMAIL_ADDRESS = yield* Config.NonEmptyString("EMAIL_ADDRESS");
+    const IS_DEV = yield* Config.Boolean("IS_DEV");
 
     const Email = yield* Cloudflare.Email.SendEmail("Email");
     const email = yield* Cloudflare.Email.Send(Email);

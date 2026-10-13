@@ -1,6 +1,6 @@
 import * as OpenAITranscriber from "@effect-uai/openai/OpenAITranscriber";
 import { DateTime, Effect, Option, Redacted } from "effect";
-import { FetchHttpClient } from "effect/unstable/http";
+import { FetchHttpClient } from "effect/http";
 import { nanoid } from "nanoid";
 import { DB } from "@manotes/shared/db.service";
 import { NoteRepo } from "@manotes/shared/note.repo";

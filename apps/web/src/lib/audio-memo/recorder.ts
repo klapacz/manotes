@@ -1,5 +1,5 @@
 import { type Cause, DateTime, Effect } from "effect";
-import { Atom } from "effect/unstable/reactivity";
+import { Atom } from "effect/reactivity";
 import WaveSurfer from "wavesurfer.js";
 import RecordPlugin from "wavesurfer.js/plugins/record";
 import type { AudioMemoRepo } from "./repo";

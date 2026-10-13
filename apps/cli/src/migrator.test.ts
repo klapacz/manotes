@@ -1,5 +1,5 @@
 import { Effect, Exit, Layer } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 import * as SqliteClient from "@effect/sql-sqlite-node/SqliteClient";
 import * as DB from "@manotes/shared/db.service";
 import * as Migrator from "@manotes/shared/migrator";

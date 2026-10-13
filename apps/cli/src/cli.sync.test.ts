@@ -1,6 +1,6 @@
 import { Effect, Fiber, Latch, Layer, SubscriptionRef } from "effect";
 import { TestClock } from "effect/testing";
-import * as Socket from "effect/unstable/socket/Socket";
+import * as Socket from "effect/socket/Socket";
 import { describe, expect, it } from "vite-plus/test";
 import * as EventRepo from "@manotes/shared/event.repo";
 import * as GraphSync from "@manotes/shared/graph-sync/service";

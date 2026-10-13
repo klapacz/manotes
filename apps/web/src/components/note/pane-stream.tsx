@@ -1,5 +1,5 @@
 import { Effect, Equal, Stream, Predicate } from "effect";
-import { Atom } from "effect/unstable/reactivity";
+import { Atom } from "effect/reactivity";
 import {
   Show,
   createEffect,
@@ -69,7 +69,7 @@ export function PaneStream(props: ComponentProps<"section">) {
           const changes = yield* NoteStreamCache.Service.use((cache) => cache.changes(query));
 
           return changes.pipe(
-            Stream.scan(NoteStream.initialState, NoteStream.retain(query.sort)),
+            Stream.scan(() => NoteStream.initialState, NoteStream.retain(query.sort)),
             // `scan` emits its initial accumulator before the first SQL result;
             // keep Success tied to real rows, after the first result is preloaded.
             Stream.drop(1),

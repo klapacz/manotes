@@ -1,5 +1,5 @@
 import { Effect, Option, Redacted, Schema, Stream } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 const read = SqlSchema.findOneOption({
   Request: Schema.Void,

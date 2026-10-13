@@ -1,7 +1,7 @@
 import type { NoteSchema } from "@manotes/shared/note.schema";
 import { RuleProps } from "@manotes/shared/rule-props";
 import { Stream } from "effect";
-import { Atom } from "effect/unstable/reactivity";
+import { Atom } from "effect/reactivity";
 import { LiveDocAtom } from "./live-doc.atom";
 import { LiveDoc } from "./live-doc.service";
 import { bindRt } from "./rt-atom";

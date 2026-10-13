@@ -1,7 +1,7 @@
 /**
  * Defines the graph sync machine's inputs, states, and write type.
  */
-import { Socket } from "effect/unstable/socket";
+import { Socket } from "effect/socket";
 import { Data, Effect } from "effect";
 import * as Messages from "../contract/messages";
 

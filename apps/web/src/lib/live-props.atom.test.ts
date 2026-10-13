@@ -4,7 +4,7 @@ import { PropRecordRepo } from "@manotes/shared/prop-record.repo";
 import { RuleProps } from "@manotes/shared/rule-props";
 import type * as RulePropsModule from "@manotes/shared/rule-props";
 import { Effect, Layer, Option, Stream, SubscriptionRef } from "effect";
-import { Atom, AtomRegistry } from "effect/unstable/reactivity";
+import { Atom, AtomRegistry } from "effect/reactivity";
 import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
 import { NotePropsEntries } from "../components/note/note-props.entries";

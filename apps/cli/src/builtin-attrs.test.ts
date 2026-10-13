@@ -21,7 +21,7 @@ import { StreamFilter } from "@manotes/shared/note/stream-filter";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import { YSchema } from "@manotes/shared/y-schema";
 import { DateTime, Effect, Layer, Option, Scope, Stream, Record, Match, Predicate } from "effect";
-import * as Reactivity from "effect/unstable/reactivity/Reactivity";
+import * as Reactivity from "effect/reactivity/Reactivity";
 import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
 import { CliRuntime } from "./cli.runtime";

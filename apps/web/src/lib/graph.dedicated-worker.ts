@@ -1,8 +1,8 @@
 import { AudioMemoWorker } from "./audio-memo/worker";
 import { BrowserRuntime, BrowserWorkerRunner } from "@effect/platform-browser";
-import { Socket } from "effect/unstable/socket";
+import { Socket } from "effect/socket";
 import { Effect, Layer, References, Stream, SubscriptionRef } from "effect";
-import { RpcGroup, RpcServer, RpcWorker } from "effect/unstable/rpc";
+import { RpcGroup, RpcServer, RpcWorker } from "effect/rpc";
 import * as DB from "@manotes/shared/db.service";
 import * as EventRepo from "@manotes/shared/event.repo";
 import * as MaterializationCheckpointRepo from "@manotes/shared/materialization-checkpoint.repo";

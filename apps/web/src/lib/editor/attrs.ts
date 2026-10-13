@@ -1,7 +1,7 @@
 import { useAtomValue } from "@effect/atom-solid";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { Effect, Predicate, Stream } from "effect";
-import { AsyncResult } from "effect/unstable/reactivity";
+import { AsyncResult } from "effect/reactivity";
 import { createMemo, type Accessor } from "solid-js";
 import type * as Y from "yjs";
 import { bindRt, createSyncedAtom } from "..";

@@ -3,7 +3,7 @@ import { getRouteApi } from "@tanstack/solid-router";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { Data, Effect, Match, Option } from "effect";
-import { AsyncResult } from "effect/unstable/reactivity";
+import { AsyncResult } from "effect/reactivity";
 import { Show } from "solid-js";
 import type * as Y from "yjs";
 import { bindRt } from "../../lib";

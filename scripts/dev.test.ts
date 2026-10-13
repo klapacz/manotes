@@ -3,7 +3,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { NodeServices, NodeSocketServer } from "@effect/platform-node";
 import { ConfigProvider, Deferred, Effect, Fiber, Runtime, Stdio } from "effect";
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
+import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { RouteConflictError, RouteStore } from "portless";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { DevEnv } from "../packages/shared/src/dev-env.ts";

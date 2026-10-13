@@ -18,7 +18,7 @@ import {
   RpcSerialization,
   RpcServer,
   RpcWorker,
-} from "effect/unstable/rpc";
+} from "effect/rpc";
 import {
   GraphSharedWorkerRpc,
   GraphSharedInitialMessageSchema,

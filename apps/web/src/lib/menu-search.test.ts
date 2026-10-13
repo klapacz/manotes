@@ -1,6 +1,6 @@
 import { Clock, Deferred, Effect, Option, Stream, SubscriptionRef } from "effect";
 import { TestClock } from "effect/testing";
-import { AsyncResult, Atom, AtomRegistry } from "effect/unstable/reactivity";
+import { AsyncResult, Atom, AtomRegistry } from "effect/reactivity";
 import { describe, expect, it } from "vite-plus/test";
 import { MenuSearch } from "./menu-search";
 import type { QueryEngine } from "./query-engine";

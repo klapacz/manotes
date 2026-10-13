@@ -2,7 +2,7 @@
 /* eslint-disable anti-slop-effect/no-manual-tag-comparison, anti-slop-effect/no-manual-tagged-construction -- Keep direct dispatch and plain tagged states in these reactive rendering helpers. */
 import { useAtom, useAtomSet, RegistryContext } from "@effect/atom-solid";
 import { Types } from "effect";
-import { AsyncResult, Atom } from "effect/unstable/reactivity";
+import { AsyncResult, Atom } from "effect/reactivity";
 import {
   createEffect,
   createMemo,

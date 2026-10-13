@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { FetchHttpClient } from "effect/unstable/http";
+import { FetchHttpClient } from "effect/http";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import * as KeyStore from "../key-store/service";
 import type * as LocalRegistry from "../local-registry/schema";

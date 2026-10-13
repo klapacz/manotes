@@ -1,4 +1,4 @@
-import { Msgpack } from "effect/unstable/encoding";
+import * as Msgpack from "../../msgpack";
 import { Schema } from "effect";
 import * as EventSchema from "../../event.schema";
 

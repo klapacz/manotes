@@ -1,4 +1,4 @@
-import type { Atom } from "effect/unstable/reactivity";
+import type { Atom } from "effect/reactivity";
 import { useGraph } from "./graph-access/graph-runtime/context";
 
 function createBindRt<R, ER>(getRt: () => Atom.AtomRuntime<R, ER>) {

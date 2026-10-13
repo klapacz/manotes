@@ -3,7 +3,7 @@ import { Attrs } from "@manotes/shared/attrs.service";
 import type { NoteSchema } from "@manotes/shared/note.schema";
 import { RuleProps } from "@manotes/shared/rule-props";
 import { Data, Option, Record, pipe } from "effect";
-import { Atom, AsyncResult } from "effect/unstable/reactivity";
+import { Atom, AsyncResult } from "effect/reactivity";
 import { bindRt } from "../../lib/rt-atom";
 import { LivePropsAtom } from "../../lib/live-props.atom";
 

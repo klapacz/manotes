@@ -1,6 +1,6 @@
-import { Effect, Layer, Option, Redacted, Stream, SubscriptionRef } from "effect";
+import { Effect, Layer, Predicate, Option, Redacted, Stream, SubscriptionRef } from "effect";
 import { NodeWS } from "@effect/platform-node/NodeSocket";
-import * as Socket from "effect/unstable/socket/Socket";
+import * as Socket from "effect/socket/Socket";
 import * as GraphSync from "@manotes/shared/graph-sync/service";
 import * as GraphSyncContext from "@manotes/shared/graph-sync/context";
 import * as GraphSyncEncryption from "@manotes/shared/graph-sync/encryption/service";
@@ -72,13 +72,14 @@ function waitForReady(statusRef: SubscriptionRef.SubscriptionRef<SyncStatusCloud
 }
 
 function webSocketConstructorLayer(token: string) {
-  return Layer.succeed(Socket.WebSocketConstructor, (url, protocols) => {
-    return (
-      // eslint-disable-next-line anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- ws implements the WebSocket operations consumed by Effect's Node adapter.
-      new NodeWS.WebSocket(url, protocols, {
-        headers: { authorization: `Bearer ${token}` },
-      }) as unknown as globalThis.WebSocket
-    );
+  return Layer.succeed(Socket.WebSocketConstructor, (url, options) => {
+    const client: Socket.WebSocketClientOptions = Predicate.isObject(options)
+      ? options
+      : { protocols: options };
+
+    return new NodeWS.WebSocket(url, client.protocols, {
+      headers: { ...client.headers, authorization: `Bearer ${token}` },
+    });
   });
 }
 

@@ -1,5 +1,5 @@
 import { Context } from "effect";
-import { HttpApiError } from "effect/unstable/httpapi";
+import { HttpApiError } from "effect/http-api";
 
 export interface CurrentSession {
   readonly accountId: string;

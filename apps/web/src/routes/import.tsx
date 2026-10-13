@@ -1,7 +1,7 @@
 import { useAtom, useAtomSet, useAtomValue } from "@effect/atom-solid";
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
 import { Effect, Schema } from "effect";
-import { AsyncResult, Atom } from "effect/unstable/reactivity";
+import { AsyncResult, Atom } from "effect/reactivity";
 import { Show, createMemo } from "solid-js";
 import * as GraphRegistryContract from "@manotes/shared/graph-registry/contract";
 import { Alert, AlertDescription } from "../components/ui/alert";

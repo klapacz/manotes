@@ -10,9 +10,9 @@ import {
   HttpClient,
   HttpClientRequest,
   HttpClientResponse,
-} from "effect/unstable/http";
-import { RpcClient, RpcSerialization } from "effect/unstable/rpc";
-import { Reactivity } from "effect/unstable/reactivity";
+} from "effect/http";
+import { RpcClient, RpcSerialization } from "effect/rpc";
+import { Reactivity } from "effect/reactivity";
 import { DevEntry } from "../../../scripts/dev-entry.ts";
 import { CliConfig } from "../src/cli.config";
 import { CliDB } from "../src/cli.db";
@@ -28,8 +28,8 @@ const seed = Effect.gen(function* () {
   // Alchemy can reconcile again during the same dev invocation. Keep manual edits.
   if (Option.isSome(previous)) return id;
 
-  const origin = yield* Config.nonEmptyString(DevEnv.names.seedApiUrl);
-  const secret = yield* Config.redacted(DevEnv.names.seedSecret);
+  const origin = yield* Config.NonEmptyString(DevEnv.names.seedApiUrl);
+  const secret = yield* Config.Redacted(DevEnv.names.seedSecret);
 
   const client = (yield* HttpClient.HttpClient).pipe(HttpClient.filterStatusOk);
 
@@ -81,7 +81,7 @@ const seed = Effect.gen(function* () {
   );
 
   yield* DevEntry.write(id, {
-    origin: yield* Config.nonEmptyString(DevEnv.names.url),
+    origin: yield* Config.NonEmptyString(DevEnv.names.url),
     sessionToken: session.sessionToken,
     graphId: graph.graphId,
     graphName: graph.displayName,

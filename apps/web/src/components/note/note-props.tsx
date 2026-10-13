@@ -6,7 +6,7 @@ import type { NoteSchema } from "@manotes/shared/note.schema";
 import { RuleProps } from "@manotes/shared/rule-props";
 import { Array, Data, Effect, Exit, Option, Record } from "effect";
 import { Stream } from "effect";
-import { AsyncResult } from "effect/unstable/reactivity";
+import { AsyncResult } from "effect/reactivity";
 import { Show } from "solid-js";
 import type * as Y from "yjs";
 import { bindRt, createAtomResultStore, MatchTag } from "../../lib";

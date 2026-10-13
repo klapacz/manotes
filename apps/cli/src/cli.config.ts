@@ -5,7 +5,7 @@ import * as DB from "@manotes/shared/db.service";
 import { CliPaths } from "./cli.paths";
 
 export const GraphKey = Schema.RedactedFromValue(
-  Schema.Uint8ArrayFromBase64.pipe(Schema.check(Schema.isLengthBetween(32, 32))),
+  Schema.Uint8ArrayFromBase64.pipe(Schema.check(Schema.isMinLength(32), Schema.isMaxLength(32))),
 );
 
 export const Config = Schema.Struct({

@@ -1,8 +1,8 @@
 /**
  * Orchestrates socket lifecycle and feeds inputs into the machine runner.
  */
-import { Socket } from "effect/unstable/socket";
-import { Effect, Queue, Stream, SubscriptionRef } from "effect";
+import { Socket } from "effect/socket";
+import { Effect, Predicate, Queue, Stream, SubscriptionRef } from "effect";
 import { decodeServerMessage } from "../contract/codec";
 import * as EventRepo from "../../event.repo";
 import * as GraphSyncContext from "../context";
@@ -43,31 +43,36 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
   );
 
   const socket = yield* createSocket();
-  const write = yield* socket.writer;
+  const writer = yield* socket.writer;
 
-  yield* socket
-    .run(
-      Effect.fn("GraphSyncMachineSession.handleSocketData")(function* (data) {
-        const message = yield* decodeServerMessage(new Uint8Array(data));
+  yield* Effect.gen(function* () {
+    const reader = yield* socket.reader;
+    yield* Queue.offer(inputQueue, Model.Input.SocketOpened());
+
+    while (true) {
+      const frames = yield* reader.pull;
+
+      for (const data of frames) {
+        const message = yield* decodeServerMessage(
+          Predicate.isString(data) ? new TextEncoder().encode(data) : data,
+        );
+
         yield* Queue.offer(inputQueue, Model.Input.ServerMessage({ message }));
-      }),
-      {
-        onOpen: Queue.offer(inputQueue, Model.Input.SocketOpened()),
-      },
-    )
-    .pipe(
-      Effect.matchCauseEffect({
-        // The queue's error channel carries socket lifecycle events so the
-        // supervisor can distinguish normal closes from open failures. A clean
-        // close produces no failure of its own, so we synthesize
-        // SocketClosedError here to represent that case.
-        onSuccess: () => Queue.fail(inputQueue, new Errors.SocketClosedError()),
-        onFailure: (cause) => Queue.failCause(inputQueue, cause),
-      }),
-      Effect.forkScoped,
-    );
+      }
+    }
+  }).pipe(
+    Effect.matchCauseEffect({
+      // The queue's error channel carries socket lifecycle events so the
+      // supervisor can distinguish normal closes from open failures. A clean
+      // close produces no failure of its own, so we synthesize
+      // SocketClosedError here to represent that case.
+      onSuccess: () => Queue.fail(inputQueue, new Errors.SocketClosedError()),
+      onFailure: (cause) => Queue.failCause(inputQueue, cause),
+    }),
+    Effect.forkScoped,
+  );
 
-  return yield* Runner.run({ inputQueue: inputQueue, write });
+  return yield* Runner.run({ inputQueue: inputQueue, write: writer.write });
 });
 
 /**

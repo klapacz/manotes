@@ -3,7 +3,7 @@ import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import type { Attrs } from "@manotes/shared/attrs.service";
 import { PropValidation } from "@manotes/shared/prop-validation";
 import { Equal, Stream } from "effect";
-import { AsyncResult } from "effect/unstable/reactivity";
+import { AsyncResult } from "effect/reactivity";
 import { createMemo, type Accessor } from "solid-js";
 import { bindRt, createSyncedAtom } from "../../lib";
 

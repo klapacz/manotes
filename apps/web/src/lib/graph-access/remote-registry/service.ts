@@ -1,6 +1,6 @@
 import { Layer } from "effect";
-import { AtomRpc } from "effect/unstable/reactivity";
-import { RpcClient } from "effect/unstable/rpc";
+import { AtomRpc } from "effect/reactivity";
+import { RpcClient } from "effect/rpc";
 import { GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
 import * as RemoteRegistryLayer from "./layer";
 

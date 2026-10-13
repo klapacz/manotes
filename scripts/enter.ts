@@ -1,7 +1,7 @@
 import { createHash, X509Certificate } from "node:crypto";
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { Console, Effect, Redacted, Stream } from "effect";
-import { Argument, Command } from "effect/unstable/cli";
+import { Argument, Command } from "effect/cli";
 import { Playwright, chromium } from "effect-playwright";
 import { DevEntry } from "./dev-entry.ts";
 
@@ -82,7 +82,7 @@ function certificateArgs(pem: string | undefined) {
 const cli = Command.make(
   "enter",
   {
-    id: Argument.string("id").pipe(Argument.withSchema(DevEntry.Id)),
+    id: Argument.String("id").pipe(Argument.withSchema(DevEntry.Id)),
   },
   ({ id }) => DevEntry.read(id).pipe(Effect.flatMap(run)),
 );

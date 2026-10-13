@@ -1,7 +1,7 @@
 import { useAtom } from "@effect/atom-solid";
 import * as EmailSchema from "@manotes/shared/schema/email";
 import { Schema } from "effect";
-import { Atom } from "effect/unstable/reactivity";
+import { Atom } from "effect/reactivity";
 import { createSignal, onMount, Show, type ValidComponent } from "solid-js";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";

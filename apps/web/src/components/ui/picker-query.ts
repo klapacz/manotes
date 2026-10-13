@@ -8,7 +8,7 @@ import {
   onMount,
   useContext,
 } from "solid-js";
-import { Atom, AsyncResult, type AtomRegistry } from "effect/unstable/reactivity";
+import { Atom, AsyncResult, type AtomRegistry } from "effect/reactivity";
 import { Option } from "effect";
 import { useAtomResource, useAtomValue } from "@effect/atom-solid";
 import { bindRt, createSyncedAtom } from "../../lib";

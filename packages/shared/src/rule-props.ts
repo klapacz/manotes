@@ -82,7 +82,7 @@ export function watch(opts: { readonly recordId: NoteSchema.Id; readonly doc: Y.
 }
 
 export function collectExpectations(rules: Readonly<Record<NoteSchema.Id, RuleMatches.Rule>>) {
-  const [unmatched, matching] = Record.partition(rules, (rule) => {
+  const [matching, unmatched] = Record.partition(rules, (rule) => {
     return Match.value(rule.status).pipe(
       Match.tag("Matching", () => Result.succeed(rule)),
       Match.tag("Unmatched", () => Result.fail(rule)),
@@ -90,7 +90,7 @@ export function collectExpectations(rules: Readonly<Record<NoteSchema.Id, RuleMa
     );
   });
 
-  const [topRules, groupRules] = Record.partition(matching, (rule) => {
+  const [groupRules, topRules] = Record.partition(matching, (rule) => {
     return Match.value(rule.rule_storage).pipe(
       Match.tag("top", () => Result.fail(rule)),
       Match.tag("group", () => Result.succeed(rule)),

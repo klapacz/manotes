@@ -4,7 +4,7 @@
 import { Data, Schema } from "effect";
 import * as Messages from "../contract/messages";
 import * as Model from "./model";
-import type { Socket } from "effect/unstable/socket";
+import type { Socket } from "effect/socket";
 
 export class LastCommitSeqMismatchError extends Data.TaggedError(
   "GraphSyncMachineLastCommitSeqMismatchError",

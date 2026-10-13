@@ -30,7 +30,7 @@ export default Alchemy.Stack(
     });
 
     const dev = yield* Alchemy.ALCHEMY_DEV;
-    const seedType = yield* Config.string(DevEnv.names.seedType).pipe(Config.withDefault(""));
+    const seedType = yield* Config.String(DevEnv.names.seedType).pipe(Config.withDefault(""));
 
     if (dev && seedType === "demo") {
       yield* Command.Exec("SeedDemo", {
@@ -39,10 +39,10 @@ export default Alchemy.Stack(
         memo: false,
         timeout: "2 minutes",
         env: {
-          [DevEnv.names.seedId]: yield* Config.nonEmptyString(DevEnv.names.seedId),
-          [DevEnv.names.seedSecret]: yield* Config.redacted(DevEnv.names.seedSecret),
+          [DevEnv.names.seedId]: yield* Config.NonEmptyString(DevEnv.names.seedId),
+          [DevEnv.names.seedSecret]: yield* Config.Redacted(DevEnv.names.seedSecret),
           [DevEnv.names.seedApiUrl]: worker.url,
-          [DevEnv.names.url]: yield* Config.nonEmptyString(DevEnv.names.url),
+          [DevEnv.names.url]: yield* Config.NonEmptyString(DevEnv.names.url),
         },
       });
     }
@@ -62,7 +62,7 @@ const getUrls = Effect.fn("AppStack.getUrls")(function* (outputs: {
 
   if (!DEV) return outputs;
 
-  const url = yield* Config.nonEmptyString(DevEnv.names.url);
+  const url = yield* Config.NonEmptyString(DevEnv.names.url);
 
   return {
     app: url,

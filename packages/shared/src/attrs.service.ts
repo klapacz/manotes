@@ -132,7 +132,7 @@ function watchGroups<E, R>(opts: {
 const readGroups = Effect.fn("Attrs.readGroups")(function* (opts: {
   readonly attrs: YSchema.Cursor<AttrsSchema.Attrs, typeof AttrsSchema.Attrs>;
 }) {
-  const [top, groups] = yield* opts.attrs.pipe(
+  const [groups, top] = yield* opts.attrs.pipe(
     YSchema.exportLoose,
     Effect.map((attrs) => attrs.props ?? {}),
     Effect.map(Record.filter(Predicate.isNotUndefined)),

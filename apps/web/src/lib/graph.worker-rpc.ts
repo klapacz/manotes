@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import { SyncStatus } from "@manotes/shared/graph-sync/status.schema";
-import { Rpc, RpcGroup } from "effect/unstable/rpc";
-import { Transferable } from "effect/unstable/workers";
+import { Rpc, RpcGroup } from "effect/rpc";
+import { Transferable } from "effect/workers";
 import * as GraphSyncConfig from "@manotes/shared/graph-sync/config";
 
 /** Initial message sent from main thread to SharedWorker. */

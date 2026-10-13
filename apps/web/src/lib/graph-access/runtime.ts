@@ -1,5 +1,5 @@
 import { Layer, ManagedRuntime } from "effect";
-import { Atom, AtomRegistry } from "effect/unstable/reactivity";
+import { Atom, AtomRegistry } from "effect/reactivity";
 import * as CommandsDelete from "./commands/delete";
 import * as CommandsProvision from "./commands/provision";
 import * as CommandsRename from "./commands/rename";

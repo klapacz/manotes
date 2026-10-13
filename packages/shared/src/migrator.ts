@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 import * as DB from "./db.service";
 
 export interface Migration {

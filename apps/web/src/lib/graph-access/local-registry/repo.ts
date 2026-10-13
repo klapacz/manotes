@@ -1,4 +1,4 @@
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 import { Array, Effect, Option, Stream, Schema as S } from "effect";
 import * as Schema from "./schema";
 import * as Errors from "./errors";
@@ -90,7 +90,7 @@ const RememberedKeyRequest = S.Struct({
 });
 
 const RememberedKeyResult = S.Struct({
-  rememberedGraphKey: S.Uint8ArrayFromBase64.pipe(S.check(S.isLengthBetween(32, 32))),
+  rememberedGraphKey: S.Uint8ArrayFromBase64.pipe(S.check(S.isMinLength(32), S.isMaxLength(32))),
 });
 
 export const findRememberedKey = SqlSchema.findOneOption({

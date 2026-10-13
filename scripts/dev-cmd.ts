@@ -1,5 +1,5 @@
 import { Data, Effect, Runtime } from "effect";
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
+import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
 export const run = Effect.fn("DevCmd.run")(function* ({
   cwd,

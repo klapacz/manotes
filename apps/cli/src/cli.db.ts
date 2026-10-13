@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { Effect, FileSystem, Layer, Schema } from "effect";
-import * as Reactivity from "effect/unstable/reactivity/Reactivity";
-import { SqlClient } from "effect/unstable/sql";
+import * as Reactivity from "effect/reactivity/Reactivity";
+import { SqlClient } from "effect/sql";
 import * as SqliteClient from "@effect/sql-sqlite-node/SqliteClient";
 import * as DB from "@manotes/shared/db.service";
 import * as Migrator from "@manotes/shared/migrator";

@@ -1,7 +1,7 @@
 import { useAtom } from "@effect/atom-solid";
 import { Effect } from "effect";
-import { FetchHttpClient } from "effect/unstable/http";
-import { Atom } from "effect/unstable/reactivity";
+import { FetchHttpClient } from "effect/http";
+import { Atom } from "effect/reactivity";
 import { splitProps, type ValidComponent } from "solid-js";
 import { MatchAsyncResult } from "../lib";
 import { CliSetup } from "../lib/graph-access/commands/cli-setup";

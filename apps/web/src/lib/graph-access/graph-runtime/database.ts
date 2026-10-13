@@ -1,5 +1,5 @@
 import { Context, Effect, Layer } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 import * as SqliteClient from "@manotes/sql-sqlite-wasm/sqlite-client";
 import * as DB from "@manotes/shared/db.service";
 import { SqlLive } from "../../db/sql-live";
