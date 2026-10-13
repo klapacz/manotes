@@ -48,7 +48,12 @@ const launch = Effect.fn("Dev.launch")(function* (
     [DevEnv.names.seedSecret]: Option.isSome(seedType) ? randomBytes(32).toString("base64url") : "",
   };
 
-  const packages = ["@manotes/shared", "@manotes/sql-sqlite-wasm", "@manotes/worker"];
+  const packages = [
+    "@manotes/effect-qb-sqlite",
+    "@manotes/shared",
+    "@manotes/sql-sqlite-wasm",
+    "@manotes/worker",
+  ];
 
   if (extension) packages.push("@manotes/extension");
 

@@ -14,7 +14,7 @@ export default EffectDbSqliteConfig.defineConfig({
 
 ```sh
 scripts/nix-develop -c pnpm --filter @manotes/effect-db-sqlite build
-scripts/nix-develop -c pnpm --filter @manotes/shared build
+scripts/nix-develop -c vp run @manotes/shared#build
 scripts/nix-develop -c pnpm exec effectdb migrate generate --config apps/cli/effectdb.config.ts --name add_priority
 scripts/nix-develop -c pnpm exec effectdb migrate up --config apps/cli/effectdb.config.ts --database ./graph.sqlite
 ```

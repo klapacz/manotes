@@ -41,6 +41,10 @@ stdenv.mkDerivation (finalAttrs: {
       ../packages/effect-db-sqlite/tsconfig.json
       ../packages/effect-db-sqlite/vite.config.ts
       ../packages/effect-db-sqlite/src
+      ../packages/effect-qb-sqlite/package.json
+      ../packages/effect-qb-sqlite/tsconfig.json
+      ../packages/effect-qb-sqlite/vite.config.ts
+      ../packages/effect-qb-sqlite/src
       ../packages/shared/package.json
       ../packages/shared/tsconfig.json
       ../packages/shared/vite.config.ts
@@ -53,7 +57,7 @@ stdenv.mkDerivation (finalAttrs: {
     inherit (finalAttrs) pname version src pnpmWorkspaces;
     inherit pnpm;
     fetcherVersion = 3;
-    hash = "sha256-vgOe+BKOvMEMcCEq+CKKjwKpBXs+t0Yc+Es8Xu6OsnA=";
+    hash = "sha256-PMn+64JUv3GV3JO435E8aSRG0uytl8qr6gv4uG9WMQA=";
   };
 
   nativeBuildInputs = [
@@ -71,7 +75,7 @@ stdenv.mkDerivation (finalAttrs: {
   buildPhase = ''
     runHook preBuild
     pnpm --filter @manotes/effect-db-sqlite build
-    pnpm --filter @manotes/shared build
+    pnpm exec vp run @manotes/shared#build
     pnpm --filter @manotes/cli build
     runHook postBuild
   '';

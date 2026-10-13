@@ -3,6 +3,7 @@ import { SqlClient } from "effect/sql";
 import { Query } from "effect-qb";
 import { DBUsedTables } from "./db.used-tables";
 import * as Sqlite from "effect-qb/sqlite";
+import { SqliteJson } from "@manotes/effect-qb-sqlite/json";
 
 import { DBValues } from "./db.values";
 
@@ -29,12 +30,14 @@ export class Service extends Context.Service<Service>()("DB", {
 
     const options = {
       valueMappings: { boolean: { toDriver: (value) => (decodeBoolean(value) ? 1 : 0) } },
-    } satisfies Pick<Sqlite.Executor.MakeOptions, "valueMappings" | "reportInput">;
+    } satisfies SqliteJson.Options;
 
     const executor = Sqlite.Executor.make({
       ...options,
       driver: Sqlite.Executor.driver((statement) => sql.unsafe(statement.sql, statement.params)),
     });
+
+    const json = SqliteJson.make(options);
 
     const query = Effect.fn("DB.query")(function* <P extends Plan>(
       plan: Query.DialectCompatiblePlan<P, "sqlite">,
@@ -60,7 +63,7 @@ export class Service extends Context.Service<Service>()("DB", {
       return yield* Effect.sync(() => sql.reactive(DBUsedTables.usedTables(plan), query<P>(plan)));
     });
 
-    return { transaction: sql.withTransaction, query, find, execute, reactiveQuery };
+    return { transaction: sql.withTransaction, query, find, execute, reactiveQuery, ...json };
   }),
 }) {
   static readonly layer = Layer.effect(this, this.make);

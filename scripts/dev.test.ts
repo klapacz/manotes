@@ -249,6 +249,7 @@ describe("main", () => {
           ]);
           expect(command.args).not.toContain("--servers");
           expect(command.args).not.toContain(import.meta.filename.replace("dev.test.ts", "dev.ts"));
+          expect(command.args).toContain("@manotes/effect-qb-sqlite");
           expect(command.args.includes("@manotes/extension")).toBe(extension);
           expect(command.args.at(-1)).toBe("dev");
           expect(store.loadRoutes()).toHaveLength(before.length + 3);

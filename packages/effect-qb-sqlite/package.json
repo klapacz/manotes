@@ -1,0 +1,19 @@
+{
+  "name": "@manotes/effect-qb-sqlite",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./json": "./dist/json.mjs"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch --no-clean"
+  },
+  "dependencies": {
+    "effect": "catalog:",
+    "effect-qb": "0.24.1"
+  },
+  "devDependencies": {
+    "vite-plus": "catalog:"
+  }
+}
