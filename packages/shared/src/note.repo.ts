@@ -205,12 +205,13 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       return stream.pipe(Stream.mapEffect((n) => decodeMetaArray(n)));
     });
 
-    const reactiveFindPreviewById = Effect.fn("NoteRepo.reactiveFindPreviewById")(function* (
-      id: string,
-    ) {
+    const reactiveFindPreviewById = Effect.fn("NoteRepo.reactiveFindPreviewById")(function* (opts: {
+      readonly id: string;
+      readonly filter?: StreamSettings.Filter;
+    }) {
       const stream = yield* db
-        .reactiveQuery((db) =>
-          db
+        .reactiveQuery((db) => {
+          const statement = db
             .select({
               id: Tables.notes.id,
               title: Tables.notes.title,
@@ -220,8 +221,21 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
               updatedAt: Tables.notes.updatedAt,
             })
             .from(Tables.notes)
-            .where(eq(Tables.notes.id, id)),
-        )
+            .$dynamic();
+
+          const conditions = [eq(Tables.notes.id, opts.id)];
+
+          if (opts.filter === undefined) return statement.where(and(...conditions)).limit(1);
+
+          return filterStatement(statement, {
+            query: {
+              ...opts.filter,
+              props: StreamSettings.propFilters(opts.filter),
+              sort: "updated",
+            },
+            conditions,
+          }).limit(1);
+        })
         .pipe(Effect.map(Stream.mapEffect(flow(Array.head, LibOption.mapEffect(decodePreview)))));
 
       return stream;

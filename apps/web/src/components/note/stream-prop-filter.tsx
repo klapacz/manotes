@@ -2,7 +2,9 @@ import { PropDef } from "@manotes/shared/prop-def.service";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
-import { Array, Option, Stream } from "effect";
+import { Attrs } from "@manotes/shared/attrs.service";
+import { keyArray } from "@solid-primitives/keyed";
+import { Array, Option, Stream, type Cause } from "effect";
 import { createMemo, Show } from "solid-js";
 import { bindRt, createAtomStore } from "../../lib";
 import { MenuQuery } from "../../lib/menu-query";
@@ -11,11 +13,14 @@ import { CommandList, CommandScroll } from "../ui/command";
 import { Picker } from "../ui/picker";
 import { PropPicker } from "./prop-picker";
 import { PropQuery } from "./prop-query";
+import { PropState } from "./prop-state";
 import { StreamPropFilterEntries } from "./stream-prop-filter.entries";
 
 type Def = PropQuery.Def;
 
-export type Entry = StreamPropFilterEntries.Entry;
+export type Entry = StreamPropFilterEntries.Entry & {
+  readonly error: Cause.Cause<unknown> | undefined;
+};
 
 export function use(opts: {
   filter: () => StreamSettings.Filter;
@@ -24,9 +29,28 @@ export function use(opts: {
 }) {
   const defs = useDefs();
 
-  const entries = createMemo(() =>
+  const rawEntries = createMemo(() =>
     StreamPropFilterEntries.make({ defs: defs(), filter: opts.filter() }),
   );
+
+  const validated = keyArray(
+    rawEntries,
+    (entry) => entry.id,
+    (entry) => {
+      const validation = PropState.use({
+        state: () => entry().state,
+        targets: () => PropQuery.targets(entry().def),
+      });
+
+      return createMemo(() => ({
+        ...entry(),
+        state: validation.state(),
+        error: validation.error(),
+      }));
+    },
+  );
+
+  const entries = createMemo(() => validated().map((entry) => entry()));
 
   const enums = createMemo(() => entries().filter((entry) => entry.def.prop_type === "enum"));
 
@@ -107,8 +131,10 @@ export function query(opts: {
 
 export function ValueLabel(props: { entry: Entry }) {
   return (
-    <Show when={Option.getOrUndefined(props.entry.value)} fallback={props.entry.detail}>
-      {(value) => <PropPicker.ValueLabel value={value()} />}
+    <Show when={Option.isSome(props.entry.value)} fallback={props.entry.detail}>
+      <span classList={{ "text-error-fg": Attrs.ValueState.$is("Invalid")(props.entry.state) }}>
+        <PropPicker.StateLabel state={props.entry.state} />
+      </span>
     </Show>
   );
 }
@@ -121,8 +147,7 @@ export function Menu(props: {
   onClear: () => void;
   onOpenNote: (id: AttrsSchema.NoteId) => void;
 }) {
-  const state = () =>
-    PropQuery.valueState({ type: props.entry.def.prop_type, value: props.entry.value });
+  const state = () => props.entry.state;
 
   const footer = () => (
     <Picker.Footer>
@@ -147,6 +172,11 @@ export function Menu(props: {
         <CommandList>
           <CommandScroll>{items}</CommandScroll>
           <PropPicker.Invalid state={state()} />
+          <Show when={props.entry.error}>
+            <p role="alert" class="px-3 py-2 text-sm text-error-fg">
+              Unable to validate reference.
+            </p>
+          </Show>
           {footer()}
         </CommandList>
       )}

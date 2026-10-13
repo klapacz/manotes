@@ -1,5 +1,6 @@
 import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
+import { Attrs } from "@manotes/shared/attrs.service";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import type { PropRecordRepo } from "@manotes/shared/prop-record.repo";
@@ -27,6 +28,7 @@ describe("property filter entries", () => {
         id: archived.id,
         def: archived,
         value: Option.some(archived.prop_default),
+        state: Attrs.ValueState.Valid({ value: archived.prop_default }),
         label: "Archived",
         detail: "False",
         modified: false,

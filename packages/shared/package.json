@@ -62,6 +62,7 @@
     "./note/stream-settings": "./dist/note/stream-settings.mjs",
     "./prop-def.service": "./dist/prop-def.service.mjs",
     "./prop-record.repo": "./dist/prop-record.repo.mjs",
+    "./prop-validation": "./dist/prop-validation.mjs",
     "./prop.repo": "./dist/prop.repo.mjs",
     "./prosemirror-materializer.utils": "./dist/prosemirror-materializer.utils.mjs",
     "./prosemirror/app-schema": "./dist/prosemirror/app-schema.mjs",

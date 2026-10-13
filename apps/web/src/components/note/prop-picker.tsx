@@ -63,7 +63,7 @@ function RecordInput(props: ValueProps) {
   const selected = () =>
     Match.value(props.state).pipe(
       Match.when(
-        { _tag: "Valid", value: { _tag: Match.is("link", "enum") } },
+        { _tag: Match.is("Valid", "Invalid"), value: { _tag: Match.is("link", "enum") } },
         ({ value }) => value.val,
       ),
       Match.orElse(() => undefined),

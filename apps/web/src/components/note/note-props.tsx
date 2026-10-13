@@ -1,6 +1,7 @@
 import { useAtom } from "@effect/atom-solid";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
+import { PropValidation } from "@manotes/shared/prop-validation";
 import { PropDef } from "@manotes/shared/prop-def.service";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
 import type { NoteRepo } from "@manotes/shared/note.repo";
@@ -44,6 +45,7 @@ export function query(opts: {
         const defs = yield* PropDef.Service.use((repo) => repo.reactiveDefs());
 
         return attrs.watchProps({ doc, defs }).pipe(
+          Stream.switchMap((entries) => PropValidation.watchEntries({ entries })),
           Stream.switchMap((entries) => {
             const editable = Array.filterMap(entries, editableEntry).filter(
               ({ def }) => def.id !== opts.recordId,
@@ -130,7 +132,10 @@ export function Menu(props: {
                 doc,
                 defs: defs.pipe(Stream.map((rows) => rows.filter((row) => row.id === propId))),
               })
-              .pipe(Stream.map((entries) => Array.filterMap(entries, editableEntry)[0]));
+              .pipe(
+                Stream.switchMap((entries) => PropValidation.watchEntries({ entries })),
+                Stream.map((entries) => Array.filterMap(entries, editableEntry)[0]),
+              );
           }),
         );
       }),

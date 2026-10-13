@@ -8,7 +8,7 @@ export function Root(props: { id: string }) {
   const note = createAtomStore(
     bindRt((rt) =>
       rt.atom((get) =>
-        NoteRepo.Service.use((repo) => repo.reactiveFindPreviewById(get(idAtom))).pipe(
+        NoteRepo.Service.use((repo) => repo.reactiveFindPreviewById({ id: get(idAtom) })).pipe(
           Stream.unwrap,
           Stream.map((value) => ({ note: Option.getOrNull(value) })),
         ),

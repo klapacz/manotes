@@ -33,7 +33,7 @@ export class Service extends Context.Service<Service>()("NoteCache.Service", {
       idleTimeToLive: ENTRY_IDLE_TTL,
       lookup: (id: string) =>
         Effect.gen(function* () {
-          const source = yield* noteRepo.reactiveFindPreviewById(id);
+          const source = yield* noteRepo.reactiveFindPreviewById({ id });
           const seed = yield* takeSeed(id);
 
           const seeded = Option.match(seed, {

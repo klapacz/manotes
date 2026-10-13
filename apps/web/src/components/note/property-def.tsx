@@ -22,6 +22,7 @@ import { NoteLink } from "../../lib/note/link-component";
 import { Button } from "../ui/button";
 import { ArrowUpRightIcon } from "../icons";
 import { PropScope } from "./prop-scope";
+import { PropState } from "./prop-state";
 import { EnumOptions } from "./enum-options";
 
 const route = getRouteApi("/$graph/");
@@ -64,16 +65,21 @@ export function Root(props: {
 
   const editableType = () => PropQuery.editableTypes.find((type) => type === props.attrs.prop_type);
 
-  const defaultState = () =>
-    PropQuery.valueState({
-      type: props.attrs.prop_type,
-      value: Option.fromNullishOr(props.attrs.prop_default),
-    });
+  const validation = PropState.use({
+    state: () =>
+      PropQuery.valueState({
+        type: props.attrs.prop_type,
+        value: Option.fromNullishOr(props.attrs.prop_default),
+      }),
+    targets: () => props.attrs.prop_targets,
+  });
+
+  const defaultState = validation.state;
 
   const defaultLink = () =>
     Match.value(defaultState()).pipe(
       Match.when(
-        { _tag: "Valid", value: { _tag: Match.is("link", "enum") } },
+        { _tag: Match.is("Valid", "Invalid"), value: { _tag: Match.is("link", "enum") } },
         ({ value }) => value.val,
       ),
       Match.orElse(() => undefined),
@@ -222,6 +228,11 @@ export function Root(props: {
         <Show when={AsyncResult.isFailure(mutation())}>
           <p role="alert" class="px-2 pt-2 text-error-fg">
             Unable to update property.
+          </p>
+        </Show>
+        <Show when={validation.error()}>
+          <p role="alert" class="px-2 pt-2 text-error-fg">
+            Unable to validate reference.
           </p>
         </Show>
       </div>

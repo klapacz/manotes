@@ -1,4 +1,5 @@
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
+import type { Attrs } from "@manotes/shared/attrs.service";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import { Option, Record } from "effect";
 import { PropQuery } from "./prop-query";
@@ -7,6 +8,7 @@ export type Entry = {
   readonly id: AttrsSchema.NoteId;
   readonly def: PropQuery.Def;
   readonly value: Option.Option<AttrsSchema.PropVal>;
+  readonly state: Attrs.ValueState<AttrsSchema.PropVal>;
   readonly label: string;
   readonly detail: string | undefined;
   readonly modified: boolean;
@@ -30,6 +32,7 @@ export function make(opts: {
       id,
       def,
       value,
+      state: PropQuery.valueState({ type: def.prop_type, value }),
       label: def.title || "Untitled",
       detail: appliedLabel({ value, modified }),
       modified,
