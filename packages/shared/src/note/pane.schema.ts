@@ -10,6 +10,7 @@ export const StreamFilterType = Schema.TaggedUnion({
   notes: {},
   pages: {},
   prop: {},
+  rule: {},
   enum_option: { enum_parent: NoteSchema.Id },
 });
 
@@ -64,6 +65,7 @@ export const Pane = Schema.TaggedUnion({
     paneId: PaneId,
     ...StreamSettings.fields,
     scope: Schema.optional(Schema.Struct({ propId: NoteSchema.Id })),
+    matches: Schema.optional(Schema.Struct({ ruleId: NoteSchema.Id })),
   },
 });
 

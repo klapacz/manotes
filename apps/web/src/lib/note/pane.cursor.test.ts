@@ -116,3 +116,14 @@ describe("PaneMake", () => {
     expect(pane.paneId.length).toBeGreaterThan(0);
   });
 });
+
+it("distinguishes rule match streams from ordinary streams and other rules", () => {
+  const filter = { type: PaneSchema.StreamFilterType.cases.notes.make({}) };
+  const first = PaneMake.ruleTargets({ ruleId: NoteSchema.Id.make("first-rule"), filter });
+  const second = PaneMake.ruleTargets({ ruleId: NoteSchema.Id.make("second-rule"), filter });
+  const pane = decodePane(first);
+
+  expect(PaneCursor.inputMatches(first)(pane)).toBe(true);
+  expect(PaneCursor.inputMatches(second)(pane)).toBe(false);
+  expect(PaneCursor.inputMatches(PaneMake.notes())(pane)).toBe(false);
+});

@@ -34,6 +34,17 @@ export function propScope(opts: {
   });
 }
 
+export function ruleTargets(opts: {
+  readonly ruleId: NoteSchema.Id;
+  readonly filter: StreamSettings.Filter;
+}) {
+  return make.stream({
+    ...StreamSettings.defaults(opts.filter.type),
+    filter: opts.filter,
+    matches: { ruleId: opts.ruleId },
+  });
+}
+
 // Incoming backlinks: notes that link to `targetId`.
 export function backlink(targetId: string) {
   const settings = StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({}));

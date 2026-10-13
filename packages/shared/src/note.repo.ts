@@ -452,6 +452,7 @@ function streamFilterConditions(query: StreamListQuery): Array<SQL> {
       eq(Tables.notes.owned_parent, enum_parent),
     ]),
     Match.tag("prop", () => [eq(Tables.notes._tag, "prop")]),
+    Match.tag("rule", () => [eq(Tables.notes._tag, "rule")]),
     Match.orElse(() => [eq(Tables.notes._tag, "note")]),
   );
 

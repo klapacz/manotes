@@ -79,7 +79,7 @@ describe("StreamFilter conversion", () => {
     ).toMatchObject({ typeChanged: true, settings: { sort: "updated" } });
   });
 
-  it.each(["notes", "pages", "prop"] as const)("round-trips a %s pane filter", (type) => {
+  it.each(["notes", "pages", "prop", "rule"] as const)("round-trips a %s pane filter", (type) => {
     const filter: StreamSettings.Filter = {
       type: PaneSchema.StreamFilterType.cases[type].make({}),
       search: "sleep log",
@@ -93,8 +93,8 @@ describe("StreamFilter conversion", () => {
 
     expect(Schema.decodeUnknownSync(AttrsSchema.TargetFilter)(attrs)).toEqual(attrs);
     expect(attrs.map(({ val }) => val)).toEqual([
-      ["_tag", "=", type === "prop" ? "prop" : "note"],
-      ...(type === "prop" ? [] : [["title", "exists", type === "pages"]]),
+      ["_tag", "=", type === "prop" || type === "rule" ? type : "note"],
+      ...(type === "prop" || type === "rule" ? [] : [["title", "exists", type === "pages"]]),
       ["body", "contains", "sleep log"],
       ["date", "=", "2026-10-09"],
       [["link", "->", "sleep-log"], "exists", true],
@@ -103,10 +103,16 @@ describe("StreamFilter conversion", () => {
     expect(StreamFilter.fromAttrs(attrs)).toEqual(filter);
   });
 
-  it.each(["notes", "pages", "prop"] as const)("round-trips a minimal %s filter", (type) => {
-    const filter = StreamSettings.defaults(PaneSchema.StreamFilterType.cases[type].make({})).filter;
-    expect(StreamFilter.fromAttrs(StreamFilter.toAttrs(filter))).toEqual(filter);
-  });
+  it.each(["notes", "pages", "prop", "rule"] as const)(
+    "round-trips a minimal %s filter",
+    (type) => {
+      const filter = StreamSettings.defaults(
+        PaneSchema.StreamFilterType.cases[type].make({}),
+      ).filter;
+
+      expect(StreamFilter.fromAttrs(StreamFilter.toAttrs(filter))).toEqual(filter);
+    },
+  );
 
   it("preserves an empty search without adding unset fields", () => {
     const filter: StreamSettings.Filter = {

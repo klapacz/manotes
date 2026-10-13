@@ -12,6 +12,7 @@ import { HorizontalScroll } from "../ui/horizontal-scroll";
 import { Focus } from "./focus";
 import { PaneHeader, type RecordControls } from "./shared";
 import { PropScope } from "./prop-scope";
+import { RuleTargets } from "./rule-targets";
 
 const route = getRouteApi("/$graph/");
 
@@ -134,6 +135,15 @@ export function PaneStreamFilter(props: {
                 {filters}
               </HorizontalScroll>
             </div>
+          </Show>
+          <Show when={pane().matches}>
+            {(matches) => (
+              <RuleTargets.Header
+                ruleId={matches().ruleId}
+                filter={pane().filter}
+                onDiscard={changeFilter}
+              />
+            )}
           </Show>
           <Show when={pane().scope}>
             {(scope) => (

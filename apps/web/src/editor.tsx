@@ -16,6 +16,7 @@ import { defineAppExtension } from "./editor.extension";
 import { EditorSyncService, MatchTag, bindRt, createSyncedAtom } from "./lib";
 import { defineReadonly } from "prosekit/extensions/readonly";
 import { PropertyDef } from "./components/note/property-def";
+import { RuleDef } from "./components/note/rule-def";
 import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
 import { Cause, Data, Deferred, Effect, SubscriptionRef } from "effect";
 import { AsyncResult, type Atom } from "effect/unstable/reactivity";
@@ -235,6 +236,11 @@ export default function Editor(props: Props): JSX.Element {
                     doc={current.doc}
                     attrs={definition()}
                   />
+                )}
+              </Show>
+              <Show when={attrs.rule()}>
+                {(rule) => (
+                  <RuleDef.Root recordId={props.noteId} doc={current.doc} attrs={rule()} />
                 )}
               </Show>
               <BacklinkMenu currentNoteId={props.noteId} />

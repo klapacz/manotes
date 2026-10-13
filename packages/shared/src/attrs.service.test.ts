@@ -1,8 +1,10 @@
-import { Effect, Predicate, Result, Schema, Stream, SubscriptionRef } from "effect";
+import { Data, Effect, Predicate, Result, Schema, Stream, SubscriptionRef } from "effect";
 import { describe, expect, expectTypeOf, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
 import { AttrsSchema } from "./attrs.schema";
 import { Attrs } from "./attrs.service";
+import { NoteDoc } from "./note/doc";
+import { YSchema } from "./y-schema";
 import { BuiltinAttrs } from "./builtin-attrs";
 import { PropRecordRepo } from "./prop-record.repo";
 
@@ -504,6 +506,49 @@ describe("Attrs property editing", () => {
             expect(props.has(propId)).toBe(false);
           }),
         ).pipe(Effect.provide(Attrs.Service.layer)),
+      );
+    } finally {
+      doc.destroy();
+    }
+  });
+});
+
+describe("Attrs rule editing", () => {
+  it("edits expectations independently and preserves them when targets change", () => {
+    const { doc, attrs: cursor } = NoteDoc.make();
+    const priority = AttrsSchema.NoteId.make("priority");
+    const assignee = AttrsSchema.NoteId.make("assignee");
+    const required = AttrsSchema.RuleExpectation.cases.required.make({});
+    const optional = AttrsSchema.RuleExpectation.cases.optional.make({});
+    const initial = AttrsSchema.TargetFilter.make([]);
+
+    const targets = AttrsSchema.TargetFilter.make([
+      Data.taggedEnum<AttrsSchema.TargetFilterExpr>().cmp({ val: ["title", "exists", true] }),
+    ]);
+
+    try {
+      Effect.runSync(
+        Effect.gen(function* () {
+          const attrs = yield* Attrs.Service;
+          yield* attrs.initializeRule({ doc, targets: initial });
+          yield* attrs.setRuleExpectation({ doc, propId: priority, value: required });
+          yield* attrs.setRuleExpectation({ doc, propId: assignee, value: optional });
+          yield* attrs.setRuleTargets({ doc, targets });
+          expect(yield* YSchema.exportStrict(cursor)).toEqual(
+            Data.taggedEnum<AttrsSchema.Attrs>().rule({
+              props: {},
+              rule_targets: targets,
+              rule_expects: { [priority]: required, [assignee]: optional },
+            }),
+          );
+
+          yield* attrs.setRuleExpectation({ doc, propId: priority, value: optional });
+          yield* attrs.clearRuleExpectation({ doc, propId: assignee });
+          expect(yield* YSchema.exportStrict(cursor)).toMatchObject({
+            rule_targets: targets,
+            rule_expects: { priority: optional },
+          });
+        }).pipe(Effect.provide(Attrs.Service.layer)),
       );
     } finally {
       doc.destroy();

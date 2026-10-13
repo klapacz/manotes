@@ -12,6 +12,7 @@ export const typeLabels = {
   notes: "Notes",
   pages: "Pages",
   prop: "Properties",
+  rule: "Rules",
   enum_option: "Enum options",
 } satisfies Record<Filter["type"]["_tag"], string>;
 

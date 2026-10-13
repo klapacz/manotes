@@ -3,7 +3,9 @@ import { DateTime, Effect, Predicate } from "effect";
 import { nanoid } from "nanoid";
 import { toast } from "somoto";
 import { MaterializedEventService, NoteSchema, bindRt } from "../../lib";
-import type { PaneSchema } from "@manotes/shared/note/pane.schema";
+import { StreamFilter } from "@manotes/shared/note/stream-filter";
+import { StreamSettings } from "@manotes/shared/note/stream-settings";
+import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import type { UnknownNodeJSON } from "@manotes/shared/node-json";
 import type { Hotkey } from "@tanstack/hotkeys";
 import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
@@ -93,6 +95,7 @@ export const prefilledPayload = Effect.fn("ComponentsNoteNoteCreate.prefilledPay
   if (
     Predicate.isTagged(pane.filter.type, "pages") ||
     Predicate.isTagged(pane.filter.type, "prop") ||
+    Predicate.isTagged(pane.filter.type, "rule") ||
     Predicate.isTagged(pane.filter.type, "enum_option")
   ) {
     content.push({
@@ -126,6 +129,16 @@ export const prefilledPayload = Effect.fn("ComponentsNoteNoteCreate.prefilledPay
   if (Predicate.isTagged(pane.filter.type, "enum_option")) {
     const attrs = yield* Attrs.Service;
     yield* attrs.initializeEnumOption({ doc, enum_parent: pane.filter.type.enum_parent });
+  }
+
+  if (Predicate.isTagged(pane.filter.type, "rule")) {
+    const attrs = yield* Attrs.Service;
+    yield* attrs.initializeRule({
+      doc,
+      targets: StreamFilter.toAttrs(
+        StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({})).filter,
+      ),
+    });
   }
 
   return yield* Effect.sync(() => Y.encodeStateAsUpdate(doc));

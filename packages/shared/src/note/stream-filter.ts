@@ -17,6 +17,7 @@ export function toAttrs(filter: StreamSettings.Filter): AttrsSchema.TargetFilter
       Comparison.make({ val: ["title", "exists", true] }),
     ]),
     Match.tag("prop", () => [Comparison.make({ val: ["_tag", "=", "prop"] })]),
+    Match.tag("rule", () => [Comparison.make({ val: ["_tag", "=", "rule"] })]),
     Match.tag("enum_option", ({ enum_parent }) => [
       Comparison.make({ val: ["_tag", "=", "owned"] }),
       Comparison.make({ val: ["owned_type", "=", "enum_option"] }),
@@ -134,6 +135,10 @@ function applyComparison(
     Match.when(["_tag", "=", "prop"], (): StreamSettings.Filter => ({
       ...filter,
       type: PaneSchema.StreamFilterType.cases.prop.make({}),
+    })),
+    Match.when(["_tag", "=", "rule"], (): StreamSettings.Filter => ({
+      ...filter,
+      type: PaneSchema.StreamFilterType.cases.rule.make({}),
     })),
     Match.when(["_tag", "=", "note"], (): StreamSettings.Filter => ({
       ...filter,

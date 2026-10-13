@@ -5,17 +5,11 @@ import { PaneMake } from "@manotes/shared/note/pane.make";
 import { StreamFilter } from "@manotes/shared/note/stream-filter";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import { getRouteApi } from "@tanstack/solid-router";
-import { Deferred, Effect, Equal, Exit, Fiber, Predicate, Stream } from "effect";
+import { Effect, Equal, Exit, Predicate } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { createMemo, Show } from "solid-js";
-import * as Y from "yjs";
-import {
-  bindRt,
-  createAtomResultStore,
-  createSyncedAtom,
-  EditorSyncService,
-  MatchTag,
-} from "../../lib";
+import type * as Y from "yjs";
+import { bindRt, createAtomResultStore, createSyncedAtom, MatchTag } from "../../lib";
 import { createStreamRefLabel } from "../../lib/editor/stream-ref/extension";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneCursor } from "../../lib/note/pane.cursor";
@@ -25,6 +19,7 @@ import { ArrowUpRightIcon } from "../icons";
 import { Alert } from "../ui/alert";
 import { Button } from "../ui/button";
 import { NoteLabel } from "./note-label";
+import { SyncedAttrs } from "../../lib/editor/synced-attrs";
 
 const route = getRouteApi("/$graph/");
 
@@ -72,31 +67,7 @@ export function Header(props: {
   const [mutation, save] = useAtom(Save, { mode: "promiseExit" });
 
   const state = createAtomResultStore(
-    bindRt((rt) =>
-      rt.atom((get) =>
-        Stream.unwrap(
-          Effect.gen(function* () {
-            const id = get(propId);
-
-            const doc = yield* Effect.acquireRelease(
-              Effect.sync(() => new Y.Doc()),
-              (doc) => Effect.sync(() => doc.destroy()),
-            );
-
-            const ready = yield* Deferred.make<void>();
-
-            const sync = yield* EditorSyncService.Service.use((service) =>
-              service.setupDoc(doc, { noteId: id }, ready),
-            ).pipe(Effect.forkScoped);
-
-            // Surface a boot failure instead of waiting forever for the ready signal.
-            yield* Deferred.await(ready).pipe(Effect.raceFirst(Fiber.join(sync)));
-
-            return yield* Attrs.Service.use((attrs) => Effect.succeed(attrs.watch({ doc })));
-          }),
-        ),
-      ),
-    ),
+    bindRt((rt) => rt.atom((get) => SyncedAttrs.watch({ id: get(propId) }))),
   );
 
   const definition = createMemo(() => {

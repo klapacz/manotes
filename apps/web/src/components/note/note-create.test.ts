@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Data, Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
 import * as MaterializedEventService from "../../lib/materialized-event.service";
@@ -61,6 +61,48 @@ vi.mock("@effect/atom-solid", () => ({
 vi.mock("somoto", () => ({ toast: { promise: <T>(promise: Promise<T>) => promise } }));
 
 describe("blank note creation", () => {
+  it("creates a rule with default Notes targets and an empty expectations map", () => {
+    const payload = Effect.runSync(
+      prefilledPayload(
+        PaneSchema.Pane.cases.stream.make({
+          paneId: PaneSchema.Id.make("rules"),
+          filter: { type: PaneSchema.StreamFilterType.cases.rule.make({}) },
+          sort: "updated",
+          view: "full",
+        }),
+      ).pipe(Effect.provide(Attrs.Service.layer)),
+    );
+
+    const { doc, attrs } = NoteDoc.make();
+    const filter = Data.taggedEnum<AttrsSchema.TargetFilterExpr>();
+
+    try {
+      Y.applyUpdate(doc, payload);
+      expect(Effect.runSync(YSchema.exportStrict(attrs))).toEqual(
+        Data.taggedEnum<AttrsSchema.Attrs>().rule({
+          props: {},
+          rule_expects: {},
+          rule_targets: [
+            filter.cmp({ val: ["_tag", "=", "note"] }),
+            filter.cmp({ val: ["title", "exists", false] }),
+            filter.cmp({
+              val: [
+                ["prop", AttrsSchema.NoteId.make("builtin:archived")],
+                "=",
+                AttrsSchema.PropVal.cases.bool.make({ val: false }),
+              ],
+            }),
+          ],
+        }),
+      );
+      expect(yDocToNodeJSON({ yDoc: doc })).toMatchObject({
+        content: [{ type: "heading", attrs: { level: 1 }, content: [{ text: "Untitled" }] }],
+      });
+    } finally {
+      doc.destroy();
+    }
+  });
+
   it("creates an owned enum option with its parent and editable title in one update", () => {
     const enum_parent = NoteSchema.Id.make("priority");
 

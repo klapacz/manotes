@@ -64,7 +64,19 @@ export function use(opts: { doc: Accessor<Y.Doc | undefined> }) {
     };
   });
 
-  return { editable, definition };
+  const rule = createMemo(() => {
+    const current = record();
+
+    if (!current) return undefined;
+
+    const { rule_targets, rule_expects } = current.attrs;
+
+    if (!Predicate.isTagged(current.attrs, "rule")) return undefined;
+
+    return { rule_targets, rule_expects };
+  });
+
+  return { editable, definition, rule };
 }
 
 export * as EditorAttrs from "./attrs";

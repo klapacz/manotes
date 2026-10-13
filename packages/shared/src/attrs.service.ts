@@ -34,6 +34,10 @@ export class Service extends Context.Service<Service>()("Attrs.Service", {
   make: Effect.sync(() => ({
     initializeProp,
     initializeEnumOption,
+    initializeRule,
+    setRuleTargets,
+    setRuleExpectation,
+    clearRuleExpectation,
     watch,
     watchProps,
     setProp,
@@ -237,6 +241,59 @@ const editablePropAttrs = Effect.fn("Attrs.editablePropAttrs")(function* (opts: 
     YSchema.find("_tag"),
     Effect.flatMap(Effect.fromOption),
     Effect.flatMap(YSchema.expect("prop")),
+  );
+});
+
+const initializeRule = Effect.fn("Attrs.initializeRule")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly targets: AttrsSchema.TargetFilter;
+}) {
+  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const rule = yield* attrs.pipe(YSchema.set("_tag", "rule"));
+  yield* rule.pipe(YSchema.set("rule_targets", opts.targets));
+  yield* rule.pipe(YSchema.upsertMap("rule_expects"));
+  yield* rule.pipe(YSchema.upsertMap("props"));
+});
+
+const setRuleTargets = Effect.fn("Attrs.setRuleTargets")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly targets: AttrsSchema.TargetFilter;
+}) {
+  const rule = yield* editableRuleAttrs({ doc: opts.doc });
+  yield* rule.pipe(YSchema.set("rule_targets", opts.targets));
+});
+
+const setRuleExpectation = Effect.fn("Attrs.setRuleExpectation")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly propId: AttrsSchema.NoteId;
+  readonly value: AttrsSchema.RuleExpectation;
+}) {
+  const rule = yield* editableRuleAttrs({ doc: opts.doc });
+  const expects = yield* rule.pipe(YSchema.upsertMap("rule_expects"));
+  yield* expects.pipe(YSchema.set({ propId: opts.propId }, opts.value));
+});
+
+const clearRuleExpectation = Effect.fn("Attrs.clearRuleExpectation")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly propId: AttrsSchema.NoteId;
+}) {
+  const rule = yield* editableRuleAttrs({ doc: opts.doc });
+  const expects = yield* rule.pipe(YSchema.findMap("rule_expects"));
+
+  if (Option.isSome(expects)) {
+    yield* expects.value.pipe(YSchema.clear({ propId: opts.propId }));
+  }
+});
+
+const editableRuleAttrs = Effect.fn("Attrs.editableRuleAttrs")(function* (opts: {
+  readonly doc: Y.Doc;
+}) {
+  const { attrs } = NoteDoc.fromDoc(opts);
+
+  return yield* attrs.pipe(
+    YSchema.find("_tag"),
+    Effect.flatMap(Effect.fromOption),
+    Effect.flatMap(YSchema.expect("rule")),
   );
 });
 
