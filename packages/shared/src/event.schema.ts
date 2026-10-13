@@ -1,13 +1,9 @@
 import { Schema } from "effect";
-import * as Msgpack from "./msgpack";
+import { Msgpack } from "./msgpack";
 import * as TemporalSchema from "./temporal.schema";
-import { NoteSchema } from "./note.schema";
+import type { Tables } from "./db.tables";
 
 export const Type = Schema.Literals(["update", "date"]);
-
-const EventId = Schema.NonEmptyString;
-
-const CommitSeq = Schema.Union([Schema.Null, Schema.Number]);
 
 export const DatePayload = Schema.Struct({
   date: TemporalSchema.PlainDateString,
@@ -19,27 +15,11 @@ export const encodeDatePayload = Schema.encodeEffect(DatePayloadBytes);
 
 export const decodeDatePayload = Schema.decodeEffect(DatePayloadBytes);
 
-export const Record = Schema.Struct({
-  localSeq: Schema.Number,
-  noteId: Schema.NonEmptyString,
-  type: Type,
-  payload: Schema.Uint8Array,
-  createdAt: Schema.DateTimeUtcFromString,
-  id: EventId,
-  commitSeq: CommitSeq,
-});
+export type Record = Tables.Event;
 
-export type Record = typeof Record.Type;
-
-export const Create = Schema.Struct({
-  noteId: NoteSchema.CreateId,
-  type: Type,
-  payload: Schema.Uint8Array,
-  createdAt: Schema.DateTimeUtcFromString,
-  id: Schema.optional(Schema.NonEmptyString),
-  commitSeq: Schema.optional(Schema.Number),
-});
-
-export type Create = typeof Create.Type;
+export type Create = Omit<Tables.Event, "localSeq" | "id" | "commitSeq"> & {
+  readonly id?: Tables.Event["id"];
+  readonly commitSeq?: NonNullable<Tables.Event["commitSeq"]>;
+};
 
 export * as EventSchema from "./event.schema";

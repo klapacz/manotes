@@ -1,3 +1,4 @@
+import { Query } from "effect-qb";
 import { PaneSchema } from "@manotes/shared/note/pane.schema";
 import { NodeServices } from "@effect/platform-node";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
@@ -234,12 +235,12 @@ describe("Archived builtin", () => {
           yield* save(propId, prop.doc);
           const db = yield* DB.Service;
 
-          const stored = (yield* db.query((db) => db.select().from(Tables.notes))).find(
-            (row) => row.id === propId,
-          );
+          const stored = (yield* db.query(
+            Query.select(Tables.notes.columns).pipe(Query.from(Tables.notes)),
+          )).find((row) => row.id === propId);
 
-          expect(stored?.attrs_valid).toBe(0);
-          expect(stored?.prop_default).toBe('{"_tag":"bool","val":false}');
+          expect(stored?.attrs_valid).toBe(false);
+          expect(stored?.prop_default).toEqual(AttrsSchema.PropVal.cases.bool.make({ val: false }));
 
           const defs = Option.getOrThrow(
             yield* (yield* definitions.reactiveDefs()).pipe(Stream.runHead),
@@ -409,11 +410,11 @@ describe("Archived builtin", () => {
           ).toEqual([]);
 
           const pull = yield* Stream.toPull(
-            yield* notes.reactiveStreamList({
+            (yield* notes.reactiveStreamList({
               type: PaneSchema.StreamFilterType.cases.notes.make({}),
               sort: "date",
               props: defaultProps,
-            }),
+            })).pipe(Stream.changesWith((a, b) => JSON.stringify(a) === JSON.stringify(b))),
           );
 
           expect((yield* pull)[0]?.map(({ id }) => id).toSorted()).toEqual(["false", "unset"]);
@@ -679,14 +680,16 @@ describe("Archived builtin", () => {
             },
           ]);
 
-          const values = db.query((db) => db.select().from(Tables.props));
+          const values = db.query(
+            Query.select(Tables.props.columns).pipe(Query.from(Tables.props)),
+          );
 
           expect(yield* values).toEqual([
             {
               recordId,
-              path: "[]",
+              path: [],
               propId: BuiltinAttrs.archivedId,
-              value: JSON.stringify(AttrsSchema.PropVal.cases.bool.make({ val: false })),
+              value: AttrsSchema.PropVal.cases.bool.make({ val: false }),
             },
           ]);
 
@@ -700,9 +703,9 @@ describe("Archived builtin", () => {
           expect(yield* values).toEqual([
             {
               recordId,
-              path: "[]",
+              path: [],
               propId: BuiltinAttrs.archivedId,
-              value: JSON.stringify(AttrsSchema.PropVal.cases.bool.make({ val: true })),
+              value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
             },
           ]);
 
@@ -841,19 +844,17 @@ describe("Archived builtin", () => {
           yield* materializer.catchUp();
           yield* materializer.catchUp();
           expect(
-            (yield* db.query((db) => db.select({ id: Tables.notes.id }).from(Tables.notes))).map(
-              (row) => row.id,
-            ),
+            (yield* db.query(
+              Query.select({ id: Tables.notes.id }).pipe(Query.from(Tables.notes)),
+            )).map((row) => row.id),
           ).toEqual(["ordinary"]);
           expect(yield* events.listAllForBackup()).toHaveLength(1);
           expect(
-            yield* db.query((db) => {
-              return db
-                .select({
-                  lastAppliedLocalSeq: Tables.materializationCheckpoint.lastAppliedLocalSeq,
-                })
-                .from(Tables.materializationCheckpoint);
-            }),
+            yield* db.query(
+              Query.select({
+                lastAppliedLocalSeq: Tables.materializationCheckpoint.lastAppliedLocalSeq,
+              }).pipe(Query.from(Tables.materializationCheckpoint)),
+            ),
           ).toEqual([{ lastAppliedLocalSeq: yield* events.getMaxLocalSeq() }]);
           expect(yield* notes.findById(BuiltinAttrs.archivedId)).toEqual(Option.none());
           expect(yield* notes.findById("ordinary")).not.toEqual(Option.none());

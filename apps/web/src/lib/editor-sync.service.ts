@@ -32,7 +32,7 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
 
     const applyMaterializedYUpdate = Effect.fn("applyMaterializedYUpdate")(function* (
       doc: Y.Doc,
-      materializedYUpdate: typeof NoteSchema.MaterializedYUpdate.Type,
+      materializedYUpdate: NoteSchema.MaterializedYUpdate,
     ) {
       if (materializedYUpdate === null) return;
 

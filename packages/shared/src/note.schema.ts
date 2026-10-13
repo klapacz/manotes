@@ -1,6 +1,6 @@
-import { Schema, SchemaGetter } from "effect";
+import { Schema } from "effect";
 import type { UnknownNodeJSON } from "./node-json";
-import * as TemporalSchema from "./temporal.schema";
+import type { Tables } from "./db.tables";
 
 export const Id = Schema.NonEmptyString.pipe(Schema.brand("NoteId"));
 
@@ -15,80 +15,37 @@ export const CreateId = Schema.NonEmptyString.pipe(
 );
 
 // eslint-disable-next-line manotes/no-type-predicates -- This opaque ProseMirror schema preserves the editor-owned JSON contract; it deliberately performs no validation.
-const ContentValue = Schema.declare<UnknownNodeJSON>((_x): _x is UnknownNodeJSON => true);
+export const Content = Schema.declare<UnknownNodeJSON>((_x): _x is UnknownNodeJSON => true);
 
-export const Content = Schema.String.pipe(
-  Schema.decodeTo(ContentValue, {
-    // eslint-disable-next-line anti-slop/require-safety-comment-for-type-assertion -- Preserve the stored node JSON contract; the editor interprets node attributes.
-    decode: SchemaGetter.transform((value: string) => JSON.parse(value) as UnknownNodeJSON),
-    encode: SchemaGetter.transform((value: UnknownNodeJSON) => JSON.stringify(value)),
-  }),
-);
+export type Record = Pick<
+  Tables.Note,
+  | "id"
+  | "title"
+  | "content"
+  | "text"
+  | "date"
+  | "materializedYUpdate"
+  | "createdAt"
+  | "updatedAt"
+  | "lastEventLocalSeq"
+>;
 
-export const MaterializedYUpdate = Schema.Union([Schema.Null, Schema.Uint8Array]);
+export type MaterializedYUpdate = Record["materializedYUpdate"];
 
-export const Record = Schema.Struct({
-  id: Id,
-  title: Schema.Union([Schema.String, Schema.Null]),
-  content: Content,
-  text: Schema.String,
-  date: TemporalSchema.PlainDateString,
-  materializedYUpdate: MaterializedYUpdate,
-  createdAt: Schema.DateTimeUtcFromString,
-  updatedAt: Schema.DateTimeUtcFromString,
-  lastEventLocalSeq: Schema.Number,
-});
-
-export type Record = typeof Record.Type;
-
-export const Preview = Schema.Struct({
-  id: Id,
-  title: Schema.Union([Schema.String, Schema.Null]),
-  text: Schema.String,
-  date: TemporalSchema.PlainDateString,
-  createdAt: Schema.DateTimeUtcFromString,
-  updatedAt: Schema.DateTimeUtcFromString,
-});
+export type Preview = Pick<Record, "id" | "title" | "text" | "date" | "createdAt" | "updatedAt">;
 
 /** One-shot editor boot payload — read atomically once; events drive the doc afterwards. */
-export const BootRecord = Schema.Struct({
-  materializedYUpdate: MaterializedYUpdate,
-  lastEventLocalSeq: Schema.Number,
-});
-
-export type BootRecord = typeof BootRecord.Type;
+export type BootRecord = Pick<Record, "materializedYUpdate" | "lastEventLocalSeq">;
 
 /** Ordering/grouping metadata for stream lists; content stays out of list queries. */
-export const Meta = Schema.Struct({
-  id: Id,
-  date: Schema.String,
-  createdAt: Schema.DateTimeUtcFromString,
-  updatedAt: Schema.DateTimeUtcFromString,
-});
+export type Meta = Pick<Record, "id" | "date" | "createdAt" | "updatedAt">;
 
-export type Meta = typeof Meta.Type;
+export type Create = Omit<Record, "id" | "materializedYUpdate" | "lastEventLocalSeq"> & {
+  readonly id?: string;
+  readonly materializedYUpdate?: MaterializedYUpdate;
+  readonly lastEventLocalSeq?: Record["lastEventLocalSeq"];
+};
 
-export const Create = Schema.Struct({
-  id: Schema.optional(Schema.String),
-  title: Schema.Union([Schema.String, Schema.Null]),
-  content: Content,
-  text: Schema.String,
-  date: TemporalSchema.PlainDateString,
-  materializedYUpdate: Schema.optional(MaterializedYUpdate),
-  createdAt: Schema.DateTimeUtcFromString,
-  updatedAt: Schema.DateTimeUtcFromString,
-  lastEventLocalSeq: Schema.optional(Schema.Number),
-});
-
-export const Update = Schema.Struct({
-  title: Schema.optional(Schema.Union([Schema.String, Schema.Null])),
-  content: Schema.optional(Content),
-  text: Schema.optional(Schema.String),
-  date: Schema.optional(TemporalSchema.PlainDateString),
-  materializedYUpdate: Schema.optional(MaterializedYUpdate),
-  createdAt: Schema.optional(Schema.DateTimeUtcFromString),
-  updatedAt: Schema.optional(Schema.DateTimeUtcFromString),
-  lastEventLocalSeq: Schema.optional(Schema.Number),
-});
+export type Update = Partial<Omit<Record, "id">>;
 
 export * as NoteSchema from "./note.schema";

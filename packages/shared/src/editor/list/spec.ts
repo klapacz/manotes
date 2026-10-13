@@ -1,4 +1,4 @@
-import { Schema } from "effect";
+import { Match, Schema } from "effect";
 import { defineNodeSpec, type Extension } from "prosekit/core";
 import type { DOMOutputSpec, ProseMirrorNode, TagParseRule } from "prosekit/pm/model";
 import {
@@ -52,12 +52,12 @@ export function defineAppListSpec(): Extension<{
 function getMarkers(node: ProseMirrorNode): DOMOutputSpec[] {
   const attrs = decodeResolvedAppListAttrs(node.attrs);
 
-  switch (attrs.kind) {
-    case "task":
+  return Match.value(attrs.kind).pipe(
+    Match.when("task", (): DOMOutputSpec[] => {
       return [["label", ["input", { type: "checkbox", checked: attrs.checked ? "" : undefined }]]];
-    default:
-      return [];
-  }
+    }),
+    Match.orElse(() => []),
+  );
 }
 
 function createAppListParseDomRules(): readonly TagParseRule[] {
@@ -149,13 +149,9 @@ function createAppListParseDomRules(): readonly TagParseRule[] {
 }
 
 function normalizeListKind(kind: string | null): AppListAttrs["kind"] {
-  switch (kind) {
-    case "ordered":
-    case "task":
-    case "toggle":
-      return kind;
-    default:
-      // Legacy/pasted `bullet` content is normalized here as well.
-      return "toggle";
-  }
+  return Match.value(kind).pipe(
+    Match.when(Match.is("ordered", "task", "toggle"), (kind) => kind),
+    // Legacy/pasted `bullet` content is normalized here as well.
+    Match.orElse(() => "toggle" as const),
+  );
 }

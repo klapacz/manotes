@@ -1,7 +1,7 @@
 /* eslint-disable anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- Solid accepts reactive accessors as JSX; generic tag dispatch needs type bridges. */
 /* eslint-disable anti-slop-effect/no-manual-tag-comparison, anti-slop-effect/no-manual-tagged-construction -- Keep direct dispatch and plain tagged states in these reactive rendering helpers. */
 import { useAtom, useAtomSet, RegistryContext } from "@effect/atom-solid";
-import { Types } from "effect";
+import { Match, Types } from "effect";
 import { AsyncResult, Atom } from "effect/reactivity";
 import {
   createEffect,
@@ -113,16 +113,15 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
 
   return createMemo(
     () => {
-      switch (state()._tag) {
-        case "Initial": {
+      return Match.value(state()).pipe(
+        Match.tag("Initial", () => {
           const onInitial = props.onInitial;
 
           return onInitial
             ? untrack(() => onInitial(() => expectState("Initial").result))
             : (props.fallback ?? null);
-        }
-
-        case "Success": {
+        }),
+        Match.tag("Success", () => {
           const onSuccess = props.onSuccess;
 
           return onSuccess
@@ -133,9 +132,8 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
                 );
               })
             : (props.fallback ?? null);
-        }
-
-        case "Error": {
+        }),
+        Match.tag("Error", () => {
           const onError = props.onError;
           const onFailure = props.onFailure;
 
@@ -149,9 +147,8 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
             : onFailure
               ? untrack(() => onFailure(() => expectState("Error").result))
               : (props.fallback ?? null);
-        }
-
-        case "Defect": {
+        }),
+        Match.tag("Defect", () => {
           const onDefect = props.onDefect;
           const onFailure = props.onFailure;
 
@@ -165,8 +162,9 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
             : onFailure
               ? untrack(() => onFailure(() => expectState("Defect").result))
               : (props.fallback ?? null);
-        }
-      }
+        }),
+        Match.exhaustive,
+      );
     },
     undefined,
     { name: "value" },
@@ -217,22 +215,14 @@ export function createAtomResultStore<A, E>(atom: () => Atom.Atom<AsyncResult.As
     const unsubscribe = registry.subscribe(
       currentAtom,
       (result) => {
-        switch (result._tag) {
-          case "Initial": {
-            setStore(reconcile({ _tag: "Loading" }));
-            break;
-          }
-
-          case "Success": {
-            setStore(reconcile({ _tag: "Success", value: result.value }));
-            break;
-          }
-
-          case "Failure": {
-            setStore(reconcile({ _tag: "Error" }));
-            break;
-          }
-        }
+        Match.value(result).pipe(
+          Match.tag("Initial", () => setStore(reconcile({ _tag: "Loading" }))),
+          Match.tag("Success", (result) => {
+            return setStore(reconcile({ _tag: "Success", value: result.value }));
+          }),
+          Match.tag("Failure", () => setStore(reconcile({ _tag: "Error" }))),
+          Match.exhaustive,
+        );
       },
       { immediate: true },
     );

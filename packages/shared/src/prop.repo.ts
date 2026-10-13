@@ -1,20 +1,8 @@
-import { eq } from "drizzle-orm";
-import { Context, Effect, Layer, Array, Schema } from "effect";
+import { Query } from "effect-qb";
+import { Context, Effect, Layer, Array } from "effect";
 import { DB } from "./db.service";
 import { Tables } from "./db.tables";
 import { NoteSchema } from "./note.schema";
-import { AttrsSchema } from "./attrs.schema";
-
-export const PropRow = Schema.Struct({
-  recordId: NoteSchema.Id,
-  path: Schema.fromJsonString(Schema.Array(NoteSchema.Id)),
-  propId: NoteSchema.Id,
-  value: Schema.NullOr(Schema.fromJsonString(AttrsSchema.PropVal)),
-});
-
-export type PropRow = typeof PropRow.Type;
-
-const encodeRows = Schema.encodeEffect(Schema.Array(PropRow));
 
 export class Service extends Context.Service<Service>()("PropRepo.Service", {
   make: Effect.gen(function* () {
@@ -23,16 +11,19 @@ export class Service extends Context.Service<Service>()("PropRepo.Service", {
     const deleteForRecord = Effect.fn("PropRepo.deleteForRecord")(function* (opts: {
       readonly recordId: NoteSchema.Id;
     }) {
-      yield* db.execute((db) => {
-        return db.delete(Tables.props).where(eq(Tables.props.recordId, opts.recordId));
-      });
+      yield* db.execute(
+        Query.delete(Tables.props).pipe(
+          Query.where(Query.eq(Tables.props.recordId, opts.recordId)),
+        ),
+      );
     });
 
     const insert = Effect.fn("PropRepo.insert")(function* (opts: {
-      readonly rows: Array.NonEmptyReadonlyArray<PropRow>;
+      readonly rows: Array.NonEmptyReadonlyArray<Tables.Prop>;
     }) {
-      const rows = yield* encodeRows(opts.rows);
-      yield* db.execute((db) => db.insert(Tables.props).values([...rows]));
+      yield* db.execute(
+        Query.insert(Tables.props).pipe(Query.from(DB.values(Tables.props, opts.rows))),
+      );
     });
 
     return { deleteForRecord, insert };

@@ -2,7 +2,7 @@ import { Server } from "node:net";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { NodeServices, NodeSocketServer } from "@effect/platform-node";
-import { ConfigProvider, Deferred, Effect, Fiber, Runtime, Stdio } from "effect";
+import { ConfigProvider, Deferred, Effect, Fiber, Record, Runtime, Stdio } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { RouteConflictError, RouteStore } from "portless";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
@@ -46,7 +46,7 @@ describe("reservePorts", () => {
     await Effect.runPromise(
       Effect.gen(function* () {
         const ports = yield* DevPorts.reservePorts();
-        const values = Object.values(ports);
+        const values = Record.values(ports);
         expect(new Set(values).size).toBe(3);
         expect(store.loadRoutes()).toEqual(
           expect.arrayContaining(
@@ -84,7 +84,7 @@ describe("reservePorts", () => {
         const second = yield* DevPorts.reservePorts();
 
         expect(store.loadRoutes()).toHaveLength(before.length + 6);
-        expect(new Set([...Object.values(first), ...Object.values(second)]).size).toBe(6);
+        expect(new Set([...Record.values(first), ...Record.values(second)]).size).toBe(6);
       }).pipe(Effect.scoped),
     );
     expect(store.loadRoutes()).toEqual(before);
@@ -109,7 +109,7 @@ describe("reservePorts", () => {
           family: "IPv4",
         });
         const second = yield* DevPorts.reservePorts();
-        expect(new Set([...Object.values(first), ...Object.values(second)]).size).toBe(6);
+        expect(new Set([...Record.values(first), ...Record.values(second)]).size).toBe(6);
       }).pipe(Effect.scoped),
     );
   });

@@ -1,21 +1,9 @@
-import { asc, eq } from "drizzle-orm";
-import { Context, Effect, Layer, Schema, Stream } from "effect";
+import { Query } from "effect-qb";
+import { Array, Context, Effect, Layer, type Stream } from "effect";
+import type * as Sqlite from "effect-qb/sqlite";
 import { DB } from "./db.service";
 import { Tables } from "./db.tables";
 import { NoteSchema } from "./note.schema";
-import { AttrsSchema } from "./attrs.schema";
-
-export const RuleExpectRow = Schema.Struct({
-  ruleId: NoteSchema.Id,
-  propId: NoteSchema.Id,
-  value: Schema.NullOr(Schema.fromJsonString(AttrsSchema.RuleExpectation)),
-});
-
-export type RuleExpectRow = typeof RuleExpectRow.Type;
-
-const encodeRows = Schema.encodeEffect(Schema.Array(RuleExpectRow));
-
-const decodeRows = Schema.decodeEffect(Schema.Array(RuleExpectRow));
 
 export class Service extends Context.Service<Service>()("RuleExpectRepo.Service", {
   make: Effect.gen(function* () {
@@ -24,27 +12,36 @@ export class Service extends Context.Service<Service>()("RuleExpectRepo.Service"
     const deleteForRule = Effect.fn("RuleExpectRepo.deleteForRule")(function* (opts: {
       readonly ruleId: NoteSchema.Id;
     }) {
-      yield* db.execute((db) => {
-        return db.delete(Tables.ruleExpects).where(eq(Tables.ruleExpects.ruleId, opts.ruleId));
-      });
+      yield* db.execute(
+        Query.delete(Tables.ruleExpects).pipe(
+          Query.where(Query.eq(Tables.ruleExpects.ruleId, opts.ruleId)),
+        ),
+      );
     });
 
     const insert = Effect.fn("RuleExpectRepo.insert")(function* (opts: {
-      readonly rows: ReadonlyArray<RuleExpectRow>;
+      readonly rows: Array.NonEmptyReadonlyArray<Tables.RuleExpect>;
     }) {
-      const rows = yield* encodeRows(opts.rows);
-      yield* db.execute((db) => db.insert(Tables.ruleExpects).values([...rows]));
+      yield* db.execute(
+        Query.insert(Tables.ruleExpects).pipe(Query.from(DB.values(Tables.ruleExpects, opts.rows))),
+      );
     });
 
-    const reactiveAll = Effect.fn("RuleExpectRepo.reactiveAll")(function* () {
-      const rows = yield* db.reactiveQuery((db) => {
-        return db
-          .select()
-          .from(Tables.ruleExpects)
-          .orderBy(asc(Tables.ruleExpects.ruleId), asc(Tables.ruleExpects.propId));
-      });
+    const reactiveAll = Effect.fn("RuleExpectRepo.reactiveAll")(function* (): Effect.fn.Return<
+      Stream.Stream<
+        ReadonlyArray<Tables.RuleExpect>,
+        Sqlite.Executor.SqliteExecutorError | Sqlite.Errors.SqliteReadQueryError
+      >
+    > {
+      const rows = yield* db.reactiveQuery(
+        Query.select(Tables.ruleExpects.columns).pipe(
+          Query.from(Tables.ruleExpects),
+          Query.orderBy(Tables.ruleExpects.ruleId),
+          Query.orderBy(Tables.ruleExpects.propId),
+        ),
+      );
 
-      return rows.pipe(Stream.mapEffect((rows) => decodeRows(rows)));
+      return rows;
     });
 
     return { deleteForRule, insert, reactiveAll };

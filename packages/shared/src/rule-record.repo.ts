@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { Query } from "effect-qb";
 import { Context, Effect, Layer, Schema, Stream } from "effect";
 import { AttrsSchema } from "./attrs.schema";
 import { DB } from "./db.service";
@@ -7,11 +7,11 @@ import { NoteSchema } from "./note.schema";
 
 export const Rule = Schema.Struct({
   id: NoteSchema.Id,
-  title: NoteSchema.Record.fields.title,
-  rule_storage: Schema.NullOr(Schema.fromJsonString(AttrsSchema.RuleStorage)).pipe(
+  title: Schema.NullOr(Schema.String),
+  rule_storage: Schema.NullOr(AttrsSchema.RuleStorage).pipe(
     Schema.decodeTo(AttrsSchema.RuleStorage),
   ),
-  rule_targets: Schema.NullOr(Schema.fromJsonString(AttrsSchema.TargetFilter)).pipe(
+  rule_targets: Schema.NullOr(AttrsSchema.TargetFilter).pipe(
     Schema.decodeTo(AttrsSchema.TargetFilter),
   ),
 });
@@ -25,18 +25,21 @@ export class Service extends Context.Service<Service>()("RuleRecordRepo.Service"
     const db = yield* DB.Service;
 
     const reactiveRules = Effect.fn("RuleRecordRepo.reactiveRules")(function* () {
-      const rules = yield* db.reactiveQuery((db) => {
-        return db
-          .select({
-            id: Tables.notes.id,
-            title: Tables.notes.title,
-            rule_storage: Tables.notes.rule_storage,
-            rule_targets: Tables.notes.rule_targets,
-          })
-          .from(Tables.notes)
-          .where(and(eq(Tables.notes._tag, "rule"), eq(Tables.notes.attrs_valid, 1)))
-          .orderBy(asc(Tables.notes.title), asc(Tables.notes.id));
-      });
+      const rules = yield* db.reactiveQuery(
+        Query.select({
+          id: Tables.notes.id,
+          title: Tables.notes.title,
+          rule_storage: Tables.notes.rule_storage,
+          rule_targets: Tables.notes.rule_targets,
+        }).pipe(
+          Query.from(Tables.notes),
+          Query.where(
+            Query.and(Query.eq(Tables.notes._tag, "rule"), Query.eq(Tables.notes.attrs_valid, 1)),
+          ),
+          Query.orderBy(Tables.notes.title),
+          Query.orderBy(Tables.notes.id),
+        ),
+      );
 
       return rules.pipe(Stream.mapEffect((rows) => decodeRules(rows)));
     });

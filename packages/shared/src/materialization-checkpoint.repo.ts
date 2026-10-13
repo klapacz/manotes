@@ -1,5 +1,5 @@
+import { Query } from "effect-qb";
 import { DateTime, Effect, Layer, Option, Context, Stream, Array } from "effect";
-import { eq } from "drizzle-orm";
 import * as DB from "./db.service";
 import * as Tables from "./db.tables";
 import { EffectOption } from "./effect/effect-option";
@@ -13,28 +13,25 @@ export class Service extends Context.Service<Service>()("MaterializationCheckpoi
     const nowISOString = DateTime.now.pipe(Effect.map(DateTime.formatIso));
 
     const getOrInit = Effect.fn("MaterializationCheckpointRepo.getOrInit")(function* () {
-      const existing = yield* db.find((db) => {
-        return db
-          .select()
-          .from(Tables.materializationCheckpoint)
-          .where(eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID));
-      });
+      const existing = yield* db.find(
+        Query.select(Tables.materializationCheckpoint.columns).pipe(
+          Query.from(Tables.materializationCheckpoint),
+          Query.where(Query.eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID)),
+        ),
+      );
 
       if (Option.isSome(existing)) return existing.value;
 
       const updatedAt = yield* nowISOString;
 
       return yield* db
-        .find((db) => {
-          return db
-            .insert(Tables.materializationCheckpoint)
-            .values({
-              id: CHECKPOINT_ROW_ID,
-              lastAppliedLocalSeq: 0,
-              updatedAt,
-            })
-            .returning();
-        })
+        .find(
+          Query.insert(Tables.materializationCheckpoint, {
+            id: CHECKPOINT_ROW_ID,
+            lastAppliedLocalSeq: 0,
+            updatedAt,
+          }).pipe(Query.returning(Tables.materializationCheckpoint.columns)),
+        )
         .pipe(
           EffectOption.getOrEffect(() => {
             return Effect.die(new Error("Failed to initialize materialization checkpoint row."));
@@ -57,16 +54,15 @@ export class Service extends Context.Service<Service>()("MaterializationCheckpoi
 
       const updatedAt = yield* nowISOString;
 
-      yield* db.query((db) => {
-        return db
-          .update(Tables.materializationCheckpoint)
-          .set({
-            lastAppliedLocalSeq,
-            updatedAt,
-          })
-          .where(eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID))
-          .returning();
-      });
+      yield* db.query(
+        Query.update(Tables.materializationCheckpoint, {
+          lastAppliedLocalSeq,
+          updatedAt,
+        }).pipe(
+          Query.where(Query.eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID)),
+          Query.returning(Tables.materializationCheckpoint.columns),
+        ),
+      );
     });
 
     const waitUntilAtLeast = Effect.fn("MaterializationCheckpointRepo.waitUntilAtLeast")(function* (
@@ -74,14 +70,14 @@ export class Service extends Context.Service<Service>()("MaterializationCheckpoi
     ) {
       yield* getOrInit();
 
-      const stream = yield* db.reactiveQuery((db) => {
-        return db
-          .select({
-            lastAppliedLocalSeq: Tables.materializationCheckpoint.lastAppliedLocalSeq,
-          })
-          .from(Tables.materializationCheckpoint)
-          .where(eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID));
-      });
+      const stream = yield* db.reactiveQuery(
+        Query.select({
+          lastAppliedLocalSeq: Tables.materializationCheckpoint.lastAppliedLocalSeq,
+        }).pipe(
+          Query.from(Tables.materializationCheckpoint),
+          Query.where(Query.eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID)),
+        ),
+      );
 
       return yield* stream.pipe(
         Stream.map(Array.head),

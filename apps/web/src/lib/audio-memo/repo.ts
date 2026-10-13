@@ -1,41 +1,29 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { Query } from "effect-qb";
 import { type Array, DateTime, Effect, Schema, Stream, Types } from "effect";
 import { DB } from "@manotes/shared/db.service";
 import { EffectOption } from "@manotes/shared/effect/effect-option";
 import { Tables } from "../db.tables";
 import { AudioMemoIntent } from "./intent";
 
-type RawRecord = typeof Tables.recordings.$inferSelect;
-
 export type Record = Types.MergeRight<
-  RawRecord,
+  Tables.Recording,
   { recordedAt: DateTime.Utc; intent: AudioMemoIntent.Record }
 >;
 
-export type Filter = {
-  path?: string;
-  state?: Array.NonEmptyReadonlyArray<Record["state"]>;
-};
+export type Filter = { path?: string; state?: Array.NonEmptyReadonlyArray<Record["state"]> };
 
 export const list = Effect.fn("AudioMemoRepo.list")(function* (
   filter: Filter,
   order: "asc" | "desc",
 ) {
   const db = yield* DB.Service;
-
-  const rows = yield* db.query((db) => {
-    return db.select().from(Tables.recordings).where(where(filter)).orderBy(orderBy(order));
-  });
+  const rows = yield* db.query(select(filter, order));
 
   return yield* Effect.forEach(rows, (row) => decode(row));
 });
 
 export const listReactive = (filter: Filter, order: "asc" | "desc") => {
-  return DB.Service.use((db) => {
-    return db.reactiveQuery((db) => {
-      return db.select().from(Tables.recordings).where(where(filter)).orderBy(orderBy(order));
-    });
-  }).pipe(
+  return DB.Service.use((db) => db.reactiveQuery(select(filter, order))).pipe(
     Stream.unwrap,
     Stream.mapEffect((rows) => Effect.forEach(rows, (row) => decode(row))),
   );
@@ -45,20 +33,25 @@ export const get = Effect.fn("AudioMemoRepo.get")(function* (path: string) {
   const db = yield* DB.Service;
 
   return yield* db
-    .find((db) => db.select().from(Tables.recordings).where(eq(Tables.recordings.path, path)))
+    .find(
+      Query.select(Tables.recordings.columns).pipe(
+        Query.from(Tables.recordings),
+        Query.where(Query.eq(Tables.recordings.path, path)),
+      ),
+    )
     .pipe(EffectOption.traverseOrElse(decode, () => new DB.NotFoundError()));
 });
 
 export const insert = Effect.fn("AudioMemoRepo.insert")(function* (recording: Record) {
   const db = yield* DB.Service;
   const intent = yield* AudioMemoIntent.encode(recording.intent);
-  yield* db.query((db) => {
-    return db
-      .insert(Tables.recordings)
-      .values({ ...recording, intent, recordedAt: DateTime.formatIso(recording.recordedAt) })
-      .onConflictDoNothing()
-      .returning();
-  });
+  yield* db.query(
+    Query.insert(Tables.recordings, {
+      ...recording,
+      intent,
+      recordedAt: DateTime.formatIso(recording.recordedAt),
+    }).pipe(Query.onConflict("path"), Query.returning(Tables.recordings.columns)),
+  );
 });
 
 export const update = Effect.fn("AudioMemoRepo.update")(function* (
@@ -73,37 +66,47 @@ export const update = Effect.fn("AudioMemoRepo.update")(function* (
     recordedAt: values.recordedAt === undefined ? undefined : DateTime.formatIso(values.recordedAt),
   };
 
-  yield* db.query((db) => {
-    return db.update(Tables.recordings).set(encoded).where(where(filter)).returning();
-  });
+  yield* db.query(
+    Query.update(Tables.recordings, encoded).pipe(
+      Query.where(where(filter)),
+      Query.returning(Tables.recordings.columns),
+    ),
+  );
 });
 
 export const remove = Effect.fn("AudioMemoRepo.remove")(function* (path: string) {
   const db = yield* DB.Service;
-  yield* db.query((db) => {
-    return db.delete(Tables.recordings).where(eq(Tables.recordings.path, path)).returning();
-  });
-});
-
-function where(filter: Filter) {
-  return and(
-    filter.path === undefined ? undefined : eq(Tables.recordings.path, filter.path),
-    filter.state === undefined ? undefined : inArray(Tables.recordings.state, [...filter.state]),
+  yield* db.query(
+    Query.delete(Tables.recordings).pipe(
+      Query.where(Query.eq(Tables.recordings.path, path)),
+      Query.returning(Tables.recordings.columns),
+    ),
   );
-}
-
-function orderBy(order: "asc" | "desc") {
-  return order === "asc" ? asc(Tables.recordings.recordedAt) : desc(Tables.recordings.recordedAt);
-}
+});
 
 const decodeRecordedAt = Schema.decodeEffect(Schema.DateTimeUtcFromString);
 
-const decode = Effect.fn("AudioMemoRepo.decode")(function* (row: RawRecord) {
+const decode = Effect.fn("AudioMemoRepo.decode")(function* (row: Tables.Recording) {
   return {
     ...row,
     recordedAt: yield* decodeRecordedAt(row.recordedAt),
     intent: yield* AudioMemoIntent.decode(row.intent),
   };
 });
+
+function select(filter: Filter, order: "asc" | "desc") {
+  return Query.select(Tables.recordings.columns).pipe(
+    Query.from(Tables.recordings),
+    Query.where(where(filter)),
+    Query.orderBy(Tables.recordings.recordedAt, order),
+  );
+}
+
+function where(filter: Filter) {
+  return Query.andAll([
+    ...(filter.path === undefined ? [] : [Query.eq(Tables.recordings.path, filter.path)]),
+    ...(filter.state === undefined ? [] : [Query.in(Tables.recordings.state, ...filter.state)]),
+  ]);
+}
 
 export * as AudioMemoRepo from "./repo";

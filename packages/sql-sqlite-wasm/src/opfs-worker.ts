@@ -1,7 +1,7 @@
 /**
  * Adapted from Effect's `packages/sql/sqlite-wasm/src/OpfsWorker.ts`; the
  * copied revision was not recorded. Local changes use cooperative OPFS and
- * broadcast update notifications across tabs.
+ * broadcast update notifications across tabs, and dispatch with Effect Match.
  */
 /* eslint-disable anti-slop/no-known-value-widening, anti-slop/no-unknown-parameters, anti-slop/require-safety-comment-for-type-assertion -- Preserve the copied Effect worker's dynamic message and wa-sqlite glue. */
 
@@ -13,7 +13,7 @@ import * as WaSqlite from "wa-sqlite";
 import SQLiteESMFactory from "wa-sqlite/dist/wa-sqlite.mjs";
 import wasmUrl from "wa-sqlite/dist/wa-sqlite.wasm?url";
 import { OPFSCoopSyncVFS } from "wa-sqlite/src/examples/OPFSCoopSyncVFS";
-import { Effect } from "effect";
+import { Effect, Match } from "effect";
 import { classifySqliteError, SqlError } from "effect/sql/SqlError";
 import type { OpfsWorkerMessage } from "./internal/opfs-worker.js";
 
@@ -65,37 +65,27 @@ export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> =>
         const message = event.data as OpfsWorkerMessage;
 
         try {
-          switch (message[0]) {
-            case "close": {
+          // Commands use the tuple's first element as their discriminator.
+          await Match.value(message).pipe(
+            Match.discriminator("0")("close", () => {
               updateBroadcast?.close();
               options.port.close();
 
-              return resume(Effect.void);
-            }
-
-            case "import": {
-              const [, id, data] = message;
+              resume(Effect.void);
+            }),
+            Match.discriminator("0")("import", ([, id, data]) => {
               messageId = id;
               (sqlite3 as any).deserialize(db, "main", data, data.length, data.length, 1 | 2);
               options.port.postMessage([id, void 0, void 0]);
-
-              return;
-            }
-
-            case "export": {
-              const [, id] = message;
+            }),
+            Match.discriminator("0")("export", ([, id]) => {
               messageId = id;
               const data = (sqlite3 as any).serialize(db, "main");
               options.port.postMessage([id, undefined, data], [data.buffer]);
-
-              return;
-            }
-
-            // Custom: sqlite3_update_hook is per-connection and only fires
-            // for changes made by that connection. Since each tab runs its
-            // own worker with a separate WASM SQLite instance, we use a
-            // BroadcastChannel to propagate change notifications across tabs.
-            case "update_hook": {
+            }),
+            // Custom: sqlite3_update_hook is per-connection. Broadcast changes
+            // so clients in other tabs can refresh their queries too.
+            Match.discriminator("0")("update_hook", () => {
               messageId = -1;
               updateBroadcast = new BroadcastChannel(`update_hook:${options.dbName}`);
               // Forward updates from other workers to our client
@@ -112,12 +102,8 @@ export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> =>
                   updateBroadcast!.postMessage([table, Number(rowid)]);
                 },
               );
-
-              return;
-            }
-
-            default: {
-              const [id, sql, params] = message;
+            }),
+            Match.orElse(async ([id, sql, params]) => {
               messageId = id;
               const results: Array<any> = [];
               let columns: Array<string> | undefined;
@@ -133,10 +119,8 @@ export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> =>
               }
 
               options.port.postMessage([id, undefined, [columns ?? [], results]]);
-
-              return;
-            }
-          }
+            }),
+          );
         } catch (e: any) {
           const message = "message" in e ? e.message : String(e);
           options.port.postMessage([messageId!, message, undefined]);

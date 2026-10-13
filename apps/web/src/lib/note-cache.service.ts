@@ -2,7 +2,7 @@ import { Cache, Context, Effect, Layer, Option, RcMap, Stream } from "effect";
 import * as NoteRepo from "@manotes/shared/note.repo";
 import * as NoteSchema from "@manotes/shared/note.schema";
 
-export type NotePreview = typeof NoteSchema.Preview.Type;
+export type NotePreview = NoteSchema.Preview;
 
 const ENTRY_IDLE_TTL = "5 seconds";
 

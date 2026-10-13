@@ -1,5 +1,5 @@
-import { Effect, Layer, Context } from "effect";
-import { eq } from "drizzle-orm";
+import { Query } from "effect-qb";
+import { Array, Effect, Layer, Context } from "effect";
 import * as DB from "../../db.service";
 import * as Tables from "../../db.tables";
 
@@ -11,26 +11,27 @@ export class Service extends Context.Service<Service>()("Materializer.BacklinkRe
       sourceId: string,
       targetIds: ReadonlyArray<string>,
     ) {
-      yield* db.query((db) => {
-        return db
-          .delete(Tables.backlinks)
-          .where(eq(Tables.backlinks.sourceId, sourceId))
-          .returning({ sourceId: Tables.backlinks.sourceId });
-      });
+      yield* db.query(
+        Query.delete(Tables.backlinks).pipe(
+          Query.where(Query.eq(Tables.backlinks.sourceId, sourceId)),
+          Query.returning({ sourceId: Tables.backlinks.sourceId }),
+        ),
+      );
 
-      if (targetIds.length === 0) return;
+      const [first, ...rest] = targetIds;
 
-      yield* db.query((db) => {
-        return db
-          .insert(Tables.backlinks)
-          .values(
-            targetIds.map((targetId) => ({
-              sourceId,
-              targetId,
-            })),
-          )
-          .returning({ sourceId: Tables.backlinks.sourceId });
-      });
+      if (first === undefined) return;
+
+      yield* db.query(
+        Query.insert(Tables.backlinks).pipe(
+          Query.from(
+            Query.values(
+              Array.map([first, ...rest] as const, (targetId) => ({ sourceId, targetId })),
+            ),
+          ),
+          Query.returning({ sourceId: Tables.backlinks.sourceId }),
+        ),
+      );
     });
 
     return {

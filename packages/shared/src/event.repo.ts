@@ -1,14 +1,11 @@
+import { Query, Cast, Type } from "effect-qb";
 import { Array, Effect, Layer, Option, pipe, Schema, Context, Stream } from "effect";
 import * as DB from "./db.service";
-import * as EventSchema from "./event.schema";
+import type { EventSchema } from "./event.schema";
+import { NoteSchema } from "./note.schema";
 import * as Tables from "./db.tables";
-import { and, asc, count, eq, gt, isNull, lte, max } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { EffectOption } from "./effect/effect-option";
-
-const decodeRecord = Schema.decodeEffect(EventSchema.Record);
-
-const decodeAll = Schema.decodeEffect(Schema.Array(EventSchema.Record));
 
 const IMPORT_BACKUP_BATCH_SIZE = 180;
 
@@ -19,100 +16,107 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
     const countPending = Effect.fn("EventRepo.countPending")(function* () {
       // Acknowledgements update these rows in place; no separate status is stored.
       return yield* db
-        .find((db) => {
-          return db
-            .select({ count: count().as("count") })
-            .from(Tables.events)
-            .where(isNull(Tables.events.commitSeq));
-        })
+        .find(
+          Query.select({ count: Cast.to(Query.count(Tables.events.localSeq), Type.int()) }).pipe(
+            Query.from(Tables.events),
+            Query.where(Query.isNull(Tables.events.commitSeq)),
+          ),
+        )
         .pipe(Effect.map(Option.match({ onNone: () => 0, onSome: (row) => row.count })));
     });
 
-    const create = Effect.fn("EventRepo.create")(function* (event: typeof EventSchema.Create.Type) {
-      const encoded = yield* pipe(event, Schema.encodeEffect(EventSchema.Create));
+    const create = Effect.fn("EventRepo.create")(function* (event: EventSchema.Create) {
+      yield* Schema.decodeEffect(NoteSchema.CreateId)(event.noteId);
 
       return yield* db
-        .find((db) => {
-          return db
-            .insert(Tables.events)
-            .values({
-              type: encoded.type,
-              noteId: encoded.noteId,
-              payload: encoded.payload,
-              createdAt: encoded.createdAt,
-              id: encoded.id ?? nanoid(),
-              commitSeq: encoded.commitSeq ?? null,
-            })
-            .returning();
-        })
-        .pipe(EffectOption.traverseOrElse(decodeRecord, () => new DB.NotFoundError()));
+        .find(
+          Query.insert(Tables.events, {
+            type: event.type,
+            noteId: event.noteId,
+            payload: event.payload,
+            createdAt: event.createdAt,
+            id: event.id ?? nanoid(),
+            commitSeq: event.commitSeq ?? null,
+          }).pipe(Query.returning(Tables.events.columns)),
+        )
+        .pipe(EffectOption.getOrEffect(() => new DB.NotFoundError()));
     });
 
     const deleteByLocalSeq = Effect.fn("EventRepo.delete")(function* (localSeq: number) {
       return yield* db
-        .find((db) => {
-          return db.delete(Tables.events).where(eq(Tables.events.localSeq, localSeq)).returning();
-        })
-        .pipe(EffectOption.traverseOrElse(decodeRecord, () => new DB.NotFoundError()));
+        .find(
+          Query.delete(Tables.events).pipe(
+            Query.where(Query.eq(Tables.events.localSeq, localSeq)),
+            Query.returning(Tables.events.columns),
+          ),
+        )
+        .pipe(EffectOption.getOrEffect(() => new DB.NotFoundError()));
     });
 
     const findByEventId = Effect.fn("EventRepo.findByEventId")(function* (eventId: string) {
-      return yield* db
-        .find((db) => db.select().from(Tables.events).where(eq(Tables.events.id, eventId)))
-        .pipe(EffectOption.traverse(decodeRecord));
+      return yield* db.find(
+        Query.select(Tables.events.columns).pipe(
+          Query.from(Tables.events),
+          Query.where(Query.eq(Tables.events.id, eventId)),
+        ),
+      );
     });
 
     const findPending = Effect.fn("EventRepo.findPending")(function* (limit: number) {
-      const events = yield* db.query((db) => {
-        return db
-          .select()
-          .from(Tables.events)
-          .where(isNull(Tables.events.commitSeq))
-          .orderBy(asc(Tables.events.localSeq))
-          .limit(limit);
-      });
+      const events = yield* db.query(
+        Query.select(Tables.events.columns).pipe(
+          Query.from(Tables.events),
+          Query.where(Query.isNull(Tables.events.commitSeq)),
+          Query.orderBy(Tables.events.localSeq, "asc"),
+          Query.limit(limit),
+        ),
+      );
 
-      return yield* pipe(events, decodeAll);
+      return events;
     });
 
     const listAllForBackup = Effect.fn("EventRepo.listAllForBackup")(function* () {
-      const events = yield* db.query((db) => {
-        return db.select().from(Tables.events).orderBy(asc(Tables.events.localSeq));
-      });
+      const events = yield* db.query(
+        Query.select(Tables.events.columns).pipe(
+          Query.from(Tables.events),
+          Query.orderBy(Tables.events.localSeq, "asc"),
+        ),
+      );
 
-      return yield* pipe(events, decodeAll);
+      return events;
     });
 
     const importBackupEvents = Effect.fn("EventRepo.importBackupEvents")(function* (
-      events: ReadonlyArray<typeof EventSchema.Create.Type>,
+      events: ReadonlyArray<EventSchema.Create>,
     ) {
       if (events.length === 0) return;
 
-      const encodedEvents = yield* pipe(
-        events,
-        Schema.encodeEffect(Schema.Array(EventSchema.Create)),
-      );
+      // Reject reserved IDs across the whole backup before inserting any events.
+      for (const event of events) yield* Schema.decodeEffect(NoteSchema.CreateId)(event.noteId);
 
       yield* db.transaction(
         Effect.forEach(
           // Large backups can exceed SQLite's bound-variable limit if we try to
           // insert every row in a single VALUES statement.
-          Array.chunksOf(encodedEvents, IMPORT_BACKUP_BATCH_SIZE),
+          Array.chunksOf(events, IMPORT_BACKUP_BATCH_SIZE),
           (chunk) => {
-            return db.query((db) => {
-              return db
-                .insert(Tables.events)
-                .values(
-                  chunk.map((event) => ({
-                    noteId: event.noteId,
-                    type: event.type,
-                    payload: event.payload,
-                    createdAt: event.createdAt,
-                    id: event.id ?? nanoid(),
-                  })),
-                )
-                .returning();
-            });
+            return db.query(
+              Query.insert(Tables.events).pipe(
+                Query.from(
+                  DB.values(
+                    Tables.events,
+                    Array.map(chunk, (event) => ({
+                      noteId: event.noteId,
+                      type: event.type,
+                      payload: event.payload,
+                      createdAt: event.createdAt,
+                      id: event.id ?? nanoid(),
+                    })),
+                  ),
+                ),
+                Query.returning(Tables.events.columns),
+              ),
+            );
           },
           {
             concurrency: 1,
@@ -123,11 +127,11 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
     });
 
     const getLastCommitSeq = Effect.fn("EventRepo.getLastCommitSeq")(function* () {
-      const result = yield* db.find((db) => {
-        return db
-          .select({ commitSeq: max(Tables.events.commitSeq).as("commitSeq") })
-          .from(Tables.events);
-      });
+      const result = yield* db.find(
+        Query.select({ commitSeq: Query.max(Tables.events.commitSeq) }).pipe(
+          Query.from(Tables.events),
+        ),
+      );
 
       return pipe(
         result,
@@ -138,26 +142,31 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
 
     const getMaxLocalSeq = Effect.fn("EventRepo.getMaxLocalSeq")(function* () {
       return yield* db
-        .find((db) => {
-          return db
-            .select({ localSeq: max(Tables.events.localSeq).as("localSeq") })
-            .from(Tables.events);
-        })
+        .find(
+          Query.select({ localSeq: Query.max(Tables.events.localSeq) }).pipe(
+            Query.from(Tables.events),
+          ),
+        )
         .pipe(Effect.map(Option.match({ onNone: () => 0, onSome: (row) => row.localSeq ?? 0 })));
     });
 
     const findUpdatesForNote = Effect.fn("EventRepo.findUpdatesForNote")(function* (
       noteId: string,
     ) {
-      const events = yield* db.query((db) => {
-        return db
-          .select()
-          .from(Tables.events)
-          .where(and(eq(Tables.events.noteId, noteId), eq(Tables.events.type, "update")))
-          .orderBy(asc(Tables.events.localSeq));
-      });
+      const events = yield* db.query(
+        Query.select(Tables.events.columns).pipe(
+          Query.from(Tables.events),
+          Query.where(
+            Query.and(
+              Query.eq(Tables.events.noteId, noteId),
+              Query.eq(Tables.events.type, "update"),
+            ),
+          ),
+          Query.orderBy(Tables.events.localSeq, "asc"),
+        ),
+      );
 
-      return yield* pipe(events, decodeAll);
+      return events;
     });
 
     const findForNoteBetweenIds = Effect.fn("EventRepo.findForNoteBetweenIds")(function* ({
@@ -169,32 +178,32 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       afterLocalSeq: number;
       upToLocalSeq: number;
     }) {
-      const events = yield* db.query((db) => {
-        return db
-          .select()
-          .from(Tables.events)
-          .where(
-            and(
-              eq(Tables.events.noteId, noteId),
-              gt(Tables.events.localSeq, afterLocalSeq),
-              lte(Tables.events.localSeq, upToLocalSeq),
+      const events = yield* db.query(
+        Query.select(Tables.events.columns).pipe(
+          Query.from(Tables.events),
+          Query.where(
+            Query.and(
+              Query.eq(Tables.events.noteId, noteId),
+              Query.gt(Tables.events.localSeq, afterLocalSeq),
+              Query.lte(Tables.events.localSeq, upToLocalSeq),
             ),
-          )
-          .orderBy(asc(Tables.events.localSeq));
-      });
+          ),
+          Query.orderBy(Tables.events.localSeq, "asc"),
+        ),
+      );
 
-      return yield* pipe(events, decodeAll);
+      return events;
     });
 
     const streamHasPending = Effect.fn("EventRepo.streamHasPending")(function* () {
-      const stream = yield* db.reactiveQuery((db) => {
-        return db
-          .select({ localSeq: Tables.events.localSeq })
-          .from(Tables.events)
-          .where(isNull(Tables.events.commitSeq))
-          .orderBy(asc(Tables.events.localSeq))
-          .limit(1);
-      });
+      const stream = yield* db.reactiveQuery(
+        Query.select({ localSeq: Tables.events.localSeq }).pipe(
+          Query.from(Tables.events),
+          Query.where(Query.isNull(Tables.events.commitSeq)),
+          Query.orderBy(Tables.events.localSeq, "asc"),
+          Query.limit(1),
+        ),
+      );
 
       return stream.pipe(Stream.map((events) => events.length > 0));
     });
@@ -206,37 +215,37 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       noteId: string;
       afterLocalSeq: number;
     }) {
-      const stream = yield* db.reactiveQuery((db) => {
-        return db
-          .select()
-          .from(Tables.events)
-          .where(
-            and(
-              eq(Tables.events.noteId, noteId),
-              eq(Tables.events.type, "update"),
-              gt(Tables.events.localSeq, afterLocalSeq),
+      const stream = yield* db.reactiveQuery(
+        Query.select(Tables.events.columns).pipe(
+          Query.from(Tables.events),
+          Query.where(
+            Query.and(
+              Query.eq(Tables.events.noteId, noteId),
+              Query.eq(Tables.events.type, "update"),
+              Query.gt(Tables.events.localSeq, afterLocalSeq),
             ),
-          )
-          .orderBy(asc(Tables.events.localSeq));
-      });
+          ),
+          Query.orderBy(Tables.events.localSeq, "asc"),
+        ),
+      );
 
-      return stream.pipe(Stream.mapEffect((events) => decodeAll(events)));
+      return stream;
     });
 
     const streamAfterGlobalId = Effect.fn("EventRepo.streamAfterGlobalId")(function* (
       afterLocalSeq: number,
       limit: number,
     ) {
-      const stream = yield* db.reactiveQuery((db) => {
-        return db
-          .select()
-          .from(Tables.events)
-          .where(gt(Tables.events.localSeq, afterLocalSeq))
-          .orderBy(asc(Tables.events.localSeq))
-          .limit(limit);
-      });
+      const stream = yield* db.reactiveQuery(
+        Query.select(Tables.events.columns).pipe(
+          Query.from(Tables.events),
+          Query.where(Query.gt(Tables.events.localSeq, afterLocalSeq)),
+          Query.orderBy(Tables.events.localSeq, "asc"),
+          Query.limit(limit),
+        ),
+      );
 
-      return stream.pipe(Stream.mapEffect((events) => decodeAll(events)));
+      return stream;
     });
 
     const markCommitted = Effect.fn("EventRepo.markCommitted")(function* ({
@@ -247,16 +256,15 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       commitSeq: number;
     }) {
       return yield* db
-        .find((db) => {
-          return db
-            .update(Tables.events)
-            .set({
-              commitSeq,
-            })
-            .where(eq(Tables.events.id, eventId))
-            .returning();
-        })
-        .pipe(EffectOption.traverseOrElse(decodeRecord, () => new DB.NotFoundError()));
+        .find(
+          Query.update(Tables.events, {
+            commitSeq,
+          }).pipe(
+            Query.where(Query.eq(Tables.events.id, eventId)),
+            Query.returning(Tables.events.columns),
+          ),
+        )
+        .pipe(EffectOption.getOrEffect(() => new DB.NotFoundError()));
     });
 
     return {

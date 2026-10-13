@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { Query } from "effect-qb";
 import { Context, Effect, Layer, Schema, Stream, Record, Struct } from "effect";
 import { AttrsSchema } from "./attrs.schema";
 import { DB } from "./db.service";
@@ -13,7 +13,7 @@ export const Defs = Struct.evolve(AttrsSchema.PropVal.cases, {
   link: (schema) => {
     return defSchema(schema).mapFields((fields) => ({
       ...fields,
-      prop_targets: Schema.NullOr(Schema.fromJsonString(AttrsSchema.TargetFilter)),
+      prop_targets: Schema.NullOr(AttrsSchema.TargetFilter),
     }));
   },
 });
@@ -23,9 +23,9 @@ function defSchema<const Tag extends AttrsSchema.PropValTag, const Value extends
 ) {
   return Schema.Struct({
     id: NoteSchema.Id,
-    title: NoteSchema.Record.fields.title,
+    title: Schema.NullOr(Schema.String),
     prop_type: Schema.NullOr(AttrsSchema.PropValTag).pipe(Schema.decodeTo(value.fields._tag)),
-    prop_default: Schema.NullOr(Schema.fromJsonString(value)),
+    prop_default: Schema.NullOr(value),
   });
 }
 
@@ -39,26 +39,29 @@ export type Def<Tag extends AttrsSchema.PropValTag = AttrsSchema.PropValTag> = {
   [K in Tag]: DefByTag[K] & { readonly prop_type: K };
 }[Tag];
 
-const decodeDefs = Schema.decodeEffect(Schema.Array(ValidDef));
+const decodeDefs = Schema.decodeUnknownEffect(Schema.Array(ValidDef));
 
 export class Service extends Context.Service<Service>()("PropRecordRepo.Service", {
   make: Effect.gen(function* () {
     const db = yield* DB.Service;
 
     const reactiveDefs = Effect.fn("PropRecordRepo.reactiveDefs")(function* () {
-      const stream = yield* db.reactiveQuery((db) => {
-        return db
-          .select({
-            id: Tables.notes.id,
-            title: Tables.notes.title,
-            prop_type: Tables.notes.prop_type,
-            prop_default: Tables.notes.prop_default,
-            prop_targets: Tables.notes.prop_targets,
-          })
-          .from(Tables.notes)
-          .where(and(eq(Tables.notes._tag, "prop"), eq(Tables.notes.attrs_valid, 1)))
-          .orderBy(asc(Tables.notes.title), asc(Tables.notes.id));
-      });
+      const stream = yield* db.reactiveQuery(
+        Query.select({
+          id: Tables.notes.id,
+          title: Tables.notes.title,
+          prop_type: Tables.notes.prop_type,
+          prop_default: Tables.notes.prop_default,
+          prop_targets: Tables.notes.prop_targets,
+        }).pipe(
+          Query.from(Tables.notes),
+          Query.where(
+            Query.and(Query.eq(Tables.notes._tag, "prop"), Query.eq(Tables.notes.attrs_valid, 1)),
+          ),
+          Query.orderBy(Tables.notes.title, "asc"),
+          Query.orderBy(Tables.notes.id, "asc"),
+        ),
+      );
 
       return stream.pipe(Stream.mapEffect((rows) => decodeDefs(rows)));
     });

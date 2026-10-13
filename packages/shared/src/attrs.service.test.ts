@@ -137,10 +137,10 @@ describe("Attrs property editing", () => {
       id: "archived",
       title: "Archived",
       prop_type: "bool",
-      prop_default: '{"_tag":"bool","val":false}',
+      prop_default: AttrsSchema.PropVal.cases.bool.make({ val: false }),
     };
 
-    const def = Schema.decodeSync(PropRecordRepo.ValidDef)(row);
+    const def = Schema.decodeUnknownSync(PropRecordRepo.ValidDef)(row);
     expect(def).toEqual({
       ...row,
       prop_default: AttrsSchema.PropVal.cases.bool.make({ val: false }),
@@ -149,9 +149,14 @@ describe("Attrs property editing", () => {
 
     const decode = Schema.decodeUnknownResult(PropRecordRepo.ValidDef);
     expect(Result.isFailure(decode({ ...row, prop_type: null }))).toBe(true);
-    const incompatible = { ...row, prop_default: '{"_tag":"number","val":1}' };
+
+    const incompatible = {
+      ...row,
+      prop_default: AttrsSchema.PropVal.cases.number.make({ val: 1 }),
+    };
+
     expect(Result.isFailure(decode(incompatible))).toBe(true);
-    expect(incompatible.prop_default).toBe('{"_tag":"number","val":1}');
+    expect(incompatible.prop_default).toEqual(AttrsSchema.PropVal.cases.number.make({ val: 1 }));
   });
 
   it("preserves defaults and assignments when changing kind, and allows explicit replacement", () => {
@@ -412,12 +417,12 @@ describe("Attrs property editing", () => {
     ];
 
     const defs = values.map((value) => {
-      return Schema.decodeSync(PropRecordRepo.ValidDef)({
+      return Schema.decodeUnknownSync(PropRecordRepo.ValidDef)({
         id: value._tag,
         title: value._tag,
 
         prop_type: value._tag,
-        prop_default: JSON.stringify(value),
+        prop_default: value,
         prop_targets: null,
       });
     });

@@ -1,4 +1,4 @@
-import * as Msgpack from "../../msgpack";
+import { Msgpack } from "../../msgpack";
 import { Schema } from "effect";
 import * as EventSchema from "../../event.schema";
 

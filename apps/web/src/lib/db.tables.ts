@@ -1,4 +1,5 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { Column, Table, Type } from "effect-qb";
+import { Schema } from "effect";
 
 export {
   notes,
@@ -7,16 +8,24 @@ export {
   events,
   backlinks,
   materializationCheckpoint,
+  type Note,
+  type Prop,
+  type RuleExpect,
+  type Event,
+  type Backlink,
+  type MaterializationCheckpoint,
 } from "@manotes/shared/db.tables";
 
-export const recordings = sqliteTable("recordings", {
-  path: text("path").primaryKey(),
-  recordedAt: text("recordedAt").notNull(),
-  mimeType: text("mimeType").notNull(),
-  durationMs: integer("durationMs"),
-  state: text("state", { enum: ["pending", "completed", "error"] }).notNull(),
-  noteId: text("noteId").notNull(),
-  intent: text("intent").notNull(),
+export const recordings = Table.make("recordings", {
+  path: Column.text().pipe(Column.primaryKey),
+  recordedAt: Column.text(),
+  mimeType: Column.text(),
+  durationMs: Column.int().pipe(Column.nullable),
+  state: Column.custom(Schema.Literals(["pending", "completed", "error"]), Type.text()),
+  noteId: Column.text(),
+  intent: Column.text(),
 });
+
+export type Recording = Table.SelectOf<typeof recordings>;
 
 export * as Tables from "./db.tables";

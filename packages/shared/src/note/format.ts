@@ -2,7 +2,7 @@ import { DateTime } from "effect";
 import { Temporal } from "temporal-polyfill";
 import type * as NoteSchema from "../note.schema";
 
-type NotePreview = Pick<typeof NoteSchema.Preview.Type, "title" | "text">;
+type NotePreview = Pick<NoteSchema.Preview, "title" | "text">;
 
 export function label(note: NotePreview): string {
   const label = note.title ?? note.text;

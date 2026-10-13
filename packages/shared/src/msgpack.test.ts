@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 import { expect, it } from "vite-plus/test";
-import * as Msgpack from "./msgpack";
+import { Msgpack } from "./msgpack";
 
 // Captured with effect@4.0.0-rc.112's Msgpack.schema, before the stable Effect upgrade.
 it("retains MessagePack bytes for stored dates and binary sync payloads", () => {
