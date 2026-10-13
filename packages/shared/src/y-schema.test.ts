@@ -287,9 +287,7 @@ describe("YSchema bound selections", () => {
       const note = Effect.runSync(attrs.pipe(YSchema.set("_tag", "note")));
       const props = Effect.runSync(note.pipe(YSchema.upsertMap("props")));
       const high = AttrsSchema.PropVal.cases.text.make({ val: "High" });
-      Effect.runSync(
-        props.pipe(YSchema.set({ propId: AttrsSchema.NoteId.make("priority") }, high)),
-      );
+      Effect.runSync(props.pipe(YSchema.set({ id: AttrsSchema.NoteId.make("priority") }, high)));
 
       expect(map.get("props")).toBeInstanceOf(Y.Map);
       const snapshot = Effect.runSync(attrs.pipe(YSchema.toJSON));
@@ -395,14 +393,14 @@ describe("YSchema bound selections", () => {
       expect(
         Result.isFailure(
           Effect.runSync(
-            Effect.result(props.pipe(YSchema.find({ propId: AttrsSchema.NoteId.make("broken") }))),
+            Effect.result(props.pipe(YSchema.find({ id: AttrsSchema.NoteId.make("broken") }))),
           ),
         ),
       ).toBe(true);
       Effect.runSync(
         props.pipe(
           YSchema.set(
-            { propId: AttrsSchema.NoteId.make("broken") },
+            { id: AttrsSchema.NoteId.make("broken") },
             AttrsSchema.PropVal.cases.number.make({ val: 7 }),
           ),
         ),
@@ -515,7 +513,7 @@ describe("YSchema bound selections", () => {
       Effect.runSync(
         firstProps.pipe(
           YSchema.set(
-            { propId: AttrsSchema.NoteId.make("priority") },
+            { id: AttrsSchema.NoteId.make("priority") },
             AttrsSchema.PropVal.cases.text.make({ val: "High" }),
           ),
         ),
@@ -523,7 +521,7 @@ describe("YSchema bound selections", () => {
       Effect.runSync(
         secondProps.pipe(
           YSchema.set(
-            { propId: AttrsSchema.NoteId.make("archived") },
+            { id: AttrsSchema.NoteId.make("archived") },
             AttrsSchema.PropVal.cases.bool.make({ val: true }),
           ),
         ),
@@ -554,20 +552,20 @@ describe("YSchema bound selections", () => {
       const written = Effect.runSync(
         attrs.pipe(
           YSchema.upsertMap("props"),
-          Effect.flatMap(YSchema.set({ propId: AttrsSchema.NoteId.make("foobar") }, value)),
+          Effect.flatMap(YSchema.set({ id: AttrsSchema.NoteId.make("foobar") }, value)),
         ),
       );
 
       expect(written.value).toEqual(value);
       expect(
         Option.getOrThrow(
-          Effect.runSync(written.pipe(YSchema.find({ propId: AttrsSchema.NoteId.make("foobar") }))),
+          Effect.runSync(written.pipe(YSchema.find({ id: AttrsSchema.NoteId.make("foobar") }))),
         ).value,
       ).toEqual(value);
       expect(Effect.runSync(written.pipe(YSchema.toJSON))).toEqual({ foobar: value });
-      Effect.runSync(written.pipe(YSchema.clear({ propId: AttrsSchema.NoteId.make("foobar") })));
+      Effect.runSync(written.pipe(YSchema.clear({ id: AttrsSchema.NoteId.make("foobar") })));
       expect(
-        Effect.runSync(written.pipe(YSchema.find({ propId: AttrsSchema.NoteId.make("foobar") }))),
+        Effect.runSync(written.pipe(YSchema.find({ id: AttrsSchema.NoteId.make("foobar") }))),
       ).toEqual(Option.none());
       expect(Effect.runSync(attrs.pipe(YSchema.toJSON))).toEqual({ props: {} });
       // @ts-expect-error external callers can supply a malformed named key
@@ -727,22 +725,22 @@ function typeChecks(attrs: YSchema.Cursor<AttrsSchema.Attrs, typeof AttrsSchema.
   const props = Effect.runSync(attrs.pipe(YSchema.upsertMap("props")));
   props.pipe(
     YSchema.set(
-      { propId: AttrsSchema.NoteId.make("priority") },
+      { id: AttrsSchema.NoteId.make("priority") },
       AttrsSchema.PropVal.cases.number.make({ val: 7 }),
     ),
   );
   // @ts-expect-error note IDs must use the shared branded ID
-  props.pipe(YSchema.find({ propId: "priority" }));
+  props.pipe(YSchema.find({ id: "priority" }));
   // @ts-expect-error referenced values also require note IDs
   AttrsSchema.PropVal.cases.link.make({ val: "unbranded" });
   // @ts-expect-error a property entry must be a tagged PropVal
-  props.pipe(YSchema.set({ propId: AttrsSchema.NoteId.make("priority") }, 7));
+  props.pipe(YSchema.set({ id: AttrsSchema.NoteId.make("priority") }, 7));
   // @ts-expect-error dictionary keys use their declared argument name
   props.pipe(YSchema.find({ noteId: "priority" }));
   // @ts-expect-error named dictionary keys cannot be positional strings
   props.pipe(YSchema.find(AttrsSchema.NoteId.make("priority")));
   // @ts-expect-error named keys accept only one argument
-  props.pipe(YSchema.clear({ propId: AttrsSchema.NoteId.make("priority"), extra: "wrong" }));
+  props.pipe(YSchema.clear({ id: AttrsSchema.NoteId.make("priority"), extra: "wrong" }));
   // @ts-expect-error named keys are only supported for dictionary schemas
   YSchema.Map({ schema: Schema.Struct({ fixed: Schema.String }), key: "propId" });
   const loose = Effect.runSync(attrs.pipe(YSchema.exportLoose));

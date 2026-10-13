@@ -36,7 +36,23 @@ export type PropValTag = PropVal["_tag"];
  *
  * Shared fields and record tags must exist before filters can compare them.
  */
-export const Props = YSchema.Map({ schema: Schema.Record(NoteId, PropVal), key: "propId" });
+export const PropValues = YSchema.Map({ schema: Schema.Record(NoteId, PropVal), key: "propId" });
+
+export const PropGroup = YSchema.Map(
+  Schema.TaggedStruct("group", {
+    props: PropValues,
+  }),
+);
+
+export type PropGroup = typeof PropGroup.Type;
+
+// Scalar entries use property IDs; groups use rule IDs. Groups contain scalar values only.
+export const Props = YSchema.Map({
+  schema: Schema.Record(NoteId, Schema.Union([PropVal, PropGroup])),
+  key: "id",
+});
+
+export type Props = typeof Props.Type;
 
 const common = {
   props: Props.pipe(
@@ -180,39 +196,45 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *   | { readonly _tag: "enum"; readonly val: NoteId }
  *   | { readonly _tag: "link"; readonly val: NoteId };
  *
+ * type PropGroup = {
+ *   readonly _tag: "group";
+ *   readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs.
+ * };
+ * type Props = Readonly<Record<NoteId, PropVal | PropGroup>>;
+ *
  * type Attrs =
  *   | {
  *       readonly _tag: "note";
  *       // Shared
- *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
+ *       readonly props: Props; // Y.Map; scalar entries are atomic JSON, groups are nested Y.Maps.
  *     }
  *   | {
  *       readonly _tag: "prop";
  *       readonly prop_type: "text";
  *       readonly prop_default?: { readonly _tag: "text"; readonly val: string };
  *       // Shared
- *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
+ *       readonly props: Props; // Y.Map; scalar entries are atomic JSON, groups are nested Y.Maps.
  *     }
  *   | {
  *       readonly _tag: "prop";
  *       readonly prop_type: "number";
  *       readonly prop_default?: { readonly _tag: "number"; readonly val: number };
  *       // Shared
- *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
+ *       readonly props: Props; // Y.Map; scalar entries are atomic JSON, groups are nested Y.Maps.
  *     }
  *   | {
  *       readonly _tag: "prop";
  *       readonly prop_type: "bool";
  *       readonly prop_default?: { readonly _tag: "bool"; readonly val: boolean };
  *       // Shared
- *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
+ *       readonly props: Props; // Y.Map; scalar entries are atomic JSON, groups are nested Y.Maps.
  *     }
  *   | {
  *       readonly _tag: "prop";
  *       readonly prop_type: "enum";
  *       readonly prop_default?: { readonly _tag: "enum"; readonly val: NoteId };
  *       // Shared
- *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
+ *       readonly props: Props; // Y.Map; scalar entries are atomic JSON, groups are nested Y.Maps.
  *     }
  *   | {
  *       readonly _tag: "prop";
@@ -220,14 +242,14 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *       readonly prop_default?: { readonly _tag: "link"; readonly val: NoteId };
  *       readonly prop_targets?: TargetFilter; // Atomic JSON; invalid predicates are forbidden.
  *       // Shared
- *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
+ *       readonly props: Props; // Y.Map; scalar entries are atomic JSON, groups are nested Y.Maps.
  *     }
  *   | {
  *       readonly _tag: "owned";
  *       readonly owned_type: "enum_option";
  *       readonly owned_parent: NoteId;
  *       // Shared
- *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
+ *       readonly props: Props; // Y.Map; scalar entries are atomic JSON, groups are nested Y.Maps.
  *     }
  *   | {
  *       readonly _tag: "rule";
@@ -237,7 +259,7 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *         { readonly _tag: "required" } | { readonly _tag: "optional" }
  *       >>;
  *       // Shared
- *       readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs; each entry is atomic JSON.
+ *       readonly props: Props; // Y.Map; scalar entries are atomic JSON, groups are nested Y.Maps.
  *     };
  * ```
  *

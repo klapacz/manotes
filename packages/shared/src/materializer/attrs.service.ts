@@ -73,6 +73,8 @@ const project = Effect.fn("MaterializerAttrs.project")(function* (opts: { readon
     props: pipe(
       loose.props ?? {},
       Record.filter(Predicate.isNotUndefined),
+      // Group projection will be added with rule-scoped assignments.
+      Record.filter((value) => !Predicate.isTagged(value, "group")),
       Record.collect((propId, value) => ({ propId, value })),
     ),
     expects: pipe(

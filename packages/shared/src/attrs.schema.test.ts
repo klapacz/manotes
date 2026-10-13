@@ -28,3 +28,35 @@ describe("Attrs defaults", () => {
     }
   });
 });
+
+describe("Attrs property groups", () => {
+  it("decodes scalar values and rule groups together", () => {
+    const props = {
+      [AttrsSchema.NoteId.make("prop_id:kind")]: AttrsSchema.PropVal.cases.enum.make({
+        val: AttrsSchema.NoteId.make("option_id:task"),
+      }),
+      [AttrsSchema.NoteId.make("rule_id:task")]: AttrsSchema.PropGroup.make({
+        props: {
+          [AttrsSchema.NoteId.make("prop_id:priority")]: AttrsSchema.PropVal.cases.number.make({
+            val: 3,
+          }),
+        },
+      }),
+    };
+
+    expect(Schema.decodeUnknownSync(AttrsSchema.Attrs)({ props }).props).toEqual(props);
+  });
+
+  it.each([
+    '{"_tag":"group"}',
+    '{"_tag":"group","props":null}',
+    '{"_tag":"group","props":{"priority":{"_tag":"number","val":"high"}}}',
+    '{"_tag":"group","props":{"nested":{"_tag":"group","props":{}}}}',
+  ])("rejects malformed or nested groups: %s", (json) => {
+    const group = JSON.parse(json);
+
+    expect(
+      Result.isFailure(Schema.decodeUnknownResult(AttrsSchema.Props)({ "rule_id:task": group })),
+    ).toBe(true);
+  });
+});

@@ -1,4 +1,4 @@
-import { Context, Data, Effect, Layer, Option, Queue, Schema, Stream } from "effect";
+import { Context, Data, Effect, Layer, Option, Predicate, Queue, Schema, Stream } from "effect";
 import * as Y from "yjs";
 import { AttrsSchema } from "./attrs.schema";
 import { NoteDoc } from "./note/doc";
@@ -108,14 +108,18 @@ const readEntry = Effect.fn("Attrs.readEntry")(function* <K extends AttrsSchema.
   const decode = Schema.decodeEffect(getPropValSchema(opts.def.prop_type));
 
   const state: ValueState<ValByTag[K], AttrsSchema.PropVal> = yield* opts.props.pipe(
-    LibOption.mapEffect(YSchema.find({ propId: opts.def.id })),
+    LibOption.mapEffect(YSchema.find({ id: opts.def.id })),
     Effect.map(Option.flatten),
     EffectOption.traverse((selection) => {
-      return decode(selection.value).pipe(
+      if (Predicate.isTagged(selection.value, "group")) {
+        return Effect.succeed(ValueState.Invalid<never, AttrsSchema.PropVal>({}));
+      }
+
+      const stored = selection.value;
+
+      return decode(stored).pipe(
         Effect.map((value) => ValueState.Valid({ value })),
-        Effect.catchTag("SchemaError", () =>
-          Effect.succeed(ValueState.Invalid({ value: selection.value })),
-        ),
+        Effect.catchTag("SchemaError", () => Effect.succeed(ValueState.Invalid({ value: stored }))),
       );
     }),
     Effect.map(Option.getOrElse(() => ValueState.Unset())),
@@ -149,7 +153,7 @@ const setProp = Effect.fn("Attrs.setProp")(function* (opts: {
 
   const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
   const props = yield* attrs.pipe(YSchema.upsertMap("props"));
-  yield* props.pipe(YSchema.set({ propId: opts.propId }, opts.value));
+  yield* props.pipe(YSchema.set({ id: opts.propId }, opts.value));
 });
 
 const clearProp = Effect.fn("Attrs.clearProp")(function* (opts: {
@@ -160,7 +164,7 @@ const clearProp = Effect.fn("Attrs.clearProp")(function* (opts: {
   const props = yield* attrs.pipe(YSchema.findMap("props"));
 
   if (Option.isSome(props)) {
-    yield* props.value.pipe(YSchema.clear({ propId: opts.propId }));
+    yield* props.value.pipe(YSchema.clear({ id: opts.propId }));
   }
 });
 
