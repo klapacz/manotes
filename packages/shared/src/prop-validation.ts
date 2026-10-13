@@ -7,11 +7,11 @@ import { StreamFilter } from "./note/stream-filter";
 export function watch<V extends AttrsSchema.PropVal>(opts: {
   readonly state: Attrs.ValueState<V, AttrsSchema.PropVal>;
   readonly targets: AttrsSchema.TargetFilter | undefined;
-}): Stream.Stream<Attrs.ValueState<V, AttrsSchema.PropVal>, unknown, NoteRepo.Service> {
+}) {
   const state = opts.state;
 
   if (!Predicate.isTagged(state, "Valid") || !AttrsSchema.PropVal.guards.link(state.value)) {
-    return Stream.succeed(state);
+    return Stream.succeed<Attrs.ValueState<V, AttrsSchema.PropVal>>(state);
   }
 
   const value = state.value;
@@ -24,7 +24,9 @@ export function watch<V extends AttrsSchema.PropVal>(opts: {
   ).pipe(
     Stream.unwrap,
     // Keep the assignment unchanged; only its displayed validity follows the scope.
-    Stream.map((note) => (Option.isSome(note) ? state : Attrs.ValueState.Invalid({ value }))),
+    Stream.map((note): Attrs.ValueState<V, AttrsSchema.PropVal> =>
+      Option.isSome(note) ? state : Attrs.ValueState.Invalid({ value }),
+    ),
   );
 }
 

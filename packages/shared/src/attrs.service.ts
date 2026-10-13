@@ -1,4 +1,18 @@
-import { Context, Data, Effect, Layer, Option, Predicate, Queue, Schema, Stream } from "effect";
+import {
+  Context,
+  Data,
+  Effect,
+  Layer,
+  Match,
+  Option,
+  Predicate,
+  Queue,
+  Record,
+  Result,
+  Schema,
+  Stream,
+  pipe,
+} from "effect";
 import * as Y from "yjs";
 import { AttrsSchema } from "./attrs.schema";
 import { NoteDoc } from "./note/doc";
@@ -6,6 +20,8 @@ import { PropRecordRepo } from "./prop-record.repo";
 import { YSchema } from "./y-schema";
 import { EffectOption } from "./effect/effect-option";
 import { LibOption } from "./effect/option";
+import { EffectStream } from "./effect/stream";
+import { PropValidation } from "./prop-validation";
 
 export type ValueState<V, I = V> = Data.TaggedEnum<{
   Unset: {};
@@ -30,6 +46,15 @@ export type Entry<Tag extends AttrsSchema.PropValTag = AttrsSchema.PropValTag> =
   };
 }[Tag];
 
+export type Defs = Readonly<Record<AttrsSchema.NoteId, PropRecordRepo.Def>>;
+
+type SavedValues = {
+  readonly top: Readonly<Record<AttrsSchema.NoteId, AttrsSchema.PropVal>>;
+  readonly groups: Readonly<
+    Record<AttrsSchema.NoteId, Readonly<Record<AttrsSchema.NoteId, AttrsSchema.PropVal>>>
+  >;
+};
+
 export class Service extends Context.Service<Service>()("Attrs.Service", {
   make: Effect.sync(() => ({
     initializeProp,
@@ -41,6 +66,7 @@ export class Service extends Context.Service<Service>()("Attrs.Service", {
     clearRuleExpectation,
     watch,
     watchProps,
+    watchGroups,
     setProp,
     clearProp,
     setPropType,
@@ -83,6 +109,91 @@ function watchProps<E, R>(opts: {
   );
 }
 
+function watchGroups<E, R>(opts: {
+  readonly doc: Y.Doc;
+  readonly defs: Stream.Stream<Defs, E, R>;
+}) {
+  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+
+  // Re-read saved data when definitions or any nested attrs value change.
+  return Stream.zipLatestWith(opts.defs, changes(opts.doc), (defs) => defs).pipe(
+    Stream.mapEffect((defs) =>
+      readGroups({ attrs }).pipe(Effect.map((saved) => ({ saved, defs }))),
+    ),
+    // Replace scope subscriptions using the newly read values and definitions.
+    Stream.switchMap(({ saved, defs }) =>
+      watchSavedGroups({ saved, defs }).pipe(Stream.map((saved) => ({ saved, defs }))),
+    ),
+  );
+}
+
+const readGroups = Effect.fn("Attrs.readGroups")(function* (opts: {
+  readonly attrs: YSchema.Cursor<AttrsSchema.Attrs, typeof AttrsSchema.Attrs>;
+}) {
+  const [top, groups] = yield* opts.attrs.pipe(
+    YSchema.exportLoose,
+    Effect.map((attrs) => attrs.props ?? {}),
+    Effect.map(Record.filter(Predicate.isNotUndefined)),
+    // Split scalar values from saved rule groups through the existing loose schema.
+    Effect.map(
+      Record.partition((value: AttrsSchema.PropVal | AttrsSchema.PropGroup) =>
+        Match.value(value).pipe(
+          Match.tag("group", (group) => Result.succeed(group)),
+          Match.orElse((value) => Result.fail(value)),
+        ),
+      ),
+    ),
+  );
+
+  return { top, groups: Record.map(groups, (group) => group.props) };
+});
+
+function watchSavedGroups(opts: { readonly saved: SavedValues; readonly defs: Defs }) {
+  return EffectStream.zipLatestRecord({
+    top: watchSavedProps({ props: opts.saved.top, defs: opts.defs }),
+    groups: pipe(
+      opts.saved.groups,
+      Record.map((props) => watchSavedProps({ props, defs: opts.defs })),
+      EffectStream.zipLatestRecord,
+    ),
+  });
+}
+
+function watchSavedProps(opts: {
+  readonly props: Readonly<Record<AttrsSchema.NoteId, AttrsSchema.PropVal>>;
+  readonly defs: Defs;
+}) {
+  return pipe(
+    opts.props,
+    // Build validation streams under the same prop IDs as the saved values.
+    Record.map((value, propId) => watchProp({ value, def: Record.get(opts.defs, propId) })),
+    EffectStream.zipLatestRecord,
+  );
+}
+
+function watchProp(opts: {
+  readonly value: AttrsSchema.PropVal;
+  readonly def: Option.Option<PropRecordRepo.Def>;
+}) {
+  return Match.value(opts.def).pipe(
+    // Preserve a supported value when its definition is unavailable.
+    Match.tag("None", () => Stream.succeed(ValueState.Invalid({ value: opts.value }))),
+    Match.tag("Some", ({ value: def }) =>
+      Stream.fromEffect(validateValueType({ value: opts.value, def })).pipe(
+        Stream.flatMap((state) =>
+          Match.value(def).pipe(
+            Match.when({ prop_type: "link" }, (def) =>
+              PropValidation.watch({ state, targets: def.prop_targets ?? undefined }),
+            ),
+            Match.orElse(() => Stream.succeed(state)),
+          ),
+        ),
+      ),
+    ),
+    Match.exhaustive,
+  );
+}
+
 function changes(doc: Y.Doc) {
   const map = doc.getMap("attrs");
 
@@ -105,8 +216,6 @@ const readEntry = Effect.fn("Attrs.readEntry")(function* <K extends AttrsSchema.
   >;
   readonly def: PropRecordRepo.Def<K>;
 }): Effect.fn.Return<Entry<K>> {
-  const decode = Schema.decodeEffect(getPropValSchema(opts.def.prop_type));
-
   const state: ValueState<ValByTag[K], AttrsSchema.PropVal> = yield* opts.props.pipe(
     LibOption.mapEffect(YSchema.find({ id: opts.def.id })),
     Effect.map(Option.flatten),
@@ -115,12 +224,7 @@ const readEntry = Effect.fn("Attrs.readEntry")(function* <K extends AttrsSchema.
         return Effect.succeed(ValueState.Invalid<never, AttrsSchema.PropVal>({}));
       }
 
-      const stored = selection.value;
-
-      return decode(stored).pipe(
-        Effect.map((value) => ValueState.Valid({ value })),
-        Effect.catchTag("SchemaError", () => Effect.succeed(ValueState.Invalid({ value: stored }))),
-      );
+      return validateValueType({ value: selection.value, def: opts.def });
     }),
     Effect.map(Option.getOrElse(() => ValueState.Unset())),
     Effect.catchTag("YSchemaError", () =>
@@ -129,6 +233,18 @@ const readEntry = Effect.fn("Attrs.readEntry")(function* <K extends AttrsSchema.
   );
 
   return { def: opts.def, value: state } satisfies Entry<K>;
+});
+
+const validateValueType = Effect.fn("Attrs.validateValueType")(function* <
+  K extends AttrsSchema.PropValTag,
+>(opts: { readonly value: AttrsSchema.PropVal; readonly def: PropRecordRepo.Def<K> }) {
+  const decode = Schema.decodeEffect(getPropValSchema(opts.def.prop_type));
+
+  return yield* decode(opts.value).pipe(
+    Effect.map((value) => ValueState.Valid({ value })),
+    // Keep supported values that no longer match their definition's type.
+    Effect.catchTag("SchemaError", () => Effect.succeed(ValueState.Invalid({ value: opts.value }))),
+  );
 });
 
 const getPropValSchema = <K extends AttrsSchema.PropValTag>(prop_type: K) => {

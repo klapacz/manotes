@@ -1,5 +1,5 @@
-import { eq } from "drizzle-orm";
-import { Context, Effect, Layer, Schema } from "effect";
+import { asc, eq } from "drizzle-orm";
+import { Context, Effect, Layer, Schema, Stream } from "effect";
 import { DB } from "./db.service";
 import { Tables } from "./db.tables";
 import { NoteSchema } from "./note.schema";
@@ -14,6 +14,8 @@ export const RuleExpectRow = Schema.Struct({
 export type RuleExpectRow = typeof RuleExpectRow.Type;
 
 const encodeRows = Schema.encodeEffect(Schema.Array(RuleExpectRow));
+
+const decodeRows = Schema.decodeEffect(Schema.Array(RuleExpectRow));
 
 export class Service extends Context.Service<Service>()("RuleExpectRepo.Service", {
   make: Effect.gen(function* () {
@@ -34,7 +36,18 @@ export class Service extends Context.Service<Service>()("RuleExpectRepo.Service"
       yield* db.execute((db) => db.insert(Tables.ruleExpects).values([...rows]));
     });
 
-    return { deleteForRule, insert };
+    const reactiveAll = Effect.fn("RuleExpectRepo.reactiveAll")(function* () {
+      const rows = yield* db.reactiveQuery((db) =>
+        db
+          .select()
+          .from(Tables.ruleExpects)
+          .orderBy(asc(Tables.ruleExpects.ruleId), asc(Tables.ruleExpects.propId)),
+      );
+
+      return rows.pipe(Stream.mapEffect((rows) => decodeRows(rows)));
+    });
+
+    return { deleteForRule, insert, reactiveAll };
   }),
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
