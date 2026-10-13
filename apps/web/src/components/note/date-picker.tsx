@@ -1,5 +1,5 @@
 import { useAtom } from "@effect/atom-solid";
-import { DateTime, Effect } from "effect";
+import { DateTime, Effect, Exit } from "effect";
 import { MaterializedEventService, bindRt } from "../../lib";
 import { DateCommand } from "./date-command";
 
@@ -20,15 +20,14 @@ export function Menu(props: {
 }
 
 export function useChangeDate(props: { noteId: string; onChanged: () => void }) {
-  const [result, setDate] = useAtom(SetDate, { mode: "promise" });
+  const [, setDate] = useAtom(SetDate, { mode: "promiseExit" });
 
   return async (date: string) => {
-    if (result().waiting) return;
+    const exit = await setDate({ noteId: props.noteId, date });
 
-    try {
-      await setDate({ noteId: props.noteId, date });
-      props.onChanged();
-    } catch {}
+    if (Exit.isFailure(exit)) return;
+
+    props.onChanged();
   };
 }
 

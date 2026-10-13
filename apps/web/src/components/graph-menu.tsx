@@ -1,5 +1,5 @@
 import type { DropdownMenuTriggerProps } from "@kobalte/core/dropdown-menu";
-import { Effect } from "effect";
+import { Effect, Exit } from "effect";
 import { Show } from "solid-js";
 import { toast } from "somoto";
 import * as GraphEncryption from "@manotes/shared/graph-encryption";
@@ -64,8 +64,8 @@ const GraphMenuIdentity = (props: { graph: LocalRegistry.Schema.Record }) => {
 
 export const GraphMenu = () => {
   const graph = useGraph();
-  const [exportBackupResult, exportBackup] = useAtom(ExportBackup, { mode: "promise" });
-  const [lockGraphResult, lockGraph] = useAtom(() => LockGraph, { mode: "promise" });
+  const [exportBackupResult, exportBackup] = useAtom(ExportBackup, { mode: "promiseExit" });
+  const [lockGraphResult, lockGraph] = useAtom(() => LockGraph, { mode: "promiseExit" });
 
   const cloudGraph = () => {
     const record = graph().record;
@@ -74,18 +74,21 @@ export const GraphMenu = () => {
   };
 
   async function handleExportBackup(displayName: string) {
-    try {
-      await exportBackup(displayName);
-      toast.success("Backup exported");
-    } catch {
+    const exit = await exportBackup(displayName);
+
+    if (Exit.isFailure(exit)) {
       toast.error("Failed to export backup");
+
+      return;
     }
+
+    toast.success("Backup exported");
   }
 
   async function handleLockGraph(envelope: GraphEncryption.GraphKeyEnvelope) {
-    try {
-      await lockGraph(envelope);
-    } catch {
+    const exit = await lockGraph(envelope);
+
+    if (Exit.isFailure(exit)) {
       toast.error("Failed to lock graph");
     }
   }

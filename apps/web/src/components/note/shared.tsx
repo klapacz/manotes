@@ -1,5 +1,5 @@
 import { getRouteApi } from "@tanstack/solid-router";
-import { Data } from "effect";
+import { Data, Exit } from "effect";
 import { useAtom } from "@effect/atom-solid";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { Show, createMemo, createSignal } from "solid-js";
@@ -251,20 +251,23 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
               onChanged: close,
             });
 
-            const [propertyMutation, editProperty] = useAtom(NoteProps.Edit, { mode: "promise" });
+            const [propertyMutation, editProperty] = useAtom(NoteProps.Edit, {
+              mode: "promiseExit",
+            });
 
             const setProperty = async (action: NoteProps.Action & { _tag: "SetProperty" }) => {
-              if (!props.doc || propertyMutation().waiting) return;
+              if (!props.doc) return;
 
-              try {
-                await editProperty({
-                  doc: props.doc,
-                  recordId: props.note.id,
-                  propId: action.propId,
-                  value: action.propVal,
-                });
-                setPage(MenuPage.Property({ propId: action.propId }));
-              } catch {}
+              const exit = await editProperty({
+                doc: props.doc,
+                recordId: props.note.id,
+                propId: action.propId,
+                value: action.propVal,
+              });
+
+              if (Exit.isFailure(exit)) return;
+
+              setPage(MenuPage.Property({ propId: action.propId }));
             };
 
             const dates = QueryEngine.map(DateSuggestions.query, (date): NoteMenuChoice => ({

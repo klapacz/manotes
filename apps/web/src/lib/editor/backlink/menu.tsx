@@ -1,4 +1,4 @@
-import { Effect, flow, Stream, Array, Struct } from "effect";
+import { Effect, Exit, flow, Stream, Array, Struct } from "effect";
 import { useEditor } from "prosekit/solid";
 import {
   AutocompleteEmpty,
@@ -169,13 +169,14 @@ export function TabMenu() {
     EMPTY_TAB_CANDIDATES,
   );
 
-  const [, createTabNote] = useAtom(CreateTabNote, { mode: "promise" });
+  const [, createTabNote] = useAtom(CreateTabNote, { mode: "promiseExit" });
 
   const onTabSelect = async (tab: BrowserExtension.TabCandidate) => {
-    try {
-      const note = await createTabNote(tab);
-      onSelect(note.id);
-    } catch {}
+    const exit = await createTabNote(tab);
+
+    if (Exit.isFailure(exit)) return;
+
+    onSelect(exit.value.id);
   };
 
   return (

@@ -137,12 +137,10 @@ export function Menu(props: {
     ),
   );
 
-  const [mutation, edit] = useAtom(Edit, { mode: "promise" });
+  const [mutation, edit] = useAtom(Edit);
 
-  const change = async (value: AttrsSchema.PropVal | undefined) => {
-    try {
-      await edit({ doc: props.doc, recordId: props.noteId, propId: props.propId, value });
-    } catch {}
+  const change = (value: AttrsSchema.PropVal | undefined) => {
+    edit({ doc: props.doc, recordId: props.noteId, propId: props.propId, value });
   };
 
   return (
@@ -171,7 +169,7 @@ export function Menu(props: {
                 defaultValue={Option.fromNullishOr(entry().def.prop_default)}
                 state={entry().value}
                 disabled={mutation().waiting}
-                onChange={(value) => void change(value)}
+                onChange={(value) => change(value)}
                 onOpenNote={props.onOpenNote}
               >
                 {(items) => (
@@ -187,7 +185,7 @@ export function Menu(props: {
                       <Picker.Back onSelect={props.onBack} />
                       <Picker.Clear
                         disabled={Predicate.isTagged(entry().value, "Unset") || mutation().waiting}
-                        onSelect={() => void change(undefined)}
+                        onSelect={() => change(undefined)}
                       />
                     </Picker.Footer>
                   </CommandList>

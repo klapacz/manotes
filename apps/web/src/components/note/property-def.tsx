@@ -56,12 +56,10 @@ export function Root(props: {
   const ctx = PaneCtx.use();
   const scroll = PaneScroll.use();
   const navigate = route.useNavigate();
-  const [mutation, edit] = useAtom(Edit, { mode: "promise" });
+  const [mutation, edit] = useAtom(Edit);
 
-  const change = async (change: Change) => {
-    try {
-      await edit({ doc: props.doc, change });
-    } catch {}
+  const change = (change: Change) => {
+    edit({ doc: props.doc, change });
   };
 
   const editableType = () => PropQuery.editableTypes.find((type) => type === props.attrs.prop_type);
@@ -126,7 +124,7 @@ export function Root(props: {
                       query={MenuQuery.choices(() => typeChoices)}
                       selected={props.attrs.prop_type}
                       onSelect={(choice) => {
-                        void change(Change.Type({ type: choice.value }));
+                        change(Change.Type({ type: choice.value }));
                         close();
                       }}
                     />
@@ -163,7 +161,7 @@ export function Root(props: {
                           state={defaultState()}
                           disabled={mutation().waiting}
                           onChange={(value) => {
-                            void change(Change.Default({ value: Option.some(value) }));
+                            change(Change.Default({ value: Option.some(value) }));
                             close();
                           }}
                           onOpenNote={(id) => close(() => openNote(id))}
@@ -176,7 +174,7 @@ export function Root(props: {
                                 <Picker.Clear
                                   disabled={!props.attrs.prop_default || mutation().waiting}
                                   onSelect={() => {
-                                    void change(Change.Default({ value: Option.none() }));
+                                    change(Change.Default({ value: Option.none() }));
                                     close();
                                   }}
                                 />

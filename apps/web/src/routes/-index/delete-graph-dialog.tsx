@@ -1,4 +1,5 @@
 import { useAtom } from "@effect/atom-solid";
+import { Exit } from "effect";
 import { createSignal, splitProps, type ValidComponent } from "solid-js";
 import { toast } from "somoto";
 import { Alert, AlertDescription } from "../../components/ui/alert";
@@ -26,20 +27,19 @@ export function DeleteGraphDialog<T extends ValidComponent = typeof Button>(prop
   const [open, setOpen] = createSignal(false);
 
   const [deleteResult, deleteLocalGraph] = useAtom(() => GraphAccessCommands.Atom.deleteLocal, {
-    mode: "promise",
+    mode: "promiseExit",
   });
 
   // SAFETY: Erasing the trigger's polymorphic parameter lets Solid remove graph; remaining props are forwarded unchanged to DialogTrigger.
   const [local, triggerProps] = splitProps(props as Props, ["graph"]);
 
   async function handleDelete() {
-    try {
-      await deleteLocalGraph(local.graph.localGraphId);
-      setOpen(false);
-      toast.success("Graph deleted");
-    } catch {
-      // Error UI is rendered below.
-    }
+    const exit = await deleteLocalGraph(local.graph.localGraphId);
+
+    if (Exit.isFailure(exit)) return;
+
+    setOpen(false);
+    toast.success("Graph deleted");
   }
 
   return (
