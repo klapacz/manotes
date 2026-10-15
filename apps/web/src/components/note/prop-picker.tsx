@@ -8,6 +8,7 @@ import { Command, CommandItem, CommandList } from "../ui/command";
 import { UseDefaultIcon, ArrowUpRightIcon } from "../icons";
 import { Picker } from "../ui/picker";
 import { NoteLabel } from "./note-label";
+import { MatchTag } from "../../lib";
 
 type ValueProps = {
   propId: AttrsSchema.NoteId;
@@ -264,14 +265,15 @@ export function ValueLabel(props: { value: AttrsSchema.PropVal }) {
 
 export function StateLabel(props: { state: Attrs.ValueState<AttrsSchema.PropVal> }) {
   return (
-    <>
-      {Match.value(props.state).pipe(
-        Match.tag("Unset", () => "Choose"),
-        Match.tag("Valid", ({ value }) => <ValueLabel value={value} />),
-        Match.tag("Invalid", ({ value }) => (
+    <MatchTag
+      when={props.state}
+      cases={{
+        Unset: () => "Choose",
+        Valid: (state) => <ValueLabel value={state().value} />,
+        Invalid: (state) => (
           <>
             Invalid
-            <Show when={value}>
+            <Show when={state().value}>
               {(value) => (
                 <>
                   : <ValueLabel value={value()} />
@@ -279,10 +281,9 @@ export function StateLabel(props: { state: Attrs.ValueState<AttrsSchema.PropVal>
               )}
             </Show>
           </>
-        )),
-        Match.exhaustive,
-      )}
-    </>
+        ),
+      }}
+    />
   );
 }
 
