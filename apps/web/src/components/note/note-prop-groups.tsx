@@ -193,14 +193,19 @@ function ValueControl(props: RowProps) {
 
   const invalid = () => Attrs.ValueState.$is("Invalid")(props.prop.value);
 
+  const unexpected = () =>
+    RuleProps.EditorGroup.$is("Rule")(props.group) && RuleProps.isUnexpected(props.prop);
+
   return (
     <Picker.Root label={label()}>
       <Picker.Trigger
         variant="ghost"
         rounded="default"
         aria-invalid={invalid() || required()}
-        class="h-7 border-0 px-2 text-sm aria-[invalid=true]:bg-error-control aria-[invalid=true]:text-error-fg aria-[invalid=true]:hover:bg-error-control-hover"
+        data-unexpected={unexpected() && !invalid() && !required()}
+        class="h-7 border-0 px-2 text-sm aria-[invalid=true]:bg-error-control aria-[invalid=true]:text-error-fg aria-[invalid=true]:hover:bg-error-control-hover data-[unexpected=true]:bg-warning-control data-[unexpected=true]:text-warning-fg data-[unexpected=true]:hover:bg-warning-control-hover"
       >
+        <Show when={unexpected()}>Unexpected: </Show>
         <Show when={required()} fallback={<PropPicker.StateLabel state={props.prop.value} />}>
           Required
         </Show>

@@ -179,6 +179,10 @@ export function reconcileGroups(opts: {
   };
 }
 
+export function isUnexpected(prop: Prop) {
+  return Option.isNone(prop.expectation) && !Attrs.ValueState.$is("Unset")(prop.value);
+}
+
 function reconcileRuleGroup(opts: {
   readonly ruleId: NoteSchema.Id;
   readonly saved: SavedProps;
