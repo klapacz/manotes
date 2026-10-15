@@ -13,8 +13,10 @@ import { QueryEngine } from "../../lib/query-engine";
 import { NoteLink } from "../../lib/note/link-component";
 import { XIcon } from "../icons";
 import { Button } from "../ui/button";
+import { ButtonGroup } from "../ui/button-group";
 import { DescriptionList } from "../ui/description-list";
 import { Picker } from "../ui/picker";
+import { Surface } from "../ui/surface";
 import { Focus } from "./focus";
 import { NoteLabel } from "./note-label";
 import { RuleTargets } from "./rule-targets";
@@ -89,22 +91,14 @@ export function Root(props: { recordId: AttrsSchema.NoteId; doc: Y.Doc; attrs: S
 
   return (
     <div class="px-4 pb-4">
-      <div
-        class="rounded-lg bg-bg-subtle px-2 py-2 text-sm transition-colors"
-        classList={{ "bg-control": focus.highlightWithin() }}
-      >
-        <div class="px-2 pb-2">RULE</div>
+      <Surface.Root highlighted={focus.highlightWithin()}>
+        <Surface.Header>RULE</Surface.Header>
         <DescriptionList.Root>
           <DescriptionList.Row>
             <DescriptionList.Term>Storage</DescriptionList.Term>
             <DescriptionList.Details>
               <Picker.Root label="Storage">
-                <Picker.Trigger
-                  variant="ghost"
-                  rounded="default"
-                  class="h-7 border-0 px-2 text-sm"
-                  disabled={mutation().waiting}
-                >
+                <Picker.Trigger variant="ghost" size="xs" disabled={mutation().waiting}>
                   {storageChoices.find((choice) => choice.value === props.attrs.rule_storage?._tag)
                     ?.label ?? "Invalid"}
                 </Picker.Trigger>
@@ -150,42 +144,39 @@ export function Root(props: { recordId: AttrsSchema.NoteId; doc: Y.Doc; attrs: S
                           {(def) => <>{def().title}</>}
                         </Show>
                       </DescriptionList.Term>
-                      <DescriptionList.Details class="flex items-center gap-1">
-                        <Picker.Root label="Expectation">
-                          <Picker.Trigger
+                      <DescriptionList.Details>
+                        <ButtonGroup.Root aria-label="Expected property">
+                          <Picker.Root label="Expectation">
+                            <Picker.Trigger variant="ghost" size="xs" disabled={mutation().waiting}>
+                              {expectationChoices.find(
+                                (choice) => choice.value === expects()[propId]?._tag,
+                              )?.label ?? "Invalid"}
+                            </Picker.Trigger>
+                            <Picker.Content>
+                              {(close) => (
+                                <Picker.Query<(typeof expectationChoices)[number]>
+                                  label="Expectation"
+                                  query={MenuQuery.choices(() => expectationChoices)}
+                                  selected={expects()[propId]?._tag}
+                                  disabled={mutation().waiting}
+                                  onSelect={(choice) => {
+                                    change(Change.Set({ propId, value: choice.expectation }));
+                                    close();
+                                  }}
+                                />
+                              )}
+                            </Picker.Content>
+                          </Picker.Root>
+                          <Button
                             variant="ghost"
-                            rounded="default"
-                            class="h-7 border-0 px-2 text-sm"
+                            size="icon-xs"
+                            aria-label="Remove expected property"
                             disabled={mutation().waiting}
+                            onClick={() => change(Change.Remove({ propId }))}
                           >
-                            {expectationChoices.find(
-                              (choice) => choice.value === expects()[propId]?._tag,
-                            )?.label ?? "Invalid"}
-                          </Picker.Trigger>
-                          <Picker.Content>
-                            {(close) => (
-                              <Picker.Query<(typeof expectationChoices)[number]>
-                                label="Expectation"
-                                query={MenuQuery.choices(() => expectationChoices)}
-                                selected={expects()[propId]?._tag}
-                                disabled={mutation().waiting}
-                                onSelect={(choice) => {
-                                  change(Change.Set({ propId, value: choice.expectation }));
-                                  close();
-                                }}
-                              />
-                            )}
-                          </Picker.Content>
-                        </Picker.Root>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          aria-label="Remove expected property"
-                          disabled={mutation().waiting}
-                          onClick={() => change(Change.Remove({ propId }))}
-                        >
-                          <XIcon />
-                        </Button>
+                            <XIcon />
+                          </Button>
+                        </ButtonGroup.Root>
                       </DescriptionList.Details>
                     </DescriptionList.Row>
                   )}
@@ -193,7 +184,7 @@ export function Root(props: { recordId: AttrsSchema.NoteId; doc: Y.Doc; attrs: S
               </DescriptionList.Root>
               <div class="pt-2 pb-1">
                 <Picker.Root label="Add expected property">
-                  <Picker.Trigger variant="outline" size="sm" disabled={mutation().waiting}>
+                  <Picker.Trigger variant="outline" size="xs" disabled={mutation().waiting}>
                     Add
                   </Picker.Trigger>
                   <Picker.Content>
@@ -220,11 +211,9 @@ export function Root(props: { recordId: AttrsSchema.NoteId; doc: Y.Doc; attrs: S
           </DescriptionList.Row>
         </DescriptionList.Root>
         <Show when={AsyncResult.isFailure(mutation())}>
-          <p role="alert" class="px-2 pt-2 text-error-fg">
-            Unable to update rule.
-          </p>
+          <Surface.Error>Unable to update rule.</Surface.Error>
         </Show>
-      </div>
+      </Surface.Root>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { bindRt } from "../../lib";
 import { CommandList, CommandScroll } from "../ui/command";
 import { DescriptionList } from "../ui/description-list";
 import { Picker } from "../ui/picker";
+import { Surface } from "../ui/surface";
 import { PropQuery } from "./prop-query";
 import { PropPicker } from "./prop-picker";
 import { Focus } from "./focus";
@@ -20,6 +21,7 @@ import { PaneMake } from "@manotes/shared/note/pane.make";
 import { PaneScroll } from "../../lib/note/pane.scroll";
 import { NoteLink } from "../../lib/note/link-component";
 import { Button } from "../ui/button";
+import { ButtonGroup } from "../ui/button-group";
 import { ArrowUpRightIcon } from "../icons";
 import { PropScope } from "./prop-scope";
 import { PropState } from "./prop-state";
@@ -103,24 +105,14 @@ export function Root(props: {
 
   return (
     <div class="px-4 pb-4">
-      <div
-        class="rounded-lg bg-bg-subtle px-2 py-2 text-sm transition-colors"
-        classList={{ "bg-control": focus.highlightWithin() }}
-      >
-        <div class="flex items-center gap-2 px-2 pb-2">
-          <span>PROPERTY</span>
-        </div>
+      <Surface.Root highlighted={focus.highlightWithin()}>
+        <Surface.Header>PROPERTY</Surface.Header>
         <DescriptionList.Root>
           <DescriptionList.Row>
             <DescriptionList.Term>Value kind</DescriptionList.Term>
             <DescriptionList.Details>
               <Picker.Root label="Value kind">
-                <Picker.Trigger
-                  variant="ghost"
-                  rounded="default"
-                  class="h-7 border-0 px-2 text-sm"
-                  disabled={mutation().waiting}
-                >
+                <Picker.Trigger variant="ghost" size="xs" disabled={mutation().waiting}>
                   {typeLabels[props.attrs.prop_type]}
                 </Picker.Trigger>
                 <Picker.Content>
@@ -142,70 +134,74 @@ export function Root(props: {
           <DescriptionList.Row>
             <DescriptionList.Term>Default</DescriptionList.Term>
             <DescriptionList.Details>
-              <Picker.Root label="Default value">
-                <Picker.Trigger
-                  variant="ghost"
-                  rounded="default"
-                  aria-invalid={Attrs.ValueState.$is("Invalid")(defaultState())}
-                  class="h-7 border-0 px-2 text-sm aria-[invalid=true]:bg-error-control aria-[invalid=true]:text-error-fg aria-[invalid=true]:hover:bg-error-control-hover"
-                  disabled={!editableType() || mutation().waiting}
-                >
-                  <PropPicker.StateLabel state={defaultState()} />
-                </Picker.Trigger>
-                <Picker.Content>
-                  {(close) => (
-                    <Show when={editableType()}>
-                      {(type) => (
-                        <PropPicker.Value
-                          propId={props.recordId}
-                          label="Default value"
-                          type={type()}
-                          targets={
-                            props.attrs.prop_type === "link" ? props.attrs.prop_targets : undefined
-                          }
-                          defaultValue={Option.none()}
-                          state={defaultState()}
-                          disabled={mutation().waiting}
-                          onChange={(value) => {
-                            change(Change.Default({ value: Option.some(value) }));
-                            close();
-                          }}
-                          onOpenNote={(id) => close(() => openNote(id))}
-                        >
-                          {(items) => (
-                            <CommandList>
-                              <CommandScroll>{items}</CommandScroll>
-                              <PropPicker.Invalid state={defaultState()} />
-                              <Picker.Footer>
-                                <Picker.Clear
-                                  disabled={!props.attrs.prop_default || mutation().waiting}
-                                  onSelect={() => {
-                                    change(Change.Default({ value: Option.none() }));
-                                    close();
-                                  }}
-                                />
-                              </Picker.Footer>
-                            </CommandList>
-                          )}
-                        </PropPicker.Value>
-                      )}
-                    </Show>
-                  )}
-                </Picker.Content>
-              </Picker.Root>
-              <Show when={defaultLink()}>
-                {(id) => (
-                  <Button
-                    as={NoteLink}
-                    id={id()}
+              <ButtonGroup.Root aria-label="Default value and actions">
+                <Picker.Root label="Default value">
+                  <Picker.Trigger
                     variant="ghost"
-                    size="icon-xs"
-                    aria-label="Open default reference"
+                    size="xs"
+                    aria-invalid={Attrs.ValueState.$is("Invalid")(defaultState())}
+                    intent={Attrs.ValueState.$is("Invalid")(defaultState()) ? "error" : undefined}
+                    disabled={!editableType() || mutation().waiting}
                   >
-                    <ArrowUpRightIcon />
-                  </Button>
-                )}
-              </Show>
+                    <PropPicker.StateLabel state={defaultState()} />
+                  </Picker.Trigger>
+                  <Picker.Content>
+                    {(close) => (
+                      <Show when={editableType()}>
+                        {(type) => (
+                          <PropPicker.Value
+                            propId={props.recordId}
+                            label="Default value"
+                            type={type()}
+                            targets={
+                              props.attrs.prop_type === "link"
+                                ? props.attrs.prop_targets
+                                : undefined
+                            }
+                            defaultValue={Option.none()}
+                            state={defaultState()}
+                            disabled={mutation().waiting}
+                            onChange={(value) => {
+                              change(Change.Default({ value: Option.some(value) }));
+                              close();
+                            }}
+                            onOpenNote={(id) => close(() => openNote(id))}
+                          >
+                            {(items) => (
+                              <CommandList>
+                                <CommandScroll>{items}</CommandScroll>
+                                <PropPicker.Invalid state={defaultState()} />
+                                <Picker.Footer>
+                                  <Picker.Clear
+                                    disabled={!props.attrs.prop_default || mutation().waiting}
+                                    onSelect={() => {
+                                      change(Change.Default({ value: Option.none() }));
+                                      close();
+                                    }}
+                                  />
+                                </Picker.Footer>
+                              </CommandList>
+                            )}
+                          </PropPicker.Value>
+                        )}
+                      </Show>
+                    )}
+                  </Picker.Content>
+                </Picker.Root>
+                <Show when={defaultLink()}>
+                  {(id) => (
+                    <Button
+                      as={NoteLink}
+                      id={id()}
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="Open default reference"
+                    >
+                      <ArrowUpRightIcon />
+                    </Button>
+                  )}
+                </Show>
+              </ButtonGroup.Root>
             </DescriptionList.Details>
           </DescriptionList.Row>
           <Show when={props.attrs.prop_type === "link"}>
@@ -226,16 +222,12 @@ export function Root(props: {
           </Show>
         </DescriptionList.Root>
         <Show when={AsyncResult.isFailure(mutation())}>
-          <p role="alert" class="px-2 pt-2 text-error-fg">
-            Unable to update property.
-          </p>
+          <Surface.Error>Unable to update property.</Surface.Error>
         </Show>
         <Show when={validation.error()}>
-          <p role="alert" class="px-2 pt-2 text-error-fg">
-            Unable to validate reference.
-          </p>
+          <Surface.Error>Unable to validate reference.</Surface.Error>
         </Show>
-      </div>
+      </Surface.Root>
     </div>
   );
 }

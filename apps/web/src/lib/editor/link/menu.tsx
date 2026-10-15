@@ -18,6 +18,7 @@ import {
   type JSX,
 } from "solid-js";
 import { Button, buttonVariants } from "../../../components/ui/button";
+import { ButtonGroup } from "../../../components/ui/button-group";
 import { inputClass } from "../../../components/ui/input";
 import { cx } from "../../cva";
 import { EditorLink } from "./extension";
@@ -135,7 +136,7 @@ export function LinkMenu(props: { edit: LinkEdit }): JSX.Element {
       <InlinePopoverPositioner placement="bottom-start" offset={6} hoist class="z-50 block">
         <InlinePopoverPopup
           ref={setPopup}
-          class="block rounded-md border border-border bg-bg text-fg shadow-md transition-opacity duration-100 data-[state=closed]:opacity-0 starting:opacity-0 motion-reduce:transition-none"
+          class="block rounded-md bg-bg text-fg shadow-md transition-opacity duration-100 data-[state=closed]:opacity-0 starting:opacity-0 motion-reduce:transition-none"
           onMouseEnter={hover.keep}
           onMouseLeave={hover.release}
         >
@@ -220,7 +221,7 @@ function LinkPanel(props: {
 
   return (
     <div
-      class="flex w-80 max-w-[calc(100vw-1rem)] flex-col gap-1 p-1"
+      class="flex w-80 max-w-[calc(100vw-1rem)] flex-col gap-1"
       // Only the fields take focus: the editor or the field being typed in
       // keeps it, so a click elsewhere in the panel cannot close it.
       onPointerDown={(event) => {
@@ -255,7 +256,7 @@ function LinkPanel(props: {
           onInput={(event) => setText(event.currentTarget.value)}
         />
       </Show>
-      <div class="flex items-center gap-0.5">
+      <ButtonGroup.Root class="w-full" aria-label="Link URL and actions">
         <input
           ref={setHrefInput}
           class={cx(fieldClass, "min-w-0 flex-1")}
@@ -276,9 +277,9 @@ function LinkPanel(props: {
               target="_blank"
               rel="noopener noreferrer"
               class={buttonVariants({
-                variant: "ghost",
-                size: "icon-sm",
-                class: "pointer-coarse:size-10",
+                variant: "outline",
+                size: "icon",
+                class: "pointer-coarse:h-11 pointer-coarse:w-10",
               })}
               aria-label="Open link"
               title="Open link"
@@ -304,7 +305,7 @@ function LinkPanel(props: {
             <Unlink />
           </IconButton>
         </Show>
-      </div>
+      </ButtonGroup.Root>
     </div>
   );
 }
@@ -312,9 +313,9 @@ function LinkPanel(props: {
 function IconButton(props: { label: string; onClick: () => void; children: JSX.Element }) {
   return (
     <Button
-      variant="ghost"
-      size="icon-sm"
-      class="pointer-coarse:size-10"
+      variant="outline"
+      size="icon"
+      class="pointer-coarse:h-11 pointer-coarse:w-10"
       aria-label={props.label}
       title={props.label}
       onClick={props.onClick}

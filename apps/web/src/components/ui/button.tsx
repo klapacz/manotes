@@ -11,7 +11,7 @@ export const buttonVariants = cva({
     "disabled:pointer-events-none disabled:opacity-50",
     "[&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:transition-colors",
     "focus-visible:border-primary-border focus-visible:ring-primary-border/30 focus-visible:ring-[3px]",
-    "aria-[invalid]:border-error-border aria-[invalid]:ring-error-border/30",
+    "aria-[invalid=true]:border-error-border aria-[invalid=true]:ring-error-border/30",
   ],
 
   variants: {
@@ -31,6 +31,7 @@ export const buttonVariants = cva({
     },
     size: {
       default: "h-9 px-4 py-2 has-[>svg]:px-3",
+      xs: "h-7 max-w-full gap-1.5 px-2 text-sm font-normal",
       sm: "h-8 gap-1.5 px-3 has-[>svg]:px-2.5",
       lg: "h-10 px-6 has-[>svg]:px-4",
       chip: "h-7 max-w-full gap-1.5 px-2 text-xs",
@@ -43,6 +44,10 @@ export const buttonVariants = cva({
       default: "rounded-md",
       full: "rounded-full",
       none: "rounded-none",
+    },
+    intent: {
+      error: "bg-error-control text-error-fg hover:bg-error-control-hover",
+      warning: "bg-warning-control text-warning-fg hover:bg-warning-control-hover",
     },
   },
   defaultVariants: {
@@ -59,7 +64,13 @@ export type ButtonProps<T extends ValidComponent = "button"> = ComponentProps<
 
 export const Button = <T extends ValidComponent = "button">(props: ButtonProps<T>) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as ButtonProps, ["class", "variant", "size", "rounded"]);
+  const [, rest] = splitProps(props as ButtonProps, [
+    "class",
+    "variant",
+    "size",
+    "rounded",
+    "intent",
+  ]);
 
   return (
     <ButtonPrimitive
@@ -68,6 +79,7 @@ export const Button = <T extends ValidComponent = "button">(props: ButtonProps<T
         variant: props.variant,
         size: props.size,
         rounded: props.rounded,
+        intent: props.intent,
         class: props.class,
       })}
       {...rest}

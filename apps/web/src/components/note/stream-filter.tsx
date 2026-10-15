@@ -16,6 +16,7 @@ import { NoteQuery } from "./note-query";
 import { NoteLabel } from "./note-label";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Button } from "../ui/button";
+import { ButtonGroup } from "../ui/button-group";
 import { Command, CommandItem, CommandList, CommandScroll } from "../ui/command";
 import { Picker } from "../ui/picker";
 import { DateCommand } from "./date-command";
@@ -422,9 +423,8 @@ export function StreamFilterEditor(props: {
             </Show>
             <Button
               variant="ghost"
-              size="chip"
-              rounded="none"
-              class="h-full min-w-0 max-w-48 px-2 text-sm font-normal"
+              size="xs"
+              class="h-full min-w-0 max-w-48"
               aria-label={`Change ${field.label.toLowerCase()} filter`}
               onClick={() => open(field.field)}
             >
@@ -444,7 +444,6 @@ export function StreamFilterEditor(props: {
                   id={id()}
                   variant="ghost"
                   size="icon-xs"
-                  rounded="none"
                   class="h-full text-fg-subtle"
                   aria-label={`Open ${field.label.toLowerCase()} note`}
                   title="Open note"
@@ -465,9 +464,9 @@ export function StreamFilterEditor(props: {
             <span class="px-2 text-sm text-fg-subtle">is</span>
             <Button
               variant="ghost"
-              size="chip"
-              rounded="none"
-              class="h-full min-w-0 max-w-48 px-2 text-sm font-normal"
+              size="xs"
+              class="h-full min-w-0 max-w-48"
+              aria-label={`Change ${entry.label} filter`}
               onClick={() => open(Field.prop({ propId: entry.id }))}
             >
               <span class="min-w-0 truncate">
@@ -485,7 +484,6 @@ export function StreamFilterEditor(props: {
                   id={value().val}
                   variant="ghost"
                   size="icon-xs"
-                  rounded="none"
                   class="h-full text-fg-subtle"
                   aria-label={`Open ${entry.label} reference`}
                   title="Open note"
@@ -632,7 +630,10 @@ function NoteFilterPicker(
 
 function FilterPill(props: { label: string; onClear: () => void; children: JSX.Element }) {
   return (
-    <div class="flex h-7 shrink-0 items-center divide-x divide-border-subtle overflow-hidden rounded-full border border-border-subtle bg-bg text-sm shadow-xs">
+    <ButtonGroup.Root
+      aria-label={`${props.label} filter`}
+      class="h-7 shrink-0 items-center divide-x divide-border-subtle rounded-full border border-border-subtle bg-bg text-sm shadow-xs"
+    >
       <span class="max-w-40 truncate px-2" title={props.label}>
         {props.label}
       </span>
@@ -640,13 +641,13 @@ function FilterPill(props: { label: string; onClear: () => void; children: JSX.E
       <Button
         variant="ghost"
         size="icon-xs"
-        rounded="none"
+        rounded="full"
         class="h-full text-fg-subtle"
         aria-label={`Clear ${props.label} filter`}
         onClick={props.onClear}
       >
         <XIcon />
       </Button>
-    </div>
+    </ButtonGroup.Root>
   );
 }

@@ -8,7 +8,7 @@ import { RuleProps } from "@manotes/shared/rule-props";
 import { getRouteApi } from "@tanstack/solid-router";
 import { Effect, Exit, Match, Option, Record, type Types } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
-import { For, Show, type JSX } from "solid-js";
+import { For, Show } from "solid-js";
 import type * as Y from "yjs";
 import { bindRt, createAtomResultStore, createSyncedAtom, MatchTag } from "../../lib";
 import { NoteLink } from "../../lib/note/link-component";
@@ -18,6 +18,7 @@ import { PaneScroll } from "../../lib/note/pane.scroll";
 import { CommandList, CommandScroll } from "../ui/command";
 import { DescriptionList } from "../ui/description-list";
 import { Picker } from "../ui/picker";
+import { Surface } from "../ui/surface";
 import { Focus } from "./focus";
 import { NoteLabel } from "./note-label";
 import { PropPicker } from "./prop-picker";
@@ -78,32 +79,21 @@ function Group(props: {
   readonly recordId: NoteSchema.Id;
   readonly doc: Y.Doc;
 }) {
-  return (
-    <Show when={!Record.isEmptyReadonlyRecord(props.group.props)}>
-      <Surface>
-        <MatchTag when={props.group} cases={{ Rule: (group) => <RuleHeading group={group()} /> }} />
-        <Rows group={props.group} recordId={props.recordId} doc={props.doc} />
-      </Surface>
-    </Show>
-  );
-}
-
-function Surface(props: { readonly children: JSX.Element }) {
   const focus = Focus.useNode();
 
   return (
-    <div
-      class="rounded-lg bg-bg-subtle p-2 text-sm transition-colors"
-      classList={{ "bg-control": focus.highlightWithin() }}
-    >
-      {props.children}
-    </div>
+    <Show when={!Record.isEmptyReadonlyRecord(props.group.props)}>
+      <Surface.Root highlighted={focus.highlightWithin()}>
+        <MatchTag when={props.group} cases={{ Rule: (group) => <RuleHeading group={group()} /> }} />
+        <Rows group={props.group} recordId={props.recordId} doc={props.doc} />
+      </Surface.Root>
+    </Show>
   );
 }
 
 function RuleHeading(props: { readonly group: Types.ExtractTag<RuleProps.EditorGroup, "Rule"> }) {
   return (
-    <div class="flex flex-wrap items-center gap-2 px-2 pb-2">
+    <Surface.Header>
       <NoteLink id={props.group.ruleId} class="min-w-0 text-fg hover:underline">
         <MatchTag
           when={props.group.status}
@@ -121,7 +111,7 @@ function RuleHeading(props: { readonly group: Types.ExtractTag<RuleProps.EditorG
           Unavailable: () => <span class="text-error-fg">Rule unavailable</span>,
         }}
       />
-    </div>
+    </Surface.Header>
   );
 }
 
@@ -200,10 +190,9 @@ function ValueControl(props: RowProps) {
     <Picker.Root label={label()}>
       <Picker.Trigger
         variant="ghost"
-        rounded="default"
+        size="xs"
         aria-invalid={invalid() || required()}
-        data-unexpected={unexpected() && !invalid() && !required()}
-        class="h-7 border-0 px-2 text-sm aria-[invalid=true]:bg-error-control aria-[invalid=true]:text-error-fg aria-[invalid=true]:hover:bg-error-control-hover data-[unexpected=true]:bg-warning-control data-[unexpected=true]:text-warning-fg data-[unexpected=true]:hover:bg-warning-control-hover"
+        intent={invalid() || required() ? "error" : unexpected() ? "warning" : undefined}
       >
         <Show when={unexpected()}>Unexpected: </Show>
         <Show when={required()} fallback={<PropPicker.StateLabel state={props.prop.value} />}>

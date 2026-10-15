@@ -45,13 +45,7 @@ export function Link(props: {
   };
 
   return (
-    <Button
-      variant="ghost"
-      size="chip"
-      rounded="default"
-      class="h-7 px-2 text-sm font-normal"
-      onClick={open}
-    >
+    <Button variant="ghost" size="xs" onClick={open}>
       {label()}
       <ArrowUpRightIcon />
     </Button>

@@ -20,12 +20,7 @@ export function Link(props: { propId: NoteSchema.Id; onOpen: () => void }) {
   );
 
   return (
-    <Button
-      variant="ghost"
-      rounded="default"
-      class="h-7 px-2 text-sm font-normal"
-      onClick={props.onOpen}
-    >
+    <Button variant="ghost" size="xs" onClick={props.onOpen}>
       <MatchTag
         when={state}
         cases={{
