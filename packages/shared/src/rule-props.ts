@@ -114,7 +114,7 @@ export function collectExpectations(rules: Readonly<Record<NoteSchema.Id, RuleMa
   const top = pipe(
     topRules,
     Record.collect((_, rule) => rule.expects),
-    RuleExpect.ExpectsReducer.combineAll,
+    RuleExpect.createReducer().combineAll,
   );
 
   // These owners remain available, but have no active group expectations.

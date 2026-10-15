@@ -69,6 +69,8 @@ export class Service extends Context.Service<Service>()("Attrs.Service", {
     watchGroups,
     setProp,
     clearProp,
+    setGroupProp,
+    clearGroupProp,
     setPropType,
     setPropDefault,
     clearPropDefault,
@@ -282,6 +284,48 @@ const clearProp = Effect.fn("Attrs.clearProp")(function* (opts: {
   if (Option.isSome(props)) {
     yield* props.value.pipe(YSchema.clear({ id: opts.propId }));
   }
+});
+
+const setGroupProp = Effect.fn("Attrs.setGroupProp")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly recordId: AttrsSchema.NoteId;
+  readonly ruleId: AttrsSchema.NoteId;
+  readonly propId: AttrsSchema.NoteId;
+  readonly value: AttrsSchema.PropVal;
+}) {
+  if (opts.recordId === opts.propId)
+    return yield* Effect.fail(new SelfAssignmentError({ propId: opts.propId }));
+
+  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const props = yield* attrs.pipe(YSchema.upsertMap("props"));
+
+  // Fails if this key already holds a scalar.
+  const group = yield* props.pipe(YSchema.upsertMap({ id: opts.ruleId }));
+  const tagged = yield* group.pipe(YSchema.upsert("_tag", "group"));
+  const values = yield* tagged.pipe(YSchema.upsertMap("props"));
+
+  yield* values.pipe(YSchema.set({ propId: opts.propId }, opts.value));
+});
+
+const clearGroupProp = Effect.fn("Attrs.clearGroupProp")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly ruleId: AttrsSchema.NoteId;
+  readonly propId: AttrsSchema.NoteId;
+}) {
+  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const props = yield* attrs.pipe(YSchema.findMap("props"));
+
+  if (Option.isNone(props)) return;
+
+  const group = yield* props.value.pipe(YSchema.findMap({ id: opts.ruleId }));
+
+  if (Option.isNone(group)) return;
+
+  const values = yield* group.value.pipe(YSchema.findMap("props"));
+
+  if (Option.isNone(values)) return;
+
+  yield* values.value.pipe(YSchema.clear({ propId: opts.propId }));
 });
 
 const initializeProp = Effect.fn("Attrs.initializeProp")(function* (opts: {

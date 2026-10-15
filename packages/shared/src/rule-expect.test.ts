@@ -19,6 +19,14 @@ describe("rule expectation reduction", () => {
     expect(RuleExpect.reduceExpects([])).toEqual({});
   });
 
+  it("keeps empty reductions independent when a UI store mutates an earlier result", () => {
+    const earlier = RuleExpect.reduceExpects([]);
+
+    Object.assign(earlier, { [priority]: required });
+
+    expect(RuleExpect.reduceExpects([])).toEqual({});
+  });
+
   it.each([
     [optional, required],
     [required, optional],

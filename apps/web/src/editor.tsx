@@ -17,6 +17,7 @@ import { EditorSyncService, MatchTag, bindRt, createSyncedAtom } from "./lib";
 import { defineReadonly } from "prosekit/extensions/readonly";
 import { PropertyDef } from "./components/note/property-def";
 import { RuleDef } from "./components/note/rule-def";
+import { NotePropGroups } from "./components/note/note-prop-groups";
 import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
 import { Cause, Data, Deferred, Effect, SubscriptionRef } from "effect";
 import { AsyncResult, type Atom } from "effect/unstable/reactivity";
@@ -243,6 +244,14 @@ export default function Editor(props: Props): JSX.Element {
                   <RuleDef.Root recordId={props.noteId} doc={current.doc} attrs={rule()} />
                 )}
               </Show>
+              <MatchTag
+                when={bootState()}
+                cases={{
+                  Ready: (ready) => (
+                    <NotePropGroups.Root recordId={props.noteId} doc={ready().doc} />
+                  ),
+                }}
+              />
               <BacklinkMenu currentNoteId={props.noteId} />
               <TabMenu />
               <StreamRefMenu />

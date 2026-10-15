@@ -513,6 +513,122 @@ describe("Attrs property editing", () => {
   });
 });
 
+describe("Attrs grouped property editing", () => {
+  it("keeps top and rule-group values independent, preserves siblings, and syncs edits", () => {
+    const { doc, attrs: cursor } = NoteDoc.make();
+    const remote = NoteDoc.make();
+    const recordId = AttrsSchema.NoteId.make("record_id:issue");
+    const task = AttrsSchema.NoteId.make("rule_id:task");
+    const other = AttrsSchema.NoteId.make("rule_id:other");
+    const priority = AttrsSchema.NoteId.make("prop_id:priority");
+    const cycle = AttrsSchema.NoteId.make("prop_id:cycle");
+    const one = AttrsSchema.PropVal.cases.number.make({ val: 1 });
+    const two = AttrsSchema.PropVal.cases.number.make({ val: 2 });
+
+    try {
+      Effect.runSync(
+        Effect.gen(function* () {
+          const attrs = yield* Attrs.Service;
+          yield* attrs.setProp({ doc, recordId, propId: priority, value: one });
+          yield* attrs.setGroupProp({ doc, recordId, ruleId: task, propId: priority, value: two });
+          yield* attrs.setGroupProp({ doc, recordId, ruleId: task, propId: cycle, value: one });
+          yield* attrs.setGroupProp({ doc, recordId, ruleId: other, propId: priority, value: one });
+          yield* attrs.setGroupProp({ doc, recordId, ruleId: task, propId: priority, value: one });
+          yield* attrs.clearGroupProp({ doc, ruleId: task, propId: priority });
+
+          const expected = {
+            priority: one,
+            task: AttrsSchema.PropGroup.make({ props: { [cycle]: one } }),
+            other: AttrsSchema.PropGroup.make({ props: { [priority]: one } }),
+          };
+
+          expect(yield* YSchema.exportStrict(cursor)).toMatchObject({
+            props: {
+              [priority]: expected.priority,
+              [task]: expected.task,
+              [other]: expected.other,
+            },
+          });
+          Y.applyUpdate(remote.doc, Y.encodeStateAsUpdate(doc));
+          yield* attrs.setGroupProp({
+            doc: remote.doc,
+            recordId,
+            ruleId: task,
+            propId: priority,
+            value: two,
+          });
+          Y.applyUpdate(doc, Y.encodeStateAsUpdate(remote.doc));
+          expect(yield* YSchema.exportStrict(cursor)).toEqual(
+            yield* YSchema.exportStrict(remote.attrs),
+          );
+          expect(doc.getMap("attrs").toJSON().props[task].props[priority]).toEqual(two);
+        }).pipe(Effect.provide(Attrs.Service.layer)),
+      );
+    } finally {
+      doc.destroy();
+      remote.doc.destroy();
+    }
+  });
+
+  it("clears without creating maps and retains empty groups", () => {
+    const { doc, attrs: cursor } = NoteDoc.make();
+    const ruleId = AttrsSchema.NoteId.make("rule_id:task");
+    const propId = AttrsSchema.NoteId.make("prop_id:priority");
+
+    try {
+      Effect.runSync(
+        Effect.gen(function* () {
+          const attrs = yield* Attrs.Service;
+          yield* attrs.clearGroupProp({ doc, ruleId, propId });
+          expect(doc.getMap("attrs").toJSON()).toEqual({});
+          yield* attrs.setGroupProp({
+            doc,
+            ruleId,
+            propId,
+            recordId: AttrsSchema.NoteId.make("record_id:issue"),
+            value: AttrsSchema.PropVal.cases.number.make({ val: 1 }),
+          });
+          yield* attrs.clearGroupProp({ doc, ruleId, propId });
+          expect(yield* YSchema.exportStrict(cursor)).toMatchObject({
+            props: { [ruleId]: AttrsSchema.PropGroup.make({ props: {} }) },
+          });
+        }).pipe(Effect.provide(Attrs.Service.layer)),
+      );
+    } finally {
+      doc.destroy();
+    }
+  });
+
+  it("rejects scalar collisions and self-assignment without changing saved data", () => {
+    const { doc } = NoteDoc.make();
+    const recordId = AttrsSchema.NoteId.make("record_id:issue");
+    const ruleId = AttrsSchema.NoteId.make("rule_id:task");
+    const propId = AttrsSchema.NoteId.make("prop_id:priority");
+    const value = AttrsSchema.PropVal.cases.bool.make({ val: true });
+
+    try {
+      Effect.runSync(
+        Effect.gen(function* () {
+          const attrs = yield* Attrs.Service;
+          yield* attrs.setProp({ doc, recordId, propId: ruleId, value });
+          const before = Y.encodeStateAsUpdate(doc);
+
+          for (const operation of [
+            attrs.setGroupProp({ doc, recordId, ruleId, propId, value }),
+            attrs.clearGroupProp({ doc, ruleId, propId }),
+            attrs.setGroupProp({ doc, recordId: propId, ruleId, propId, value }),
+          ]) {
+            expect(Result.isFailure(yield* Effect.result(operation))).toBe(true);
+            expect(Y.encodeStateAsUpdate(doc)).toEqual(before);
+          }
+        }).pipe(Effect.provide(Attrs.Service.layer)),
+      );
+    } finally {
+      doc.destroy();
+    }
+  });
+});
+
 describe("Attrs rule editing", () => {
   it("edits expectations independently and preserves them when targets change", () => {
     const { doc, attrs: cursor } = NoteDoc.make();

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, expectTypeOf, it } from "vite-plus/test";
 import { Effect, Option, Result, Schema } from "effect";
 import * as Y from "yjs";
 import { AttrsSchema } from "./attrs.schema";
@@ -314,6 +314,43 @@ describe("YSchema bound selections", () => {
       if (!(mounted instanceof Y.Map)) throw new Error("Expected props map");
       expect(exported.props.priority).not.toBe(mounted.get("priority"));
       expect(Option.getOrThrow(Effect.runSync(note.pipe(YSchema.findMap("props"))))).toBeDefined();
+    } finally {
+      doc.destroy();
+    }
+  });
+
+  it("infers map variants inside unions and retains parent replacement guards", () => {
+    const { doc, attrs } = fixture();
+    const ruleId = AttrsSchema.NoteId.make("rule_id:task");
+    const propId = AttrsSchema.NoteId.make("prop_id:priority");
+
+    try {
+      const props = Effect.runSync(attrs.pipe(YSchema.upsertMap("props")));
+      expect(Effect.runSync(props.pipe(YSchema.findMap({ id: ruleId })))).toEqual(Option.none());
+      const group = Effect.runSync(props.pipe(YSchema.upsertMap({ id: ruleId })));
+      expectTypeOf(group).toEqualTypeOf<
+        YSchema.Cursor<AttrsSchema.PropGroup, typeof AttrsSchema.PropGroup>
+      >();
+      const tagged = Effect.runSync(group.pipe(YSchema.upsert("_tag", "group")));
+      const values = Effect.runSync(tagged.pipe(YSchema.upsertMap("props")));
+      const value = AttrsSchema.PropVal.cases.number.make({ val: 3 });
+      Effect.runSync(values.pipe(YSchema.set({ propId }, value)));
+      expect(Effect.runSync(attrs.pipe(YSchema.exportStrict))).toMatchObject({
+        props: { [ruleId]: AttrsSchema.PropGroup.make({ props: { [propId]: value } }) },
+      });
+
+      const scalar = AttrsSchema.PropVal.cases.bool.make({ val: false });
+      Effect.runSync(props.pipe(YSchema.set({ id: ruleId }, scalar)));
+      const before = Y.encodeStateAsUpdate(doc);
+
+      for (const operation of [
+        props.pipe(YSchema.findMap({ id: ruleId }), Effect.asVoid),
+        props.pipe(YSchema.upsertMap({ id: ruleId }), Effect.asVoid),
+        values.pipe(YSchema.set({ propId }, value), Effect.asVoid),
+      ]) {
+        expect(Result.isFailure(Effect.runSync(Effect.result(operation)))).toBe(true);
+        expect(Y.encodeStateAsUpdate(doc)).toEqual(before);
+      }
     } finally {
       doc.destroy();
     }
@@ -723,6 +760,16 @@ function typeChecks(attrs: YSchema.Cursor<AttrsSchema.Attrs, typeof AttrsSchema.
   // @ts-expect-error data-first required fields cannot be cleared
   YSchema.clear(attrs, "_tag");
   const props = Effect.runSync(attrs.pipe(YSchema.upsertMap("props")));
+
+  const group = Effect.runSync(
+    props.pipe(YSchema.upsertMap({ id: AttrsSchema.NoteId.make("rule_id:task") })),
+  );
+
+  const values = Effect.runSync(group.pipe(YSchema.upsertMap("props")));
+  // @ts-expect-error group values use propId, rather than the outer map's id argument
+  values.pipe(YSchema.set({ id: AttrsSchema.NoteId.make("priority") }, 7));
+  // @ts-expect-error atomic prop values have no map-backed val
+  group.pipe(YSchema.upsertMap("val"));
   props.pipe(
     YSchema.set(
       { id: AttrsSchema.NoteId.make("priority") },

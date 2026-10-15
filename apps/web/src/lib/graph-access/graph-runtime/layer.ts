@@ -17,6 +17,7 @@ import { GraphDatabase } from "./database";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { PropDef } from "@manotes/shared/prop-def.service";
 import { EnumOptionRepo } from "@manotes/shared/enum-option.repo";
+import { RuleRecord } from "@manotes/shared/rule-record.service";
 
 export type SetupOpts = {
   localGraphId: string;
@@ -43,6 +44,7 @@ export const makeLayer = (opts: SetupOpts) =>
         Attrs.Service.layer,
         PropDef.Service.layer,
         EnumOptionRepo.Service.layer,
+        RuleRecord.Service.layer,
         BacklinkService.Service.layer,
         NoteCache.Service.layer,
         NoteStreamCache.Service.layer,

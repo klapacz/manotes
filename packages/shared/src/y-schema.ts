@@ -130,18 +130,21 @@ type Unwrap<S> = S extends { readonly [MapTypeId]: ObjectSchema }
       ? Unwrap<Inner>
       : S;
 
+// A dictionary entry can hold atomic values alongside a schema-declared map variant.
+type MapVariant<S> =
+  Unwrap<S> extends infer Value
+    ? Value extends ObjectSchema & { readonly [MapTypeId]: ObjectSchema }
+      ? Value
+      : Value extends { readonly members: readonly (infer Member)[] }
+        ? MapVariant<Member>
+        : never
+    : never;
+
 type MapKeys<A, S> = {
-  [K in Keys<A>]: [Unwrap<PropertySchema<S, K>>] extends [never]
-    ? never
-    : Unwrap<PropertySchema<S, K>> extends { readonly [MapTypeId]: ObjectSchema }
-      ? K
-      : never;
+  [K in Keys<A>]: [MapSchema<S, K>] extends [never] ? never : K;
 }[Keys<A>];
 
-type MapSchema<S, K extends string> = Extract<
-  Unwrap<PropertySchema<S, K>>,
-  ObjectSchema & { readonly [MapTypeId]: ObjectSchema }
->;
+type MapSchema<S, K extends string> = MapVariant<PropertySchema<S, K>>;
 
 type MapCursor<S, K extends string> = Cursor<MapSchema<S, K>["Type"], MapSchema<S, K>>;
 
@@ -780,13 +783,23 @@ function mapFieldAsts<A extends object, S extends Schema.Constraint>(
   bound: Cursor<A, S>,
   key: string,
 ) {
-  const fields = fieldAsts(bound, key);
+  const variants = fieldAsts(bound, key).map(mapVariants);
 
-  if (!fields.every((field) => field.annotations?.[MapAnnotation] === true)) {
+  if (variants.some((fields) => fields.length === 0)) {
     throw new globalThis.Error(`Field ${key} is not declared with YSchema.Map`);
   }
 
-  return fields;
+  return variants.flat();
+}
+
+function mapVariants(ast: SchemaAST.AST): readonly SchemaAST.AST[] {
+  if (ast.annotations?.[MapAnnotation] === true) return [ast];
+
+  if (SchemaAST.isUnion(ast)) return ast.types.flatMap(mapVariants);
+
+  if (SchemaAST.isSuspend(ast)) return mapVariants(ast.thunk());
+
+  return [];
 }
 
 function bindMap<A extends object, S extends Schema.Constraint, K extends string>(

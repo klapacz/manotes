@@ -25,6 +25,14 @@ const defs: Attrs.Defs = {
 };
 
 describe("rule prop reconciliation", () => {
+  it("keeps empty top expectations independent when a UI store mutates an earlier result", () => {
+    const earlier = RuleProps.collectExpectations({});
+
+    Object.assign(earlier.top, { [priority]: required });
+
+    expect(RuleProps.collectExpectations({}).top).toEqual({});
+  });
+
   it("merges top expectations and keeps rule groups separate", () => {
     const topOptional = makeRule({ id: "top_optional", storage: "top", matches: true });
     const topRequired = makeRule({ id: "top_required", storage: "top", matches: true });
