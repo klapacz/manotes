@@ -1,5 +1,5 @@
 import { Array, Context, Effect, Layer, Option, Record, Result, Stream } from "effect";
-import { NoteSchema } from "./note.schema";
+import { RecordSchema } from "./record.schema";
 import { RuleExpect } from "./rule-expect";
 import { RuleExpectRepo } from "./rule-expect.repo";
 import { RuleRecordRepo } from "./rule-record.repo";
@@ -42,8 +42,8 @@ export class Service extends Context.Service<Service>()("RuleRecord.Service", {
 }
 
 function expectsForRule(opts: {
-  readonly ruleId: NoteSchema.Id;
-  readonly byRule: Readonly<Record<NoteSchema.Id, readonly Tables.RuleExpect[]>>;
+  readonly ruleId: RecordSchema.Id;
+  readonly byRule: Readonly<Record<RecordSchema.Id, readonly Tables.RuleExpect[]>>;
 }) {
   const rows = Record.get(opts.byRule, opts.ruleId).pipe(Option.getOrElse(() => []));
 

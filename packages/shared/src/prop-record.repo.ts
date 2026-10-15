@@ -3,7 +3,7 @@ import { Context, Effect, Layer, Schema, Stream, Record, Struct } from "effect";
 import { AttrsSchema } from "./attrs.schema";
 import { DB } from "./db.service";
 import { Tables } from "./db.tables";
-import { NoteSchema } from "./note.schema";
+import { RecordSchema } from "./record.schema";
 
 export const Defs = Struct.evolve(AttrsSchema.PropVal.cases, {
   text: (schema) => defSchema(schema),
@@ -22,7 +22,7 @@ function defSchema<const Tag extends AttrsSchema.PropValTag, const Value extends
   value: Schema.TaggedStruct<Tag, { readonly val: Value }>,
 ) {
   return Schema.Struct({
-    id: NoteSchema.Id,
+    id: RecordSchema.Id,
     title: Schema.NullOr(Schema.String),
     prop_type: Schema.NullOr(AttrsSchema.PropValTag).pipe(Schema.decodeTo(value.fields._tag)),
     prop_default: Schema.NullOr(value),
@@ -48,18 +48,21 @@ export class Service extends Context.Service<Service>()("PropRecordRepo.Service"
     const reactiveDefs = Effect.fn("PropRecordRepo.reactiveDefs")(function* () {
       const stream = yield* db.reactiveQuery(
         Query.select({
-          id: Tables.notes.id,
-          title: Tables.notes.title,
-          prop_type: Tables.notes.prop_type,
-          prop_default: Tables.notes.prop_default,
-          prop_targets: Tables.notes.prop_targets,
+          id: Tables.records.id,
+          title: Tables.records.title,
+          prop_type: Tables.records.prop_type,
+          prop_default: Tables.records.prop_default,
+          prop_targets: Tables.records.prop_targets,
         }).pipe(
-          Query.from(Tables.notes),
+          Query.from(Tables.records),
           Query.where(
-            Query.and(Query.eq(Tables.notes._tag, "prop"), Query.eq(Tables.notes.attrs_valid, 1)),
+            Query.and(
+              Query.eq(Tables.records._tag, "prop"),
+              Query.eq(Tables.records.attrs_valid, 1),
+            ),
           ),
-          Query.orderBy(Tables.notes.title, "asc"),
-          Query.orderBy(Tables.notes.id, "asc"),
+          Query.orderBy(Tables.records.title, "asc"),
+          Query.orderBy(Tables.records.id, "asc"),
         ),
       );
 

@@ -133,7 +133,7 @@ function Toolbar(props: { view: EditorView; linkEdit: LinkEdit; onDismiss: () =>
           <ToolbarButton label="Toggle list" onPress={run(toggleList)}>
             <List />
           </ToolbarButton>
-          <ToolbarButton label="Link a note" onPress={run(insertNoteLink)}>
+          <ToolbarButton label="Link a record" onPress={run(insertRecordLink)}>
             <Brackets />
           </ToolbarButton>
           <ToolbarButton label="Link" onPress={() => props.linkEdit.open(props.view)}>
@@ -185,8 +185,8 @@ const toggleTask = createToggleListCommand({ kind: "task" });
 // Plain lists are collapsible toggles in this app.
 const toggleList = createToggleListCommand({ kind: "toggle" });
 
-// Opens the note link autocomplete.
-const insertNoteLink: Command = (state, dispatch) => {
+// Opens the record link autocomplete.
+const insertRecordLink: Command = (state, dispatch) => {
   dispatch?.(state.tr.insertText("[["));
 
   return true;

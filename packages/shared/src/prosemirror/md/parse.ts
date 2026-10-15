@@ -2,13 +2,13 @@ import MarkdownIt from "markdown-it";
 import Token from "markdown-it/lib/token.mjs";
 import { defaultMarkdownParser, MarkdownParser } from "prosemirror-markdown";
 import type { Node, Schema } from "prosekit/pm/model";
-import { NOTE_SCHEMA } from "../app-schema";
+import { RECORD_SCHEMA } from "../app-schema";
 import { checkMarkdownTable } from "../../editor/table/spec";
 import { numberOrderedLists } from "./number-ordered-lists";
 import { decodeStreamRefAttrs } from "../../editor/stream-ref/spec";
 
 /** Parse CommonMark plus strikethrough and tasks directly into the app schema. */
-export function parse(markdown: string, schema: Schema = NOTE_SCHEMA): Node {
+export function parse(markdown: string, schema: Schema = RECORD_SCHEMA): Node {
   const tokenizer = new MarkdownIt("commonmark", { html: false }).enable([
     "strikethrough",
     "table",
@@ -168,7 +168,7 @@ function adaptRefs(tokens: readonly Token[]): Token[] {
   for (const [index, token] of tokens.entries()) {
     if (index < nextIndex) continue;
     const href = token.type === "link_open" ? token.attrGet("href") : null;
-    // Only ./<id>.md is a note ref. External links, parent paths, and
+    // Only ./<id>.md is a record ref. External links, parent paths, and
     // links with query strings or fragments keep their normal link tokens.
     const encodedId = /^\.\/([^/?#]+)\.md$/.exec(href ?? "")?.[1];
     const streamData = href?.startsWith("stream:") ? href.slice("stream:".length) : undefined;

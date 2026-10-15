@@ -13,8 +13,8 @@ import * as EventRepo from "@manotes/shared/event.repo";
 import * as Materializer from "@manotes/shared/materializer.service";
 import type { UnknownNodeJSON } from "@manotes/shared/node-json";
 import * as EventSchema from "@manotes/shared/event.schema";
-import * as NoteRepo from "@manotes/shared/note.repo";
-import { NOTE_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
+import * as RecordRepo from "@manotes/shared/record.repo";
+import { RECORD_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
 import { toLocalDateString } from "@manotes/shared/temporal/utils";
 import { MdParse } from "@manotes/shared/prosemirror/md/parse";
 import { MdSerialize } from "@manotes/shared/prosemirror/md/serialize";
@@ -26,7 +26,7 @@ import { CliRuntime } from "./cli.runtime";
 import { ExecuteApi } from "./execute-api";
 import { BacklinkLabels } from "./backlink-labels";
 
-const NOTE_ID = "note-1";
+const RECORD_ID = "record-1";
 
 const INITIAL_MARKDOWN = dedent`
   # Plan
@@ -38,23 +38,23 @@ type RuntimeServices =
   | DB.Service
   | EventRepo.Service
   | Materializer.Service
-  | NoteRepo.Service
+  | RecordRepo.Service
   | FileSystem.FileSystem;
 
-describe("ExecuteApi.editNote", () => {
+describe("ExecuteApi.editRecord", () => {
   it("saves a date event without changing content, and skips unchanged or cancelling dates", async () => {
     await runIntegration(
       Effect.gen(function* () {
-        yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
-        const noteRepo = yield* NoteRepo.Service;
+        yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
+        const recordRepo = yield* RecordRepo.Service;
         const eventRepo = yield* EventRepo.Service;
-        const before = yield* noteRepo.getById(NOTE_ID);
+        const before = yield* recordRepo.getById(RECORD_ID);
 
         yield* runTestScript(dedent`
-          await api.editNote("${NOTE_ID}", [{ kind: "date", date: "2024-02-29" }]);
+          await api.editRecord("${RECORD_ID}", [{ kind: "date", date: "2024-02-29" }]);
         `);
 
-        const after = yield* noteRepo.getById(NOTE_ID);
+        const after = yield* recordRepo.getById(RECORD_ID);
         expect(after.date).toBe("2024-02-29");
         expect(after.content).toEqual(before.content);
         expect(after.materializedYUpdate).toEqual(before.materializedYUpdate);
@@ -71,14 +71,14 @@ describe("ExecuteApi.editNote", () => {
         expect(after.updatedAt).toEqual(event.createdAt);
 
         yield* runTestScript(dedent`
-          await api.editNote("${NOTE_ID}", [{ kind: "date", date: "2024-02-29" }]);
-          await api.editNote("${NOTE_ID}", [
+          await api.editRecord("${RECORD_ID}", [{ kind: "date", date: "2024-02-29" }]);
+          await api.editRecord("${RECORD_ID}", [
             { kind: "date", date: "2025-01-01" },
             { kind: "date", date: "2024-02-29" },
           ]);
         `);
         expect(yield* eventRepo.countPending()).toBe(1);
-        expect(yield* noteRepo.getById(NOTE_ID)).toEqual(after);
+        expect(yield* recordRepo.getById(RECORD_ID)).toEqual(after);
       }),
     );
   });
@@ -86,19 +86,19 @@ describe("ExecuteApi.editNote", () => {
   it("saves mixed edits using only the last date, ignoring an invalid earlier date", async () => {
     await runIntegration(
       Effect.gen(function* () {
-        yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
+        yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
         yield* runTestScript(dedent`
-          await api.editNote("${NOTE_ID}", [
+          await api.editRecord("${RECORD_ID}", [
             { kind: "date", date: "2025-02-29" },
             { kind: "replace", text: "Alpha", with: "Beta" },
             { kind: "date", date: "2024-02-29" },
           ]);
         `);
-        const noteRepo = yield* NoteRepo.Service;
+        const recordRepo = yield* RecordRepo.Service;
         const eventRepo = yield* EventRepo.Service;
-        const note = yield* noteRepo.getById(NOTE_ID);
-        expect(note.date).toBe("2024-02-29");
-        expect(markdownFromContent(note.content)).toBe("# Plan\n\nBeta.\n");
+        const record = yield* recordRepo.getById(RECORD_ID);
+        expect(record.date).toBe("2024-02-29");
+        expect(markdownFromContent(record.content)).toBe("# Plan\n\nBeta.\n");
         expect((yield* eventRepo.findPending(10)).map((event) => event.type)).toEqual([
           "update",
           "date",
@@ -110,10 +110,10 @@ describe("ExecuteApi.editNote", () => {
   it("rejects an invalid final date, and rolls back dates when body edits fail", async () => {
     await runIntegration(
       Effect.gen(function* () {
-        yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
-        const noteRepo = yield* NoteRepo.Service;
+        yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
+        const recordRepo = yield* RecordRepo.Service;
         const eventRepo = yield* EventRepo.Service;
-        const before = yield* noteRepo.getById(NOTE_ID);
+        const before = yield* recordRepo.getById(RECORD_ID);
 
         for (const edits of [
           [
@@ -127,12 +127,12 @@ describe("ExecuteApi.editNote", () => {
           ],
         ]) {
           const result = yield* runTestScript(dedent`
-            await api.editNote("${NOTE_ID}", ${JSON.stringify(edits)});
+            await api.editRecord("${RECORD_ID}", ${JSON.stringify(edits)});
           `).pipe(Effect.result);
 
           expect(Result.isFailure(result)).toBe(true);
           expect(yield* eventRepo.countPending()).toBe(0);
-          expect(yield* noteRepo.getById(NOTE_ID)).toEqual(before);
+          expect(yield* recordRepo.getById(RECORD_ID)).toEqual(before);
         }
       }),
     );
@@ -141,33 +141,33 @@ describe("ExecuteApi.editNote", () => {
   it("matches exported backlink labels and preserves their destination IDs", async () => {
     await runIntegration(
       Effect.gen(function* () {
-        yield* seedNote("linked-note", "# Manotes");
-        yield* seedNote(
-          NOTE_ID,
-          "Sync [Manotes](./linked-note.md) and [missing](./missing.md).",
+        yield* seedRecord("linked-record", "# Manotes");
+        yield* seedRecord(
+          RECORD_ID,
+          "Sync [Manotes](./linked-record.md) and [missing](./missing.md).",
           2,
         );
-        const noteRepo = yield* NoteRepo.Service;
-        const labels = BacklinkLabels.buildCache(yield* noteRepo.findAllRecords());
-        const note = yield* noteRepo.getById(NOTE_ID);
+        const recordRepo = yield* RecordRepo.Service;
+        const labels = BacklinkLabels.buildCache(yield* recordRepo.findAllNotes());
+        const record = yield* recordRepo.getById(RECORD_ID);
 
-        const exported = MdSerialize.serialize(NOTE_SCHEMA.nodeFromJSON(note.content), {
+        const exported = MdSerialize.serialize(RECORD_SCHEMA.nodeFromJSON(record.content), {
           backlinkLabel: (id) => labels.get(id),
         });
 
-        expect(exported).toBe("Sync [Manotes](./linked-note.md) and [missing](./missing.md).\n");
+        expect(exported).toBe("Sync [Manotes](./linked-record.md) and [missing](./missing.md).\n");
 
         yield* runTestScript(dedent`
-          await api.editNote("${NOTE_ID}", [{
+          await api.editRecord("${RECORD_ID}", [{
             kind: "replace",
             text: ${JSON.stringify(exported.trimEnd())},
             with: ${JSON.stringify(`- [ ] ${exported.trimEnd()}`)},
           }]);
         `);
 
-        const updated = yield* noteRepo.getById(NOTE_ID);
+        const updated = yield* recordRepo.getById(RECORD_ID);
         expect(markdownFromContent(updated.content)).toBe(
-          "- [ ] Sync [linked-note](./linked-note.md) and [missing](./missing.md).\n",
+          "- [ ] Sync [linked-record](./linked-record.md) and [missing](./missing.md).\n",
         );
       }),
     );
@@ -176,23 +176,23 @@ describe("ExecuteApi.editNote", () => {
   it("exposes editing and creation and writes one event for an ordered edit batch", async () => {
     await runIntegration(
       Effect.gen(function* () {
-        yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
+        yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
         const eventRepo = yield* EventRepo.Service;
-        const noteRepo = yield* NoteRepo.Service;
+        const recordRepo = yield* RecordRepo.Service;
 
         expect(yield* eventRepo.countPending()).toBe(0);
 
         yield* runTestScript(dedent`
-          if (Object.keys(api).sort().join(",") !== "createNote,editNote") throw new Error("unexpected API");
-          await api.editNote("${NOTE_ID}", [
+          if (Object.keys(api).sort().join(",") !== "createRecord,editRecord") throw new Error("unexpected API");
+          await api.editRecord("${RECORD_ID}", [
             { kind: "replace", text: "Alpha", with: "Beta" },
             { kind: "append", markdown: "Beta follows." },
             { kind: "replace", text: "Beta", with: "Done", occurrence: "all" },
           ]);
         `);
 
-        const events = yield* eventRepo.findUpdatesForNote(NOTE_ID);
-        const note = yield* noteRepo.getById(NOTE_ID);
+        const events = yield* eventRepo.findUpdatesForRecord(RECORD_ID);
+        const record = yield* recordRepo.getById(RECORD_ID);
 
         const expected = `${dedent`
           # Plan
@@ -204,10 +204,10 @@ describe("ExecuteApi.editNote", () => {
 
         expect(events).toHaveLength(2);
         expect(yield* eventRepo.countPending()).toBe(1);
-        expect(markdownFromContent(note.content)).toBe(expected);
+        expect(markdownFromContent(record.content)).toBe(expected);
         expect(markdownAfterReplay(events.map((event) => event.payload))).toBe(expected);
         expect(stateVectorAfterReplay(events.map((event) => event.payload))).toEqual(
-          stateVectorAfterReplay([requireSnapshot(note.materializedYUpdate)]),
+          stateVectorAfterReplay([requireSnapshot(record.materializedYUpdate)]),
         );
         yield* eventRepo.markCommitted({ eventId: events[1]!.id, commitSeq: 2 });
         expect(yield* eventRepo.countPending()).toBe(0);
@@ -218,20 +218,20 @@ describe("ExecuteApi.editNote", () => {
   it("lets sequential calls edit the latest materialized content", async () => {
     await runIntegration(
       Effect.gen(function* () {
-        yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
+        yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
         const eventRepo = yield* EventRepo.Service;
-        const noteRepo = yield* NoteRepo.Service;
+        const recordRepo = yield* RecordRepo.Service;
 
         yield* runTestScript(dedent`
-          await api.editNote("${NOTE_ID}", [{ kind: "replace", text: "Alpha", with: "Beta" }]);
-          await api.editNote("${NOTE_ID}", [{ kind: "replace", text: "Beta", with: "Gamma" }]);
+          await api.editRecord("${RECORD_ID}", [{ kind: "replace", text: "Alpha", with: "Beta" }]);
+          await api.editRecord("${RECORD_ID}", [{ kind: "replace", text: "Beta", with: "Gamma" }]);
         `);
 
-        const events = yield* eventRepo.findUpdatesForNote(NOTE_ID);
-        const note = yield* noteRepo.getById(NOTE_ID);
+        const events = yield* eventRepo.findUpdatesForRecord(RECORD_ID);
+        const record = yield* recordRepo.getById(RECORD_ID);
 
         expect(events).toHaveLength(3);
-        expect(markdownFromContent(note.content)).toBe(
+        expect(markdownFromContent(record.content)).toBe(
           `${dedent`
           # Plan
 
@@ -245,19 +245,19 @@ describe("ExecuteApi.editNote", () => {
   it("serializes concurrent calls without losing either edit", async () => {
     await runIntegration(
       Effect.gen(function* () {
-        yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
+        yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
         const eventRepo = yield* EventRepo.Service;
-        const noteRepo = yield* NoteRepo.Service;
+        const recordRepo = yield* RecordRepo.Service;
 
         yield* runTestScript(dedent`
           await Promise.all([
-            api.editNote("${NOTE_ID}", [{ kind: "append", markdown: "First concurrent append." }]),
-            api.editNote("${NOTE_ID}", [{ kind: "append", markdown: "Second concurrent append." }]),
+            api.editRecord("${RECORD_ID}", [{ kind: "append", markdown: "First concurrent append." }]),
+            api.editRecord("${RECORD_ID}", [{ kind: "append", markdown: "Second concurrent append." }]),
           ]);
         `);
 
-        const events = yield* eventRepo.findUpdatesForNote(NOTE_ID);
-        const markdown = markdownFromContent((yield* noteRepo.getById(NOTE_ID)).content);
+        const events = yield* eventRepo.findUpdatesForRecord(RECORD_ID);
+        const markdown = markdownFromContent((yield* recordRepo.getById(RECORD_ID)).content);
 
         expect(events).toHaveLength(3);
         expect(markdown).toContain("First concurrent append.\n");
@@ -269,20 +269,20 @@ describe("ExecuteApi.editNote", () => {
   it("does not write events for no-op or cancelling edits", async () => {
     await runIntegration(
       Effect.gen(function* () {
-        yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
+        yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
         const eventRepo = yield* EventRepo.Service;
-        const noteRepo = yield* NoteRepo.Service;
+        const recordRepo = yield* RecordRepo.Service;
 
         yield* runTestScript(dedent`
-          await api.editNote("${NOTE_ID}", [{ kind: "replace", text: "Alpha", with: "Alpha" }]);
-          await api.editNote("${NOTE_ID}", [
+          await api.editRecord("${RECORD_ID}", [{ kind: "replace", text: "Alpha", with: "Alpha" }]);
+          await api.editRecord("${RECORD_ID}", [
             { kind: "replace", text: "Alpha", with: "Beta" },
             { kind: "replace", text: "Beta", with: "Alpha" },
           ]);
         `);
 
-        expect(yield* eventRepo.findUpdatesForNote(NOTE_ID)).toHaveLength(1);
-        expect(markdownFromContent((yield* noteRepo.getById(NOTE_ID)).content)).toBe(
+        expect(yield* eventRepo.findUpdatesForRecord(RECORD_ID)).toHaveLength(1);
+        expect(markdownFromContent((yield* recordRepo.getById(RECORD_ID)).content)).toBe(
           `${INITIAL_MARKDOWN}\n`,
         );
       }),
@@ -292,12 +292,12 @@ describe("ExecuteApi.editNote", () => {
   it("rolls back the whole batch when a later edit fails", async () => {
     await runIntegration(
       Effect.gen(function* () {
-        yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
+        yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
         const eventRepo = yield* EventRepo.Service;
-        const noteRepo = yield* NoteRepo.Service;
+        const recordRepo = yield* RecordRepo.Service;
 
         const result = yield* runTestScript(dedent`
-          await api.editNote("${NOTE_ID}", [
+          await api.editRecord("${RECORD_ID}", [
             { kind: "replace", text: "Alpha", with: "Beta" },
             { kind: "replace", text: "missing", with: "never saved" },
           ]);
@@ -307,8 +307,8 @@ describe("ExecuteApi.editNote", () => {
 
         if (Result.isFailure(result)) expect(String(result.failure)).toMatch(/found 0/);
 
-        expect(yield* eventRepo.findUpdatesForNote(NOTE_ID)).toHaveLength(1);
-        expect(markdownFromContent((yield* noteRepo.getById(NOTE_ID)).content)).toBe(
+        expect(yield* eventRepo.findUpdatesForRecord(RECORD_ID)).toHaveLength(1);
+        expect(markdownFromContent((yield* recordRepo.getById(RECORD_ID)).content)).toBe(
           `${INITIAL_MARKDOWN}\n`,
         );
       }),
@@ -318,9 +318,9 @@ describe("ExecuteApi.editNote", () => {
   it("catches up an unmaterialized event before editing", async () => {
     await runIntegration(
       Effect.gen(function* () {
-        const seeded = yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
+        const seeded = yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
         const eventRepo = yield* EventRepo.Service;
-        const noteRepo = yield* NoteRepo.Service;
+        const recordRepo = yield* RecordRepo.Service;
 
         const pendingMarkdown = dedent`
           # Plan
@@ -329,26 +329,26 @@ describe("ExecuteApi.editNote", () => {
         `;
 
         const pending = yield* eventRepo.create({
-          noteId: NOTE_ID,
+          recordId: RECORD_ID,
           type: "update",
           payload: deltaFromMarkdown(seeded.update, pendingMarkdown),
           createdAt: yield* DateTime.now,
         });
 
-        expect((yield* noteRepo.getById(NOTE_ID)).lastEventLocalSeq).toBe(seeded.localSeq);
+        expect((yield* recordRepo.getById(RECORD_ID)).lastEventLocalSeq).toBe(seeded.localSeq);
 
         yield* runTestScript(dedent`
-          await api.editNote("${NOTE_ID}", [
+          await api.editRecord("${RECORD_ID}", [
             { kind: "replace", text: "Remote pending", with: "Caught up" },
           ]);
         `);
 
-        const events = yield* eventRepo.findUpdatesForNote(NOTE_ID);
-        const note = yield* noteRepo.getById(NOTE_ID);
+        const events = yield* eventRepo.findUpdatesForRecord(RECORD_ID);
+        const record = yield* recordRepo.getById(RECORD_ID);
 
         expect(events).toHaveLength(3);
-        expect(note.lastEventLocalSeq).toBeGreaterThan(pending.localSeq);
-        expect(markdownFromContent(note.content)).toBe(
+        expect(record.lastEventLocalSeq).toBeGreaterThan(pending.localSeq);
+        expect(markdownFromContent(record.content)).toBe(
           `${dedent`
           # Plan
 
@@ -360,28 +360,28 @@ describe("ExecuteApi.editNote", () => {
   });
 });
 
-describe("ExecuteApi.createNote", () => {
+describe("ExecuteApi.createRecord", () => {
   it("creates a supplied ID with ordered appends and the last date, then allows editing", async () => {
     await runIntegration(
       Effect.gen(function* () {
         yield* runTestScript(dedent`
-          const id = await api.createNote("created-note", [
+          const id = await api.createRecord("created-record", [
             { kind: "date", date: "invalid but superseded" },
             { kind: "append", markdown: "# Created" },
             { kind: "append", markdown: "See [Target](./target.md)." },
             { kind: "date", date: "2024-02-29" },
           ]);
-          if (id !== "created-note") throw new Error("unexpected ID");
-          await api.editNote(id, [{ kind: "append", markdown: "Next." }]);
+          if (id !== "created-record") throw new Error("unexpected ID");
+          await api.editRecord(id, [{ kind: "append", markdown: "Next." }]);
         `);
-        const noteRepo = yield* NoteRepo.Service;
+        const recordRepo = yield* RecordRepo.Service;
         const eventRepo = yield* EventRepo.Service;
-        const note = yield* noteRepo.getById("created-note");
-        expect(note.title).toBe("Created");
-        expect(note.date).toBe("2024-02-29");
+        const record = yield* recordRepo.getById("created-record");
+        expect(record.title).toBe("Created");
+        expect(record.date).toBe("2024-02-29");
         const markdown = "# Created\n\nSee [target](./target.md).\n\nNext.\n";
-        expect(markdownFromContent(note.content)).toBe(markdown);
-        const updates = yield* eventRepo.findUpdatesForNote(note.id);
+        expect(markdownFromContent(record.content)).toBe(markdown);
+        const updates = yield* eventRepo.findUpdatesForRecord(record.id);
         expect(markdownAfterReplay(updates.map((event) => event.payload))).toBe(markdown);
         expect((yield* eventRepo.findPending(10)).map((event) => event.type)).toEqual([
           "update",
@@ -392,22 +392,22 @@ describe("ExecuteApi.createNote", () => {
     );
   });
 
-  it("generates distinct IDs and persists empty and date-only notes", async () => {
+  it("generates distinct IDs and persists empty and date-only records", async () => {
     await runIntegration(
       Effect.gen(function* () {
         yield* runTestScript(dedent`
-          const first = await api.createNote(undefined, []);
-          const second = await api.createNote(undefined, [{ kind: "date", date: "2024-02-29" }]);
+          const first = await api.createRecord(undefined, []);
+          const second = await api.createRecord(undefined, [{ kind: "date", date: "2024-02-29" }]);
           if (!first || !second || first === second) throw new Error("invalid generated IDs");
-          await api.editNote(first, [{ kind: "append", markdown: "Generated." }]);
+          await api.editRecord(first, [{ kind: "append", markdown: "Generated." }]);
         `);
-        const noteRepo = yield* NoteRepo.Service;
-        const notes = yield* noteRepo.findAllRecords();
-        expect(notes).toHaveLength(2);
-        const dated = notes.find((note) => note.date === "2024-02-29");
+        const recordRepo = yield* RecordRepo.Service;
+        const records = yield* recordRepo.findAllNotes();
+        expect(records).toHaveLength(2);
+        const dated = records.find((record) => record.date === "2024-02-29");
         expect(dated).toBeDefined();
-        expect(NOTE_SCHEMA.nodeFromJSON(dated!.content).textContent).toBe("");
-        const generated = notes.find((note) => note.id !== dated!.id);
+        expect(RECORD_SCHEMA.nodeFromJSON(dated!.content).textContent).toBe("");
+        const generated = records.find((record) => record.id !== dated!.id);
         expect(markdownFromContent(generated!.content)).toBe("Generated.\n");
         expect(generated!.date).toBe(toLocalDateString(generated!.createdAt));
       }),
@@ -418,52 +418,52 @@ describe("ExecuteApi.createNote", () => {
     await runIntegration(
       Effect.gen(function* () {
         for (const call of [
-          'api.createNote("", [])',
-          'api.createNote("invalid", [{ kind: "replace", text: "", with: "no" }])',
-          'api.createNote("invalid", [{ kind: "append", markdown: "Not saved" }, { kind: "date", date: "2025-02-29" }])',
+          'api.createRecord("", [])',
+          'api.createRecord("invalid", [{ kind: "replace", text: "", with: "no" }])',
+          'api.createRecord("invalid", [{ kind: "append", markdown: "Not saved" }, { kind: "date", date: "2025-02-29" }])',
         ]) {
           const result = yield* runTestScript(`await ${call};`).pipe(Effect.result);
 
           expect(Result.isFailure(result)).toBe(true);
         }
 
-        const noteRepo = yield* NoteRepo.Service;
+        const recordRepo = yield* RecordRepo.Service;
         const eventRepo = yield* EventRepo.Service;
-        expect(yield* noteRepo.findAllRecords()).toEqual([]);
+        expect(yield* recordRepo.findAllNotes()).toEqual([]);
         expect(yield* eventRepo.countPending()).toBe(0);
       }),
     );
   });
 
-  it("rejects existing IDs, including notes with only unmaterialized events", async () => {
+  it("rejects existing IDs, including records with only unmaterialized events", async () => {
     await runIntegration(
       Effect.gen(function* () {
-        yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
-        const noteRepo = yield* NoteRepo.Service;
+        yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
+        const recordRepo = yield* RecordRepo.Service;
         const eventRepo = yield* EventRepo.Service;
-        const before = yield* noteRepo.getById(NOTE_ID);
+        const before = yield* recordRepo.getById(RECORD_ID);
         yield* eventRepo.create({
-          noteId: "unmaterialized",
+          recordId: "unmaterialized",
           type: "update",
           payload: fullUpdateFromMarkdown("Existing."),
           createdAt: yield* DateTime.now,
         });
 
-        for (const id of [NOTE_ID, "unmaterialized"]) {
+        for (const id of [RECORD_ID, "unmaterialized"]) {
           const result = yield* runTestScript(dedent`
-            await api.createNote("${id}", [{ kind: "append", markdown: "Never saved." }]);
+            await api.createRecord("${id}", [{ kind: "append", markdown: "Never saved." }]);
           `).pipe(Effect.result);
 
           expect(Result.isFailure(result)).toBe(true);
 
           if (Result.isFailure(result)) {
-            expect(String(result.failure)).toContain(`Note already exists: ${id}`);
+            expect(String(result.failure)).toContain(`Record already exists: ${id}`);
           }
         }
 
-        expect(yield* noteRepo.getById(NOTE_ID)).toEqual(before);
+        expect(yield* recordRepo.getById(RECORD_ID)).toEqual(before);
         expect(yield* eventRepo.countPending()).toBe(1);
-        expect(yield* eventRepo.findUpdatesForNote("unmaterialized")).toHaveLength(1);
+        expect(yield* eventRepo.findUpdatesForRecord("unmaterialized")).toHaveLength(1);
       }),
     );
   });
@@ -473,16 +473,16 @@ describe("ExecuteApi.createNote", () => {
       Effect.gen(function* () {
         yield* runTestScript(dedent`
           const results = await Promise.allSettled([
-            api.createNote("same-id", [{ kind: "append", markdown: "First." }]),
-            api.createNote("same-id", [{ kind: "append", markdown: "Second." }]),
+            api.createRecord("same-id", [{ kind: "append", markdown: "First." }]),
+            api.createRecord("same-id", [{ kind: "append", markdown: "Second." }]),
           ]);
           if (results.filter((result) => result.status === "fulfilled").length !== 1) {
             throw new Error("Expected one successful creation");
           }
         `);
-        const noteRepo = yield* NoteRepo.Service;
+        const recordRepo = yield* RecordRepo.Service;
         const eventRepo = yield* EventRepo.Service;
-        expect(yield* noteRepo.findAllRecords()).toHaveLength(1);
+        expect(yield* recordRepo.findAllNotes()).toHaveLength(1);
         expect(yield* eventRepo.countPending()).toBe(2);
       }),
     );
@@ -512,7 +512,7 @@ function runTestScript(source: string) {
   );
 }
 
-function seedNote(noteId: string, markdown: string, commitSeq = 1) {
+function seedRecord(recordId: string, markdown: string, commitSeq = 1) {
   const update = fullUpdateFromMarkdown(markdown);
 
   return Effect.gen(function* () {
@@ -520,14 +520,14 @@ function seedNote(noteId: string, markdown: string, commitSeq = 1) {
     const materializer = yield* Materializer.Service;
 
     const event = yield* eventRepo.create({
-      noteId,
+      recordId,
       type: "update",
       payload: update,
       createdAt: yield* DateTime.now,
       commitSeq,
     });
 
-    yield* materializer.materializeNoteUpTo({ noteId, upToLocalSeq: event.localSeq });
+    yield* materializer.materializeRecordUpTo({ recordId, upToLocalSeq: event.localSeq });
 
     return { localSeq: event.localSeq, update };
   });
@@ -535,7 +535,7 @@ function seedNote(noteId: string, markdown: string, commitSeq = 1) {
 
 function fullUpdateFromMarkdown(markdown: string): Uint8Array<ArrayBufferLike> {
   const yDoc = prosemirrorJSONToYDoc(
-    NOTE_SCHEMA,
+    RECORD_SCHEMA,
     MdParse.parse(markdown).toJSON(),
     PROSEMIRROR_XML_FRAGMENT_KEY,
   );
@@ -556,7 +556,7 @@ function deltaFromMarkdown(
   try {
     Y.applyUpdate(yDoc, baseUpdate);
     const fragment = getProsemirrorXmlFragment(yDoc);
-    const { meta } = initProseMirrorDoc(fragment, NOTE_SCHEMA);
+    const { meta } = initProseMirrorDoc(fragment, RECORD_SCHEMA);
     const stateVector = Y.encodeStateVector(yDoc);
     updateYFragment(yDoc, fragment, MdParse.parse(markdown), meta);
 
@@ -571,7 +571,7 @@ function markdownAfterReplay(updates: ReadonlyArray<Uint8Array<ArrayBufferLike>>
 
   try {
     return MdSerialize.serialize(
-      initProseMirrorDoc(getProsemirrorXmlFragment(yDoc), NOTE_SCHEMA).doc,
+      initProseMirrorDoc(getProsemirrorXmlFragment(yDoc), RECORD_SCHEMA).doc,
     );
   } finally {
     yDoc.destroy();
@@ -599,7 +599,7 @@ function replay(updates: ReadonlyArray<Uint8Array<ArrayBufferLike>>): Y.Doc {
 }
 
 function markdownFromContent(content: UnknownNodeJSON): string {
-  return MdSerialize.serialize(NOTE_SCHEMA.nodeFromJSON(content));
+  return MdSerialize.serialize(RECORD_SCHEMA.nodeFromJSON(content));
 }
 
 function requireSnapshot(update: Uint8Array<ArrayBufferLike> | null): Uint8Array<ArrayBufferLike> {

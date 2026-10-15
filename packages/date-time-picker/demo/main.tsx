@@ -41,7 +41,7 @@ function Demo() {
         <section>
           <h2>Date picker</h2>
           <DatePicker
-            label="Note date"
+            label="Record date"
             locale={locale()}
             value={date()}
             onChange={setDate}

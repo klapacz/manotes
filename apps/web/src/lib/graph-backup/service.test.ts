@@ -17,7 +17,7 @@ describe("graph backup service", () => {
       events: [
         {
           localSeq: 4,
-          noteId: "note-a",
+          recordId: "record-a",
           type: "update",
           payload: new Uint8Array([0, 1, 2, 255]),
           createdAt: firstCreatedAt,
@@ -26,7 +26,7 @@ describe("graph backup service", () => {
         },
         {
           localSeq: 5,
-          noteId: "note-b",
+          recordId: "record-b",
           type: "update",
           payload: new Uint8Array([9, 8, 7]),
           createdAt: secondCreatedAt,
@@ -41,14 +41,14 @@ describe("graph backup service", () => {
 
     expect(encoded.events).toEqual([
       {
-        noteId: "note-a",
+        recordId: "record-a",
         type: "update",
         payload: "AAEC/w==",
         createdAt: "2026-04-01T10:00:00.000Z",
         id: "event-a",
       },
       {
-        noteId: "note-b",
+        recordId: "record-b",
         type: "update",
         payload: "CQgH",
         createdAt: "2026-04-01T11:00:00.000Z",
@@ -59,14 +59,14 @@ describe("graph backup service", () => {
     expect(decoded).toEqual(backup);
     expect(decoded.events).toEqual([
       {
-        noteId: "note-a",
+        recordId: "record-a",
         type: "update",
         payload: new Uint8Array([0, 1, 2, 255]),
         createdAt: firstCreatedAt,
         id: "event-a",
       },
       {
-        noteId: "note-b",
+        recordId: "record-b",
         type: "update",
         payload: new Uint8Array([9, 8, 7]),
         createdAt: secondCreatedAt,

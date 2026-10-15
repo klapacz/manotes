@@ -13,8 +13,8 @@ import * as Y from "yjs";
 import * as DB from "@manotes/shared/db.service";
 import * as EventRepo from "@manotes/shared/event.repo";
 import * as Materializer from "@manotes/shared/materializer.service";
-import * as NoteRepo from "@manotes/shared/note.repo";
-import { NOTE_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
+import * as RecordRepo from "@manotes/shared/record.repo";
+import { RECORD_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
 import { MdParse } from "@manotes/shared/prosemirror/md/parse";
 import { PROSEMIRROR_XML_FRAGMENT_KEY } from "@manotes/shared/prosemirror/yjs";
 import { CliRuntime } from "./cli.runtime";
@@ -23,7 +23,7 @@ const APP_DIR = fileURLToPath(new URL("..", import.meta.url));
 
 const CLI_ENTRY = fileURLToPath(new URL("./cli.ts", import.meta.url));
 
-const NOTE_ID = "workflow-note";
+const RECORD_ID = "workflow-record";
 
 describe("CLI local workflow", () => {
   it.each(["missing", "nonzero", "success", "print-only"])(
@@ -82,7 +82,7 @@ describe("CLI local workflow", () => {
     },
   );
 
-  it.each(["note.md", ".hidden"])(
+  it.each(["record.md", ".hidden"])(
     "rejects init in a directory containing %s before contacting the server",
     { timeout: 30_000 },
     async (filename) => {
@@ -206,17 +206,17 @@ describe("CLI local workflow", () => {
             autoSync,
           }),
         );
-        const note = await seedWorkspace(databasePath);
+        const record = await seedWorkspace(databasePath);
 
         const exportResult = await runCli(workspace, ["execute"], "");
 
         expect(exportResult.code, exportResult.stdout + exportResult.stderr).toBe(0);
         expect(exportResult.stderr).not.toContain("Automatic sync failed.");
-        const initialFile = await readFile(path.join(workspace, `${NOTE_ID}.md`), "utf8");
+        const initialFile = await readFile(path.join(workspace, `${RECORD_ID}.md`), "utf8");
         expect(initialFile).toBe(
           `${dedent`
           ---
-          date: "${note.date}"
+          date: "${record.date}"
           modified: "2026-09-12T10:24:36.000Z"
           ---
 
@@ -231,11 +231,11 @@ describe("CLI local workflow", () => {
         const reexportResult = await runCli(workspace, ["execute"], "");
 
         expect(reexportResult.code, reexportResult.stdout + reexportResult.stderr).toBe(0);
-        expect(await readFile(path.join(workspace, `${NOTE_ID}.md`), "utf8")).toBe(initialFile);
+        expect(await readFile(path.join(workspace, `${RECORD_ID}.md`), "utf8")).toBe(initialFile);
         await writeFile(
           fileScript,
           dedent`
-            await api.editNote("${NOTE_ID}", [
+            await api.editRecord("${RECORD_ID}", [
               { kind: "append", markdown: "From file." },
             ]);
           `,
@@ -255,7 +255,7 @@ describe("CLI local workflow", () => {
           expect(fileResult.stdout).toContain("Run `manotes sync` to publish.");
         }
 
-        expect(await readFile(path.join(workspace, `${NOTE_ID}.md`), "utf8")).toContain(
+        expect(await readFile(path.join(workspace, `${RECORD_ID}.md`), "utf8")).toContain(
           "From file.\n",
         );
 
@@ -263,7 +263,7 @@ describe("CLI local workflow", () => {
           workspace,
           ["execute"],
           dedent`
-            await api.editNote("${NOTE_ID}", [
+            await api.editRecord("${RECORD_ID}", [
               { kind: "append", markdown: "From stdin." },
             ]);
           `,
@@ -276,7 +276,7 @@ describe("CLI local workflow", () => {
         const failedStdinResult = await runCli(
           workspace,
           ["execute"],
-          `await api.editNote("${NOTE_ID}", [{ kind: "append", markdown: "Before failure." }]);
+          `await api.editRecord("${RECORD_ID}", [{ kind: "append", markdown: "Before failure." }]);
             throw new Error("stdin failure");\n`,
         );
 
@@ -307,7 +307,7 @@ describe("CLI local workflow", () => {
 
 async function seedWorkspace(databasePath: string) {
   const yDoc = prosemirrorJSONToYDoc(
-    NOTE_SCHEMA,
+    RECORD_SCHEMA,
     MdParse.parse(dedent`
       ---
 
@@ -332,17 +332,20 @@ async function seedWorkspace(databasePath: string) {
       const materializer = yield* Materializer.Service;
 
       const event = yield* eventRepo.create({
-        noteId: NOTE_ID,
+        recordId: RECORD_ID,
         type: "update",
         payload: update,
         createdAt: DateTime.makeUnsafe("2026-09-12T10:24:36.000Z"),
         commitSeq: 1,
       });
 
-      yield* materializer.materializeNoteUpTo({ noteId: NOTE_ID, upToLocalSeq: event.localSeq });
-      const noteRepo = yield* NoteRepo.Service;
+      yield* materializer.materializeRecordUpTo({
+        recordId: RECORD_ID,
+        upToLocalSeq: event.localSeq,
+      });
+      const recordRepo = yield* RecordRepo.Service;
 
-      return yield* noteRepo.getById(NOTE_ID);
+      return yield* recordRepo.getById(RECORD_ID);
     }).pipe(
       Effect.provide(CliRuntime.layer),
       Effect.provide(configLayer),

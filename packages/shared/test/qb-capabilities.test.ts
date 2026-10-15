@@ -7,11 +7,11 @@ import { describe, expect, expectTypeOf, it } from "vite-plus/test";
 import { AttrsSchema } from "../src/attrs.schema";
 import { Tables } from "../src/db.tables";
 import { DBUsedTables } from "../src/db.used-tables";
-import { NoteSchema } from "../src/note.schema";
+import { RecordSchema } from "../src/record.schema";
 
 // Investigation only: no application schemas or repositories are changed.
 const documents = Table.make("codec_probe", {
-  id: Column.text().pipe(Column.schema(NoteSchema.Id), Column.primaryKey),
+  id: Column.text().pipe(Column.schema(RecordSchema.Id), Column.primaryKey),
   createdAt: Column.text().pipe(Column.schema(Schema.DateTimeUtcFromString)),
   content: Column.text().pipe(
     Column.schema(
@@ -27,10 +27,10 @@ const documents = Table.make("codec_probe", {
   payload: Column.json(Schema.Struct({ count: Schema.NumberFromString })),
 });
 
-const Expects = Schema.Record(NoteSchema.Id, AttrsSchema.RuleExpectation);
+const Expects = Schema.Record(RecordSchema.Id, AttrsSchema.RuleExpectation);
 
 const fragmentRules = Query.select({
-  id: Tables.notes.id,
+  id: Tables.records.id,
   expects: Fragment.expression({
     dbType: Type.json(),
     schema: Expects,
@@ -40,10 +40,10 @@ const fragmentRules = Query.select({
     WHERE ${Tables.ruleExpects.propId} IS NOT NULL AND ${Tables.ruleExpects.value} IS NOT NULL
   )`,
 }).pipe(
-  Query.from(Tables.notes),
-  Query.leftJoin(Tables.ruleExpects, Query.eq(Tables.ruleExpects.ruleId, Tables.notes.id)),
-  Query.groupBy(Tables.notes.id),
-  Query.orderBy(Tables.notes.id),
+  Query.from(Tables.records),
+  Query.leftJoin(Tables.ruleExpects, Query.eq(Tables.ruleExpects.ruleId, Tables.records.id)),
+  Query.groupBy(Tables.records.id),
+  Query.orderBy(Tables.records.id),
 );
 
 // The public AST constructor can express function calls without SQL templates.
@@ -82,7 +82,7 @@ const validExpectations = Query.select({ expects: expectationObject }).pipe(
   Query.from(Tables.ruleExpects),
   Query.where(
     Query.and(
-      Query.eq(Tables.ruleExpects.ruleId, Tables.notes.id),
+      Query.eq(Tables.ruleExpects.ruleId, Tables.records.id),
       Query.isNotNull(Tables.ruleExpects.propId),
       Query.isNotNull(Tables.ruleExpects.value),
     ),
@@ -90,16 +90,16 @@ const validExpectations = Query.select({ expects: expectationObject }).pipe(
 );
 
 const astRules = Query.select({
-  id: Tables.notes.id,
+  id: Tables.records.id,
   expects: SqliteQuery.scalar(validExpectations),
-}).pipe(Query.from(Tables.notes), Query.orderBy(Tables.notes.id));
+}).pipe(Query.from(Tables.records), Query.orderBy(Tables.records.id));
 
 describe("effect-qb 0.24.1 codec and JSON aggregation investigation", () => {
   it("encodes mutations and decodes column codecs without repository-level Schema calls", async () => {
     await withDatabase(async (database, executor) => {
       await Effect.runPromise(executor.execute(Query.createTable(documents)));
       const createdAt = DateTime.makeUnsafe("2026-10-14T10:00:00.000Z");
-      const id = NoteSchema.Id.make("document");
+      const id = RecordSchema.Id.make("document");
       const content = { type: "doc", content: [] };
 
       await Effect.runPromise(
@@ -126,7 +126,7 @@ describe("effect-qb 0.24.1 codec and JSON aggregation investigation", () => {
         executor.execute(Query.select(documents.columns).pipe(Query.from(documents))),
       );
 
-      expectTypeOf(rows[0]!.id).toEqualTypeOf<NoteSchema.Id>();
+      expectTypeOf(rows[0]!.id).toEqualTypeOf<RecordSchema.Id>();
       expectTypeOf(rows[0]!.createdAt).toEqualTypeOf<DateTime.Utc>();
       expectTypeOf(rows[0]!.enabled).toEqualTypeOf<boolean>();
       expectTypeOf(rows[0]!.payload.count).toEqualTypeOf<number>();
@@ -155,7 +155,7 @@ describe("effect-qb 0.24.1 codec and JSON aggregation investigation", () => {
       await Effect.runPromise(
         executor.execute(
           Query.insert(documents, {
-            id: NoteSchema.Id.make("document"),
+            id: RecordSchema.Id.make("document"),
             createdAt: DateTime.makeUnsafe("2026-10-14T10:00:00.000Z"),
             content: { type: "doc" },
             enabled: true,
@@ -231,8 +231,11 @@ describe("effect-qb 0.24.1 codec and JSON aggregation investigation", () => {
         },
       ]);
       expect(astRows).toEqual(fragmentRows);
-      expect([...DBUsedTables.usedTables(astRules)].sort()).toEqual(["notes", "rule_expects"]);
-      expect([...DBUsedTables.usedTables(fragmentRules)].sort()).toEqual(["notes", "rule_expects"]);
+      expect([...DBUsedTables.usedTables(astRules)].sort()).toEqual(["records", "rule_expects"]);
+      expect([...DBUsedTables.usedTables(fragmentRules)].sort()).toEqual([
+        "records",
+        "rule_expects",
+      ]);
     });
   });
 
@@ -282,14 +285,14 @@ const nativeParameter = Schema.decodeUnknownSync(
 );
 
 async function seedRules(database: DatabaseSync, executor: ReturnType<typeof makeExecutor>) {
-  await Effect.runPromise(executor.execute(Query.createTable(Tables.notes)));
+  await Effect.runPromise(executor.execute(Query.createTable(Tables.records)));
   await Effect.runPromise(executor.execute(Query.createTable(Tables.ruleExpects)));
 
-  const insertNote = database.prepare(`INSERT INTO notes
+  const insertRecord = database.prepare(`INSERT INTO records
     (id, _tag, content, text, date, createdAt, updatedAt, lastEventLocalSeq)
     VALUES (?, 'rule', '{}', ?, '2026-10-14', '2026-10-14', '2026-10-14', 0)`);
 
-  for (const id of ["empty", "filtered", "populated"]) insertNote.run(id, id);
+  for (const id of ["empty", "filtered", "populated"]) insertRecord.run(id, id);
   const insertExpect = database.prepare("INSERT INTO rule_expects VALUES (?, ?, ?)");
   insertExpect.run("filtered", "invalid", null);
   insertExpect.run(

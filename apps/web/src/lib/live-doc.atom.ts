@@ -1,17 +1,17 @@
 import { useAtomValue } from "@effect/atom-solid";
-import type { NoteSchema } from "@manotes/shared/note.schema";
+import type { RecordSchema } from "@manotes/shared/record.schema";
 import { Atom, AsyncResult } from "effect/reactivity";
 import { createMemo, type Accessor } from "solid-js";
 import { LiveDoc } from "./live-doc.service";
 import { bindRt } from "./rt-atom";
 
 export const byRecord = bindRt((rt) => {
-  return Atom.family((recordId: NoteSchema.Id) => {
+  return Atom.family((recordId: RecordSchema.Id) => {
     return rt.subscriptionRef(LiveDoc.Service.use((service) => service.acquire({ recordId })));
   });
 });
 
-export function use(opts: { readonly recordId: Accessor<NoteSchema.Id> }) {
+export function use(opts: { readonly recordId: Accessor<RecordSchema.Id> }) {
   const result = useAtomValue(() => byRecord()(opts.recordId()));
 
   return createMemo(() => {

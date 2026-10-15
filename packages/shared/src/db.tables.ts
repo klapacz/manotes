@@ -7,11 +7,11 @@ import { ddlType } from "effect-qb/internal/column";
 import type { StoredShape as StoredJson } from "effect-qb/internal/json/storage";
 import * as EventSchema from "./event.schema";
 import { AttrsSchema } from "./attrs.schema";
-import { NoteSchema } from "./note.schema";
+import { RecordSchema } from "./record.schema";
 import * as TemporalSchema from "./temporal.schema";
 
-export const notes = Table.make("notes", {
-  id: Column.text().pipe(Column.schema(NoteSchema.Id), Column.primaryKey),
+export const records = Table.make("records", {
+  id: Column.text().pipe(Column.schema(RecordSchema.Id), Column.primaryKey),
   _tag: Column.custom(AttrsSchema.RecordTag, Type.text()).pipe(
     Column.default(Query.literal("note")),
   ),
@@ -19,14 +19,14 @@ export const notes = Table.make("notes", {
   prop_default: nullableJson(AttrsSchema.PropVal),
   prop_targets: nullableJson(AttrsSchema.TargetFilter),
   owned_type: Column.custom(Schema.Literal("enum_option"), Type.text()).pipe(Column.nullable),
-  owned_parent: Column.text().pipe(Column.schema(NoteSchema.Id), Column.nullable),
+  owned_parent: Column.text().pipe(Column.schema(RecordSchema.Id), Column.nullable),
   rule_storage: nullableJson(AttrsSchema.RuleStorage),
   rule_targets: nullableJson(AttrsSchema.TargetFilter),
   attrs_valid: Column.custom(Schema.BooleanFromBit, Type.int()).pipe(
     Column.default(Query.literal(0)),
   ),
   title: Column.text().pipe(Column.nullable),
-  content: jsonText(NoteSchema.Content),
+  content: jsonText(RecordSchema.Content),
   text: Column.text(),
   date: Column.text().pipe(Column.schema(TemporalSchema.PlainDateString)),
   materializedYUpdate: Column.blob().pipe(Column.nullable),
@@ -34,17 +34,17 @@ export const notes = Table.make("notes", {
   updatedAt: Column.text().pipe(Column.schema(Schema.DateTimeUtcFromString)),
   lastEventLocalSeq: Column.int(),
 })
-  .pipe(Index.make((table) => [table._tag]).pipe(Index.named("notes_tag_idx")))
-  .pipe(Index.make((table) => [table.owned_parent]).pipe(Index.named("notes_owned_parent_idx")));
+  .pipe(Index.make((table) => [table._tag]).pipe(Index.named("records_tag_idx")))
+  .pipe(Index.make((table) => [table.owned_parent]).pipe(Index.named("records_owned_parent_idx")));
 
-export type Note = Table.SelectOf<typeof notes>;
+export type Record = Table.SelectOf<typeof records>;
 
 // NULL preserves an unparseable assignment; an absent assignment has no row.
 // References can arrive out of order, so these projections have no foreign keys.
 export const props = Table.make("props", {
-  recordId: Column.text().pipe(Column.schema(NoteSchema.Id)),
-  path: jsonText(Schema.Array(NoteSchema.Id)),
-  propId: Column.text().pipe(Column.schema(NoteSchema.Id)),
+  recordId: Column.text().pipe(Column.schema(RecordSchema.Id)),
+  path: jsonText(Schema.Array(RecordSchema.Id)),
+  propId: Column.text().pipe(Column.schema(RecordSchema.Id)),
   value: nullableJson(AttrsSchema.PropVal),
 })
   .pipe(PrimaryKey.make((table) => [table.recordId, table.path, table.propId]))
@@ -53,8 +53,8 @@ export const props = Table.make("props", {
 export type Prop = Table.SelectOf<typeof props>;
 
 export const ruleExpects = Table.make("rule_expects", {
-  ruleId: Column.text().pipe(Column.schema(NoteSchema.Id)),
-  propId: Column.text().pipe(Column.schema(NoteSchema.Id)),
+  ruleId: Column.text().pipe(Column.schema(RecordSchema.Id)),
+  propId: Column.text().pipe(Column.schema(RecordSchema.Id)),
   value: nullableJson(AttrsSchema.RuleExpectation),
 })
   .pipe(PrimaryKey.make((table) => [table.ruleId, table.propId]))
@@ -65,7 +65,7 @@ export type RuleExpect = Table.SelectOf<typeof ruleExpects>;
 export const events = Table.make("events", {
   // SQLite allocates a monotonic row ID when omitted.
   localSeq: Column.int().pipe(Column.primaryKey, Sqlite.Column.autoIncrement),
-  noteId: Column.text().pipe(Column.schema(Schema.NonEmptyString)),
+  recordId: Column.text().pipe(Column.schema(Schema.NonEmptyString)),
   type: Column.custom(EventSchema.Type, Type.text()),
   payload: Column.blob(),
   createdAt: Column.text().pipe(Column.schema(Schema.DateTimeUtcFromString)),

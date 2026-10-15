@@ -15,7 +15,7 @@ const config: CliConfig.Config = {
 };
 
 describe("CliConfig.write", () => {
-  it.each([undefined, "", '[note]\nlanguage = "pl"\n'])(
+  it.each([undefined, "", '[record]\nlanguage = "pl"\n'])(
     "initializes zk without replacing existing config %j",
     async (existing) => {
       const dir = await mkdtemp(path.join(tmpdir(), "manotes-config-"));

@@ -1,9 +1,9 @@
 import { Array, Option } from "effect";
-import { NoteSchema } from "./note.schema";
+import { RecordSchema } from "./record.schema";
 import { AttrsSchema } from "./attrs.schema";
 import type { PropRecordRepo } from "./prop-record.repo";
 
-export const archivedId = NoteSchema.Id.make("builtin:archived");
+export const archivedId = RecordSchema.Id.make("builtin:archived");
 
 export const archived = {
   id: archivedId,

@@ -19,7 +19,7 @@ export type Block = { h1: string } | { p: Array<Inline> };
 
 export type Page = { title: string; blocks: Array<Block> };
 
-/** An untitled journal note, dated `today - daysAgo`. */
+/** An untitled journal record, dated `today - daysAgo`. */
 export type Entry = { daysAgo: number; blocks: Array<Block> };
 
 export const SOURCE_GRAPH_DISPLAY_NAME = "Manotes Demo";
@@ -30,14 +30,16 @@ export const PAGES: Record<PageKey, Page> = {
     title: "Korneliusz Łapacz",
     blocks: [
       { h1: "Korneliusz Łapacz" },
-      { p: ["Software engineer. I build ", { backlink: "manotes" }, ", a local-first notes app."] },
+      {
+        p: ["Software engineer. I build ", { backlink: "manotes" }, ", a local-first records app."],
+      },
       {
         p: [
           "I keep a daily ",
           { backlink: "diary" },
           ", track my ",
           { backlink: "sleepLog" },
-          ", and note every entry in the ",
+          ", and record every entry in the ",
           { backlink: "migraineLog" },
           ".",
         ],
@@ -50,7 +52,7 @@ export const PAGES: Record<PageKey, Page> = {
       { h1: "Manotes" },
       {
         p: [
-          "Manotes is an event-sourced, local-first notes app. Notes are materialized from an append-only event log, so a backup is just a replay of every event.",
+          "Manotes is an event-sourced, local-first records app. Notes are materialized from an append-only event log, so a backup is just a replay of every event.",
         ],
       },
       { p: ["Open work lives in ", { backlink: "manotesTasks" }, "."] },
@@ -94,7 +96,7 @@ const migraine = (daysAgo: number, text: string): Entry => ({
   blocks: [{ p: [{ backlink: "migraineLog" }, ` ${text}`] }],
 });
 
-/** Untitled journal notes. Ordering is irrelevant; each carries its own date. */
+/** Untitled journal records. Ordering is irrelevant; each carries its own date. */
 export const ENTRIES: Array<Entry> = [
   sleep(0, "7h10m, quality 8/10. Woke up before the alarm, felt rested."),
   sleep(1, "6h30m, quality 6/10. Went to bed late after a long coding session."),
@@ -196,7 +198,7 @@ export const ENTRIES: Array<Entry> = [
   },
   {
     daysAgo: 13,
-    blocks: [{ p: [{ backlink: "diary" }, " Read about event sourcing. Took notes for later."] }],
+    blocks: [{ p: [{ backlink: "diary" }, " Read about event sourcing. Took records for later."] }],
   },
   {
     daysAgo: 14,

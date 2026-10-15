@@ -8,13 +8,13 @@ export * as Migrator from "./migrator";
 
 export * as EventRepo from "@manotes/shared/event.repo";
 
-export * as NoteSchema from "@manotes/shared/note.schema";
+export * as RecordSchema from "@manotes/shared/record.schema";
 
-export * as NoteRepo from "@manotes/shared/note.repo";
+export * as RecordRepo from "@manotes/shared/record.repo";
 
-export * as NoteCache from "./note-cache.service";
+export * as RecordCache from "./record-cache.service";
 
-export * as NoteStreamCache from "./note-stream-cache.service";
+export * as RecordStreamCache from "./record-stream-cache.service";
 
 export * as MaterializationCheckpointRepo from "@manotes/shared/materialization-checkpoint.repo";
 

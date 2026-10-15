@@ -14,7 +14,7 @@ import {
 } from "effect";
 import { DB } from "@manotes/shared/db.service";
 import { GraphWorkerClient } from "../graph-worker.client";
-import type { NoteSchema } from "@manotes/shared/note.schema";
+import type { RecordSchema } from "@manotes/shared/record.schema";
 import { AudioMemoFiles } from "./files";
 import type { AudioMemoIntent } from "./intent";
 import { AudioMemoRecorder } from "./recorder";
@@ -22,7 +22,7 @@ import { AudioMemoRepo } from "./repo";
 import { AudioMemoService } from "./service";
 
 export type Draft = {
-  id: NoteSchema.Id;
+  id: RecordSchema.Id;
   createdAt: DateTime.Utc;
   intent: AudioMemoIntent.Record;
 };
@@ -69,7 +69,7 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
 
   // A session saves only one recording. Wait for that save, then keep watching
   // its row across retries and removals from either pane. The pane's existing
-  // completion watcher handles the actual note arriving and clearing the draft.
+  // completion watcher handles the actual record arriving and clearing the draft.
   yield* SubscriptionRef.changes(ref).pipe(
     Stream.filterMap(
       Match.type<State>().pipe(
@@ -193,7 +193,7 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
         yield* AudioMemoFiles.save(localGraphId, capture.recording.path, capture.blob);
         yield* AudioMemoService.register({
           ...capture.recording,
-          noteId: draft.id,
+          recordId: draft.id,
           intent: draft.intent,
         });
         yield* SubscriptionRef.set(ref, State.Pending({ recording: capture.recording }));

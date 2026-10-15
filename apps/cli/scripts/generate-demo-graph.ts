@@ -11,7 +11,7 @@ import { prosemirrorJSONToYDoc } from "y-prosemirror";
 import * as Y from "yjs";
 import * as EventSchema from "@manotes/shared/event.schema";
 import * as BackupSchema from "@manotes/shared/graph-backup/schema";
-import { NOTE_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
+import { RECORD_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
 import { PROSEMIRROR_XML_FRAGMENT_KEY } from "@manotes/shared/prosemirror/yjs";
 import { toLocalDateString } from "@manotes/shared/temporal/utils";
 import { ENTRIES, PAGES, SOURCE_GRAPH_DISPLAY_NAME } from "./demo-content";
@@ -35,7 +35,7 @@ function blockToJSON(block: Block) {
 
 function buildPayload(blocks: Array<Block>): Uint8Array<ArrayBufferLike> {
   const yDoc = prosemirrorJSONToYDoc(
-    NOTE_SCHEMA,
+    RECORD_SCHEMA,
     { type: "doc", content: blocks.map(blockToJSON) },
     PROSEMIRROR_XML_FRAGMENT_KEY,
   );
@@ -44,12 +44,12 @@ function buildPayload(blocks: Array<Block>): Uint8Array<ArrayBufferLike> {
 }
 
 function event(
-  noteId: string,
+  recordId: string,
   type: "update" | "date",
   payload: Uint8Array<ArrayBufferLike>,
   createdAt: DateTime.Utc,
 ): BackupSchema.Record {
-  return { noteId, type, payload, createdAt, id: nanoid() };
+  return { recordId, type, payload, createdAt, id: nanoid() };
 }
 
 const now = DateTime.nowUnsafe();
@@ -64,13 +64,13 @@ for (const [index, [key, page]] of Record.toEntries(PAGES).entries()) {
 
 // Journal entries: an `update` event plus a `date` event pinning the day.
 for (const entry of ENTRIES) {
-  const noteId = nanoid();
+  const recordId = nanoid();
   const createdAt = DateTime.subtract(now, { days: entry.daysAgo });
   const date = toLocalDateString(createdAt);
   const datePayload = Effect.runSync(EventSchema.encodeDatePayload({ date }));
 
-  events.push(event(noteId, "update", buildPayload(entry.blocks), createdAt));
-  events.push(event(noteId, "date", datePayload, DateTime.add(createdAt, { seconds: 1 })));
+  events.push(event(recordId, "update", buildPayload(entry.blocks), createdAt));
+  events.push(event(recordId, "date", datePayload, DateTime.add(createdAt, { seconds: 1 })));
 }
 
 events.sort((a, b) => DateTime.toEpochMillis(a.createdAt) - DateTime.toEpochMillis(b.createdAt));

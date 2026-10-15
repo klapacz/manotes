@@ -1,8 +1,8 @@
 import { Effect, Match } from "effect";
 import { CliError } from "effect/cli";
 import { ChildProcess } from "effect/process";
-import type { NoteSearch } from "@manotes/shared/note/search";
-import { PaneMake } from "@manotes/shared/note/pane.make";
+import type { RecordSearch } from "@manotes/shared/record/search";
+import { PaneMake } from "@manotes/shared/record/pane.make";
 import type { CliConfig } from "./cli.config";
 
 export function make(config: Pick<CliConfig.Config, "origin" | "graphId">, id?: string): string {
@@ -11,8 +11,8 @@ export function make(config: Pick<CliConfig.Config, "origin" | "graphId">, id?: 
   if (id === undefined) return url.href;
 
   const search = {
-    panes: [PaneMake.note(id)],
-  } satisfies typeof NoteSearch.Schema.Encoded;
+    panes: [PaneMake.record(id)],
+  } satisfies typeof RecordSearch.Schema.Encoded;
 
   url.searchParams.set("panes", JSON.stringify(search.panes));
 

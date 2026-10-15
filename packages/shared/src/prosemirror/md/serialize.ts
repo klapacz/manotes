@@ -157,7 +157,7 @@ function createSerializer(options: Options): MarkdownSerializer {
       backlink(state, node) {
         const { id } = decodeBacklinkAttrs(node.attrs);
 
-        // Labels are display-only; the encoded note id is the link destination.
+        // Labels are display-only; the encoded record id is the link destination.
         const label = options.backlinkLabel?.(id) ?? id;
 
         // encodeURIComponent leaves these punctuation characters unescaped;

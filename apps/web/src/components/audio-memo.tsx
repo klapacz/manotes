@@ -6,7 +6,7 @@ import { Array, DateTime, Effect, Match as EffectMatch, Option, Stream } from "e
 import { AsyncResult, Atom } from "effect/reactivity";
 import { For, Match, Show, Switch, createMemo, onMount, type ParentProps } from "solid-js";
 import { toast } from "somoto";
-import { MatchAsyncResult, NoteCache, NoteSchema, bindRt } from "../lib";
+import { MatchAsyncResult, RecordCache, RecordSchema, bindRt } from "../lib";
 import { AudioMemoFiles } from "../lib/audio-memo/files";
 import { AudioMemoRecorder } from "../lib/audio-memo/recorder";
 import { AudioMemoRepo } from "../lib/audio-memo/repo";
@@ -14,12 +14,12 @@ import { AudioMemoSavedSession } from "../lib/audio-memo/saved-session";
 import { AudioMemoSession, State } from "../lib/audio-memo/session";
 import { DB } from "@manotes/shared/db.service";
 import { GraphWorkerClient } from "../lib/graph-worker.client";
-import { NoteFormat } from "@manotes/shared/note/format";
-import { PaneCursor } from "../lib/note/pane.cursor";
-import { PaneCtx } from "../lib/note/pane.ctx";
-import { PaneMake } from "@manotes/shared/note/pane.make";
+import { RecordFormat } from "@manotes/shared/record/format";
+import { PaneCursor } from "../lib/record/pane.cursor";
+import { PaneCtx } from "../lib/record/pane.ctx";
+import { PaneMake } from "@manotes/shared/record/pane.make";
 import { LoadingIcon, PauseIcon, PlayIcon, RetryIcon, StopIcon, XIcon } from "./icons";
-import { PaneEmptyState } from "./note/shared";
+import { PaneEmptyState } from "./record/shared";
 import { Button, buttonVariants } from "./ui/button";
 
 export type Draft = AudioMemoSession.Draft;
@@ -54,11 +54,11 @@ const completionAtom = bindRt((rt) => {
             // Completion is committed before materialization. Wait until the
             // transcript exists so the notification's Open action can use it.
             Stream.flatMap((row) => {
-              return NoteCache.Service.use((cache) => cache.changes(row.noteId)).pipe(
+              return RecordCache.Service.use((cache) => cache.changes(row.recordId)).pipe(
                 Stream.unwrap,
                 Stream.filter(Option.isSome),
                 Stream.take(1),
-                Stream.map(() => NoteSchema.Id.make(row.noteId)),
+                Stream.map(() => RecordSchema.Id.make(row.recordId)),
               );
             }),
             // A manually removed recording has no row and no transcript to open.
@@ -144,20 +144,20 @@ export function RecordingList() {
   );
 }
 
-export function useNotifyReady(): (noteId: NoteSchema.Id) => void {
+export function useNotifyReady(): (recordId: RecordSchema.Id) => void {
   const ctx = PaneCtx.use();
   const navigate = route.useNavigate();
   const params = route.useParams();
 
-  return (noteId) => {
+  return (recordId) => {
     const link = {
-      ...PaneCtx.linkOptions(ctx, PaneCursor.openNext(PaneMake.note(noteId))),
+      ...PaneCtx.linkOptions(ctx, PaneCursor.openNext(PaneMake.record(recordId))),
       params: params(),
     };
 
     toast.success("Audio memo ready", {
       // The draft and recordings list can observe the same completion.
-      id: noteId,
+      id: recordId,
       action: {
         label: "Open",
         onClick: () => void navigate(link),
@@ -493,7 +493,7 @@ export function SavedRow(props: { recording: AudioMemoRepo.Record }) {
             class="ml-auto shrink-0 text-xs text-fg-subtle"
             dateTime={DateTime.formatIso(props.recording.recordedAt)}
           >
-            {NoteFormat.formatUpdatedAt(props.recording.recordedAt)}
+            {RecordFormat.formatUpdatedAt(props.recording.recordedAt)}
           </time>
         </div>
       </div>

@@ -61,22 +61,22 @@ export const run = Effect.fn("ExecuteScript.run")(function* (
 function createGlobals(api: Api, pending: Promise<unknown>[]): CodemodeTool[] {
   return [
     {
-      name: "api.editNote",
+      name: "api.editRecord",
       spread: true,
       execute: (args, { signal }) => {
-        const [id, edits] = decodeEditNoteArgs(args);
-        const call = api.editNote(id, edits, signal);
+        const [id, edits] = decodeEditRecordArgs(args);
+        const call = api.editRecord(id, edits, signal);
         pending.push(call);
 
         return call;
       },
     },
     {
-      name: "api.createNote",
+      name: "api.createRecord",
       spread: true,
       execute: (args, { signal }) => {
-        const [id, edits] = decodeCreateNoteArgs(args);
-        const call = api.createNote(id ?? undefined, edits, signal);
+        const [id, edits] = decodeCreateRecordArgs(args);
+        const call = api.createRecord(id ?? undefined, edits, signal);
         pending.push(call);
 
         return call;
@@ -108,10 +108,10 @@ const CreateEdit = Schema.Union([AppendEdit, DateEdit]);
 
 const Edit = Schema.Union([CreateEdit, ReplaceEdit]);
 
-const decodeEditNoteArgs = Schema.decodeUnknownSync(
+const decodeEditRecordArgs = Schema.decodeUnknownSync(
   Schema.Tuple([Schema.NonEmptyString, Schema.Array(Edit)]),
 );
 
-const decodeCreateNoteArgs = Schema.decodeUnknownSync(
+const decodeCreateRecordArgs = Schema.decodeUnknownSync(
   Schema.Tuple([Schema.NullOr(Schema.NonEmptyString), Schema.Array(CreateEdit)]),
 );

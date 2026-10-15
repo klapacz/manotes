@@ -17,7 +17,7 @@ export const decodeEnvelope = Schema.decodeEffect(EnvelopeMsgPack);
 export const encodeEnvelope = Schema.encodeEffect(EnvelopeMsgPack);
 
 export const BodySchema = Schema.Struct({
-  noteId: Schema.NonEmptyString,
+  recordId: Schema.NonEmptyString,
   type: EventSchema.Type,
   payload: Schema.Uint8Array,
 });

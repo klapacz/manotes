@@ -9,8 +9,8 @@ import * as EventSchema from "@manotes/shared/event.schema";
 import { PlainDateString } from "@manotes/shared/temporal.schema";
 import { toLocalDateString } from "@manotes/shared/temporal/utils";
 import * as Materializer from "@manotes/shared/materializer.service";
-import * as NoteRepo from "@manotes/shared/note.repo";
-import { NOTE_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
+import * as RecordRepo from "@manotes/shared/record.repo";
+import { RECORD_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
 import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
 import { CliPaths } from "./cli.paths";
 import { EditDocument } from "./edit-document";
@@ -22,8 +22,8 @@ export type Edit = EditDocument.Edit | { readonly kind: "date"; readonly date: s
 export type CreateEdit = Extract<Edit, { readonly kind: "append" | "date" }>;
 
 export type Api = {
-  readonly editNote: (id: string, edits: readonly Edit[], signal?: AbortSignal) => Promise<void>;
-  readonly createNote: (
+  readonly editRecord: (id: string, edits: readonly Edit[], signal?: AbortSignal) => Promise<void>;
+  readonly createRecord: (
     id: string | undefined,
     edits: readonly CreateEdit[],
     signal?: AbortSignal,
@@ -59,24 +59,27 @@ export const acquireStdinScript = Effect.fn("ExecuteApi.acquireStdinScript")(fun
 
 const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
   const db = yield* DB.Service;
-  const noteRepo = yield* NoteRepo.Service;
+  const recordRepo = yield* RecordRepo.Service;
   const eventRepo = yield* EventRepo.Service;
   const materializer = yield* Materializer.Service;
 
-  const editNote = Effect.fn("ExecuteApi.editNote")(function* (id: string, edits: readonly Edit[]) {
+  const editRecord = Effect.fn("ExecuteApi.editRecord")(function* (
+    id: string,
+    edits: readonly Edit[],
+  ) {
     // Read, edit, and save in one SQLite transaction. A concurrent writer cannot
     // slip between a separate stale check and the insert; a lock conflict fails.
     yield* db.transaction(
       Effect.gen(function* () {
         // Include events left by an interrupted command before taking the snapshot.
-        yield* materializer.materializeNoteUpTo({
-          noteId: id,
+        yield* materializer.materializeRecordUpTo({
+          recordId: id,
           upToLocalSeq: yield* eventRepo.getMaxLocalSeq(),
         });
-        const note = yield* noteRepo.findByIdWithBacklinks(id);
+        const found = yield* recordRepo.findByIdWithBacklinks(id);
 
-        if (Option.isNone(note)) return yield* Effect.fail(new Error(`Note not found: ${id}`));
-        const { record, backlinks } = note.value;
+        if (Option.isNone(found)) return yield* Effect.fail(new Error(`Record not found: ${id}`));
+        const { record, backlinks } = found.value;
 
         // Resolve metadata separately; only body edits go through Yjs.
         const resolved = yield* resolveEdits(edits);
@@ -97,7 +100,7 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
 
         if (bodyUpdate !== null) {
           const event = yield* eventRepo.create({
-            noteId: id,
+            recordId: id,
             type: "update",
             payload: bodyUpdate,
             createdAt,
@@ -108,7 +111,7 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
 
         if (Option.isSome(date)) {
           const event = yield* eventRepo.create({
-            noteId: id,
+            recordId: id,
             type: "date",
             payload: yield* EventSchema.encodeDatePayload({ date: date.value }),
             createdAt,
@@ -118,13 +121,13 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
         }
 
         // Reuse production derivation for content, title, text, and backlinks.
-        // The next editNote call sees this update even before Markdown is written.
-        yield* materializer.materializeNoteUpTo({ noteId: id, upToLocalSeq });
+        // The next editRecord call sees this update even before Markdown is written.
+        yield* materializer.materializeRecordUpTo({ recordId: id, upToLocalSeq });
       }),
     );
   });
 
-  const createNote = Effect.fn("ExecuteApi.createNote")(function* (
+  const createRecord = Effect.fn("ExecuteApi.createRecord")(function* (
     requestedId: string | undefined,
     edits: readonly CreateEdit[],
   ) {
@@ -132,37 +135,37 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
 
     // Scripts can be plain JavaScript, so enforce the narrower creation API at runtime too.
     if (edits.some((edit) => edit.kind !== "append" && edit.kind !== "date")) {
-      return yield* Effect.fail(new Error("createNote only accepts append and date edits"));
+      return yield* Effect.fail(new Error("createRecord only accepts append and date edits"));
     }
 
     return yield* db.transaction(
       Effect.gen(function* () {
-        // An existing note may still be represented only by unmaterialized events.
-        yield* materializer.materializeNoteUpTo({
-          noteId: id,
+        // An existing record may still be represented only by unmaterialized events.
+        yield* materializer.materializeRecordUpTo({
+          recordId: id,
           upToLocalSeq: yield* eventRepo.getMaxLocalSeq(),
         });
-        const existing = yield* noteRepo.findById(id);
+        const existing = yield* recordRepo.findById(id);
 
         if (Option.isSome(existing)) {
-          return yield* Effect.fail(new Error(`Note already exists: ${id}`));
+          return yield* Effect.fail(new Error(`Record already exists: ${id}`));
         }
 
         const resolved = yield* resolveEdits(edits);
         const bodyUpdate = yield* createInitialUpdate(resolved.bodyEdits);
         const createdAt = yield* DateTime.now;
-        yield* eventRepo.create({ noteId: id, type: "update", payload: bodyUpdate, createdAt });
+        yield* eventRepo.create({ recordId: id, type: "update", payload: bodyUpdate, createdAt });
 
         const date = Option.getOrElse(resolved.date, () => toLocalDateString(createdAt));
 
         const event = yield* eventRepo.create({
-          noteId: id,
+          recordId: id,
           type: "date",
           payload: yield* EventSchema.encodeDatePayload({ date }),
           createdAt,
         });
 
-        yield* materializer.materializeNoteUpTo({ noteId: id, upToLocalSeq: event.localSeq });
+        yield* materializer.materializeRecordUpTo({ recordId: id, upToLocalSeq: event.localSeq });
 
         return id;
       }),
@@ -170,8 +173,8 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
   });
 
   return {
-    editNote: (id, edits, signal) => Effect.runPromise(editNote(id, edits), { signal }),
-    createNote: (id, edits, signal) => Effect.runPromise(createNote(id, edits), { signal }),
+    editRecord: (id, edits, signal) => Effect.runPromise(editRecord(id, edits), { signal }),
+    createRecord: (id, edits, signal) => Effect.runPromise(createRecord(id, edits), { signal }),
   } satisfies Api;
 });
 
@@ -196,7 +199,7 @@ const createInitialUpdate = Effect.fn("ExecuteApi.createInitialUpdate")(function
   const doc = yield* Effect.try({
     try: () => {
       return EditDocument.apply(
-        NOTE_SCHEMA.node("doc", null, [NOTE_SCHEMA.node("paragraph")]),
+        RECORD_SCHEMA.node("doc", null, [RECORD_SCHEMA.node("paragraph")]),
         edits,
       );
     },
@@ -209,7 +212,7 @@ const createInitialUpdate = Effect.fn("ExecuteApi.createInitialUpdate")(function
   );
 
   const fragment = getProsemirrorXmlFragment(yDoc);
-  const { meta } = initProseMirrorDoc(fragment, NOTE_SCHEMA);
+  const { meta } = initProseMirrorDoc(fragment, RECORD_SCHEMA);
   updateYFragment(yDoc, fragment, doc, meta);
 
   return Y.encodeStateAsUpdate(yDoc);
@@ -231,7 +234,7 @@ const createBodyUpdate = Effect.fn("ExecuteApi.createBodyUpdate")(function* (
 
   if (snapshot !== null) Y.applyUpdate(yDoc, snapshot);
   const fragment = getProsemirrorXmlFragment(yDoc);
-  const { doc, meta } = initProseMirrorDoc(fragment, NOTE_SCHEMA);
+  const { doc, meta } = initProseMirrorDoc(fragment, RECORD_SCHEMA);
 
   const updated = yield* Effect.try({
     try: () => EditDocument.apply(doc, edits, { backlinkLabel: (id) => labels.get(id) }),

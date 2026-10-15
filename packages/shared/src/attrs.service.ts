@@ -15,7 +15,7 @@ import {
 } from "effect";
 import * as Y from "yjs";
 import { AttrsSchema } from "./attrs.schema";
-import { NoteDoc } from "./note/doc";
+import { RecordDoc } from "./record/doc";
 import { PropRecordRepo } from "./prop-record.repo";
 import { YSchema } from "./y-schema";
 import { EffectOption } from "./effect/effect-option";
@@ -46,12 +46,12 @@ export type Entry<Tag extends AttrsSchema.PropValTag = AttrsSchema.PropValTag> =
   };
 }[Tag];
 
-export type Defs = Readonly<Record<AttrsSchema.NoteId, PropRecordRepo.Def>>;
+export type Defs = Readonly<Record<AttrsSchema.RecordId, PropRecordRepo.Def>>;
 
 type SavedValues = {
-  readonly top: Readonly<Record<AttrsSchema.NoteId, AttrsSchema.PropVal>>;
+  readonly top: Readonly<Record<AttrsSchema.RecordId, AttrsSchema.PropVal>>;
   readonly groups: Readonly<
-    Record<AttrsSchema.NoteId, Readonly<Record<AttrsSchema.NoteId, AttrsSchema.PropVal>>>
+    Record<AttrsSchema.RecordId, Readonly<Record<AttrsSchema.RecordId, AttrsSchema.PropVal>>>
   >;
 };
 
@@ -81,11 +81,11 @@ export class Service extends Context.Service<Service>()("Attrs.Service", {
 }
 
 export class SelfAssignmentError extends Data.TaggedError("Attrs.SelfAssignmentError")<{
-  readonly propId: AttrsSchema.NoteId;
+  readonly propId: AttrsSchema.RecordId;
 }> {}
 
 function watch(opts: { readonly doc: Y.Doc }) {
-  const { attrs } = NoteDoc.fromDoc(opts);
+  const { attrs } = RecordDoc.fromDoc(opts);
 
   return changes(opts.doc).pipe(
     Stream.mapEffect(() => {
@@ -98,7 +98,7 @@ function watchProps<E, R>(opts: {
   readonly doc: Y.Doc;
   readonly defs: Stream.Stream<readonly PropRecordRepo.Def[], E, R>;
 }) {
-  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const { attrs } = RecordDoc.fromDoc({ doc: opts.doc });
 
   return Stream.zipLatestWith(opts.defs, changes(opts.doc), (defs) => defs).pipe(
     Stream.mapEffect((defs) => {
@@ -115,7 +115,7 @@ function watchGroups<E, R>(opts: {
   readonly doc: Y.Doc;
   readonly defs: Stream.Stream<Defs, E, R>;
 }) {
-  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const { attrs } = RecordDoc.fromDoc({ doc: opts.doc });
 
   // Re-read saved data when definitions or any nested attrs value change.
   return Stream.zipLatestWith(opts.defs, changes(opts.doc), (defs) => defs).pipe(
@@ -162,7 +162,7 @@ function watchSavedGroups(opts: { readonly saved: SavedValues; readonly defs: De
 }
 
 function watchSavedProps(opts: {
-  readonly props: Readonly<Record<AttrsSchema.NoteId, AttrsSchema.PropVal>>;
+  readonly props: Readonly<Record<AttrsSchema.RecordId, AttrsSchema.PropVal>>;
   readonly defs: Defs;
 }) {
   return pipe(
@@ -261,24 +261,24 @@ const getPropValSchema = <K extends AttrsSchema.PropValTag>(prop_type: K) => {
 
 const setProp = Effect.fn("Attrs.setProp")(function* (opts: {
   readonly doc: Y.Doc;
-  readonly recordId: AttrsSchema.NoteId;
-  readonly propId: AttrsSchema.NoteId;
+  readonly recordId: AttrsSchema.RecordId;
+  readonly propId: AttrsSchema.RecordId;
   readonly value: AttrsSchema.PropVal;
 }) {
   if (opts.recordId === opts.propId) {
     return yield* Effect.fail(new SelfAssignmentError({ propId: opts.propId }));
   }
 
-  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const { attrs } = RecordDoc.fromDoc({ doc: opts.doc });
   const props = yield* attrs.pipe(YSchema.upsertMap("props"));
   yield* props.pipe(YSchema.set({ id: opts.propId }, opts.value));
 });
 
 const clearProp = Effect.fn("Attrs.clearProp")(function* (opts: {
   readonly doc: Y.Doc;
-  readonly propId: AttrsSchema.NoteId;
+  readonly propId: AttrsSchema.RecordId;
 }) {
-  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const { attrs } = RecordDoc.fromDoc({ doc: opts.doc });
   const props = yield* attrs.pipe(YSchema.findMap("props"));
 
   if (Option.isSome(props)) yield* props.value.pipe(YSchema.clear({ id: opts.propId }));
@@ -286,16 +286,16 @@ const clearProp = Effect.fn("Attrs.clearProp")(function* (opts: {
 
 const setGroupProp = Effect.fn("Attrs.setGroupProp")(function* (opts: {
   readonly doc: Y.Doc;
-  readonly recordId: AttrsSchema.NoteId;
-  readonly ruleId: AttrsSchema.NoteId;
-  readonly propId: AttrsSchema.NoteId;
+  readonly recordId: AttrsSchema.RecordId;
+  readonly ruleId: AttrsSchema.RecordId;
+  readonly propId: AttrsSchema.RecordId;
   readonly value: AttrsSchema.PropVal;
 }) {
   if (opts.recordId === opts.propId) {
     return yield* Effect.fail(new SelfAssignmentError({ propId: opts.propId }));
   }
 
-  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const { attrs } = RecordDoc.fromDoc({ doc: opts.doc });
   const props = yield* attrs.pipe(YSchema.upsertMap("props"));
 
   // Fails if this key already holds a scalar.
@@ -308,10 +308,10 @@ const setGroupProp = Effect.fn("Attrs.setGroupProp")(function* (opts: {
 
 const clearGroupProp = Effect.fn("Attrs.clearGroupProp")(function* (opts: {
   readonly doc: Y.Doc;
-  readonly ruleId: AttrsSchema.NoteId;
-  readonly propId: AttrsSchema.NoteId;
+  readonly ruleId: AttrsSchema.RecordId;
+  readonly propId: AttrsSchema.RecordId;
 }) {
-  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const { attrs } = RecordDoc.fromDoc({ doc: opts.doc });
   const props = yield* attrs.pipe(YSchema.findMap("props"));
 
   if (Option.isNone(props)) return;
@@ -331,7 +331,7 @@ const initializeProp = Effect.fn("Attrs.initializeProp")(function* (opts: {
   readonly doc: Y.Doc;
   readonly defaultValue?: AttrsSchema.PropVal;
 }) {
-  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const { attrs } = RecordDoc.fromDoc({ doc: opts.doc });
   const prop = yield* attrs.pipe(YSchema.set("_tag", "prop"));
   yield* prop.pipe(YSchema.set("prop_type", opts.defaultValue?._tag ?? "bool"));
 
@@ -344,9 +344,9 @@ const initializeProp = Effect.fn("Attrs.initializeProp")(function* (opts: {
 
 const initializeEnumOption = Effect.fn("Attrs.initializeEnumOption")(function* (opts: {
   readonly doc: Y.Doc;
-  readonly enum_parent: AttrsSchema.NoteId;
+  readonly enum_parent: AttrsSchema.RecordId;
 }) {
-  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const { attrs } = RecordDoc.fromDoc({ doc: opts.doc });
   const owned = yield* attrs.pipe(YSchema.set("_tag", "owned"));
   yield* owned.pipe(YSchema.set("owned_type", "enum_option"));
   yield* owned.pipe(YSchema.set("owned_parent", opts.enum_parent));
@@ -397,7 +397,7 @@ const setPropTargets = Effect.fn("Attrs.setPropTargets")(function* (opts: {
 const editablePropAttrs = Effect.fn("Attrs.editablePropAttrs")(function* (opts: {
   readonly doc: Y.Doc;
 }) {
-  const { attrs } = NoteDoc.fromDoc(opts);
+  const { attrs } = RecordDoc.fromDoc(opts);
 
   return yield* attrs.pipe(
     YSchema.find("_tag"),
@@ -410,7 +410,7 @@ const initializeRule = Effect.fn("Attrs.initializeRule")(function* (opts: {
   readonly doc: Y.Doc;
   readonly targets: AttrsSchema.TargetFilter;
 }) {
-  const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
+  const { attrs } = RecordDoc.fromDoc({ doc: opts.doc });
   const rule = yield* attrs.pipe(YSchema.set("_tag", "rule"));
   yield* rule.pipe(YSchema.set("rule_storage", AttrsSchema.RuleStorage.cases.top.make({})));
   yield* rule.pipe(YSchema.set("rule_targets", opts.targets));
@@ -436,7 +436,7 @@ const setRuleTargets = Effect.fn("Attrs.setRuleTargets")(function* (opts: {
 
 const setRuleExpectation = Effect.fn("Attrs.setRuleExpectation")(function* (opts: {
   readonly doc: Y.Doc;
-  readonly propId: AttrsSchema.NoteId;
+  readonly propId: AttrsSchema.RecordId;
   readonly value: AttrsSchema.RuleExpectation;
 }) {
   const rule = yield* editableRuleAttrs({ doc: opts.doc });
@@ -446,7 +446,7 @@ const setRuleExpectation = Effect.fn("Attrs.setRuleExpectation")(function* (opts
 
 const clearRuleExpectation = Effect.fn("Attrs.clearRuleExpectation")(function* (opts: {
   readonly doc: Y.Doc;
-  readonly propId: AttrsSchema.NoteId;
+  readonly propId: AttrsSchema.RecordId;
 }) {
   const rule = yield* editableRuleAttrs({ doc: opts.doc });
   const expects = yield* rule.pipe(YSchema.findMap("rule_expects"));
@@ -457,7 +457,7 @@ const clearRuleExpectation = Effect.fn("Attrs.clearRuleExpectation")(function* (
 const editableRuleAttrs = Effect.fn("Attrs.editableRuleAttrs")(function* (opts: {
   readonly doc: Y.Doc;
 }) {
-  const { attrs } = NoteDoc.fromDoc(opts);
+  const { attrs } = RecordDoc.fromDoc(opts);
 
   return yield* attrs.pipe(
     YSchema.find("_tag"),

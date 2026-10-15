@@ -9,7 +9,7 @@ import * as MaterializationCheckpointRepo from "@manotes/shared/materialization-
 import * as MaterializedEventService from "./materialized-event.service";
 import * as BacklinkService from "@manotes/shared/materializer/backlink/service";
 import * as MaterializerService from "@manotes/shared/materializer.service";
-import * as NoteRepo from "@manotes/shared/note.repo";
+import * as RecordRepo from "@manotes/shared/record.repo";
 import * as GraphSync from "@manotes/shared/graph-sync/service";
 import * as GraphSyncContext from "@manotes/shared/graph-sync/context";
 import * as GraphSyncEncryption from "@manotes/shared/graph-sync/encryption/service";
@@ -177,7 +177,7 @@ function buildServiceLayer(opts: {
   return Layer.mergeAll(
     DB.Service.layer,
     EventRepo.Service.layer,
-    NoteRepo.Service.layer,
+    RecordRepo.Service.layer,
     BacklinkService.Service.layer,
     MaterializationCheckpointRepo.Service.layer,
     MaterializedEventService.Service.layer,

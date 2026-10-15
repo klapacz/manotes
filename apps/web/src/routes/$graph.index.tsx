@@ -1,22 +1,22 @@
 import { createFileRoute } from "@tanstack/solid-router";
 import { Schema } from "effect";
-import { Pane } from "../components/note/pane";
-import { PaneCtx } from "../lib/note/pane.ctx";
-import { PaneScroll } from "../lib/note/pane.scroll";
-import { Focus } from "../components/note/focus";
+import { Pane } from "../components/record/pane";
+import { PaneCtx } from "../lib/record/pane.ctx";
+import { PaneScroll } from "../lib/record/pane.scroll";
+import { Focus } from "../components/record/focus";
 
-import { NoteSearch } from "@manotes/shared/note/search";
+import { RecordSearch } from "@manotes/shared/record/search";
 
 export const Route = createFileRoute("/$graph/")({
   component: RouteComponent,
-  validateSearch: NoteSearch.Schema.pipe(Schema.toStandardSchemaV1),
+  validateSearch: RecordSearch.Schema.pipe(Schema.toStandardSchemaV1),
 });
 
 function RouteComponent() {
-  return <NotesCanvas />;
+  return <RecordsCanvas />;
 }
 
-function NotesCanvas() {
+function RecordsCanvas() {
   const panes = Route.useSearch({ select: (search) => search.panes });
 
   return (

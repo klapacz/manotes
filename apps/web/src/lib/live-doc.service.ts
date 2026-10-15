@@ -1,4 +1,4 @@
-import type { NoteSchema } from "@manotes/shared/note.schema";
+import type { RecordSchema } from "@manotes/shared/record.schema";
 import { Cause, Context, Data, Deferred, Effect, Layer, RcMap, SubscriptionRef } from "effect";
 import * as Y from "yjs";
 import * as EditorSyncService from "./editor-sync.service";
@@ -24,11 +24,11 @@ export class Service extends Context.Service<Service>()("LiveDoc.Service", {
     // Every view of a record holds the same session until its last reference expires.
     const docs = yield* RcMap.make({
       idleTimeToLive: "7 seconds",
-      lookup: (recordId: NoteSchema.Id) => makeDoc({ recordId }),
+      lookup: (recordId: RecordSchema.Id) => makeDoc({ recordId }),
     });
 
     const acquire = Effect.fn("LiveDoc.acquire")(function* (opts: {
-      readonly recordId: NoteSchema.Id;
+      readonly recordId: RecordSchema.Id;
     }) {
       return yield* RcMap.get(docs, opts.recordId);
     });
@@ -42,7 +42,7 @@ export class Service extends Context.Service<Service>()("LiveDoc.Service", {
 }
 
 const makeDoc = Effect.fn("LiveDoc.makeDoc")(function* (opts: {
-  readonly recordId: NoteSchema.Id;
+  readonly recordId: RecordSchema.Id;
 }) {
   const sync = yield* EditorSyncService.Service;
 
@@ -57,7 +57,7 @@ const makeDoc = Effect.fn("LiveDoc.makeDoc")(function* (opts: {
   // Stop synchronization and flush pending writes before destroying the shared doc.
   yield* Effect.all(
     [
-      sync.setupDoc(doc, { noteId: opts.recordId }, ready),
+      sync.setupDoc(doc, { recordId: opts.recordId }, ready),
       Effect.gen(function* () {
         yield* Deferred.await(ready);
         yield* SubscriptionRef.set(state, Doc.Ready({ doc }));

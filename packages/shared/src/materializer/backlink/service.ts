@@ -7,14 +7,14 @@ export class Service extends Context.Service<Service>()("Materializer.Backlink.S
   make: Effect.gen(function* () {
     const repo = yield* Repo.Service;
 
-    const replaceForSourceNote = Effect.fn("Materializer.Backlink.replaceForSourceNote")(
+    const replaceForSourceRecord = Effect.fn("Materializer.Backlink.replaceForSourceRecord")(
       function* (options: { sourceId: string; content: UnknownNodeJSON }) {
         yield* repo.replaceForSource(options.sourceId, collectBacklinkTargetIds(options.content));
       },
     );
 
     return {
-      replaceForSourceNote,
+      replaceForSourceRecord,
     };
   }),
 }) {

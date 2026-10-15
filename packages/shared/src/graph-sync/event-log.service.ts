@@ -105,7 +105,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
                     });
 
                     yield* eventRepo.create({
-                      noteId: decrypted.noteId,
+                      recordId: decrypted.recordId,
                       type: decrypted.type,
                       payload: decrypted.payload,
                       createdAt: event.createdAt,
@@ -136,13 +136,13 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
       const events = yield* Effect.forEach(
         pending,
         Effect.fnUntraced(function* (event) {
-          const streamRef = yield* graphSyncEncryption.deriveNoteStreamRef(event.noteId);
+          const streamRef = yield* graphSyncEncryption.deriveRecordStreamRef(event.recordId);
 
           const encryptedPayload = yield* graphSyncEncryption.encryptEventBody({
             id: event.id,
             streamRef,
             createdAt: event.createdAt,
-            noteId: event.noteId,
+            recordId: event.recordId,
             type: event.type,
             payload: event.payload,
           });

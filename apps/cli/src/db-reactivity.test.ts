@@ -3,7 +3,7 @@ import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
 import { DB } from "@manotes/shared/db.service";
 import { Tables } from "@manotes/shared/db.tables";
-import { NoteFilter } from "@manotes/shared/note/filter";
+import { RecordFilter } from "@manotes/shared/record/filter";
 import { Effect, Exit, Layer, Stream } from "effect";
 import * as Reactivity from "effect/reactivity/Reactivity";
 import { SqlClient } from "effect/sql";
@@ -27,14 +27,14 @@ describe("automatic reactive query dependencies", () => {
         yield* Effect.yieldNow;
         const sql = yield* SqlClient.SqlClient;
         const db = yield* DB.Service;
-        yield* sql`INSERT INTO notes (id, content, text, date, createdAt, updatedAt, lastEventLocalSeq)
+        yield* sql`INSERT INTO records (id, content, text, date, createdAt, updatedAt, lastEventLocalSeq)
           VALUES ('note', '{}', 'body', '2026-10-13', '2026-10-13', '2026-10-13', 0)`;
 
         const stream = yield* db.reactiveQuery(
-          Query.select({ id: Tables.notes.id }).pipe(
-            Query.from(Tables.notes),
+          Query.select({ id: Tables.records.id }).pipe(
+            Query.from(Tables.records),
             Query.where(
-              NoteFilter.filterPredicate({
+              RecordFilter.filterPredicate({
                 sort: "updated",
                 props: {
                   [BuiltinAttrs.archivedId]: AttrsSchema.PropVal.cases.bool.make({ val: false }),

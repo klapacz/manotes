@@ -3,12 +3,12 @@ import { jsonFromNode } from "prosekit/core";
 import * as Y from "yjs";
 import { yXmlFragmentToProseMirrorRootNode } from "y-prosemirror";
 import type { UnknownNodeJSON } from "./node-json";
-import { NOTE_SCHEMA } from "./prosemirror/app-schema";
+import { RECORD_SCHEMA } from "./prosemirror/app-schema";
 import { getProsemirrorXmlFragment } from "./prosemirror/yjs";
 
 export function yDocToNodeJSON(opts: { yDoc: Y.Doc }): UnknownNodeJSON {
   const xmlFragment = getProsemirrorXmlFragment(opts.yDoc);
-  const rootNode = yXmlFragmentToProseMirrorRootNode(xmlFragment, NOTE_SCHEMA);
+  const rootNode = yXmlFragmentToProseMirrorRootNode(xmlFragment, RECORD_SCHEMA);
 
   return jsonFromNode(rootNode);
 }

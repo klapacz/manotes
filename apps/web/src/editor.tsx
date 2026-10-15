@@ -17,13 +17,13 @@ import { MatchTag } from "./lib";
 import { LiveDoc } from "./lib/live-doc.service";
 import { LiveDocAtom } from "./lib/live-doc.atom";
 import { defineReadonly } from "prosekit/extensions/readonly";
-import { PropertyDef } from "./components/note/property-def";
-import { RuleDef } from "./components/note/rule-def";
-import { NotePropGroups } from "./components/note/note-prop-groups";
+import { PropertyDef } from "./components/record/property-def";
+import { RuleDef } from "./components/record/rule-def";
+import { RecordPropGroups } from "./components/record/record-prop-groups";
 import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
 import BacklinkMenu, { StreamRefMenu, TabMenu } from "./lib/editor/backlink/menu";
-import { Focus } from "./components/note/focus";
-import type { NoteSchema } from "@manotes/shared/note.schema";
+import { Focus } from "./components/record/focus";
+import type { RecordSchema } from "@manotes/shared/record.schema";
 import { EditorFocus } from "./lib/editor/focus.extension";
 import { EditorAttrs } from "./lib/editor/attrs";
 import { createLinkEdit, LinkMenu } from "./lib/editor/link/menu";
@@ -33,7 +33,7 @@ import { TableControls } from "./lib/editor/table/controls";
 import { defineSearchHighlight, setSearchHighlight } from "./lib/editor/search-highlight.extension";
 
 type Props = {
-  noteId: NoteSchema.Id;
+  recordId: RecordSchema.Id;
   attached?: boolean;
   search?: string;
   backlinksTo?: string;
@@ -41,7 +41,7 @@ type Props = {
 };
 
 export default function Editor(props: Props): JSX.Element {
-  const state = LiveDocAtom.use({ recordId: () => props.noteId });
+  const state = LiveDocAtom.use({ recordId: () => props.recordId });
   const doc = createMemo(() => LiveDoc.readyDoc(state()));
 
   return (
@@ -86,11 +86,11 @@ function ReadyEditor(props: Props & { readonly doc: Y.Doc }) {
   const fid = Focus.useId();
 
   const fnode = Focus.createNode(() => ({
-    id: fid.editor(props.noteId),
+    id: fid.editor(props.recordId),
     enabled: props.attached ?? true,
     focus: (_element, options) => {
       // The pooled view keeps a live, transaction-mapped selection; reuse it
-      // only while visible, so entering a long note does not jump.
+      // only while visible, so entering a long record does not jump.
       const view = editor.view;
       EditorFocus.placeCaretInView(view);
       view.focus();
@@ -118,20 +118,20 @@ function ReadyEditor(props: Props & { readonly doc: Y.Doc }) {
         />
         <Show when={attrs.definition()}>
           {(definition) => (
-            <PropertyDef.Root recordId={props.noteId} doc={props.doc} attrs={definition()} />
+            <PropertyDef.Root recordId={props.recordId} doc={props.doc} attrs={definition()} />
           )}
         </Show>
         <Show when={attrs.rule()}>
-          {(rule) => <RuleDef.Root recordId={props.noteId} doc={props.doc} attrs={rule()} />}
+          {(rule) => <RuleDef.Root recordId={props.recordId} doc={props.doc} attrs={rule()} />}
         </Show>
-        <NotePropGroups.Root recordId={props.noteId} doc={props.doc} />
-        <BacklinkMenu currentNoteId={props.noteId} />
+        <RecordPropGroups.Root recordId={props.recordId} doc={props.doc} />
+        <BacklinkMenu currentRecordId={props.recordId} />
         <TabMenu />
         <StreamRefMenu />
         <SlashMenu />
         <TableControls />
         <LinkMenu edit={linkEdit} />
-        {/* Leaving to the note, like Escape, drops the keyboard; a plain blur gets refocused. */}
+        {/* Leaving to the record, like Escape, drops the keyboard; a plain blur gets refocused. */}
         <MobileToolbar linkEdit={linkEdit} onDismiss={() => focus.requestParent()} />
       </div>
     </ProseKit>

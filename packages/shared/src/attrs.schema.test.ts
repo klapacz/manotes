@@ -3,7 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { AttrsSchema } from "./attrs.schema";
 
 describe("Attrs defaults", () => {
-  it("decodes empty attrs and constructs a note with the same defaults", () => {
+  it("decodes empty attrs and constructs a record with the same defaults", () => {
     const attrs = AttrsSchema.Attrs.members[0].make({});
 
     expect(attrs._tag).toBe("note");
@@ -20,7 +20,7 @@ describe("Attrs defaults", () => {
     );
   });
 
-  it("retains required fields for non-note records", () => {
+  it("retains required fields for non-record records", () => {
     for (const tag of ["prop", "rule", "owned"]) {
       expect(Result.isFailure(Schema.decodeUnknownResult(AttrsSchema.Attrs)({ _tag: tag }))).toBe(
         true,
@@ -32,12 +32,12 @@ describe("Attrs defaults", () => {
 describe("Attrs property groups", () => {
   it("decodes scalar values and rule groups together", () => {
     const props = {
-      [AttrsSchema.NoteId.make("prop_id:kind")]: AttrsSchema.PropVal.cases.enum.make({
-        val: AttrsSchema.NoteId.make("option_id:task"),
+      [AttrsSchema.RecordId.make("prop_id:kind")]: AttrsSchema.PropVal.cases.enum.make({
+        val: AttrsSchema.RecordId.make("option_id:task"),
       }),
-      [AttrsSchema.NoteId.make("rule_id:task")]: AttrsSchema.PropGroup.make({
+      [AttrsSchema.RecordId.make("rule_id:task")]: AttrsSchema.PropGroup.make({
         props: {
-          [AttrsSchema.NoteId.make("prop_id:priority")]: AttrsSchema.PropVal.cases.number.make({
+          [AttrsSchema.RecordId.make("prop_id:priority")]: AttrsSchema.PropVal.cases.number.make({
             val: 3,
           }),
         },

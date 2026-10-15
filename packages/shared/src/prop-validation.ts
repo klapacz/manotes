@@ -1,8 +1,8 @@
 import { Match, Option, Predicate, Stream } from "effect";
 import { AttrsSchema } from "./attrs.schema";
 import { Attrs } from "./attrs.service";
-import { NoteRepo } from "./note.repo";
-import { StreamFilter } from "./note/stream-filter";
+import { RecordRepo } from "./record.repo";
+import { StreamFilter } from "./record/stream-filter";
 
 export function watch<V extends AttrsSchema.PropVal>(opts: {
   readonly state: Attrs.ValueState<V, AttrsSchema.PropVal>;
@@ -16,7 +16,7 @@ export function watch<V extends AttrsSchema.PropVal>(opts: {
 
   const value = state.value;
 
-  return NoteRepo.Service.use((repo) => {
+  return RecordRepo.Service.use((repo) => {
     return repo.reactiveFindPreviewById({
       id: value.val,
       filter: StreamFilter.fromAttrs(opts.targets),
@@ -24,15 +24,15 @@ export function watch<V extends AttrsSchema.PropVal>(opts: {
   }).pipe(
     Stream.unwrap,
     // Keep the assignment unchanged; only its displayed validity follows the scope.
-    Stream.map((note): Attrs.ValueState<V, AttrsSchema.PropVal> => {
-      return Option.isSome(note) ? state : Attrs.ValueState.Invalid({ value });
+    Stream.map((record): Attrs.ValueState<V, AttrsSchema.PropVal> => {
+      return Option.isSome(record) ? state : Attrs.ValueState.Invalid({ value });
     }),
   );
 }
 
 export function watchEntries(opts: {
   readonly entries: readonly Attrs.Entry[];
-}): Stream.Stream<readonly Attrs.Entry[], unknown, NoteRepo.Service> {
+}): Stream.Stream<readonly Attrs.Entry[], unknown, RecordRepo.Service> {
   if (opts.entries.length === 0) return Stream.succeed([]);
 
   return Stream.zipLatestAll(

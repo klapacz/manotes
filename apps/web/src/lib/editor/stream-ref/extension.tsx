@@ -3,12 +3,12 @@ import { Data, Option, Stream } from "effect";
 import { defineSolidNodeView, type SolidNodeViewProps } from "prosekit/solid";
 import { createMemo } from "solid-js";
 import { bindRt, createAtomStore, createSyncedAtom } from "../..";
-import * as NoteCache from "../../note-cache.service";
-import { NoteFormat } from "../../note";
-import { PaneCursor } from "../../note/pane.cursor";
-import { PaneCtx } from "../../note/pane.ctx";
-import { PaneSchema } from "@manotes/shared/note/pane.schema";
-import { PaneScroll } from "../../note/pane.scroll";
+import * as RecordCache from "../../record-cache.service";
+import { RecordFormat } from "../../record";
+import { PaneCursor } from "../../record/pane.cursor";
+import { PaneCtx } from "../../record/pane.ctx";
+import { PaneSchema } from "@manotes/shared/record/pane.schema";
+import { PaneScroll } from "../../record/pane.scroll";
 import {
   decodeStreamRefAttrs,
   streamRefLabel,
@@ -22,8 +22,8 @@ export function defineStreamRefRuntime() {
 }
 
 export function createStreamRefLabel(attrs: () => StreamRefAttrs) {
-  const backlinksTo = createNoteLabel(() => attrs().filter.backlinksTo);
-  const linksFrom = createNoteLabel(() => attrs().filter.linksFrom);
+  const backlinksTo = createRecordLabel(() => attrs().filter.backlinksTo);
+  const linksFrom = createRecordLabel(() => attrs().filter.linksFrom);
 
   return () => {
     return streamRefLabel(
@@ -64,19 +64,19 @@ function StreamRefView(props: SolidNodeViewProps) {
   );
 }
 
-export function createNoteLabel(id: () => string | undefined) {
+export function createRecordLabel(id: () => string | undefined) {
   const idAtom = createSyncedAtom(id);
 
   const label = createAtomStore(
     bindRt((rt) => {
       return rt.atom((get) => {
-        const noteId = get(idAtom);
+        const recordId = get(idAtom);
 
-        if (!noteId) return Stream.succeed(undefined);
+        if (!recordId) return Stream.succeed(undefined);
 
-        return NoteCache.Service.use((cache) => cache.changes(noteId)).pipe(
+        return RecordCache.Service.use((cache) => cache.changes(recordId)).pipe(
           Stream.unwrap,
-          Stream.map((note) => Option.getOrUndefined(Option.map(note, NoteFormat.label))),
+          Stream.map((record) => Option.getOrUndefined(Option.map(record, RecordFormat.label))),
         );
       });
     }),

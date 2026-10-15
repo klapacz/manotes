@@ -109,7 +109,7 @@ const execute = Command.make(
         Effect.tapCause(() => {
           return Effect.gen(function* () {
             yield* Console.error(
-              "Execution failed. Earlier editNote calls may already be saved locally.",
+              "Execution failed. Earlier editRecord calls may already be saved locally.",
             );
             yield* printPending();
           });
@@ -152,7 +152,7 @@ const execute = Command.make(
   Command.withExamples([
     {
       command: "cat edit.js | manotes execute",
-      description: "Read JavaScript from stdin; api provides createNote and editNote.",
+      description: "Read JavaScript from stdin; api provides createRecord and editRecord.",
     },
   ]),
 );
@@ -171,7 +171,7 @@ const url = Command.make(
   {
     id: Argument.String("id").pipe(
       Argument.optional,
-      Argument.withDescription("Note ID to open. Omit to show the graph root URL."),
+      Argument.withDescription("Record ID to open. Omit to show the graph root URL."),
     ),
     open: Flag.Boolean("open").pipe(
       Flag.withDefault(false),
@@ -190,7 +190,7 @@ const url = Command.make(
     },
     flow(Effect.provide(CliConfig.layerFromFile), Effect.provide(CliPaths.layer)),
   ),
-).pipe(Command.withDescription("Print a web URL for a note or the graph root."));
+).pipe(Command.withDescription("Print a web URL for a record or the graph root."));
 
 const syncAndWrite = Effect.fn("Cli.syncAndWrite")(function* () {
   yield* Effect.gen(function* () {

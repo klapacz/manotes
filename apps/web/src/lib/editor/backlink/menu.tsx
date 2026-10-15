@@ -14,19 +14,19 @@ import {
   commandListClass,
   commandSurfaceClass,
 } from "../../../components/ui/command";
-import { NoteCreate } from "../../../components/note/note-create";
-import { NoteRepo, bindRt, createAtomState, createAtomStore, createSyncedAtom } from "../..";
+import { RecordCreate } from "../../../components/record/record-create";
+import { RecordRepo, bindRt, createAtomState, createAtomStore, createSyncedAtom } from "../..";
 import { cx } from "../../cva";
 import { useArrowKeyAliases } from "../autocomplete";
-import { NoteFormat } from "../../note";
+import { RecordFormat } from "../../record";
 import type { AppExtension } from "../../../editor.extension";
 import * as BrowserExtensionClient from "../../browser-extension/client";
-import * as BrowserExtensionTabNoteService from "../../browser-extension/tab-note/service";
+import * as BrowserExtensionTabRecordService from "../../browser-extension/tab-record/service";
 import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
 import { useAtom } from "@effect/atom-solid";
-import { PaneCtx } from "../../note/pane.ctx";
-import { PaneSchema } from "@manotes/shared/note/pane.schema";
-import { createNoteLabel, createStreamRefLabel } from "../stream-ref/extension";
+import { PaneCtx } from "../../record/pane.ctx";
+import { PaneSchema } from "@manotes/shared/record/pane.schema";
+import { createRecordLabel, createStreamRefLabel } from "../stream-ref/extension";
 import type { StreamRefAttrs } from "@manotes/shared/editor/stream-ref/spec";
 
 const BACKLINK_REGEX = /\[\[([^\]\n]*)$/u;
@@ -35,60 +35,62 @@ const TAB_REGEX = /\[@([^\]\n]*)$/u;
 
 const STREAM_REF_REGEX = /\[!([^\]\n]*)$/u;
 
-type BacklinkNote = {
+type BacklinkRecord = {
   id: string;
   title: string;
 };
 
-const EMPTY_BACKLINK_NOTES: BacklinkNote[] = [];
+const EMPTY_BACKLINK_RECORDS: BacklinkRecord[] = [];
 
 const EMPTY_TAB_CANDIDATES: BrowserExtension.TabCandidate[] = [];
 
 const popupClass = cx(commandSurfaceClass, commandListClass, "block w-56 border p-1 shadow-md");
 
-const CreateTabNote = bindRt((rt) => {
+const CreateTabRecord = bindRt((rt) => {
   return rt.fn(
-    Effect.fn("LibEditorBacklinkMenu.createTabNote")(function* (
+    Effect.fn("LibEditorBacklinkMenu.createTabRecord")(function* (
       tab: BrowserExtension.TabCandidate,
     ) {
-      const service = yield* BrowserExtensionTabNoteService.Service;
+      const service = yield* BrowserExtensionTabRecordService.Service;
 
       return yield* service.createFromTab(tab);
     }),
   );
 });
 
-export default function BacklinkMenu(props: { currentNoteId: string }) {
+export default function BacklinkMenu(props: { currentRecordId: string }) {
   const editor = useEditor<AppExtension>();
   const onSelect = createBacklinkInsertion(editor);
 
   const [query, setRawQuery, rawQueryAtom] = createAtomState("");
-  const currentNoteIdAtom = createSyncedAtom(() => props.currentNoteId);
+  const currentRecordIdAtom = createSyncedAtom(() => props.currentRecordId);
   const [isOpen, setOpen, openAtom] = createAtomState(false);
   useArrowKeyAliases(editor, isOpen);
 
-  const createNote = NoteCreate.useCreateNote();
+  const createRecord = RecordCreate.useCreateRecord();
 
   const onCreatePage = (title: string) => {
-    return createNote({ payload: NoteCreate.pagePayload(title) }, (note) => onSelect(note.id));
+    return createRecord({ payload: RecordCreate.pagePayload(title) }, (record) => {
+      return onSelect(record.id);
+    });
   };
 
-  const notes = createAtomStore(
+  const records = createAtomStore(
     bindRt((rt) => {
       return rt.atom((get) => {
         const query = get(rawQueryAtom);
-        const currentNoteId = get(currentNoteIdAtom);
+        const currentRecordId = get(currentRecordIdAtom);
 
-        if (!get(openAtom)) return Stream.succeed(EMPTY_BACKLINK_NOTES);
+        if (!get(openAtom)) return Stream.succeed(EMPTY_BACKLINK_RECORDS);
 
-        return NoteRepo.Service.use((repo) => repo.reactiveSearchPreview({ search: query })).pipe(
+        return RecordRepo.Service.use((repo) => repo.reactiveSearchPreview({ search: query })).pipe(
           Stream.unwrap,
           Stream.map(
             flow(
-              Array.filter((note) => note.id !== currentNoteId),
-              Array.map((note) => ({
-                ...note,
-                title: NoteFormat.label(note),
+              Array.filter((record) => record.id !== currentRecordId),
+              Array.map((record) => ({
+                ...record,
+                title: RecordFormat.label(record),
               })),
               Array.map(Struct.pick(["id", "title"])),
             ),
@@ -96,7 +98,7 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
         );
       });
     }),
-    EMPTY_BACKLINK_NOTES,
+    EMPTY_BACKLINK_RECORDS,
   );
 
   return (
@@ -109,19 +111,19 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
     >
       <AutocompletePositioner class="z-50 block">
         <AutocompletePopup class={popupClass}>
-          <AutocompleteEmpty class={commandEmptyClass}>No matching notes</AutocompleteEmpty>
+          <AutocompleteEmpty class={commandEmptyClass}>No matching records</AutocompleteEmpty>
 
-          <For each={notes.value}>
-            {(note) => (
+          <For each={records.value}>
+            {(record) => (
               <AutocompleteItem
                 class={cx(
                   commandItemBaseClass,
                   "data-highlighted:bg-control-hover data-highlighted:text-fg",
                 )}
-                onSelect={() => onSelect(note.id)}
-                value={note.id}
+                onSelect={() => onSelect(record.id)}
+                value={record.id}
               >
-                {note.title}
+                {record.title}
               </AutocompleteItem>
             )}
           </For>
@@ -170,10 +172,10 @@ export function TabMenu() {
     EMPTY_TAB_CANDIDATES,
   );
 
-  const [, createTabNote] = useAtom(CreateTabNote, { mode: "promiseExit" });
+  const [, createTabRecord] = useAtom(CreateTabRecord, { mode: "promiseExit" });
 
   const onTabSelect = async (tab: BrowserExtension.TabCandidate) => {
-    const exit = await createTabNote(tab);
+    const exit = await createTabRecord(tab);
 
     if (Exit.isFailure(exit)) return;
 
@@ -227,8 +229,8 @@ export function StreamRefMenu() {
     return isOpen() ? ctx.stack().filter((pane) => !PaneSchema.Pane.guards.recordings(pane)) : [];
   });
 
-  const onSelect = (pane: PaneSchema.PaneNote | PaneSchema.PaneStream) => {
-    if (PaneSchema.Pane.guards.note(pane)) {
+  const onSelect = (pane: PaneSchema.PaneRecord | PaneSchema.PaneStream) => {
+    if (PaneSchema.Pane.guards.record(pane)) {
       insertBacklink(pane.id);
 
       return;
@@ -271,17 +273,17 @@ export function StreamRefMenu() {
 }
 
 function StreamRefMenuItem(props: {
-  pane: PaneSchema.PaneNote | PaneSchema.PaneStream;
+  pane: PaneSchema.PaneRecord | PaneSchema.PaneStream;
   query: string;
   onSelect: () => void;
 }) {
   const pane = props.pane;
 
-  const resolveLabel = PaneSchema.Pane.guards.note(pane)
-    ? createNoteLabel(() => pane.id)
+  const resolveLabel = PaneSchema.Pane.guards.record(pane)
+    ? createRecordLabel(() => pane.id)
     : createStreamRefLabel(() => pane);
 
-  const label = () => resolveLabel() ?? "[unavailable note]";
+  const label = () => resolveLabel() ?? "[unavailable record]";
 
   return (
     <Show when={label().toLowerCase().includes(props.query.toLowerCase()) && label()} keyed>

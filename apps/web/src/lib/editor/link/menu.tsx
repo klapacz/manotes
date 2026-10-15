@@ -166,7 +166,7 @@ export function LinkMenu(props: { edit: LinkEdit }): JSX.Element {
 
 /**
  * The link's URL as a field, plus a text field for a new link at the caret.
- * Enter saves, Escape reverts, and focus leaving for the note saves.
+ * Enter saves, Escape reverts, and focus leaving for the record saves.
  */
 function LinkPanel(props: {
   target: EditorLink.Target;

@@ -21,7 +21,7 @@ export const DirFlag = GlobalFlag.Setting("dir")({
   flag: Flag.String("dir").pipe(
     Flag.optional,
     Flag.withDescription(
-      "Materialized notes directory (defaults to the current working directory).",
+      "Materialized records directory (defaults to the current working directory).",
     ),
   ),
 });

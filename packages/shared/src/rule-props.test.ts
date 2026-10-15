@@ -7,9 +7,9 @@ import { RuleMatches } from "./rule-matches";
 import { RuleProps } from "./rule-props";
 import { RuleRecordRepo } from "./rule-record.repo";
 
-const priority = AttrsSchema.NoteId.make("prop_id:priority");
+const priority = AttrsSchema.RecordId.make("prop_id:priority");
 
-const cycle = AttrsSchema.NoteId.make("prop_id:cycle");
+const cycle = AttrsSchema.RecordId.make("prop_id:cycle");
 
 const required = AttrsSchema.RuleExpectation.cases.required.make({});
 
@@ -69,7 +69,7 @@ describe("rule prop reconciliation", () => {
     const unmatched = makeRule({ id: "unmatched", storage: "group", matches: false });
     const expected = makeRule({ id: "expected", storage: "group", matches: true });
     const absent = makeRule({ id: "absent", storage: "group", matches: false });
-    const unavailable = AttrsSchema.NoteId.make("unavailable");
+    const unavailable = AttrsSchema.RecordId.make("unavailable");
 
     const groups = RuleProps.reconcileGroups({
       expectations: RuleProps.collectExpectations({
@@ -114,7 +114,7 @@ describe("rule prop reconciliation", () => {
   it("combines already-validated values with unexpected props and unset expectations", () => {
     const rule = makeRule({ id: "task", storage: "top", matches: true });
     const wrongType = AttrsSchema.PropVal.cases.text.make({ val: "high" });
-    const custom = AttrsSchema.NoteId.make("custom");
+    const custom = AttrsSchema.RecordId.make("custom");
 
     const groups = RuleProps.reconcileGroups({
       expectations: RuleProps.collectExpectations({
@@ -170,7 +170,7 @@ function makeRule(opts: {
 }): RuleMatches.Rule {
   return {
     ...RuleRecordRepo.Rule.make({
-      id: AttrsSchema.NoteId.make(opts.id),
+      id: AttrsSchema.RecordId.make(opts.id),
       title: opts.id,
       rule_storage: AttrsSchema.RuleStorage.cases[opts.storage].make({}),
       rule_targets: [],

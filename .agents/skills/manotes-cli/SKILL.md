@@ -1,26 +1,26 @@
 ---
 name: manotes-cli
-description: Read, filter, create, and edit Manotes notes with zk and the CLI, then sync changes.
+description: Read, filter, create, and edit Manotes records with zk and the CLI, then sync changes.
 ---
 
 # Manotes CLI
 
-- Purpose: Read and filter Manotes notes with zk; create and edit through `manotes execute`.
+- Purpose: Read and filter Manotes records with zk; create and edit through `manotes execute`.
 - Workspace: Use the current directory unless told otherwise.
-- Read `<note-id>.md` files, but never edit them or `.manotes/` directly.
+- Read `<record-id>.md` files, but never edit them or `.manotes/` directly.
 - Metadata: Frontmatter `date` is the logical assigned date, called `created` in zk. `modified` is the last update in UTC.
 - Setup: Consult `manotes init --help`.
 
 ## Notes and pages
 
 - Notes capture thoughts, ideas, and experiences.
-- Pages are notes with an H1 heading (`# Title`), representing entities such as projects, libraries, or articles in progress.
-- Default to a note without an H1 for ordinary capture. Add an H1 when creating a page for an entity.
+- Pages are records with an H1 heading (`# Title`), representing entities such as projects, libraries, or articles in progress.
+- Default to a record without an H1 for ordinary capture. Add an H1 when creating a page for an entity.
 
-## Filter notes
+## Filter records
 
 - Default command: `zk list --format short [filters]`.
-- Prefer zk for filtering and sorting notes.
+- Prefer zk for filtering and sorting records.
 - Filter and sort by `created` unless asked about updates or modifications. "Recent", "latest", and "newest" mean `--sort created-`.
 - Date output: Keep filenames and dates together with `--format '{{path}}\t{{created}}'`. Use `{{modified}}` for update queries.
 - Read selected files when snippets aren't enough.
@@ -40,9 +40,9 @@ description: Read, filter, create, and edit Manotes notes with zk and the CLI, t
 | Notes linking to ID                     | `--link-to ID.md`; inverse: `--no-link-to ID.md`                                                                                                      |
 | Notes ID links to                       | `--linked-by ID.md`; inverse: `--no-linked-by ID.md`                                                                                                  |
 | Indirect links                          | Add `--recursive` and optionally `--max-distance N` to a link filter                                                                                  |
-| Unconnected notes sharing a linked note | `--related ID.md`                                                                                                                                     |
-| Notes mentioning a note's title         | `--mention ID.md`; add `--no-link-to ID.md` for unlinked mentions                                                                                     |
-| Notes whose titles a note mentions      | `--mentioned-by ID.md`; add `--no-linked-by ID.md` for unlinked mentions                                                                              |
+| Unconnected records sharing a linked record | `--related ID.md`                                                                                                                                     |
+| Notes mentioning a record's title         | `--mention ID.md`; add `--no-link-to ID.md` for unlinked mentions                                                                                     |
+| Notes whose titles a record mentions      | `--mentioned-by ID.md`; add `--no-linked-by ID.md` for unlinked mentions                                                                              |
 | Link maintenance                        | `--orphan` for no incoming links; `--missing-backlink` for an incoming link not reciprocated; `--broken-links` for broken outgoing links              |
 | Order and cap results                   | `--sort created-,title+`; criteria: `created`, `modified`, `path`, `title`, `word-count`, `random`. Suffix `+` ascending, `-` descending; `--limit N` |
 
@@ -52,14 +52,14 @@ description: Read, filter, create, and edit Manotes notes with zk and the CLI, t
 - Date syntax: ISO dates/times or quoted relative dates such as `'last monday'`.
 
 ```sh
-# Three most recent notes linking to a project, by logical date.
+# Three most recent records linking to a project, by logical date.
 zk list --format '{{path}}\t{{created}}' \
   --link-to PROJECT_ID.md --sort created- --limit 3
 ```
 
-[Filtering reference](https://zk-org.github.io/zk/notes/note-filtering.html).
+[Filtering reference](https://zk-org.github.io/zk/records/record-filtering.html).
 
-## Create and edit notes
+## Create and edit records
 
 - Body edits exclude frontmatter. Use a `date` action to change the assigned date.
 - Write plain JavaScript with top-level `await`; the sandbox provides `api` with this interface:
@@ -74,26 +74,26 @@ type Edit =
 type CreateEdit = { kind: "append"; markdown: string } | { kind: "date"; date: string };
 
 type Api = {
-  editNote(noteId: string, edits: readonly Edit[]): Promise<void>;
-  createNote(noteId: string | undefined, edits: readonly CreateEdit[]): Promise<string>;
+  editRecord(recordId: string, edits: readonly Edit[]): Promise<void>;
+  createRecord(recordId: string | undefined, edits: readonly CreateEdit[]): Promise<string>;
 };
 ```
 
-- Note ID: Filename without `.md`.
+- Record ID: Filename without `.md`.
 - Create: Pass `undefined` to generate an ID, or a non-empty unused ID. Returns the created ID. Date defaults to today.
-- Edits run in order; each awaited `editNote` or `createNote` call saves independently.
+- Edits run in order; each awaited `editRecord` or `createRecord` call saves independently.
 - Replacement text matches literal Markdown in the body, not a regex.
 - Occurrence: Omit for exactly one match; otherwise use a zero-based index or `"all"`.
 - Delete: Set `with: ""`.
 
 ```sh
 manotes execute <<'JS'
-await api.createNote(undefined, [
+await api.createRecord(undefined, [
   { kind: "append", markdown: "First paragraph." },
   { kind: "date", date: "2026-09-12" },
 ]);
 
-await api.editNote("note-id", [
+await api.editRecord("record-id", [
   { kind: "replace", text: "# Draft", with: "# Plan" },
   { kind: "replace", text: "TODO", with: "Done", occurrence: 0 },
   { kind: "replace", text: "(obsolete)", with: "", occurrence: "all" },

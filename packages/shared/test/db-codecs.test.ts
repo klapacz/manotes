@@ -5,7 +5,7 @@ import * as Sqlite from "effect-qb/sqlite";
 import { describe, expect, expectTypeOf, it } from "vite-plus/test";
 import { Tables } from "../src/db.tables";
 import { DB } from "../src/db.service";
-import { NoteSchema } from "../src/note.schema";
+import { RecordSchema } from "../src/record.schema";
 import { AttrsSchema } from "../src/attrs.schema";
 import { SqliteJson } from "@manotes/effect-qb-sqlite/json";
 import type { UnknownNodeJSON } from "../src/node-json";
@@ -21,7 +21,7 @@ describe("application column codecs", () => {
             Query.from(
               DB.values(Tables.events, {
                 id: "single",
-                noteId: "note",
+                recordId: "note",
                 type: "update",
                 payload: new Uint8Array([1, 2]),
                 createdAt,
@@ -50,15 +50,15 @@ describe("application column codecs", () => {
     }).toThrow("same columns");
   });
 
-  it("encodes note writes and decodes returning, selected and nested rows", async () => {
+  it("encodes record writes and decodes returning, selected and nested rows", async () => {
     await withDatabase(async (database, executor) => {
       const createdAt = DateTime.makeUnsafe("2026-10-15T12:00:00.000Z");
       const content = { type: "doc", attrs: { pluginSpecific: ["kept", 42] } };
 
       const [inserted] = await Effect.runPromise(
         executor.execute(
-          Query.insert(Tables.notes, {
-            id: NoteSchema.Id.make("note"),
+          Query.insert(Tables.records, {
+            id: RecordSchema.Id.make("note"),
             title: null,
             content,
             text: "body",
@@ -66,16 +66,16 @@ describe("application column codecs", () => {
             createdAt,
             updatedAt: createdAt,
             lastEventLocalSeq: 0,
-          }).pipe(Query.returning(Tables.notes.columns)),
+          }).pipe(Query.returning(Tables.records.columns)),
         ),
       );
 
-      expectTypeOf(inserted!.id).toEqualTypeOf<NoteSchema.Id>();
+      expectTypeOf(inserted!.id).toEqualTypeOf<RecordSchema.Id>();
       expectTypeOf(inserted!.createdAt).toEqualTypeOf<DateTime.Utc>();
       expectTypeOf(inserted!.content).toEqualTypeOf<UnknownNodeJSON>();
       expect(inserted!.content).toEqual(content);
       expect(DateTime.formatIso(inserted!.createdAt)).toBe(DateTime.formatIso(createdAt));
-      expect(database.prepare("SELECT content, createdAt, updatedAt FROM notes").get()).toEqual({
+      expect(database.prepare("SELECT content, createdAt, updatedAt FROM records").get()).toEqual({
         content: JSON.stringify(content),
         createdAt: DateTime.formatIso(createdAt),
         updatedAt: DateTime.formatIso(createdAt),
@@ -84,31 +84,31 @@ describe("application column codecs", () => {
       const updatedAt = DateTime.add(createdAt, { minutes: 1 });
       await Effect.runPromise(
         executor.execute(
-          Query.update(Tables.notes, { updatedAt, title: undefined }).pipe(
-            Query.where(Query.eq(Tables.notes.id, "note")),
+          Query.update(Tables.records, { updatedAt, title: undefined }).pipe(
+            Query.where(Query.eq(Tables.records.id, "note")),
           ),
         ),
       );
 
       const selection = Query.select({
-        content: Tables.notes.content,
-        updatedAt: Tables.notes.updatedAt,
-      }).pipe(Query.from(Tables.notes));
+        content: Tables.records.content,
+        updatedAt: Tables.records.updatedAt,
+      }).pipe(Query.from(Tables.records));
 
       const json = SqliteJson.make({});
 
       const [row] = await Effect.runPromise(
-        executor.execute(Query.select({ notes: json.jsonArrayFrom(selection) })),
+        executor.execute(Query.select({ records: json.jsonArrayFrom(selection) })),
       );
 
-      expect(row!.notes[0]!.content).toEqual(content);
-      expect(DateTime.formatIso(row!.notes[0]!.updatedAt)).toBe(DateTime.formatIso(updatedAt));
+      expect(row!.records[0]!.content).toEqual(content);
+      expect(DateTime.formatIso(row!.records[0]!.updatedAt)).toBe(DateTime.formatIso(updatedAt));
     });
   });
 
   it("parses content JSON without enforcing an editor document structure", async () => {
     await withDatabase(async (database, executor) => {
-      const insert = database.prepare(`INSERT INTO notes
+      const insert = database.prepare(`INSERT INTO records
         (id, content, text, date, createdAt, updatedAt, lastEventLocalSeq)
         VALUES (?, ?, '', '2026-10-15', '2026-10-15', '2026-10-15', 0)`);
 
@@ -119,20 +119,20 @@ describe("application column codecs", () => {
 
       const rows = await Effect.runPromise(
         executor.execute(
-          Query.select({ content: Tables.notes.content }).pipe(
-            Query.from(Tables.notes),
-            Query.orderBy(Tables.notes.id),
+          Query.select({ content: Tables.records.content }).pipe(
+            Query.from(Tables.records),
+            Query.orderBy(Tables.records.id),
           ),
         ),
       );
 
       expect(rows.map((row) => row.content)).toEqual(values);
-      database.exec("UPDATE notes SET content = 'not JSON' WHERE id = '0'");
+      database.exec("UPDATE records SET content = 'not JSON' WHERE id = '0'");
       expect(
         Exit.isFailure(
           await Effect.runPromiseExit(
             executor.execute(
-              Query.select({ content: Tables.notes.content }).pipe(Query.from(Tables.notes)),
+              Query.select({ content: Tables.records.content }).pipe(Query.from(Tables.records)),
             ),
           ),
         ),
@@ -142,17 +142,19 @@ describe("application column codecs", () => {
 
   it("keeps BooleanFromBit storage and the existing integer filter", async () => {
     await withDatabase(async (database, executor) => {
-      database.exec(`INSERT INTO notes
+      database.exec(`INSERT INTO records
         (id, content, text, date, createdAt, updatedAt, lastEventLocalSeq)
         VALUES ('note', '{}', '', '2026-10-15', '2026-10-15', '2026-10-15', 0)`);
-      await Effect.runPromise(executor.execute(Query.update(Tables.notes, { attrs_valid: true })));
-      expect(database.prepare("SELECT attrs_valid FROM notes").get()).toEqual({ attrs_valid: 1 });
+      await Effect.runPromise(
+        executor.execute(Query.update(Tables.records, { attrs_valid: true })),
+      );
+      expect(database.prepare("SELECT attrs_valid FROM records").get()).toEqual({ attrs_valid: 1 });
       expect(
         await Effect.runPromise(
           executor.execute(
-            Query.select({ valid: Tables.notes.attrs_valid }).pipe(
-              Query.from(Tables.notes),
-              Query.where(Query.eq(Tables.notes.attrs_valid, 1)),
+            Query.select({ valid: Tables.records.attrs_valid }).pipe(
+              Query.from(Tables.records),
+              Query.where(Query.eq(Tables.records.attrs_valid, 1)),
             ),
           ),
         ),
@@ -167,7 +169,7 @@ describe("application column codecs", () => {
 
       const rows = ["one", "two"].map((id) => ({
         id,
-        noteId: "note",
+        recordId: "note",
         type: Schema.Literal("update").make("update"),
         payload,
         createdAt,
@@ -201,15 +203,15 @@ describe("application column codecs", () => {
             Query.from(
               DB.values(Tables.props, [
                 {
-                  recordId: NoteSchema.Id.make("note"),
-                  path: [NoteSchema.Id.make("rule")],
-                  propId: NoteSchema.Id.make("number"),
+                  recordId: RecordSchema.Id.make("note"),
+                  path: [RecordSchema.Id.make("rule")],
+                  propId: RecordSchema.Id.make("number"),
                   value,
                 },
                 {
-                  recordId: NoteSchema.Id.make("note"),
+                  recordId: RecordSchema.Id.make("note"),
                   path: [],
-                  propId: NoteSchema.Id.make("null"),
+                  propId: RecordSchema.Id.make("null"),
                   value: null,
                 },
               ]),
@@ -242,8 +244,8 @@ describe("application column codecs", () => {
   it("decodes rule expectations through columns and rejects invalid stored IDs", async () => {
     await withDatabase(async (database, executor) => {
       const expectation: Tables.RuleExpect = {
-        ruleId: NoteSchema.Id.make("rule"),
-        propId: NoteSchema.Id.make("prop"),
+        ruleId: RecordSchema.Id.make("rule"),
+        propId: RecordSchema.Id.make("prop"),
         value: AttrsSchema.RuleExpectation.cases.required.make({}),
       };
 
@@ -256,7 +258,7 @@ describe("application column codecs", () => {
         ),
       );
 
-      expectTypeOf(rows[0]!.propId).toEqualTypeOf<NoteSchema.Id>();
+      expectTypeOf(rows[0]!.propId).toEqualTypeOf<RecordSchema.Id>();
       expect(rows).toEqual([expectation]);
       expect(database.prepare("SELECT value FROM rule_expects").get()).toEqual({
         value: '{"_tag":"required"}',
@@ -288,11 +290,11 @@ describe("application column codecs", () => {
     await withDatabase(async (database, executor) => {
       expect(
         database
-          .prepare("SELECT type FROM pragma_table_info('notes') WHERE name = 'content'")
+          .prepare("SELECT type FROM pragma_table_info('records') WHERE name = 'content'")
           .get(),
       ).toEqual({ type: "TEXT" });
       database.exec(
-        "INSERT INTO events (noteId, type, payload, createdAt, id) VALUES ('note', 'update', x'00', 'bad date', 'bad')",
+        "INSERT INTO events (recordId, type, payload, createdAt, id) VALUES ('note', 'update', x'00', 'bad date', 'bad')",
       );
       expect(
         Exit.isFailure(
@@ -315,9 +317,9 @@ function checkValueTypes() {
   // @ts-expect-error Unknown columns are rejected.
   DB.values(Tables.events, { ...eventInput(), typo: "unknown" });
   DB.values(Tables.props, {
-    recordId: NoteSchema.Id.make("note"),
+    recordId: RecordSchema.Id.make("note"),
     path: [],
-    propId: NoteSchema.Id.make("number"),
+    propId: RecordSchema.Id.make("number"),
     value: {
       ...AttrsSchema.PropVal.cases.number.make({ val: 42 }),
       // @ts-expect-error JSON fields retain their schema's value types.
@@ -331,7 +333,7 @@ void checkValueTypes;
 function eventInput() {
   return {
     id: "event",
-    noteId: "note",
+    recordId: "note",
     type: Schema.Literal("update").make("update"),
     payload: new Uint8Array([1, 2]),
     createdAt: DateTime.makeUnsafe("2026-10-15T12:00:00.000Z"),
@@ -345,7 +347,7 @@ async function withDatabase(
   const executor = makeExecutor(database);
 
   try {
-    for (const table of [Tables.notes, Tables.events, Tables.props, Tables.ruleExpects])
+    for (const table of [Tables.records, Tables.events, Tables.props, Tables.ruleExpects])
       await Effect.runPromise(executor.execute(Query.createTable(table)));
     await run(database, executor);
   } finally {

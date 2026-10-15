@@ -1,7 +1,7 @@
 import { Option, Schema } from "effect";
 import { defineCommands, defineNodeSpec, insertNode } from "prosekit/core";
-import { PaneSchema } from "../../note/pane.schema";
-import { StreamSettings } from "../../note/stream-settings";
+import { PaneSchema } from "../../record/pane.schema";
+import { StreamSettings } from "../../record/stream-settings";
 
 export const StreamRefAttrs = PaneSchema.StreamSettings;
 
@@ -58,13 +58,13 @@ export function defineStreamRefCommands() {
 
 export function streamRefLabel(
   { filter, sort, view }: StreamRefAttrs,
-  noteLabel: (id: string) => string = (id) => id,
+  recordLabel: (id: string) => string = (id) => id,
 ): string {
   return [
     StreamSettings.typeLabels[filter.type._tag],
     filter.search && `“${filter.search}”`,
-    filter.backlinksTo && `Backlinks to ${noteLabel(filter.backlinksTo)}`,
-    filter.linksFrom && `Links from ${noteLabel(filter.linksFrom)}`,
+    filter.backlinksTo && `Backlinks to ${recordLabel(filter.backlinksTo)}`,
+    filter.linksFrom && `Links from ${recordLabel(filter.linksFrom)}`,
     filter.date,
     sort !== StreamSettings.defaults(filter.type).sort && sort,
     view !== "full" && view,

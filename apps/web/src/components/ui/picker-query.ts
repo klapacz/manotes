@@ -126,7 +126,7 @@ export function use<T extends { value: string }>(opts: Options<T>) {
     }),
   );
 
-  // Limit mounted command items: rendering every note stalls large graphs.
+  // Limit mounted command items: rendering every record stalls large graphs.
   const visible = createMemo(() => matches().slice(0, 50));
 
   const status = createMemo(() => {

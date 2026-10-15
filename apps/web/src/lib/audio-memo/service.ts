@@ -3,7 +3,7 @@ import { DateTime, Effect, Option, Redacted } from "effect";
 import { FetchHttpClient } from "effect/http";
 import { nanoid } from "nanoid";
 import { DB } from "@manotes/shared/db.service";
-import { NoteRepo } from "@manotes/shared/note.repo";
+import { RecordRepo } from "@manotes/shared/record.repo";
 import { EventRepo } from "@manotes/shared/event.repo";
 import { EventSchema } from "@manotes/shared/event.schema";
 import { MaterializationCheckpointRepo } from "@manotes/shared/materialization-checkpoint.repo";
@@ -11,11 +11,11 @@ import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 import { AudioMemoFiles } from "./files";
 import { AudioMemoRepo } from "./repo";
 import type { AudioMemoIntent } from "./intent";
-import type { NoteSchema } from "@manotes/shared/note.schema";
+import type { RecordSchema } from "@manotes/shared/record.schema";
 
 export const register = Effect.fn("AudioMemoService.register")(function* (
   recording: Pick<AudioMemoRepo.Record, "path" | "recordedAt" | "mimeType" | "durationMs"> & {
-    noteId: NoteSchema.Id;
+    recordId: RecordSchema.Id;
     intent: AudioMemoIntent.Record;
   },
 ) {
@@ -80,25 +80,25 @@ const transcribeFile = Effect.fn("AudioMemoService.transcribeFile")(
 // Both events and recording completion live in the graph DB. No checkpoint wait
 // may run inside this transaction: the materializer needs to acquire the DB itself.
 const publish = Effect.fn("AudioMemoService.publish")(function* (
-  { path, recordedAt, noteId, intent }: AudioMemoRepo.Record,
+  { path, recordedAt, recordId, intent }: AudioMemoRepo.Record,
   transcript: string,
 ) {
   const db = yield* DB.Service;
   const events = yield* EventRepo.Service;
   const checkpoint = yield* MaterializationCheckpointRepo.Service;
-  const categoryId = yield* getCategoryNoteId();
+  const categoryId = yield* getCategoryRecordId();
 
   const localSeq = yield* db.transaction(
     Effect.gen(function* () {
       yield* events.create({
-        noteId,
+        recordId,
         type: "update",
         createdAt: recordedAt,
         payload: transcriptPayload({ categoryId, transcript, backlink: intent.backlink }),
       });
 
       const last = yield* events.create({
-        noteId,
+        recordId,
         type: "date",
         createdAt: recordedAt,
         payload: yield* EventSchema.encodeDatePayload({ date: intent.date }),
@@ -115,18 +115,18 @@ const publish = Effect.fn("AudioMemoService.publish")(function* (
 
 const CATEGORY_TITLE = "Audio memos";
 
-const getCategoryNoteId = Effect.fn("AudioMemoService.getCategoryNoteId")(function* () {
+const getCategoryRecordId = Effect.fn("AudioMemoService.getCategoryRecordId")(function* () {
   const events = yield* EventRepo.Service;
-  const notes = yield* NoteRepo.Service;
+  const records = yield* RecordRepo.Service;
 
-  const category = yield* notes.findIdByTitle(CATEGORY_TITLE);
+  const category = yield* records.findIdByTitle(CATEGORY_TITLE);
   const categoryId = Option.getOrElse(category, () => ({ id: nanoid() })).id;
 
   const createdAt = yield* DateTime.now;
 
   if (Option.isNone(category)) {
     yield* events.create({
-      noteId: categoryId,
+      recordId: categoryId,
       type: "update",
       createdAt,
       payload: ProsemirrorEncode.encodeDocument([

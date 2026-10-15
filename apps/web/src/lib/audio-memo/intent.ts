@@ -1,10 +1,10 @@
 import { Schema } from "effect";
-import { NoteSchema } from "@manotes/shared/note.schema";
+import { RecordSchema } from "@manotes/shared/record.schema";
 import * as TemporalSchema from "@manotes/shared/temporal.schema";
 
 export const Record = Schema.Struct({
   date: TemporalSchema.PlainDateString,
-  backlink: Schema.NullOr(NoteSchema.Id),
+  backlink: Schema.NullOr(RecordSchema.Id),
 });
 
 export type Record = typeof Record.Type;

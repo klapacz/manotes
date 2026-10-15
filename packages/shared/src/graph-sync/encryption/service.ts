@@ -41,10 +41,10 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
       catch: (cause) => new EventEncryptionError({ cause }),
     });
 
-    const deriveNoteStreamRef = Effect.fn("GraphSyncEncryptionService.deriveNoteStreamRef")(
-      function* (noteId: string) {
+    const deriveRecordStreamRef = Effect.fn("GraphSyncEncryptionService.deriveRecordStreamRef")(
+      function* (recordId: string) {
         const signature = yield* Effect.tryPromise({
-          try: () => crypto.subtle.sign("HMAC", streamRefKey, encodeStreamRefInput(noteId)),
+          try: () => crypto.subtle.sign("HMAC", streamRefKey, encodeStreamRefInput(recordId)),
           catch: (cause) => new StreamRefDerivationError({ cause }),
         });
 
@@ -56,14 +56,14 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
       id,
       streamRef,
       createdAt,
-      noteId,
+      recordId,
       type,
       payload,
     }: {
       id: string;
       streamRef: Uint8Array<ArrayBufferLike>;
       createdAt: EncryptionSchema.CreatedAt;
-      noteId: string;
+      recordId: string;
       type: EncryptionSchema.Body["type"];
       payload: Uint8Array<ArrayBufferLike>;
     }) {
@@ -79,7 +79,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
 
       const body = yield* remapError(
         EncryptionSchema.encodeBody({
-          noteId,
+          recordId,
           type,
           payload,
         }),
@@ -153,7 +153,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
     });
 
     return {
-      deriveNoteStreamRef,
+      deriveRecordStreamRef,
       encryptEventBody,
       decryptEventBody,
     };
@@ -172,8 +172,8 @@ const EVENT_IV_LENGTH = 12;
 // format later.
 const STREAM_REF_CONTEXT = "manotes/graph-sync/stream-ref/v0";
 
-function encodeStreamRefInput(noteId: string) {
-  return textEncoder.encode(`${STREAM_REF_CONTEXT}:${noteId}`);
+function encodeStreamRefInput(recordId: string) {
+  return textEncoder.encode(`${STREAM_REF_CONTEXT}:${recordId}`);
 }
 
 const textEncoder = new TextEncoder();

@@ -3,7 +3,7 @@ import { DateTime, Effect, Exit, Schema } from "effect";
 import { Column, Query, Table } from "effect-qb";
 import * as Sqlite from "effect-qb/sqlite";
 import { describe, expect, expectTypeOf, it } from "vite-plus/test";
-import { NoteSchema } from "../src/note.schema";
+import { RecordSchema } from "../src/record.schema";
 import { AttrsSchema } from "../src/attrs.schema";
 import { Tables } from "../src/db.tables";
 import { DBUsedTables } from "../src/db.used-tables";
@@ -12,11 +12,11 @@ import { SqliteJson } from "@manotes/effect-qb-sqlite/json";
 const { jsonArrayFrom, jsonObjectFrom } = SqliteJson.make({});
 
 const parents = Table.make("parents", {
-  id: Column.text().pipe(Column.schema(NoteSchema.Id), Column.primaryKey),
+  id: Column.text().pipe(Column.schema(RecordSchema.Id), Column.primaryKey),
 });
 
 const children = Table.make("children", {
-  id: Column.text().pipe(Column.schema(NoteSchema.Id), Column.primaryKey),
+  id: Column.text().pipe(Column.schema(RecordSchema.Id), Column.primaryKey),
   parentId: Column.text(),
   name: Column.text(),
   createdAt: Column.text().pipe(Column.schema(Schema.DateTimeUtcFromString)),
@@ -49,16 +49,16 @@ const expectations = Query.select({
   value: Tables.ruleExpects.value,
 }).pipe(
   Query.from(Tables.ruleExpects),
-  Query.where(Query.eq(Tables.ruleExpects.ruleId, Tables.notes.id)),
+  Query.where(Query.eq(Tables.ruleExpects.ruleId, Tables.records.id)),
   Query.where(Query.isNotNull(Tables.ruleExpects.value)),
   Query.orderBy(Tables.ruleExpects.propId),
 );
 
 const rules = Query.select({
-  id: Tables.notes.id,
+  id: Tables.records.id,
   expects: jsonArrayFrom(expectations),
   firstExpectation: jsonObjectFrom(expectations.pipe(Query.limit(1))),
-}).pipe(Query.from(Tables.notes), Query.where(Query.eq(Tables.notes._tag, "rule")));
+}).pipe(Query.from(Tables.records), Query.where(Query.eq(Tables.records._tag, "rule")));
 
 describe("typed JSON subquery helpers", () => {
   it("uses the executor's value mappings for array, object and nested array rows", async () => {
@@ -107,9 +107,9 @@ describe("typed JSON subquery helpers", () => {
 
   it("works with Manotes rule expectations without another result schema", async () => {
     await withDatabase(async (database, executor) => {
-      await Effect.runPromise(executor.execute(Query.createTable(Tables.notes)));
+      await Effect.runPromise(executor.execute(Query.createTable(Tables.records)));
       await Effect.runPromise(executor.execute(Query.createTable(Tables.ruleExpects)));
-      database.exec(`INSERT INTO notes
+      database.exec(`INSERT INTO records
         (id, _tag, content, text, date, createdAt, updatedAt, lastEventLocalSeq)
         VALUES ('rule', 'rule', '{}', '', '2026-10-14', '2026-10-14', '2026-10-14', 0)`);
       const insert = database.prepare("INSERT INTO rule_expects VALUES ('rule', ?, ?)");
@@ -125,14 +125,14 @@ describe("typed JSON subquery helpers", () => {
           firstExpectation: { propId: "priority", value: required },
         },
       ]);
-      expect([...DBUsedTables.usedTables(rules)].sort()).toEqual(["notes", "rule_expects"]);
+      expect([...DBUsedTables.usedTables(rules)].sort()).toEqual(["records", "rule_expects"]);
     });
   });
 
   it("returns decoded arrays and objects, preserving ordering, limits and empty results", async () => {
     await withDatabase(async (_database, executor) => {
       const rows = await Effect.runPromise(executor.execute(sqliteQuery));
-      expectTypeOf(rows[0]!.id).toEqualTypeOf<NoteSchema.Id>();
+      expectTypeOf(rows[0]!.id).toEqualTypeOf<RecordSchema.Id>();
       expectTypeOf(rows[1]!.children[0]!.createdAt).toEqualTypeOf<DateTime.Utc>();
       expectTypeOf(rows[1]!.children[0]!.payload.count).toEqualTypeOf<number>();
       expectTypeOf(rows[0]!.firstChild).toEqualTypeOf<Query.ResultRow<typeof childQuery> | null>();
@@ -236,7 +236,7 @@ describe("typed JSON subquery helpers", () => {
 
     const rejectInsert = () => {
       // @ts-expect-error INSERT is not a selectable subquery.
-      jsonArrayFrom(Query.insert(parents, { id: NoteSchema.Id.make("new") }));
+      jsonArrayFrom(Query.insert(parents, { id: RecordSchema.Id.make("new") }));
     };
 
     expect(rejectInsert).toThrow("JSON helpers currently require a SELECT");

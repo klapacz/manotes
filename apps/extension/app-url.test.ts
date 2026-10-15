@@ -3,15 +3,15 @@ import { AppUrlMatchPatterns, isAppUrl } from "./app-url";
 
 describe("isAppUrl", () => {
   it.each([
-    ["http://localhost:5173/notes", true],
-    ["http://127.0.0.1:5173/notes", true],
-    ["https://manotes.localhost/notes", true],
-    ["https://01.manotes.localhost/notes", true],
-    ["https://manotes.dev/notes", true],
-    ["https://app.manotes.dev/notes", true],
-    ["http://manotes.localhost/notes", false],
-    ["https://other.localhost/notes", false],
-    ["https://manotes.localhost.example.com/notes", false],
+    ["http://localhost:5173/records", true],
+    ["http://127.0.0.1:5173/records", true],
+    ["https://manotes.localhost/records", true],
+    ["https://01.manotes.localhost/records", true],
+    ["https://manotes.dev/records", true],
+    ["https://app.manotes.dev/records", true],
+    ["http://manotes.localhost/records", false],
+    ["https://other.localhost/records", false],
+    ["https://manotes.localhost.example.com/records", false],
   ] as const)("classifies %s as %s", (url, expected) => {
     expect(isAppUrl(url)).toBe(expected);
   });

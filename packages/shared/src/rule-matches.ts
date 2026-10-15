@@ -1,8 +1,8 @@
 import { Data, Effect, Option, Record, Stream } from "effect";
 import { EffectStream } from "./effect/stream";
-import { NoteSchema } from "./note.schema";
-import { NoteRepo } from "./note.repo";
-import { StreamFilter } from "./note/stream-filter";
+import { RecordSchema } from "./record.schema";
+import { RecordRepo } from "./record.repo";
+import { StreamFilter } from "./record/stream-filter";
 import { RuleRecord } from "./rule-record.service";
 
 export type MatchStatus = Data.TaggedEnum<{
@@ -14,12 +14,12 @@ export const MatchStatus = Data.taggedEnum<MatchStatus>();
 
 export type Rule = RuleRecord.Rule & { readonly status: MatchStatus };
 
-export function watch(opts: { readonly recordId: NoteSchema.Id }) {
+export function watch(opts: { readonly recordId: RecordSchema.Id }) {
   return Stream.unwrap(
     Effect.gen(function* () {
-      const records = yield* RuleRecord.Service;
-      const notes = yield* NoteRepo.Service;
-      const rules = yield* records.reactiveRules();
+      const ruleRecords = yield* RuleRecord.Service;
+      const records = yield* RecordRepo.Service;
+      const rules = yield* ruleRecords.reactiveRules();
 
       return rules.pipe(
         // Target edits replace the lookups and release the previous subscriptions.
@@ -27,7 +27,7 @@ export function watch(opts: { readonly recordId: NoteSchema.Id }) {
           return EffectStream.zipLatestRecord(
             Record.map(rules, (rule) => {
               return Stream.unwrap(
-                notes.reactiveFindPreviewById({
+                records.reactiveFindPreviewById({
                   id: opts.recordId,
                   filter: StreamFilter.fromAttrs(rule.rule_targets),
                 }),

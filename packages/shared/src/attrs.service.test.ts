@@ -3,7 +3,7 @@ import { describe, expect, expectTypeOf, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
 import { AttrsSchema } from "./attrs.schema";
 import { Attrs } from "./attrs.service";
-import { NoteDoc } from "./note/doc";
+import { RecordDoc } from "./record/doc";
 import { YSchema } from "./y-schema";
 import { BuiltinAttrs } from "./builtin-attrs";
 import { PropRecordRepo } from "./prop-record.repo";
@@ -161,7 +161,7 @@ describe("Attrs property editing", () => {
 
   it("preserves defaults and assignments when changing kind, and allows explicit replacement", () => {
     const doc = new Y.Doc();
-    const propId = AttrsSchema.NoteId.make("hours");
+    const propId = AttrsSchema.RecordId.make("hours");
     const original = AttrsSchema.PropVal.cases.bool.make({ val: false });
 
     try {
@@ -171,7 +171,7 @@ describe("Attrs property editing", () => {
             yield* attrs.initializeProp({ doc, defaultValue: original });
             yield* attrs.setProp({
               doc,
-              recordId: AttrsSchema.NoteId.make("record"),
+              recordId: AttrsSchema.RecordId.make("record"),
               propId,
               value: original,
             });
@@ -236,8 +236,8 @@ describe("Attrs property editing", () => {
     const remote = new Y.Doc();
     const root = doc.getMap("attrs");
     const props = new Y.Map();
-    const propId = AttrsSchema.NoteId.make("archived");
-    const recordId = AttrsSchema.NoteId.make("note");
+    const propId = AttrsSchema.RecordId.make("archived");
+    const recordId = AttrsSchema.RecordId.make("note");
     const initial = AttrsSchema.PropVal.cases.bool.make({ val: false });
 
     const def: typeof PropRecordRepo.Defs.bool.Type = {
@@ -325,7 +325,7 @@ describe("Attrs property editing", () => {
 
   it("reacts to def changes and keeps wrong-kind assignments invalid", async () => {
     const doc = new Y.Doc();
-    const propId = AttrsSchema.NoteId.make("archived");
+    const propId = AttrsSchema.RecordId.make("archived");
     const initial = AttrsSchema.PropVal.cases.bool.make({ val: false });
 
     const def: typeof PropRecordRepo.Defs.bool.Type = {
@@ -406,14 +406,14 @@ describe("Attrs property editing", () => {
 
   it("reads and writes every property kind, leaving defaults unset and malformed numbers invalid", async () => {
     const doc = new Y.Doc();
-    const recordId = AttrsSchema.NoteId.make("note");
+    const recordId = AttrsSchema.RecordId.make("note");
 
     const values = [
       AttrsSchema.PropVal.cases.text.make({ val: "hello" }),
       AttrsSchema.PropVal.cases.number.make({ val: 7 }),
       AttrsSchema.PropVal.cases.bool.make({ val: false }),
-      AttrsSchema.PropVal.cases.enum.make({ val: AttrsSchema.NoteId.make("choice") }),
-      AttrsSchema.PropVal.cases.link.make({ val: AttrsSchema.NoteId.make("linked-note") }),
+      AttrsSchema.PropVal.cases.enum.make({ val: AttrsSchema.RecordId.make("choice") }),
+      AttrsSchema.PropVal.cases.link.make({ val: AttrsSchema.RecordId.make("linked-record") }),
     ];
 
     const defs = values.map((value) => {
@@ -446,7 +446,7 @@ describe("Attrs property editing", () => {
             );
 
             for (const value of values) {
-              const propId = AttrsSchema.NoteId.make(value._tag);
+              const propId = AttrsSchema.RecordId.make(value._tag);
               yield* attrs.setProp({ doc, recordId, propId, value });
               const [updated] = yield* pull;
               expect(updated.find((entry) => entry.def.id === propId)?.value).toEqual(
@@ -495,7 +495,7 @@ describe("Attrs property editing", () => {
 
   it("clears malformed assignments without decoding them or creating missing maps", () => {
     const doc = new Y.Doc();
-    const propId = AttrsSchema.NoteId.make("archived");
+    const propId = AttrsSchema.RecordId.make("archived");
 
     try {
       Effect.runSync(
@@ -520,13 +520,13 @@ describe("Attrs property editing", () => {
 
 describe("Attrs grouped property editing", () => {
   it("keeps top and rule-group values independent, preserves siblings, and syncs edits", () => {
-    const { doc, attrs: cursor } = NoteDoc.make();
-    const remote = NoteDoc.make();
-    const recordId = AttrsSchema.NoteId.make("record_id:issue");
-    const task = AttrsSchema.NoteId.make("rule_id:task");
-    const other = AttrsSchema.NoteId.make("rule_id:other");
-    const priority = AttrsSchema.NoteId.make("prop_id:priority");
-    const cycle = AttrsSchema.NoteId.make("prop_id:cycle");
+    const { doc, attrs: cursor } = RecordDoc.make();
+    const remote = RecordDoc.make();
+    const recordId = AttrsSchema.RecordId.make("record_id:issue");
+    const task = AttrsSchema.RecordId.make("rule_id:task");
+    const other = AttrsSchema.RecordId.make("rule_id:other");
+    const priority = AttrsSchema.RecordId.make("prop_id:priority");
+    const cycle = AttrsSchema.RecordId.make("prop_id:cycle");
     const one = AttrsSchema.PropVal.cases.number.make({ val: 1 });
     const two = AttrsSchema.PropVal.cases.number.make({ val: 2 });
 
@@ -576,9 +576,9 @@ describe("Attrs grouped property editing", () => {
   });
 
   it("clears without creating maps and retains empty groups", () => {
-    const { doc, attrs: cursor } = NoteDoc.make();
-    const ruleId = AttrsSchema.NoteId.make("rule_id:task");
-    const propId = AttrsSchema.NoteId.make("prop_id:priority");
+    const { doc, attrs: cursor } = RecordDoc.make();
+    const ruleId = AttrsSchema.RecordId.make("rule_id:task");
+    const propId = AttrsSchema.RecordId.make("prop_id:priority");
 
     try {
       Effect.runSync(
@@ -590,7 +590,7 @@ describe("Attrs grouped property editing", () => {
             doc,
             ruleId,
             propId,
-            recordId: AttrsSchema.NoteId.make("record_id:issue"),
+            recordId: AttrsSchema.RecordId.make("record_id:issue"),
             value: AttrsSchema.PropVal.cases.number.make({ val: 1 }),
           });
           yield* attrs.clearGroupProp({ doc, ruleId, propId });
@@ -605,10 +605,10 @@ describe("Attrs grouped property editing", () => {
   });
 
   it("rejects scalar collisions and self-assignment without changing saved data", () => {
-    const { doc } = NoteDoc.make();
-    const recordId = AttrsSchema.NoteId.make("record_id:issue");
-    const ruleId = AttrsSchema.NoteId.make("rule_id:task");
-    const propId = AttrsSchema.NoteId.make("prop_id:priority");
+    const { doc } = RecordDoc.make();
+    const recordId = AttrsSchema.RecordId.make("record_id:issue");
+    const ruleId = AttrsSchema.RecordId.make("rule_id:task");
+    const propId = AttrsSchema.RecordId.make("prop_id:priority");
     const value = AttrsSchema.PropVal.cases.bool.make({ val: true });
 
     try {
@@ -636,9 +636,9 @@ describe("Attrs grouped property editing", () => {
 
 describe("Attrs rule editing", () => {
   it("edits expectations independently and preserves them when targets change", () => {
-    const { doc, attrs: cursor } = NoteDoc.make();
-    const priority = AttrsSchema.NoteId.make("priority");
-    const assignee = AttrsSchema.NoteId.make("assignee");
+    const { doc, attrs: cursor } = RecordDoc.make();
+    const priority = AttrsSchema.RecordId.make("priority");
+    const assignee = AttrsSchema.RecordId.make("assignee");
     const required = AttrsSchema.RuleExpectation.cases.required.make({});
     const optional = AttrsSchema.RuleExpectation.cases.optional.make({});
     const initial = AttrsSchema.TargetFilter.make([]);
@@ -678,11 +678,11 @@ describe("Attrs rule editing", () => {
   });
 
   it("watches storage edits and synced replacements without changing targets or expectations", async () => {
-    const { doc, attrs: cursor } = NoteDoc.make();
+    const { doc, attrs: cursor } = RecordDoc.make();
     const remote = new Y.Doc();
     const top = AttrsSchema.RuleStorage.cases.top.make({});
     const group = AttrsSchema.RuleStorage.cases.group.make({});
-    const priority = AttrsSchema.NoteId.make("priority");
+    const priority = AttrsSchema.RecordId.make("priority");
     const required = AttrsSchema.RuleExpectation.cases.required.make({});
     const targets = AttrsSchema.TargetFilter.make([]);
 

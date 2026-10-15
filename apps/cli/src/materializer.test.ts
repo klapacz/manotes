@@ -1,12 +1,12 @@
-import { PaneSchema } from "@manotes/shared/note/pane.schema";
+import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { NodeServices } from "@effect/platform-node";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { DB } from "@manotes/shared/db.service";
 import { EventRepo } from "@manotes/shared/event.repo";
 import * as Materializer from "@manotes/shared/materializer.service";
 import { MaterializerAttrs } from "@manotes/shared/materializer/attrs.service";
-import { StreamFilter } from "@manotes/shared/note/stream-filter";
-import { NoteRepo } from "@manotes/shared/note.repo";
+import { StreamFilter } from "@manotes/shared/record/stream-filter";
+import { RecordRepo } from "@manotes/shared/record.repo";
 import { DateTime, Effect, Layer, Result, Record, type Scope } from "effect";
 import * as Reactivity from "effect/reactivity/Reactivity";
 import { SqlClient } from "effect/sql";
@@ -23,7 +23,7 @@ describe("attrs materialization", () => {
         const event = yield* save(doc, "note");
         const sql = yield* SqlClient.SqlClient;
 
-        expect(yield* sql`SELECT _tag AS tag, attrs_valid, prop_type FROM notes`).toEqual([
+        expect(yield* sql`SELECT _tag AS tag, attrs_valid, prop_type FROM records`).toEqual([
           { tag: "note", attrs_valid: 1, prop_type: null },
         ]);
         expect(yield* sql`SELECT * FROM props`).toEqual([]);
@@ -50,7 +50,7 @@ describe("attrs materialization", () => {
           AttrsSchema.FilterExpr.make({
             // oxlint-disable-next-line anti-slop-effect/no-manual-tagged-construction -- The recursive FilterExpr codec's make validates this general-stream predicate.
             _tag: "cmp",
-            val: [["prop", AttrsSchema.NoteId.make("priority")], "invalid", true],
+            val: [["prop", AttrsSchema.RecordId.make("priority")], "invalid", true],
           }),
         ]);
         attrs.set("owned_type", "enum_option");
@@ -77,7 +77,7 @@ describe("attrs materialization", () => {
         const sql = yield* SqlClient.SqlClient;
         expect(
           yield* sql`SELECT _tag AS tag, attrs_valid, prop_type,
-          prop_default, prop_targets, owned_type, owned_parent, rule_targets FROM notes`,
+          prop_default, prop_targets, owned_type, owned_parent, rule_targets FROM records`,
         ).toEqual([
           {
             tag: "note",
@@ -111,7 +111,7 @@ describe("attrs materialization", () => {
         other.getMap("attrs").set("props", otherProps);
         otherProps.set(
           "priority",
-          AttrsSchema.PropVal.cases.enum.make({ val: AttrsSchema.NoteId.make("high") }),
+          AttrsSchema.PropVal.cases.enum.make({ val: AttrsSchema.RecordId.make("high") }),
         );
         yield* save(other, "other");
 
@@ -124,11 +124,11 @@ describe("attrs materialization", () => {
         attrs.set("props", props);
         props.set(
           "priority",
-          AttrsSchema.PropVal.cases.enum.make({ val: AttrsSchema.NoteId.make("high") }),
+          AttrsSchema.PropVal.cases.enum.make({ val: AttrsSchema.RecordId.make("high") }),
         );
         props.set(
           "assignee",
-          AttrsSchema.PropVal.cases.link.make({ val: AttrsSchema.NoteId.make("person") }),
+          AttrsSchema.PropVal.cases.link.make({ val: AttrsSchema.RecordId.make("person") }),
         );
         const expects = new Y.Map<unknown>();
         attrs.set("rule_expects", expects);
@@ -136,7 +136,7 @@ describe("attrs materialization", () => {
         expects.set("assignee", AttrsSchema.RuleExpectation.cases.optional.make({}));
         yield* save(doc, "rule");
         const sql = yield* SqlClient.SqlClient;
-        expect(yield* sql`SELECT attrs_valid FROM notes WHERE id = 'rule'`).toEqual([
+        expect(yield* sql`SELECT attrs_valid FROM records WHERE id = 'rule'`).toEqual([
           { attrs_valid: 1 },
         ]);
 
@@ -162,7 +162,7 @@ describe("attrs materialization", () => {
         yield* save(doc, "rule");
         expect(yield* sql`SELECT * FROM props WHERE recordId = 'rule'`).toEqual([]);
         expect(yield* sql`SELECT * FROM rule_expects`).toEqual([]);
-        expect(yield* sql`SELECT attrs_valid FROM notes WHERE id = 'rule'`).toEqual([
+        expect(yield* sql`SELECT attrs_valid FROM records WHERE id = 'rule'`).toEqual([
           { attrs_valid: 0 },
         ]);
 
@@ -177,7 +177,7 @@ describe("attrs materialization", () => {
         ]);
         expect(yield* sql`SELECT * FROM rule_expects`).toEqual([]);
         expect(
-          yield* sql`SELECT _tag AS tag, rule_targets, attrs_valid FROM notes WHERE id = 'rule'`,
+          yield* sql`SELECT _tag AS tag, rule_targets, attrs_valid FROM records WHERE id = 'rule'`,
         ).toEqual([{ tag: "note", rule_targets: null, attrs_valid: 1 }]);
       }),
     );
@@ -253,13 +253,13 @@ describe("attrs materialization", () => {
         yield* save(doc, "rule");
         const sql = yield* SqlClient.SqlClient;
 
-        expect(yield* sql`SELECT rule_storage, attrs_valid FROM notes`).toEqual([
+        expect(yield* sql`SELECT rule_storage, attrs_valid FROM records`).toEqual([
           { rule_storage: JSON.stringify(group), attrs_valid: 1 },
         ]);
 
         attrs.delete("rule_storage");
         yield* save(doc, "rule");
-        expect(yield* sql`SELECT rule_storage, attrs_valid FROM notes`).toEqual([
+        expect(yield* sql`SELECT rule_storage, attrs_valid FROM records`).toEqual([
           { rule_storage: null, attrs_valid: 0 },
         ]);
         expect(attrs.has("rule_storage")).toBe(false);
@@ -267,7 +267,7 @@ describe("attrs materialization", () => {
         attrs.set("rule_storage", "broken");
         const malformedUpdate = Y.encodeStateAsUpdate(doc);
         yield* save(doc, "rule");
-        expect(yield* sql`SELECT rule_storage, attrs_valid FROM notes`).toEqual([
+        expect(yield* sql`SELECT rule_storage, attrs_valid FROM records`).toEqual([
           { rule_storage: null, attrs_valid: 0 },
         ]);
         expect(attrs.get("rule_storage")).toBe("broken");
@@ -275,7 +275,7 @@ describe("attrs materialization", () => {
 
         attrs.set("rule_storage", top);
         yield* save(doc, "rule");
-        expect(yield* sql`SELECT rule_storage, attrs_valid FROM notes`).toEqual([
+        expect(yield* sql`SELECT rule_storage, attrs_valid FROM records`).toEqual([
           { rule_storage: JSON.stringify(top), attrs_valid: 1 },
         ]);
         expect(yield* sql`SELECT ruleId, propId FROM rule_expects`).toEqual([
@@ -301,7 +301,7 @@ describe("attrs materialization", () => {
         expects.set("priority", AttrsSchema.RuleExpectation.cases.optional.make({}));
         yield* save(doc, "rule");
         const sql = yield* SqlClient.SqlClient;
-        const beforeNotes = yield* sql`SELECT * FROM notes`;
+        const beforeRecords = yield* sql`SELECT * FROM records`;
         const beforeProps = yield* sql`SELECT * FROM props`;
         const beforeExpects = yield* sql`SELECT * FROM rule_expects`;
         const beforeCheckpoint = yield* sql`SELECT * FROM materialization_checkpoint`;
@@ -320,27 +320,27 @@ describe("attrs materialization", () => {
 
         const directFailure = yield* attrsService
           .materialize({
-            recordId: AttrsSchema.NoteId.make("rule"),
+            recordId: AttrsSchema.RecordId.make("rule"),
             yDoc: doc,
           })
           .pipe(Effect.result);
 
         expect(Result.isFailure(directFailure)).toBe(true);
-        expect(yield* sql`SELECT * FROM notes`).toEqual(beforeNotes);
+        expect(yield* sql`SELECT * FROM records`).toEqual(beforeRecords);
         expect(yield* sql`SELECT * FROM props`).toEqual(beforeProps);
         expect(yield* sql`SELECT * FROM rule_expects`).toEqual(beforeExpects);
 
         const materializer = yield* Materializer.Service;
         const failed = yield* materializer.catchUp().pipe(Effect.result);
         expect(Result.isFailure(failed)).toBe(true);
-        expect(yield* sql`SELECT * FROM notes`).toEqual(beforeNotes);
+        expect(yield* sql`SELECT * FROM records`).toEqual(beforeRecords);
         expect(yield* sql`SELECT * FROM props`).toEqual(beforeProps);
         expect(yield* sql`SELECT * FROM rule_expects`).toEqual(beforeExpects);
         expect(yield* sql`SELECT * FROM materialization_checkpoint`).toEqual(beforeCheckpoint);
 
         yield* sql`DROP TRIGGER reject_expect`;
         yield* materializer.catchUp();
-        expect(yield* sql`SELECT rule_targets FROM notes`).toEqual([
+        expect(yield* sql`SELECT rule_targets FROM records`).toEqual([
           {
             rule_targets: JSON.stringify(targets),
           },
@@ -363,12 +363,12 @@ function makeDoc() {
   );
 }
 
-function appendEvent(doc: Y.Doc, noteId: string) {
+function appendEvent(doc: Y.Doc, recordId: string) {
   return Effect.gen(function* () {
     const repo = yield* EventRepo.Service;
 
     return yield* repo.create({
-      noteId,
+      recordId,
       type: "update",
       payload: Y.encodeStateAsUpdate(doc),
       createdAt: yield* DateTime.now,
@@ -376,9 +376,9 @@ function appendEvent(doc: Y.Doc, noteId: string) {
   });
 }
 
-function save(doc: Y.Doc, noteId: string) {
+function save(doc: Y.Doc, recordId: string) {
   return Effect.gen(function* () {
-    const event = yield* appendEvent(doc, noteId);
+    const event = yield* appendEvent(doc, recordId);
     const materializer = yield* Materializer.Service;
     yield* materializer.catchUp();
 
@@ -386,11 +386,11 @@ function save(doc: Y.Doc, noteId: string) {
   });
 }
 
-function expectSnapshot(noteId: string, update: Uint8Array<ArrayBufferLike>) {
+function expectSnapshot(recordId: string, update: Uint8Array<ArrayBufferLike>) {
   return Effect.gen(function* () {
-    const repo = yield* NoteRepo.Service;
-    const note = yield* repo.getById(noteId);
-    expect(note.materializedYUpdate).toEqual(update);
+    const repo = yield* RecordRepo.Service;
+    const record = yield* repo.getById(recordId);
+    expect(record.materializedYUpdate).toEqual(update);
   });
 }
 
@@ -402,7 +402,7 @@ function runIntegration(
     | EventRepo.Service
     | Materializer.Service
     | MaterializerAttrs.Service
-    | NoteRepo.Service
+    | RecordRepo.Service
     | SqlClient.SqlClient
     | Scope.Scope
   >,

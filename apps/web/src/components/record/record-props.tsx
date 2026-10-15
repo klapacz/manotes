@@ -1,0 +1,374 @@
+import { useAtom } from "@effect/atom-solid";
+import type { AttrsSchema } from "@manotes/shared/attrs.schema";
+import { Attrs } from "@manotes/shared/attrs.service";
+import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
+import type { RecordSchema } from "@manotes/shared/record.schema";
+import { RuleProps } from "@manotes/shared/rule-props";
+import { Array, Data, Effect, Exit, Option, Record } from "effect";
+import { Stream } from "effect";
+import { AsyncResult } from "effect/reactivity";
+import { Show } from "solid-js";
+import type * as Y from "yjs";
+import { bindRt, createAtomResultStore, MatchTag } from "../../lib";
+import { QueryEngine } from "../../lib/query-engine";
+import { MenuQuery } from "../../lib/menu-query";
+import { CommandList, CommandScroll } from "../ui/command";
+import { Picker } from "../ui/picker";
+import { RecordLabel } from "./record-label";
+import { RecordPropsEntries } from "./record-props.entries";
+import { PropPicker } from "./prop-picker";
+import { PropQuery } from "./prop-query";
+
+export type Action = Data.TaggedEnum<{
+  OpenProperty: { readonly selection: RecordPropsEntries.Selection };
+  SetProperty: {
+    readonly selection: RecordPropsEntries.Selection;
+    readonly propVal: AttrsSchema.PropVal;
+  };
+}>;
+
+export const Action = Data.taggedEnum<Action>();
+
+export type Choice = Picker.Choice & Action;
+
+export function query<E, R>(opts: {
+  readonly groups: Stream.Stream<RuleProps.EditorGroups, E, R>;
+}) {
+  return (request: QueryEngine.Request) => {
+    return opts.groups.pipe(Stream.switchMap((groups) => makeQuery(groups)(request)));
+  };
+}
+
+export function Menu(props: {
+  readonly recordId: RecordSchema.Id;
+  readonly doc: Y.Doc;
+  readonly selection: RecordPropsEntries.Selection;
+  readonly onBack: () => void;
+  readonly onOpenRecord: (id: RecordSchema.Id) => void;
+}) {
+  const state = createAtomResultStore(() => {
+    return RecordPropsEntries.byRecord()(props.recordId);
+  });
+
+  return (
+    <MatchTag
+      when={state}
+      cases={{
+        Loading: () => <p class="px-3 py-2 text-sm text-fg-subtle">Loading property…</p>,
+        Error: () => <p class="px-3 py-2 text-sm text-error-fg">Unable to load property.</p>,
+        Success: (result) => {
+          return (
+            <Show
+              when={Option.getOrUndefined(
+                RecordPropsEntries.find({ groups: result().value, selection: props.selection }),
+              )}
+              fallback={
+                <PropPicker.Unavailable>
+                  <Picker.Footer>
+                    <Picker.Back onSelect={props.onBack} />
+                  </Picker.Footer>
+                </PropPicker.Unavailable>
+              }
+            >
+              {(entry) => {
+                return (
+                  <ValueMenu
+                    entry={entry()}
+                    recordId={props.recordId}
+                    doc={props.doc}
+                    onBack={props.onBack}
+                    onOpenRecord={props.onOpenRecord}
+                    onChanged={(value) => {
+                      if (value === undefined) props.onBack();
+                    }}
+                  />
+                );
+              }}
+            </Show>
+          );
+        },
+      }}
+    />
+  );
+}
+
+export function EntryValue(props: { readonly entry: RecordPropsEntries.Entry }) {
+  const required = () => RuleProps.isRequired(props.entry);
+  const invalid = () => Attrs.ValueState.$is("Invalid")(props.entry.value);
+
+  const unexpected = () => {
+    return (
+      RuleProps.EditorGroup.$is("Rule")(props.entry.group) && RuleProps.isUnexpected(props.entry)
+    );
+  };
+
+  return (
+    <span
+      classList={{
+        "text-error-fg": invalid() || required(),
+        "text-warning-fg": unexpected() && !invalid() && !required(),
+      }}
+    >
+      <Show when={unexpected()}>Unexpected: </Show>
+      <Show when={required()} fallback={<PropPicker.StateLabel state={props.entry.value} />}>
+        Required
+      </Show>
+    </span>
+  );
+}
+
+export function ValueMenu(props: {
+  readonly entry: RecordPropsEntries.Entry;
+  readonly recordId: RecordSchema.Id;
+  readonly doc: Y.Doc;
+  readonly onBack: () => void;
+  readonly onOpenRecord: (id: RecordSchema.Id) => void;
+  readonly onChanged: (value: AttrsSchema.PropVal | undefined) => void;
+}) {
+  const [mutation, edit] = useAtom(Edit, { mode: "promiseExit" });
+
+  const change = async (value: AttrsSchema.PropVal | undefined) => {
+    const exit = await edit({
+      doc: props.doc,
+      recordId: props.recordId,
+      selection: RecordPropsEntries.selection(props.entry),
+      value,
+    });
+
+    if (Exit.isFailure(exit)) return;
+
+    props.onChanged(value);
+  };
+
+  return (
+    <Show
+      when={Option.getOrUndefined(props.entry.def)}
+      fallback={
+        <PropPicker.Unavailable>
+          <Show when={AsyncResult.isFailure(mutation())}>
+            <p role="alert" class="px-3 py-2 text-sm text-error-fg">
+              Unable to update property.
+            </p>
+          </Show>
+          <Picker.Footer>
+            <Picker.Back onSelect={props.onBack} />
+            <Picker.Clear
+              disabled={Attrs.ValueState.$is("Unset")(props.entry.value) || mutation().waiting}
+              onSelect={() => void change(undefined)}
+            />
+          </Picker.Footer>
+        </PropPicker.Unavailable>
+      }
+    >
+      {(def) => {
+        return (
+          <PropPicker.Value
+            propId={props.entry.propId}
+            label={RecordPropsEntries.label(props.entry)}
+            type={def().prop_type}
+            targets={PropQuery.targets(def())}
+            defaultValue={Option.fromNullishOr(def().prop_default)}
+            state={props.entry.value}
+            disabled={mutation().waiting}
+            onChange={(value) => void change(value)}
+            onOpenRecord={props.onOpenRecord}
+          >
+            {(items) => {
+              return (
+                <CommandList>
+                  <CommandScroll>{items}</CommandScroll>
+                  <PropPicker.Invalid state={props.entry.value} />
+                  <Show when={AsyncResult.isFailure(mutation())}>
+                    <p role="alert" class="px-3 py-2 text-sm text-error-fg">
+                      Unable to update property.
+                    </p>
+                  </Show>
+                  <Picker.Footer>
+                    <Picker.Back onSelect={props.onBack} />
+                    <Picker.Clear
+                      disabled={
+                        Attrs.ValueState.$is("Unset")(props.entry.value) || mutation().waiting
+                      }
+                      onSelect={() => void change(undefined)}
+                    />
+                  </Picker.Footer>
+                </CommandList>
+              );
+            }}
+          </PropPicker.Value>
+        );
+      }}
+    </Show>
+  );
+}
+
+export const Edit = bindRt((rt) => {
+  return rt.fn(
+    Effect.fn("ComponentsRecordRecordProps.edit")(function* (opts: {
+      readonly doc: Y.Doc;
+      readonly recordId: RecordSchema.Id;
+      readonly selection: RecordPropsEntries.Selection;
+      readonly value: AttrsSchema.PropVal | undefined;
+    }) {
+      const attrs = yield* Attrs.Service;
+      const prop = { doc: opts.doc, propId: opts.selection.propId };
+
+      yield* RecordPropsEntries.Selection.$match(opts.selection, {
+        Top: () => {
+          if (opts.value === undefined) return attrs.clearProp(prop);
+
+          return attrs.setProp({ ...prop, recordId: opts.recordId, value: opts.value });
+        },
+        Rule: ({ ruleId }) => {
+          if (opts.value === undefined) return attrs.clearGroupProp({ ...prop, ruleId });
+
+          return attrs.setGroupProp({
+            ...prop,
+            recordId: opts.recordId,
+            ruleId,
+            value: opts.value,
+          });
+        },
+      });
+    }),
+  );
+});
+
+function makeQuery(groups: RuleProps.EditorGroups) {
+  // Keep each group's props together, with top-level props first.
+  const entries = Array.flatMap(
+    [groups.top, ...Record.values(groups.groups)],
+    RecordPropsEntries.entries,
+  );
+
+  const combined = QueryEngine.combine([
+    // Match prop names and offer their value pickers.
+    MenuQuery.choices(() => Array.map(entries, openChoice)),
+    // Also search values, such as Task → Priority → High.
+    ...Array.map(entries, valueQuery),
+  ]);
+
+  return (request: QueryEngine.Request) => {
+    return combined(request).pipe(
+      Stream.map((matches) => {
+        if (request.text.trim()) return matches;
+
+        // Browsing uses headings for context and places props below record actions.
+        return Array.map(matches, (match) => {
+          return { ...match, score: 0.5, value: { ...match.value, path: [] } };
+        });
+      }),
+    );
+  };
+}
+
+function openChoice(entry: RecordPropsEntries.Entry): Choice {
+  const selection = RecordPropsEntries.selection(entry);
+  const section = groupKey(entry.group);
+  const label = RecordPropsEntries.label(entry);
+
+  const path = RuleProps.EditorGroup.$match(entry.group, {
+    Top: () => [],
+    Rule: ({ status }) => [RecordPropsEntries.ruleLabel(status)],
+  });
+
+  return {
+    ...Action.OpenProperty({ selection }),
+    value: `${section}:${entry.propId}`,
+    group: section,
+    groupLabel: () => <GroupLabel group={entry.group} />,
+    label,
+    path,
+    keywords: [[...path, label].join(" ")],
+    labelSuffix: <PropPicker.BuiltinBadge builtin={BuiltinAttrs.isBuiltin(entry.propId)} />,
+    detail: () => <EntryValue entry={entry} />,
+    suffix: <Picker.Caret />,
+  };
+}
+
+function groupKey(group: RuleProps.EditorGroup) {
+  return RuleProps.EditorGroup.$match(group, {
+    Top: () => "props",
+    Rule: ({ ruleId }) => `rule:${ruleId}`,
+  });
+}
+
+function GroupLabel(props: { readonly group: RuleProps.EditorGroup }) {
+  return (
+    <MatchTag
+      when={props.group}
+      cases={{
+        Top: () => <>Properties</>,
+        Rule: (group) => {
+          return (
+            <span class="flex items-center gap-2">
+              <MatchTag
+                when={group().status}
+                cases={{
+                  Matching: (status) => <>{RecordPropsEntries.ruleLabel(status())}</>,
+                  Unmatched: (status) => <>{RecordPropsEntries.ruleLabel(status())}</>,
+                  Unavailable: () => <RecordLabel.Root id={group().ruleId} />,
+                }}
+              />
+              <MatchTag
+                when={group().status}
+                cases={{
+                  Unmatched: () => <span class="text-warning-fg">No longer applies</span>,
+                  Unavailable: () => <span class="text-error-fg">Rule unavailable</span>,
+                }}
+              />
+            </span>
+          );
+        },
+      }}
+    />
+  );
+}
+
+function valueQuery(entry: RecordPropsEntries.Entry) {
+  // Available definitions supply the type, defaults, and reference scope.
+  if (Option.isNone(entry.def)) return () => Stream.succeed([]);
+
+  const def = entry.def.value;
+  const selection = RecordPropsEntries.selection(entry);
+
+  const query = MenuQuery.nested({
+    label: RecordPropsEntries.label(entry),
+    query: QueryEngine.map(
+      PropQuery.values({
+        propId: entry.propId,
+        type: def.prop_type,
+        targets: PropQuery.targets(def),
+        defaultValue: Option.fromNullishOr(def.prop_default),
+      }),
+      (choice): Choice => {
+        return {
+          ...choice,
+          ...Action.SetProperty({ selection, propVal: choice.propVal }),
+          value: `${groupKey(entry.group)}:${entry.propId}:${choice.value}`,
+          group: groupKey(entry.group),
+          labelSuffix: <PropPicker.BuiltinBadge builtin={BuiltinAttrs.isBuiltin(entry.propId)} />,
+        };
+      },
+    ),
+  });
+
+  return withGroupPath({ group: entry.group, query });
+}
+
+function withGroupPath<E, R>(opts: {
+  readonly group: RuleProps.EditorGroup;
+  readonly query: QueryEngine.Query<Choice, E, R>;
+}) {
+  return RuleProps.EditorGroup.$match(opts.group, {
+    Top: () => opts.query,
+    Rule: (group) => {
+      return MenuQuery.nested({
+        label: RecordPropsEntries.ruleLabel(group.status),
+        query: opts.query,
+      });
+    },
+  });
+}
+
+export * as RecordProps from "./record-props";

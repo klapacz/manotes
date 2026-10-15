@@ -1,10 +1,10 @@
 import { Attrs } from "@manotes/shared/attrs.service";
-import type { NoteSchema } from "@manotes/shared/note.schema";
+import type { RecordSchema } from "@manotes/shared/record.schema";
 import { Effect, Stream, SubscriptionRef } from "effect";
 import { LiveDoc } from "../live-doc.service";
 
 // Scope and rule-target panes acquire the same doc used by their editors.
-export function watch(opts: { readonly id: NoteSchema.Id }) {
+export function watch(opts: { readonly id: RecordSchema.Id }) {
   return Stream.unwrap(
     Effect.gen(function* () {
       const docs = yield* LiveDoc.Service;

@@ -37,7 +37,7 @@ export class InvalidPasswordError extends Error {
 const GRAPH_KEY_LENGTH = 32;
 
 // PBKDF2 makes password guessing more expensive. The derived output is used as
-// an AES-GCM wrapping key, not as note/content encryption material directly.
+// an AES-GCM wrapping key, not as record/content encryption material directly.
 const PBKDF2_ITERATIONS = 600_000;
 
 // Salt ensures that even if two graphs use the same password, they still get

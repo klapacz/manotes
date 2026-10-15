@@ -2,7 +2,7 @@ import dedent from "dedent";
 import { describe, expect, it } from "vite-plus/test";
 import { MdParse } from "@manotes/shared/prosemirror/md/parse";
 import { MdSerialize } from "@manotes/shared/prosemirror/md/serialize";
-import { NOTE_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
+import { RECORD_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
 import { EditDocument, type Edit } from "./edit-document";
 
 function edit(markdown: string, edits: readonly Edit[]) {
@@ -24,7 +24,7 @@ describe("EditDocument.apply", () => {
     const doc = MdParse.parse(dedent`
       Hello.
 
-      - Keep **formatting** and [note](./note-id.md)
+      - Keep **formatting** and [record](./record-id.md)
     `);
 
     const updated = EditDocument.apply(doc, [{ kind: "replace", text: "Hello", with: "Updated" }]);
@@ -83,7 +83,7 @@ describe("EditDocument.apply", () => {
     expect(edit("a\n\nb", [{ kind: "replace", text: "\nb", with: "\nB" }])).toBe("a\n\nB\n");
   });
 
-  it("removes empty blocks but keeps a paragraph when the whole note is deleted", () => {
+  it("removes empty blocks but keeps a paragraph when the whole record is deleted", () => {
     const doc = EditDocument.apply(MdParse.parse("a\n\nb\n\nc"), [
       { kind: "replace", text: "b", with: "" },
     ]);
@@ -139,19 +139,19 @@ describe("EditDocument.apply", () => {
   });
 
   it("rejects unsupported replacement content but can append without touching it", () => {
-    const doc = NOTE_SCHEMA.node(
+    const doc = RECORD_SCHEMA.node(
       "doc",
       null,
-      NOTE_SCHEMA.node(
+      RECORD_SCHEMA.node(
         "table",
         null,
-        NOTE_SCHEMA.node(
+        RECORD_SCHEMA.node(
           "tableRow",
           null,
-          NOTE_SCHEMA.node(
+          RECORD_SCHEMA.node(
             "tableCell",
             null,
-            NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("headerless")),
+            RECORD_SCHEMA.node("paragraph", null, RECORD_SCHEMA.text("headerless")),
           ),
         ),
       ),
@@ -184,10 +184,10 @@ describe("EditDocument.apply", () => {
     expect(MdParse.parse(MdSerialize.serialize(edited)).eq(edited)).toBe(true);
   });
   it("preserves empty paragraphs inside and outside a replaced Markdown range", () => {
-    const doc = NOTE_SCHEMA.node("doc", null, [
-      NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("before")),
-      NOTE_SCHEMA.node("paragraph"),
-      NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("after")),
+    const doc = RECORD_SCHEMA.node("doc", null, [
+      RECORD_SCHEMA.node("paragraph", null, RECORD_SCHEMA.text("before")),
+      RECORD_SCHEMA.node("paragraph"),
+      RECORD_SCHEMA.node("paragraph", null, RECORD_SCHEMA.text("after")),
     ]);
 
     expect(MdParse.parse(MdSerialize.serialize(doc)).eq(doc)).toBe(true);

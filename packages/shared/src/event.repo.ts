@@ -2,7 +2,7 @@ import { Query, Cast, Type } from "effect-qb";
 import { Array, Effect, Layer, Option, pipe, Schema, Context, Stream } from "effect";
 import * as DB from "./db.service";
 import type { EventSchema } from "./event.schema";
-import { NoteSchema } from "./note.schema";
+import { RecordSchema } from "./record.schema";
 import * as Tables from "./db.tables";
 import { nanoid } from "nanoid";
 import { EffectOption } from "./effect/effect-option";
@@ -26,13 +26,13 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
     });
 
     const create = Effect.fn("EventRepo.create")(function* (event: EventSchema.Create) {
-      yield* Schema.decodeEffect(NoteSchema.CreateId)(event.noteId);
+      yield* Schema.decodeEffect(RecordSchema.CreateId)(event.recordId);
 
       return yield* db
         .find(
           Query.insert(Tables.events, {
             type: event.type,
-            noteId: event.noteId,
+            recordId: event.recordId,
             payload: event.payload,
             createdAt: event.createdAt,
             id: event.id ?? nanoid(),
@@ -92,7 +92,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       if (events.length === 0) return;
 
       // Reject reserved IDs across the whole backup before inserting any events.
-      for (const event of events) yield* Schema.decodeEffect(NoteSchema.CreateId)(event.noteId);
+      for (const event of events) yield* Schema.decodeEffect(RecordSchema.CreateId)(event.recordId);
 
       yield* db.transaction(
         Effect.forEach(
@@ -106,7 +106,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
                   DB.values(
                     Tables.events,
                     Array.map(chunk, (event) => ({
-                      noteId: event.noteId,
+                      recordId: event.recordId,
                       type: event.type,
                       payload: event.payload,
                       createdAt: event.createdAt,
@@ -150,15 +150,15 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
         .pipe(Effect.map(Option.match({ onNone: () => 0, onSome: (row) => row.localSeq ?? 0 })));
     });
 
-    const findUpdatesForNote = Effect.fn("EventRepo.findUpdatesForNote")(function* (
-      noteId: string,
+    const findUpdatesForRecord = Effect.fn("EventRepo.findUpdatesForRecord")(function* (
+      recordId: string,
     ) {
       const events = yield* db.query(
         Query.select(Tables.events.columns).pipe(
           Query.from(Tables.events),
           Query.where(
             Query.and(
-              Query.eq(Tables.events.noteId, noteId),
+              Query.eq(Tables.events.recordId, recordId),
               Query.eq(Tables.events.type, "update"),
             ),
           ),
@@ -169,12 +169,12 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       return events;
     });
 
-    const findForNoteBetweenIds = Effect.fn("EventRepo.findForNoteBetweenIds")(function* ({
-      noteId,
+    const findForRecordBetweenIds = Effect.fn("EventRepo.findForRecordBetweenIds")(function* ({
+      recordId,
       afterLocalSeq,
       upToLocalSeq,
     }: {
-      noteId: string;
+      recordId: string;
       afterLocalSeq: number;
       upToLocalSeq: number;
     }) {
@@ -183,7 +183,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
           Query.from(Tables.events),
           Query.where(
             Query.and(
-              Query.eq(Tables.events.noteId, noteId),
+              Query.eq(Tables.events.recordId, recordId),
               Query.gt(Tables.events.localSeq, afterLocalSeq),
               Query.lte(Tables.events.localSeq, upToLocalSeq),
             ),
@@ -208,11 +208,11 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       return stream.pipe(Stream.map((events) => events.length > 0));
     });
 
-    const streamUpdatesForNote = Effect.fn("EventRepo.streamUpdatesForNote")(function* ({
-      noteId,
+    const streamUpdatesForRecord = Effect.fn("EventRepo.streamUpdatesForRecord")(function* ({
+      recordId,
       afterLocalSeq,
     }: {
-      noteId: string;
+      recordId: string;
       afterLocalSeq: number;
     }) {
       const stream = yield* db.reactiveQuery(
@@ -220,7 +220,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
           Query.from(Tables.events),
           Query.where(
             Query.and(
-              Query.eq(Tables.events.noteId, noteId),
+              Query.eq(Tables.events.recordId, recordId),
               Query.eq(Tables.events.type, "update"),
               Query.gt(Tables.events.localSeq, afterLocalSeq),
             ),
@@ -276,12 +276,12 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       importBackupEvents,
       findPending,
       countPending,
-      findUpdatesForNote,
-      findForNoteBetweenIds,
+      findUpdatesForRecord,
+      findForRecordBetweenIds,
       listAllForBackup,
       markCommitted,
       streamHasPending,
-      streamUpdatesForNote,
+      streamUpdatesForRecord,
       streamAfterGlobalId,
     };
   }),

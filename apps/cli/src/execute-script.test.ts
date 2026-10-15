@@ -11,8 +11,8 @@ describe("ExecuteScript.run", () => {
       ExecuteScript.run(
         `text([
           typeof process, typeof require, typeof module, typeof Buffer,
-          typeof fetch, typeof setTimeout, typeof globalThis.api.editNote,
-          typeof globalThis.api.createNote,
+          typeof fetch, typeof setTimeout, typeof globalThis.api.editRecord,
+          typeof globalThis.api.createRecord,
         ]);`,
         "edit.js",
         makeApi(),
@@ -62,13 +62,13 @@ describe("ExecuteScript.run", () => {
   });
 
   it.each([
-    'await api.editNote("", []);',
-    'await api.editNote("note", [{ kind: "append", markdown: 7 }]);',
-    'await api.editNote("note", [{ kind: "replace", text: "a", with: "b", occurrence: -1 }]);',
-    'await api.editNote("note", [{ kind: "unknown" }]);',
-    'await api.createNote("", []);',
-    'await api.createNote("note", [{ kind: "replace", text: "a", with: "b" }]);',
-    'await api.createNote("note", [{ kind: "date", date: 7 }]);',
+    'await api.editRecord("", []);',
+    'await api.editRecord("note", [{ kind: "append", markdown: 7 }]);',
+    'await api.editRecord("note", [{ kind: "replace", text: "a", with: "b", occurrence: -1 }]);',
+    'await api.editRecord("note", [{ kind: "unknown" }]);',
+    'await api.createRecord("", []);',
+    'await api.createRecord("note", [{ kind: "replace", text: "a", with: "b" }]);',
+    'await api.createRecord("note", [{ kind: "date", date: 7 }]);',
   ])("rejects malformed arguments before calling the host: %s", async (source) => {
     const api = makeApi();
 
@@ -77,8 +77,8 @@ describe("ExecuteScript.run", () => {
     );
 
     expect(Result.isFailure(result)).toBe(true);
-    expect(api.editNote).not.toHaveBeenCalled();
-    expect(api.createNote).not.toHaveBeenCalled();
+    expect(api.editRecord).not.toHaveBeenCalled();
+    expect(api.createRecord).not.toHaveBeenCalled();
   });
 
   it("keeps output before a tagged script failure", async () => {
@@ -114,7 +114,7 @@ describe("ExecuteScript.run", () => {
     const started = Promise.withResolvers<void>();
     const controller = new AbortController();
     let cleanedUp = false;
-    api.editNote.mockImplementation((_id, _edits, signal) => {
+    api.editRecord.mockImplementation((_id, _edits, signal) => {
       return Effect.runPromise(
         Effect.sync(() => started.resolve()).pipe(
           Effect.andThen(Effect.never),
@@ -133,7 +133,7 @@ describe("ExecuteScript.run", () => {
     });
 
     const execution = Effect.runPromiseExit(
-      ExecuteScript.run('await api.editNote("note", []);', "edit.js", api),
+      ExecuteScript.run('await api.editRecord("note", []);', "edit.js", api),
       { signal: controller.signal },
     );
 
@@ -142,7 +142,7 @@ describe("ExecuteScript.run", () => {
     const result = await execution;
 
     expect(Exit.isFailure(result)).toBe(true);
-    expect(api.editNote.mock.calls[0]?.[2]?.aborted).toBe(true);
+    expect(api.editRecord.mock.calls[0]?.[2]?.aborted).toBe(true);
     expect(cleanedUp).toBe(true);
   });
 
@@ -151,7 +151,7 @@ describe("ExecuteScript.run", () => {
     async (ending) => {
       const api = makeApi();
       let cleanedUp = false;
-      api.editNote.mockImplementation((_id, _edits, signal) => {
+      api.editRecord.mockImplementation((_id, _edits, signal) => {
         return Effect.runPromise(
           Effect.never.pipe(
             Effect.onExit(() => {
@@ -169,14 +169,14 @@ describe("ExecuteScript.run", () => {
       });
 
       const result = await Effect.runPromise(
-        ExecuteScript.run(`api.editNote("note", []); ${ending}`, "edit.js", api).pipe(
+        ExecuteScript.run(`api.editRecord("note", []); ${ending}`, "edit.js", api).pipe(
           Effect.result,
         ),
       );
 
       expect(Result.isFailure(result)).toBe(ending !== "");
-      expect(api.editNote).toHaveBeenCalledOnce();
-      expect(api.editNote.mock.calls[0]?.[2]?.aborted).toBe(true);
+      expect(api.editRecord).toHaveBeenCalledOnce();
+      expect(api.editRecord.mock.calls[0]?.[2]?.aborted).toBe(true);
       expect(cleanedUp).toBe(true);
     },
   );
@@ -184,7 +184,7 @@ describe("ExecuteScript.run", () => {
 
 function makeApi() {
   return {
-    editNote: vi.fn<Api["editNote"]>(async () => undefined),
-    createNote: vi.fn<Api["createNote"]>(async (id) => id ?? "generated-id"),
+    editRecord: vi.fn<Api["editRecord"]>(async () => undefined),
+    createRecord: vi.fn<Api["createRecord"]>(async (id) => id ?? "generated-id"),
   };
 }

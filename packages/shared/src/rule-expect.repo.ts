@@ -3,14 +3,14 @@ import { Array, Context, Effect, Layer, type Stream } from "effect";
 import type * as Sqlite from "effect-qb/sqlite";
 import { DB } from "./db.service";
 import { Tables } from "./db.tables";
-import { NoteSchema } from "./note.schema";
+import { RecordSchema } from "./record.schema";
 
 export class Service extends Context.Service<Service>()("RuleExpectRepo.Service", {
   make: Effect.gen(function* () {
     const db = yield* DB.Service;
 
     const deleteForRule = Effect.fn("RuleExpectRepo.deleteForRule")(function* (opts: {
-      readonly ruleId: NoteSchema.Id;
+      readonly ruleId: RecordSchema.Id;
     }) {
       yield* db.execute(
         Query.delete(Tables.ruleExpects).pipe(

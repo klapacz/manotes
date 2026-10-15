@@ -7,7 +7,7 @@ export class PendingEvent extends Schema.Class<PendingEvent>("GraphSyncPendingEv
   id: Schema.NonEmptyString,
   streamRef: Schema.Uint8Array,
   // Opaque encrypted event-envelope bytes. The sync server stores and replays
-  // them without interpreting note content.
+  // them without interpreting record content.
   payload: Schema.Uint8Array,
   createdAt: Schema.DateTimeUtcFromString,
 }) {

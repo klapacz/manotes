@@ -3,9 +3,9 @@ import * as Y from "yjs";
 import { ySyncPluginKey } from "y-prosemirror";
 import * as EventRepo from "@manotes/shared/event.repo";
 import { Array, DateTime, Option } from "effect";
-import * as NoteSchema from "@manotes/shared/note.schema";
-import * as NoteRepo from "@manotes/shared/note.repo";
-import * as NoteCache from "./note-cache.service";
+import * as RecordSchema from "@manotes/shared/record.schema";
+import * as RecordRepo from "@manotes/shared/record.repo";
+import * as RecordCache from "./record-cache.service";
 import { streamDebounceNoDrop } from "./stream-debounce-no-drop";
 
 const REMOTE_ORIGIN = Symbol("remote");
@@ -22,17 +22,17 @@ class OutcomingUpdateCtx extends Data.Class<{
   origin: EditorUpdateOrigin;
 }> {}
 
-export type SetupInput = { noteId: string };
+export type SetupInput = { recordId: string };
 
 export class Service extends Context.Service<Service>()("EditorSyncService.Service", {
   make: Effect.gen(function* () {
     const eventRepo = yield* EventRepo.Service;
-    const noteRepo = yield* NoteRepo.Service;
-    const noteCache = yield* NoteCache.Service;
+    const recordRepo = yield* RecordRepo.Service;
+    const recordCache = yield* RecordCache.Service;
 
     const applyMaterializedYUpdate = Effect.fn("applyMaterializedYUpdate")(function* (
       doc: Y.Doc,
-      materializedYUpdate: NoteSchema.MaterializedYUpdate,
+      materializedYUpdate: RecordSchema.MaterializedYUpdate,
     ) {
       if (materializedYUpdate === null) return;
 
@@ -41,7 +41,7 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
 
     const applyIncomingUpdates = Effect.fn("applyIncomingUpdates")(function* (
       doc: Y.Doc,
-      noteId: string,
+      recordId: string,
       initialLastKnownLocalSeq: number,
     ) {
       let lastKnownLocalSeq = initialLastKnownLocalSeq;
@@ -49,8 +49,8 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
       while (true) {
         yield* Effect.logDebug("Last known localSeq:", lastKnownLocalSeq);
 
-        const reactiveStream = yield* eventRepo.streamUpdatesForNote({
-          noteId,
+        const reactiveStream = yield* eventRepo.streamUpdatesForRecord({
+          recordId,
           afterLocalSeq: lastKnownLocalSeq,
         });
 
@@ -76,7 +76,7 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
     });
 
     const persistChunk = Effect.fn("persistChunk")(function* (
-      noteId: string,
+      recordId: string,
       chunk: Chunk.NonEmptyChunk<OutcomingUpdateCtx>,
     ) {
       const allUpdateCtxs = Chunk.toArray(chunk);
@@ -94,13 +94,13 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
         payload: merged,
         createdAt: yield* DateTime.now,
         type: "update",
-        noteId: noteId,
+        recordId: recordId,
       });
     });
 
     const saveOutcomingUpdates = Effect.fn("saveOutcomingUpdates")(function* (
       doc: Y.Doc,
-      noteId: string,
+      recordId: string,
     ) {
       yield* Stream.callback<OutcomingUpdateCtx>((queue) => {
         return Effect.sync(() => {
@@ -118,9 +118,9 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
       }).pipe(
         Stream.filter((updateCtx) => updateCtx.origin !== REMOTE_ORIGIN),
         streamDebounceNoDrop("1 second", (remaining) => {
-          return persistChunk(noteId, remaining).pipe(Effect.orDie);
+          return persistChunk(recordId, remaining).pipe(Effect.orDie);
         }),
-        Stream.runForEach((chunk) => persistChunk(noteId, chunk)),
+        Stream.runForEach((chunk) => persistChunk(recordId, chunk)),
       );
     });
 
@@ -128,15 +128,15 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
       function* (doc: Y.Doc, input: SetupInput, ready: Deferred.Deferred<void>) {
         // The boot payload is read atomically once; events drive the doc afterwards.
         const initial = pipe(
-          yield* noteRepo.findBootById(input.noteId),
-          Option.getOrElse(NoteRepo.bootResultEmpty),
+          yield* recordRepo.findBootById(input.recordId),
+          Option.getOrElse(RecordRepo.bootResultEmpty),
         );
 
         // Prime the cache before the content applies (which mounts the
         // backlink node views): they resolve their labels instantly from the
         // seed and keep updating reactively. Boot never waits on label
         // queries.
-        yield* noteCache.prime(initial.backlinks);
+        yield* recordCache.prime(initial.backlinks);
 
         yield* Effect.all(
           [
@@ -144,14 +144,14 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
               yield* applyMaterializedYUpdate(doc, initial.record.materializedYUpdate);
               yield* Deferred.succeed(ready, void 0);
 
-              yield* applyIncomingUpdates(doc, input.noteId, initial.record.lastEventLocalSeq);
+              yield* applyIncomingUpdates(doc, input.recordId, initial.record.lastEventLocalSeq);
             }),
-            saveOutcomingUpdates(doc, input.noteId),
+            saveOutcomingUpdates(doc, input.recordId),
           ],
           { concurrency: "unbounded" },
         );
       },
-      (effect, _doc, input) => effect.pipe(Effect.annotateLogs({ noteId: input.noteId })),
+      (effect, _doc, input) => effect.pipe(Effect.annotateLogs({ recordId: input.recordId })),
     );
 
     return {
@@ -161,7 +161,7 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(
     Layer.provide(EventRepo.Service.layer),
-    Layer.provide(NoteRepo.Service.layer),
-    Layer.provide(NoteCache.Service.layer),
+    Layer.provide(RecordRepo.Service.layer),
+    Layer.provide(RecordCache.Service.layer),
   );
 }

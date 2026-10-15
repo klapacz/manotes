@@ -1,4 +1,4 @@
-import { NoteSchema } from "@manotes/shared/note.schema";
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { Deferred, Effect, Exit, Option, Scope, Stream, SubscriptionRef } from "effect";
 import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vite-plus/test";
@@ -6,7 +6,7 @@ import * as Y from "yjs";
 import * as EditorSyncService from "./editor-sync.service";
 import { LiveDoc } from "./live-doc.service";
 
-const recordId = NoteSchema.Id.make("record_id:shared");
+const recordId = RecordSchema.Id.make("record_id:shared");
 
 // The fake sync owns a long-lived session just like setupDoc, with controlled boot.
 describe("shared live docs", () => {
@@ -86,7 +86,7 @@ describe("shared live docs", () => {
         const first = yield* firstGraph.acquire({ recordId });
 
         const otherRecord = yield* firstGraph.acquire({
-          recordId: NoteSchema.Id.make("record_id:other"),
+          recordId: RecordSchema.Id.make("record_id:other"),
         });
 
         const otherGraph = yield* secondGraph.acquire({ recordId });

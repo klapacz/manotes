@@ -3,10 +3,10 @@ import { Effect, Option, Result, Schema } from "effect";
 import * as Y from "yjs";
 import { AttrsSchema } from "./attrs.schema";
 import { YSchema } from "./y-schema";
-import { NoteDoc } from "./note/doc";
+import { RecordDoc } from "./record/doc";
 
 function fixture() {
-  const { doc, attrs } = NoteDoc.make();
+  const { doc, attrs } = RecordDoc.make();
   const map = doc.getMap<unknown>("attrs");
 
   return { doc, map, attrs };
@@ -14,7 +14,7 @@ function fixture() {
 
 const example = (doc: Y.Doc, targets: AttrsSchema.TargetFilter | undefined) => {
   return Effect.gen(function* () {
-    const { attrs } = NoteDoc.fromDoc({ doc });
+    const { attrs } = RecordDoc.fromDoc({ doc });
 
     const prop = yield* attrs.pipe(
       YSchema.upsert("_tag", "prop"),
@@ -162,7 +162,7 @@ describe("YSchema bound selections", () => {
 
       const invalid: AttrsSchema.Filter = [
         Schema.TaggedStruct("cmp", { val: AttrsSchema.FilterCmp }).make({
-          val: [["prop", AttrsSchema.NoteId.make("priority")], "invalid", true],
+          val: [["prop", AttrsSchema.RecordId.make("priority")], "invalid", true],
         }),
       ];
 
@@ -179,7 +179,7 @@ describe("YSchema bound selections", () => {
   });
 
   it("separates target comparisons recursively from general filters", () => {
-    const id = AttrsSchema.NoteId.make("priority");
+    const id = AttrsSchema.RecordId.make("priority");
     const cmp = Schema.TaggedStruct("cmp", { val: AttrsSchema.FilterCmp });
     const and = Schema.TaggedStruct("and", { val: AttrsSchema.Filter });
     const or = Schema.TaggedStruct("or", { val: AttrsSchema.Filter });
@@ -245,21 +245,21 @@ describe("YSchema bound selections", () => {
       doc.getMap("attrs").set("props", map);
 
       const props = YSchema.make({
-        schema: Schema.Record(AttrsSchema.NoteId, AttrsSchema.PropVal),
+        schema: Schema.Record(AttrsSchema.RecordId, AttrsSchema.PropVal),
         map,
       });
 
       Effect.runSync(
         props.pipe(
           YSchema.set(
-            AttrsSchema.NoteId.make("priority"),
+            AttrsSchema.RecordId.make("priority"),
             AttrsSchema.PropVal.cases.text.make({ val: "High" }),
           ),
         ),
       );
       expect(
         Option.getOrThrow(
-          Effect.runSync(props.pipe(YSchema.find(AttrsSchema.NoteId.make("priority")))),
+          Effect.runSync(props.pipe(YSchema.find(AttrsSchema.RecordId.make("priority")))),
         ).value,
       ).toEqual(AttrsSchema.PropVal.cases.text.make({ val: "High" }));
       expect(
@@ -288,13 +288,13 @@ describe("YSchema bound selections", () => {
       const note = Effect.runSync(attrs.pipe(YSchema.set("_tag", "note")));
       const props = Effect.runSync(note.pipe(YSchema.upsertMap("props")));
       const high = AttrsSchema.PropVal.cases.text.make({ val: "High" });
-      Effect.runSync(props.pipe(YSchema.set({ id: AttrsSchema.NoteId.make("priority") }, high)));
+      Effect.runSync(props.pipe(YSchema.set({ id: AttrsSchema.RecordId.make("priority") }, high)));
 
       expect(map.get("props")).toBeInstanceOf(Y.Map);
       const snapshot = Effect.runSync(attrs.pipe(YSchema.toJSON));
 
       const decoded = AttrsSchema.Attrs.members[0].make({
-        props: { [AttrsSchema.NoteId.make("priority")]: high },
+        props: { [AttrsSchema.RecordId.make("priority")]: high },
       });
 
       expect(snapshot).toEqual(decoded);
@@ -322,8 +322,8 @@ describe("YSchema bound selections", () => {
 
   it("infers map variants inside unions and retains parent replacement guards", () => {
     const { doc, attrs } = fixture();
-    const ruleId = AttrsSchema.NoteId.make("rule_id:task");
-    const propId = AttrsSchema.NoteId.make("prop_id:priority");
+    const ruleId = AttrsSchema.RecordId.make("rule_id:task");
+    const propId = AttrsSchema.RecordId.make("prop_id:priority");
 
     try {
       const props = Effect.runSync(attrs.pipe(YSchema.upsertMap("props")));
@@ -431,14 +431,14 @@ describe("YSchema bound selections", () => {
       expect(
         Result.isFailure(
           Effect.runSync(
-            Effect.result(props.pipe(YSchema.find({ id: AttrsSchema.NoteId.make("broken") }))),
+            Effect.result(props.pipe(YSchema.find({ id: AttrsSchema.RecordId.make("broken") }))),
           ),
         ),
       ).toBe(true);
       Effect.runSync(
         props.pipe(
           YSchema.set(
-            { id: AttrsSchema.NoteId.make("broken") },
+            { id: AttrsSchema.RecordId.make("broken") },
             AttrsSchema.PropVal.cases.number.make({ val: 7 }),
           ),
         ),
@@ -473,7 +473,7 @@ describe("YSchema bound selections", () => {
       Effect.runSync(
         expects.pipe(
           YSchema.set(
-            { propId: AttrsSchema.NoteId.make("priority") },
+            { propId: AttrsSchema.RecordId.make("priority") },
             AttrsSchema.RuleExpectation.cases.required.make({}),
           ),
         ),
@@ -490,22 +490,21 @@ describe("YSchema bound selections", () => {
           rule_storage: AttrsSchema.RuleStorage.cases.top.make({}),
           rule_targets: [],
           rule_expects: {
-            [AttrsSchema.NoteId.make("priority")]: AttrsSchema.RuleExpectation.cases.required.make(
-              {},
-            ),
+            [AttrsSchema.RecordId.make("priority")]:
+              AttrsSchema.RuleExpectation.cases.required.make({}),
           },
         }),
       );
       const optional = AttrsSchema.RuleExpectation.cases.optional.make({});
       Effect.runSync(
-        expects.pipe(YSchema.set({ propId: AttrsSchema.NoteId.make("priority") }, optional)),
+        expects.pipe(YSchema.set({ propId: AttrsSchema.RecordId.make("priority") }, optional)),
       );
       expect(Effect.runSync(rule.pipe(YSchema.exportStrict))).toEqual(
         AttrsSchema.Attrs.members[3].make({
           props: {},
           rule_storage: AttrsSchema.RuleStorage.cases.top.make({}),
           rule_targets: [],
-          rule_expects: { [AttrsSchema.NoteId.make("priority")]: optional },
+          rule_expects: { [AttrsSchema.RecordId.make("priority")]: optional },
         }),
       );
       const mounted = map.get("rule_expects");
@@ -525,7 +524,7 @@ describe("YSchema bound selections", () => {
             Effect.result(
               expects.pipe(
                 YSchema.set(
-                  { propId: AttrsSchema.NoteId.make("priority") },
+                  { propId: AttrsSchema.RecordId.make("priority") },
                   AttrsSchema.RuleExpectation.cases.optional.make({}),
                 ),
               ),
@@ -551,7 +550,7 @@ describe("YSchema bound selections", () => {
       Effect.runSync(
         firstProps.pipe(
           YSchema.set(
-            { id: AttrsSchema.NoteId.make("priority") },
+            { id: AttrsSchema.RecordId.make("priority") },
             AttrsSchema.PropVal.cases.text.make({ val: "High" }),
           ),
         ),
@@ -559,7 +558,7 @@ describe("YSchema bound selections", () => {
       Effect.runSync(
         secondProps.pipe(
           YSchema.set(
-            { id: AttrsSchema.NoteId.make("archived") },
+            { id: AttrsSchema.RecordId.make("archived") },
             AttrsSchema.PropVal.cases.bool.make({ val: true }),
           ),
         ),
@@ -590,24 +589,24 @@ describe("YSchema bound selections", () => {
       const written = Effect.runSync(
         attrs.pipe(
           YSchema.upsertMap("props"),
-          Effect.flatMap(YSchema.set({ id: AttrsSchema.NoteId.make("foobar") }, value)),
+          Effect.flatMap(YSchema.set({ id: AttrsSchema.RecordId.make("foobar") }, value)),
         ),
       );
 
       expect(written.value).toEqual(value);
       expect(
         Option.getOrThrow(
-          Effect.runSync(written.pipe(YSchema.find({ id: AttrsSchema.NoteId.make("foobar") }))),
+          Effect.runSync(written.pipe(YSchema.find({ id: AttrsSchema.RecordId.make("foobar") }))),
         ).value,
       ).toEqual(value);
       expect(Effect.runSync(written.pipe(YSchema.toJSON))).toEqual({ foobar: value });
-      Effect.runSync(written.pipe(YSchema.clear({ id: AttrsSchema.NoteId.make("foobar") })));
+      Effect.runSync(written.pipe(YSchema.clear({ id: AttrsSchema.RecordId.make("foobar") })));
       expect(
-        Effect.runSync(written.pipe(YSchema.find({ id: AttrsSchema.NoteId.make("foobar") }))),
+        Effect.runSync(written.pipe(YSchema.find({ id: AttrsSchema.RecordId.make("foobar") }))),
       ).toEqual(Option.none());
       expect(Effect.runSync(attrs.pipe(YSchema.toJSON))).toEqual({ props: {} });
       // @ts-expect-error external callers can supply a malformed named key
-      const wrongKey = written.pipe(YSchema.set({ noteId: "foobar" }, value));
+      const wrongKey = written.pipe(YSchema.set({ recordId: "foobar" }, value));
       expect(Result.isFailure(Effect.runSync(Effect.result(wrongKey)))).toBe(true);
       expect(Effect.runSync(attrs.pipe(YSchema.toJSON))).toEqual({ props: {} });
     } finally {
@@ -741,7 +740,7 @@ function typeChecks(attrs: YSchema.Cursor<AttrsSchema.Attrs, typeof AttrsSchema.
   rule.pipe(YSchema.set("rule_targets", validTarget));
 
   const invalid = Schema.TaggedStruct("cmp", { val: AttrsSchema.FilterCmp }).make({
-    val: [["prop", AttrsSchema.NoteId.make("priority")], "invalid", true],
+    val: [["prop", AttrsSchema.RecordId.make("priority")], "invalid", true],
   });
 
   // @ts-expect-error invalid comparisons cannot be used as property targets
@@ -763,17 +762,17 @@ function typeChecks(attrs: YSchema.Cursor<AttrsSchema.Attrs, typeof AttrsSchema.
   const props = Effect.runSync(attrs.pipe(YSchema.upsertMap("props")));
 
   const group = Effect.runSync(
-    props.pipe(YSchema.upsertMap({ id: AttrsSchema.NoteId.make("rule_id:task") })),
+    props.pipe(YSchema.upsertMap({ id: AttrsSchema.RecordId.make("rule_id:task") })),
   );
 
   const values = Effect.runSync(group.pipe(YSchema.upsertMap("props")));
   // @ts-expect-error group values use propId, rather than the outer map's id argument
-  values.pipe(YSchema.set({ id: AttrsSchema.NoteId.make("priority") }, 7));
+  values.pipe(YSchema.set({ id: AttrsSchema.RecordId.make("priority") }, 7));
   // @ts-expect-error atomic prop values have no map-backed val
   group.pipe(YSchema.upsertMap("val"));
   props.pipe(
     YSchema.set(
-      { id: AttrsSchema.NoteId.make("priority") },
+      { id: AttrsSchema.RecordId.make("priority") },
       AttrsSchema.PropVal.cases.number.make({ val: 7 }),
     ),
   );
@@ -782,20 +781,20 @@ function typeChecks(attrs: YSchema.Cursor<AttrsSchema.Attrs, typeof AttrsSchema.
   // @ts-expect-error referenced values also require note IDs
   AttrsSchema.PropVal.cases.link.make({ val: "unbranded" });
   // @ts-expect-error a property entry must be a tagged PropVal
-  props.pipe(YSchema.set({ id: AttrsSchema.NoteId.make("priority") }, 7));
+  props.pipe(YSchema.set({ id: AttrsSchema.RecordId.make("priority") }, 7));
   // @ts-expect-error dictionary keys use their declared argument name
-  props.pipe(YSchema.find({ noteId: "priority" }));
+  props.pipe(YSchema.find({ recordId: "priority" }));
   // @ts-expect-error named dictionary keys cannot be positional strings
-  props.pipe(YSchema.find(AttrsSchema.NoteId.make("priority")));
+  props.pipe(YSchema.find(AttrsSchema.RecordId.make("priority")));
   // @ts-expect-error named keys accept only one argument
-  props.pipe(YSchema.clear({ id: AttrsSchema.NoteId.make("priority"), extra: "wrong" }));
+  props.pipe(YSchema.clear({ id: AttrsSchema.RecordId.make("priority"), extra: "wrong" }));
   // @ts-expect-error named keys are only supported for dictionary schemas
   YSchema.Map({ schema: Schema.Struct({ fixed: Schema.String }), key: "propId" });
   const loose = Effect.runSync(attrs.pipe(YSchema.exportLoose));
 
-  const priority = loose.props?.[AttrsSchema.NoteId.make("priority")];
+  const priority = loose.props?.[AttrsSchema.RecordId.make("priority")];
   const optionalNumber: number | undefined = priority?._tag === "number" ? priority.val : undefined;
-  const optionalParent: AttrsSchema.NoteId | undefined = loose.owned_parent;
+  const optionalParent: AttrsSchema.RecordId | undefined = loose.owned_parent;
 
   void optionalNumber;
   void optionalParent;

@@ -1,7 +1,7 @@
 import { prosemirrorJSONToYXmlFragment } from "y-prosemirror";
 import * as Y from "yjs";
 import type { UnknownNodeJSON } from "../node-json";
-import { NOTE_SCHEMA } from "./app-schema";
+import { RECORD_SCHEMA } from "./app-schema";
 import { getProsemirrorXmlFragment } from "./yjs";
 
 export function initializeDocument(opts: {
@@ -9,7 +9,7 @@ export function initializeDocument(opts: {
   readonly content: readonly UnknownNodeJSON[];
 }): void {
   prosemirrorJSONToYXmlFragment(
-    NOTE_SCHEMA,
+    RECORD_SCHEMA,
     { type: "doc", content: opts.content },
     getProsemirrorXmlFragment(opts.doc),
   );

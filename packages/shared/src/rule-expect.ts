@@ -2,14 +2,14 @@ import { Array, Predicate, Record, Reducer } from "effect";
 import { AttrsSchema } from "./attrs.schema";
 
 export type Expect = {
-  readonly propId: AttrsSchema.NoteId;
-  readonly ruleId: AttrsSchema.NoteId;
+  readonly propId: AttrsSchema.RecordId;
+  readonly ruleId: AttrsSchema.RecordId;
   readonly expectation: AttrsSchema.RuleExpectation;
 };
 
 export function reduceExpects(
   expects: readonly Expect[],
-): Readonly<Record<AttrsSchema.NoteId, AttrsSchema.RuleExpectation>> {
+): Readonly<Record<AttrsSchema.RecordId, AttrsSchema.RuleExpectation>> {
   return createReducer().combineAll(
     Array.map(expects, (expect) => Record.singleton(expect.propId, expect.expectation)),
   );
@@ -24,7 +24,7 @@ const ExpectationReducer = Reducer.make<AttrsSchema.RuleExpectation>((left, righ
 
 export function createReducer() {
   // Each reduction owns its empty record, which may later be adopted by a mutable UI store.
-  return Record.makeReducerUnion<AttrsSchema.NoteId, AttrsSchema.RuleExpectation>(
+  return Record.makeReducerUnion<AttrsSchema.RecordId, AttrsSchema.RuleExpectation>(
     ExpectationReducer,
   );
 }

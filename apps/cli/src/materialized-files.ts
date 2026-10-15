@@ -1,8 +1,8 @@
 import path from "node:path";
 import { DateTime, Effect, FileSystem } from "effect";
-import { NOTE_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
-import * as NoteRepo from "@manotes/shared/note.repo";
-import type { NoteSchema } from "@manotes/shared/note.schema";
+import { RECORD_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
+import * as RecordRepo from "@manotes/shared/record.repo";
+import type { RecordSchema } from "@manotes/shared/record.schema";
 import { CliPaths } from "./cli.paths";
 import { MdSerialize } from "@manotes/shared/prosemirror/md/serialize";
 import { BacklinkLabels } from "./backlink-labels";
@@ -14,15 +14,15 @@ import { BacklinkLabels } from "./backlink-labels";
 export const writeAll = Effect.fn("MaterializedFiles.writeAll")(function* () {
   const workspacePaths = yield* CliPaths.Service;
   const fs = yield* FileSystem.FileSystem;
-  const noteRepo = yield* NoteRepo.Service;
+  const recordRepo = yield* RecordRepo.Service;
 
-  const records = yield* noteRepo.findAllRecords();
+  const records = yield* recordRepo.findAllNotes();
   const cache = BacklinkLabels.buildCache(records);
 
   yield* Effect.forEach(
     records,
     Effect.fnUntraced(function* (record) {
-      const doc = NOTE_SCHEMA.nodeFromJSON(record.content);
+      const doc = RECORD_SCHEMA.nodeFromJSON(record.content);
       const body = MdSerialize.serialize(doc, { backlinkLabel: (id) => cache.get(id) });
       const content = formatFile(record, body);
 
@@ -35,7 +35,7 @@ export const writeAll = Effect.fn("MaterializedFiles.writeAll")(function* () {
 });
 
 // Metadata belongs to the exported file, not the editable ProseMirror body.
-function formatFile(record: Pick<NoteSchema.Record, "date" | "updatedAt">, body: string): string {
+function formatFile(record: Pick<RecordSchema.Record, "date" | "updatedAt">, body: string): string {
   return `---\ndate: "${record.date}"\nmodified: "${DateTime.formatIso(record.updatedAt)}"\n---\n\n${body}`;
 }
 

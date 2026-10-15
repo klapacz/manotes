@@ -13,18 +13,18 @@ const DISPLAY_FORMAT = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
-export function parseDate(noteId: string): Temporal.PlainDate | null {
+export function parseDate(recordId: string): Temporal.PlainDate | null {
   try {
-    return Temporal.PlainDate.from(noteId, { overflow: "reject" });
+    return Temporal.PlainDate.from(recordId, { overflow: "reject" });
   } catch {
     return null;
   }
 }
 
-export function formatDate(noteId: string): string {
-  const date = parseDate(noteId);
+export function formatDate(recordId: string): string {
+  const date = parseDate(recordId);
 
-  if (!date) return noteId;
+  if (!date) return recordId;
 
   // Construct in local time to avoid UTC day-shift around timezone boundaries.
   return DISPLAY_FORMAT.format(new Date(date.year, date.month - 1, date.day));

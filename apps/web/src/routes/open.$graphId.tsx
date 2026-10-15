@@ -4,11 +4,11 @@ import { GraphDestination } from "../lib/graph-access/graph-runtime/destination"
 import * as LocalRegistry from "../lib/graph-access/local-registry";
 import * as GraphAccessRuntime from "../lib/graph-access/runtime";
 import * as SessionService from "../lib/graph-access/session/service";
-import { NoteSearch } from "@manotes/shared/note/search";
+import { RecordSearch } from "@manotes/shared/record/search";
 
 export const Route = createFileRoute("/open/$graphId")({
   component: () => null,
-  validateSearch: NoteSearch.Schema.pipe(Schema.toStandardSchemaV1),
+  validateSearch: RecordSearch.Schema.pipe(Schema.toStandardSchemaV1),
   loaderDeps: ({ search }) => ({ panes: search.panes }),
   loader: async ({ params, deps }) => {
     const graph = await GraphAccessRuntime.rt.runPromise(
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/open/$graphId")({
     throw redirect(
       GraphDestination.linkOptions(
         graph.value.localGraphId,
-        GraphDestination.Destination.cases.notes.make({ panes: deps.panes }),
+        GraphDestination.Destination.cases.records.make({ panes: deps.panes }),
       ),
     );
   },

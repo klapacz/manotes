@@ -87,7 +87,7 @@ const installReactivityHooks = Effect.fn("CliDB.installReactivityHooks")(functio
 });
 
 const REACTIVE_TABLES = [
-  "notes",
+  "records",
   "props",
   "rule_expects",
   "events",

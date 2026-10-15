@@ -1,5 +1,5 @@
 export {
-  notes,
+  records,
   props,
   ruleExpects,
   events,

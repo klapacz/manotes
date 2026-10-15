@@ -238,7 +238,7 @@ const becomeLeader = Effect.fn("GraphWorkerClient.becomeLeader")(function* (
       const dedicatedWorkerPort = yield* createDedicatedWorker(config);
 
       // Sends the dedicated worker's port2 to the SharedWorker via RPC.
-      // Note: with the current SharedWorker implementation, attach failures can
+      // Record: with the current SharedWorker implementation, attach failures can
       // be logged and reflected in health state there without surfacing back to
       // this caller as an RPC failure, so the leader may not retry on them.
       yield* sharedClient.updateMessagePort({ port: dedicatedWorkerPort });

@@ -1,4 +1,4 @@
-import type { NoteSchema } from "@manotes/shared/note.schema";
+import type { RecordSchema } from "@manotes/shared/record.schema";
 import { RuleProps } from "@manotes/shared/rule-props";
 import { Stream } from "effect";
 import { Atom } from "effect/reactivity";
@@ -7,7 +7,7 @@ import { LiveDoc } from "./live-doc.service";
 import { bindRt } from "./rt-atom";
 
 export const byRecord = bindRt((rt) => {
-  return Atom.family((recordId: NoteSchema.Id) => {
+  return Atom.family((recordId: RecordSchema.Id) => {
     // Resolve graph context while selecting the atom, before its stream runs.
     const doc = LiveDocAtom.byRecord()(recordId);
 

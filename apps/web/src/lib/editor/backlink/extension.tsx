@@ -8,11 +8,11 @@ import {
   type SolidNodeViewProps,
 } from "prosekit/solid";
 import { createEffect, createMemo, type JSX } from "solid-js";
-import * as NoteCache from "../../note-cache.service";
+import * as RecordCache from "../../record-cache.service";
 import { bindRt, createAtomStore, createSyncedAtom } from "../..";
 import { decodeBacklinkAttrs, type BacklinkAttrs } from "@manotes/shared/editor/backlink/spec";
-import { NoteFormat } from "../../note";
-import { NoteLink } from "../../note/link-component";
+import { RecordFormat } from "../../record";
+import { RecordLink } from "../../record/link-component";
 
 export type { BacklinkAttrs };
 
@@ -31,20 +31,20 @@ const BacklinkLabelEntry = Data.taggedEnum<BacklinkLabelEntry>();
 function createBacklinkView(labelSnapshot: Map<string, string>) {
   return function BacklinkView(props: SolidNodeViewProps): JSX.Element {
     const attrs = createMemo(() => decodeBacklinkAttrs(props.node.attrs));
-    const noteId = () => attrs().id;
-    const noteIdAtom = createSyncedAtom(noteId);
+    const recordId = () => attrs().id;
+    const recordIdAtom = createSyncedAtom(recordId);
 
     const state = createAtomStore(
       bindRt((rt) => {
         return rt.atom((get) => {
-          const noteId = get(noteIdAtom);
+          const recordId = get(recordIdAtom);
 
-          return NoteCache.Service.use((cache) => cache.changes(noteId)).pipe(
+          return RecordCache.Service.use((cache) => cache.changes(recordId)).pipe(
             Stream.unwrap,
             Stream.map(
               Option.match({
-                onSome: (note): BacklinkLabelEntry => {
-                  return BacklinkLabelEntry.Resolved({ title: NoteFormat.label(note) });
+                onSome: (record): BacklinkLabelEntry => {
+                  return BacklinkLabelEntry.Resolved({ title: RecordFormat.label(record) });
                 },
                 onNone: BacklinkLabelEntry.Missing,
               }),
@@ -57,28 +57,28 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
 
     createEffect(() => {
       BacklinkLabelEntry.$match({
-        Loading: () => labelSnapshot.delete(noteId()),
-        Resolved: ({ title }) => labelSnapshot.set(noteId(), title),
-        Missing: () => labelSnapshot.delete(noteId()),
+        Loading: () => labelSnapshot.delete(recordId()),
+        Resolved: ({ title }) => labelSnapshot.set(recordId(), title),
+        Missing: () => labelSnapshot.delete(recordId()),
       })(state.value);
     });
 
     const label = BacklinkLabelEntry.$match({
       Resolved: ({ title }) => title,
-      Missing: () => "[unavailable note]",
+      Missing: () => "[unavailable record]",
       Loading: () => "",
     });
 
     return (
-      <NoteLink
-        id={noteId()}
+      <RecordLink
+        id={recordId()}
         data-backlink=""
         data-backlink-state={state.value._tag}
-        data-backlink-id={noteId()}
+        data-backlink-id={recordId()}
         contentEditable={false}
       >
         {label(state.value)}
-      </NoteLink>
+      </RecordLink>
     );
   } satisfies SolidNodeViewComponent;
 }

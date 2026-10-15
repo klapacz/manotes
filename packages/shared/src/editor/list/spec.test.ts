@@ -1,13 +1,13 @@
 import { EditorState, TextSelection } from "prosekit/pm/state";
 import { enterCommand } from "prosemirror-flat-list";
 import { describe, expect, it } from "vite-plus/test";
-import { NOTE_SCHEMA } from "../../prosemirror/app-schema";
+import { RECORD_SCHEMA } from "../../prosemirror/app-schema";
 
 describe("list item creation", () => {
   it.each(["task", "toggle", "ordered"])("preserves %s kind on Enter", (kind) => {
-    const paragraph = NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("item"));
-    const list = NOTE_SCHEMA.node("list", { kind, checked: true }, [paragraph]);
-    const doc = NOTE_SCHEMA.node("doc", null, [list]);
+    const paragraph = RECORD_SCHEMA.node("paragraph", null, RECORD_SCHEMA.text("item"));
+    const list = RECORD_SCHEMA.node("list", { kind, checked: true }, [paragraph]);
+    const doc = RECORD_SCHEMA.node("doc", null, [list]);
 
     for (const position of [2, 4, 6]) {
       let state = EditorState.create({

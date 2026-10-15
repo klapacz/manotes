@@ -7,7 +7,7 @@ import { Effect, Layer, Option, Stream, SubscriptionRef } from "effect";
 import { Atom, AtomRegistry } from "effect/reactivity";
 import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
-import { NotePropsEntries } from "../components/note/note-props.entries";
+import { RecordPropsEntries } from "../components/record/record-props.entries";
 import { LiveDoc } from "./live-doc.service";
 import { LivePropsAtom } from "./live-props.atom";
 
@@ -27,9 +27,9 @@ vi.mock("@manotes/shared/rule-props", async (importOriginal) => {
   };
 });
 
-const recordId = AttrsSchema.NoteId.make("record_id:shared");
+const recordId = AttrsSchema.RecordId.make("record_id:shared");
 
-const propId = AttrsSchema.NoteId.make("prop_id:priority");
+const propId = AttrsSchema.RecordId.make("prop_id:priority");
 
 const def = PropRecordRepo.Defs.number.make({
   id: propId,
@@ -113,7 +113,7 @@ describe("shared live props atom", () => {
         expect(yield* AtomRegistry.getResult(registry, surface)).toEqual(snapshot(1));
         expect(subscriptions).toBe(1);
 
-        const menu = NotePropsEntries.byRecord()(recordId);
+        const menu = RecordPropsEntries.byRecord()(recordId);
         const unmountMenu = registry.mount(menu);
         expect((yield* AtomRegistry.getResult(registry, menu)).top).toEqual(snapshot(1).groups.top);
         expect(subscriptions).toBe(1);

@@ -6,7 +6,7 @@ Manotes uses Effect Query Builder 0.24.1 with Effect 4.0.3 for SQLite queries. T
 
 Shared tables live in `packages/shared/src/db.tables.ts`; web-only tables live in `apps/web/src/lib/db.tables.ts`. Export table-derived row types immediately below each table. Keep storage codecs on columns so ordinary queries return domain values, including `DateTime.Utc` dates and parsed JSON. Do not add another row schema to repeat those column definitions.
 
-Keep schemas for separate contracts and domain checks: Yjs documents, saved filters, sync/backup formats, event payloads, reserved `builtin:` event targets, and property definitions whose defaults must match their type. `NoteSchema.Content` supplies an editor-owned TypeScript type without validating the editor structure; its JSON column still parses and stringifies JSON.
+Keep schemas for separate contracts and domain checks: Yjs documents, saved filters, sync/backup formats, event payloads, reserved `builtin:` event targets, and property definitions whose defaults must match their type. `RecordSchema.Content` supplies an editor-owned TypeScript type without validating the editor structure; its JSON column still parses and stringifies JSON.
 
 Use `DB.Service` for query execution and transactions. Single inserts and updates bind domain values through QB's column codecs. For bulk inserts, use `Query.from(DB.values(table, rows))`; the helper reuses insert bindings for dates, JSON and BLOBs. It accepts one row or a nonempty batch whose rows supply the same columns. Undefined mutation fields are omitted. An empty update fails instead of becoming a silent no-op.
 
@@ -33,17 +33,17 @@ const rules = Effect.gen(function* () {
     value: Tables.ruleExpects.value,
   }).pipe(
     Query.from(Tables.ruleExpects),
-    Query.where(Query.eq(Tables.ruleExpects.ruleId, Tables.notes.id)),
+    Query.where(Query.eq(Tables.ruleExpects.ruleId, Tables.records.id)),
     Query.where(Query.isNotNull(Tables.ruleExpects.value)),
     Query.orderBy(Tables.ruleExpects.propId),
   );
 
   return yield* db.query(
     Query.select({
-      id: Tables.notes.id,
+      id: Tables.records.id,
       expects: db.jsonArrayFrom(expectations),
       first: db.jsonObjectFrom(expectations.pipe(Query.limit(1))),
-    }).pipe(Query.from(Tables.notes)),
+    }).pipe(Query.from(Tables.records)),
   );
 });
 ```

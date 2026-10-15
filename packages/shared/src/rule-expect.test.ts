@@ -2,13 +2,13 @@ import { describe, expect, it } from "vite-plus/test";
 import { AttrsSchema } from "./attrs.schema";
 import { RuleExpect } from "./rule-expect";
 
-const priority = AttrsSchema.NoteId.make("prop_id:priority");
+const priority = AttrsSchema.RecordId.make("prop_id:priority");
 
-const cycle = AttrsSchema.NoteId.make("prop_id:cycle");
+const cycle = AttrsSchema.RecordId.make("prop_id:cycle");
 
-const task = AttrsSchema.NoteId.make("rule_id:task");
+const task = AttrsSchema.RecordId.make("rule_id:task");
 
-const important = AttrsSchema.NoteId.make("rule_id:important");
+const important = AttrsSchema.RecordId.make("rule_id:important");
 
 const required = AttrsSchema.RuleExpectation.cases.required.make({});
 

@@ -2,7 +2,7 @@ import { Data, Effect, Match, Option, Record, Result, Stream, type Types, pipe }
 import type * as Y from "yjs";
 import { AttrsSchema } from "./attrs.schema";
 import { Attrs } from "./attrs.service";
-import { NoteSchema } from "./note.schema";
+import { RecordSchema } from "./record.schema";
 import { PropDef } from "./prop-def.service";
 import { PropRecordRepo } from "./prop-record.repo";
 import { RuleExpect } from "./rule-expect";
@@ -20,18 +20,18 @@ export type GroupStatus = Data.TaggedEnum<{
 export const GroupStatus = Data.taggedEnum<GroupStatus>();
 
 export type Prop = {
-  readonly propId: NoteSchema.Id;
+  readonly propId: RecordSchema.Id;
   readonly def: Option.Option<PropRecordRepo.Def>;
   readonly expectation: Option.Option<AttrsSchema.RuleExpectation>;
   readonly value: Attrs.ValueState<AttrsSchema.PropVal>;
 };
 
 export type EditorGroup = Data.TaggedEnum<{
-  Top: { readonly props: Readonly<Record<NoteSchema.Id, Prop>> };
+  Top: { readonly props: Readonly<Record<RecordSchema.Id, Prop>> };
   Rule: {
-    readonly ruleId: NoteSchema.Id;
+    readonly ruleId: RecordSchema.Id;
     readonly status: GroupStatus;
-    readonly props: Readonly<Record<NoteSchema.Id, Prop>>;
+    readonly props: Readonly<Record<RecordSchema.Id, Prop>>;
   };
 }>;
 
@@ -39,26 +39,26 @@ export const EditorGroup = Data.taggedEnum<EditorGroup>();
 
 export type EditorGroups = {
   readonly top: Types.ExtractTag<EditorGroup, "Top">;
-  readonly groups: Readonly<Record<NoteSchema.Id, Types.ExtractTag<EditorGroup, "Rule">>>;
+  readonly groups: Readonly<Record<RecordSchema.Id, Types.ExtractTag<EditorGroup, "Rule">>>;
 };
 
 type Expected = ReturnType<typeof RuleExpect.reduceExpects>;
 
-type SavedProps = Readonly<Record<NoteSchema.Id, Attrs.ValueState<AttrsSchema.PropVal>>>;
+type SavedProps = Readonly<Record<RecordSchema.Id, Attrs.ValueState<AttrsSchema.PropVal>>>;
 
 export type Saved = {
   readonly top: SavedProps;
-  readonly groups: Readonly<Record<NoteSchema.Id, SavedProps>>;
+  readonly groups: Readonly<Record<RecordSchema.Id, SavedProps>>;
 };
 
 export type Expectations = {
   readonly top: Expected;
   readonly groups: Readonly<
-    Record<NoteSchema.Id, { readonly status: GroupStatus; readonly expects: Expected }>
+    Record<RecordSchema.Id, { readonly status: GroupStatus; readonly expects: Expected }>
   >;
 };
 
-export function watch(opts: { readonly recordId: NoteSchema.Id; readonly doc: Y.Doc }) {
+export function watch(opts: { readonly recordId: RecordSchema.Id; readonly doc: Y.Doc }) {
   return Stream.unwrap(
     Effect.gen(function* () {
       const attrs = yield* Attrs.Service;
@@ -81,7 +81,7 @@ export function watch(opts: { readonly recordId: NoteSchema.Id; readonly doc: Y.
   );
 }
 
-export function collectExpectations(rules: Readonly<Record<NoteSchema.Id, RuleMatches.Rule>>) {
+export function collectExpectations(rules: Readonly<Record<RecordSchema.Id, RuleMatches.Rule>>) {
   const [matching, unmatched] = Record.partition(rules, (rule) => {
     return Match.value(rule.status).pipe(
       Match.tag("Matching", () => Result.succeed(rule)),
@@ -178,10 +178,10 @@ export function isRequired(prop: Prop) {
 }
 
 function reconcileRuleGroup(opts: {
-  readonly ruleId: NoteSchema.Id;
+  readonly ruleId: RecordSchema.Id;
   readonly saved: SavedProps;
   readonly defs: Attrs.Defs;
-  readonly expectation: Option.Option<Expectations["groups"][NoteSchema.Id]>;
+  readonly expectation: Option.Option<Expectations["groups"][RecordSchema.Id]>;
 }) {
   const { status, expects } = opts.expectation.pipe(
     Option.match({

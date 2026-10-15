@@ -1,16 +1,16 @@
 import { Effect, Record, Schema } from "effect";
-import { NoteSchema } from "./note.schema";
+import { RecordSchema } from "./record.schema";
 import { PlainDateString } from "./temporal.schema";
 import { YSchema } from "./y-schema";
 
 /*
- * Note identities
+ * Record identities
  *
- * Reuse the shared note ID before defining values that refer to notes.
+ * Reuse the shared record ID before defining values that refer to records.
  */
-export const NoteId = NoteSchema.Id;
+export const RecordId = RecordSchema.Id;
 
-export type NoteId = typeof NoteId.Type;
+export type RecordId = typeof RecordId.Type;
 
 /*
  * Property values
@@ -21,8 +21,8 @@ export const PropVal = Schema.TaggedUnion({
   text: { val: Schema.String },
   number: { val: Schema.Finite },
   bool: { val: Schema.Boolean },
-  enum: { val: NoteId },
-  link: { val: NoteId },
+  enum: { val: RecordId },
+  link: { val: RecordId },
 });
 
 export type PropVal = typeof PropVal.Type;
@@ -36,7 +36,7 @@ export type PropValTag = PropVal["_tag"];
  *
  * Shared fields and record tags must exist before filters can compare them.
  */
-export const PropValues = YSchema.Map({ schema: Schema.Record(NoteId, PropVal), key: "propId" });
+export const PropValues = YSchema.Map({ schema: Schema.Record(RecordId, PropVal), key: "propId" });
 
 export const PropGroup = YSchema.Map(
   Schema.TaggedStruct("group", {
@@ -48,7 +48,7 @@ export type PropGroup = typeof PropGroup.Type;
 
 // Scalar entries use property IDs; groups use rule IDs. Groups contain scalar values only.
 export const Props = YSchema.Map({
-  schema: Schema.Record(NoteId, Schema.Union([PropVal, PropGroup])),
+  schema: Schema.Record(RecordId, Schema.Union([PropVal, PropGroup])),
   key: "id",
 });
 
@@ -77,17 +77,17 @@ export type RecordTag = typeof RecordTag.Type;
  *
  * Filters depend on IDs, value cases and record tags. Definitions and rules use them below.
  */
-const PropTarget = Schema.Tuple([Schema.Literal("prop"), NoteId]);
+const PropTarget = Schema.Tuple([Schema.Literal("prop"), RecordId]);
 
 export const TargetFilterCmp = Schema.Union([
   Schema.Tuple([Schema.Literal("_tag"), Schema.Literal("="), RecordTag]),
   Schema.Tuple([Schema.Literal("owned_type"), Schema.Literal("="), Schema.Literal("enum_option")]),
-  Schema.Tuple([Schema.Literal("owned_parent"), Schema.Literal("="), NoteId]),
+  Schema.Tuple([Schema.Literal("owned_parent"), Schema.Literal("="), RecordId]),
   Schema.Tuple([Schema.Literal("title"), Schema.Literal("exists"), Schema.Boolean]),
   Schema.Tuple([Schema.Literal("body"), Schema.Literal("contains"), Schema.String]),
   Schema.Tuple([Schema.Literal("date"), Schema.Literal("="), PlainDateString]),
   Schema.Tuple([
-    Schema.Tuple([Schema.Literal("link"), Schema.Literals(["->", "<-"]), NoteId]),
+    Schema.Tuple([Schema.Literal("link"), Schema.Literals(["->", "<-"]), RecordId]),
     Schema.Literal("exists"),
     Schema.Literal(true),
   ]),
@@ -185,7 +185,7 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *
  * Compose the complete record schema after all field schemas have been defined.
  *
- * Resolved decoded schema. Missing shared fields default to note and an empty
+ * Resolved decoded schema. Missing shared fields default to record and an empty
  * props map during decoding only; malformed fields remain invalid and Yjs is untouched.
  *
  * ```ts
@@ -193,14 +193,14 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *   | { readonly _tag: "text"; readonly val: string }
  *   | { readonly _tag: "number"; readonly val: number }
  *   | { readonly _tag: "bool"; readonly val: boolean }
- *   | { readonly _tag: "enum"; readonly val: NoteId }
- *   | { readonly _tag: "link"; readonly val: NoteId };
+ *   | { readonly _tag: "enum"; readonly val: RecordId }
+ *   | { readonly _tag: "link"; readonly val: RecordId };
  *
  * type PropGroup = {
  *   readonly _tag: "group";
- *   readonly props: Readonly<Record<NoteId, PropVal>>; // Y.Map in live Yjs.
+ *   readonly props: Readonly<Record<RecordId, PropVal>>; // Y.Map in live Yjs.
  * };
- * type Props = Readonly<Record<NoteId, PropVal | PropGroup>>;
+ * type Props = Readonly<Record<RecordId, PropVal | PropGroup>>;
  *
  * type Attrs =
  *   | {
@@ -232,14 +232,14 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *   | {
  *       readonly _tag: "prop";
  *       readonly prop_type: "enum";
- *       readonly prop_default?: { readonly _tag: "enum"; readonly val: NoteId };
+ *       readonly prop_default?: { readonly _tag: "enum"; readonly val: RecordId };
  *       // Shared
  *       readonly props: Props; // Y.Map; scalar entries are atomic JSON, groups are nested Y.Maps.
  *     }
  *   | {
  *       readonly _tag: "prop";
  *       readonly prop_type: "link";
- *       readonly prop_default?: { readonly _tag: "link"; readonly val: NoteId };
+ *       readonly prop_default?: { readonly _tag: "link"; readonly val: RecordId };
  *       readonly prop_targets?: TargetFilter; // Atomic JSON; invalid predicates are forbidden.
  *       // Shared
  *       readonly props: Props; // Y.Map; scalar entries are atomic JSON, groups are nested Y.Maps.
@@ -247,7 +247,7 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *   | {
  *       readonly _tag: "owned";
  *       readonly owned_type: "enum_option";
- *       readonly owned_parent: NoteId;
+ *       readonly owned_parent: RecordId;
  *       // Shared
  *       readonly props: Props; // Y.Map; scalar entries are atomic JSON, groups are nested Y.Maps.
  *     }
@@ -255,7 +255,7 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *       readonly _tag: "rule";
  *       readonly rule_storage: { readonly _tag: "top" } | { readonly _tag: "group" }; // Atomic JSON.
  *       readonly rule_targets: TargetFilter; // Atomic JSON; invalid predicates are forbidden.
- *       readonly rule_expects: Readonly<Record<NoteId, // Y.Map in live Yjs; each entry is atomic JSON.
+ *       readonly rule_expects: Readonly<Record<RecordId, // Y.Map in live Yjs; each entry is atomic JSON.
  *         { readonly _tag: "required" } | { readonly _tag: "optional" }
  *       >>;
  *       // Shared
@@ -263,7 +263,7 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *     };
  * ```
  *
- * NoteId is the shared branded note ID; numeric values must be finite. Dates use
+ * RecordId is the shared branded record ID; numeric values must be finite. Dates use
  * PlainDateString. Target filters reject invalid predicates at every nesting level.
  */
 export const Attrs = Schema.Union([
@@ -275,13 +275,13 @@ export const Attrs = Schema.Union([
   Schema.Struct({
     ...records.cases.owned.fields,
     owned_type: Schema.Literal("enum_option"),
-    owned_parent: NoteId,
+    owned_parent: RecordId,
   }),
   Schema.Struct({
     ...records.cases.rule.fields,
     rule_storage: RuleStorage,
     rule_targets: TargetFilter,
-    rule_expects: YSchema.Map({ schema: Schema.Record(NoteId, RuleExpectation), key: "propId" }),
+    rule_expects: YSchema.Map({ schema: Schema.Record(RecordId, RuleExpectation), key: "propId" }),
   }),
 ]);
 

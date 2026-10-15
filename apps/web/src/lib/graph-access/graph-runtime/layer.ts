@@ -6,10 +6,10 @@ import * as GraphWorkerClient from "../../graph-worker.client";
 import * as MaterializationCheckpointRepo from "@manotes/shared/materialization-checkpoint.repo";
 import * as MaterializedEventService from "../../materialized-event.service";
 import * as BacklinkService from "@manotes/shared/materializer/backlink/service";
-import * as NoteCache from "../../note-cache.service";
-import * as NoteStreamCache from "../../note-stream-cache.service";
-import * as NoteRepo from "@manotes/shared/note.repo";
-import * as BrowserExtensionTabNoteService from "../../browser-extension/tab-note/service";
+import * as RecordCache from "../../record-cache.service";
+import * as RecordStreamCache from "../../record-stream-cache.service";
+import * as RecordRepo from "@manotes/shared/record.repo";
+import * as BrowserExtensionTabRecordService from "../../browser-extension/tab-record/service";
 import * as SessionService from "../session/service";
 import * as SyncSessionWatcher from "./sync-session-watcher";
 import * as Lock from "./lock";
@@ -40,17 +40,17 @@ export const makeLayer = (opts: SetupOpts) => {
 
       return Layer.mergeAll(
         EventRepo.Service.layer,
-        NoteRepo.Service.layer,
+        RecordRepo.Service.layer,
         Attrs.Service.layer,
         PropDef.Service.layer,
         EnumOptionRepo.Service.layer,
         RuleRecord.Service.layer,
         BacklinkService.Service.layer,
-        NoteCache.Service.layer,
-        NoteStreamCache.Service.layer,
+        RecordCache.Service.layer,
+        RecordStreamCache.Service.layer,
         MaterializationCheckpointRepo.Service.layer,
         MaterializedEventService.Service.layer,
-        BrowserExtensionTabNoteService.Service.layer,
+        BrowserExtensionTabRecordService.Service.layer,
         LiveDoc.Service.layer,
         GraphWorkerClient.Service.layer,
         SyncSessionWatcher.Service.layer,

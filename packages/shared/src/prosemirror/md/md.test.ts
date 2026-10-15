@@ -1,44 +1,46 @@
-import { PaneSchema } from "../../note/pane.schema";
+import { PaneSchema } from "../../record/pane.schema";
 import dedent from "dedent";
 import { createEditor, union } from "prosekit/core";
 import { defineAppSchema } from "../../editor.schema";
 import { defineAppTableExtension } from "../../editor/table/spec";
 import { describe, expect, it } from "vite-plus/test";
-import { NOTE_SCHEMA } from "../app-schema";
+import { RECORD_SCHEMA } from "../app-schema";
 import { MdParse } from "./parse";
 import { MdSerialize } from "./serialize";
 import { decodeStreamRefAttrs, streamRefLabel } from "../../editor/stream-ref/spec";
 
 describe("app Markdown conversion", () => {
   it.each(["list", "blockquote"])("keeps code fences inside %s containers", (container) => {
-    const paragraph = (text: string) => NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text(text));
+    const paragraph = (text: string) => {
+      return RECORD_SCHEMA.node("paragraph", null, RECORD_SCHEMA.text(text));
+    };
 
-    const code = NOTE_SCHEMA.node(
+    const code = RECORD_SCHEMA.node(
       "codeBlock",
       { language: "ts" },
-      NOTE_SCHEMA.text("const n = 1;"),
+      RECORD_SCHEMA.text("const n = 1;"),
     );
 
     const content = [
       ...(container === "list" ? [paragraph("parent")] : []),
-      NOTE_SCHEMA.node(container, null, [code]),
-      NOTE_SCHEMA.node("list", null, [
-        NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.node("backlink", { id: "after-code" })),
+      RECORD_SCHEMA.node(container, null, [code]),
+      RECORD_SCHEMA.node("list", null, [
+        RECORD_SCHEMA.node("paragraph", null, RECORD_SCHEMA.node("backlink", { id: "after-code" })),
       ]),
     ];
 
-    const doc = NOTE_SCHEMA.node("doc", null, [NOTE_SCHEMA.node(container, null, content)]);
+    const doc = RECORD_SCHEMA.node("doc", null, [RECORD_SCHEMA.node(container, null, content)]);
 
     expect(MdParse.parse(MdSerialize.serialize(doc)).eq(doc)).toBe(true);
   });
 
   it.each([" ", "\t", " \t\n"])("preserves whitespace-only paragraphs: %j", (text) => {
-    const paragraph = NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text(text));
+    const paragraph = RECORD_SCHEMA.node("paragraph", null, RECORD_SCHEMA.text(text));
 
-    const doc = NOTE_SCHEMA.node("doc", null, [
+    const doc = RECORD_SCHEMA.node("doc", null, [
       paragraph,
-      NOTE_SCHEMA.node("list", null, [paragraph]),
-      NOTE_SCHEMA.node("blockquote", null, [paragraph]),
+      RECORD_SCHEMA.node("list", null, [paragraph]),
+      RECORD_SCHEMA.node("blockquote", null, [paragraph]),
     ]);
 
     expect(MdParse.parse(MdSerialize.serialize(doc)).eq(doc)).toBe(true);
@@ -111,18 +113,18 @@ describe("app Markdown conversion", () => {
     expect(doc.child(2).attrs.kind).toBe("toggle");
   });
 
-  it("maps relative note links to atoms and resolves display labels only on export", () => {
+  it("maps relative record links to atoms and resolves display labels only on export", () => {
     const doc = MdParse.parse(
-      "See [**Display**](./note%20%281%29.md) and [remote](https://example.com/note.md).",
+      "See [**Display**](./record%20%281%29.md) and [remote](https://example.com/record.md).",
     );
 
     const backlink = doc.firstChild!.child(1);
     expect(backlink.type.name).toBe("backlink");
-    expect(backlink.attrs.id).toBe("note (1)");
+    expect(backlink.attrs.id).toBe("record (1)");
     const output = MdSerialize.serialize(doc, { backlinkLabel: () => "A [label] *with* marks" });
-    expect(output).toContain("[A \\[label\\] \\*with\\* marks](./note%20%281%29.md)");
+    expect(output).toContain("[A \\[label\\] \\*with\\* marks](./record%20%281%29.md)");
     expect(MdParse.parse(output).toJSON()).toEqual(doc.toJSON());
-    expect(MdSerialize.serialize(doc)).toContain("[note (1)]");
+    expect(MdSerialize.serialize(doc)).toContain("[record (1)]");
   });
 
   it("preserves text and marks around adjacent backlinks", () => {
@@ -155,13 +157,13 @@ describe("app Markdown conversion", () => {
       view: "snippets",
     });
 
-    const doc = NOTE_SCHEMA.node(
+    const doc = RECORD_SCHEMA.node(
       "doc",
       null,
-      NOTE_SCHEMA.node("paragraph", null, [
-        NOTE_SCHEMA.text("See "),
-        NOTE_SCHEMA.node("streamRef", attrs),
-        NOTE_SCHEMA.text(" for more."),
+      RECORD_SCHEMA.node("paragraph", null, [
+        RECORD_SCHEMA.text("See "),
+        RECORD_SCHEMA.node("streamRef", attrs),
+        RECORD_SCHEMA.text(" for more."),
       ]),
     );
 
@@ -211,7 +213,7 @@ describe("app Markdown conversion", () => {
 
   it("does not mistake other relative links for backlinks", () => {
     const doc = MdParse.parse(
-      "[asset](./asset.png) [parent](../note.md) [fragment](./note.md#section)",
+      "[asset](./asset.png) [parent](../record.md) [fragment](./record.md#section)",
     );
 
     expect(doc.firstChild!.child(0).marks[0]!.type.name).toBe("link");
@@ -229,10 +231,10 @@ describe("app Markdown conversion", () => {
     ` +
       "\n\n";
 
-    const doc = NOTE_SCHEMA.node(
+    const doc = RECORD_SCHEMA.node(
       "doc",
       null,
-      NOTE_SCHEMA.node("codeBlock", { language: "ts" }, NOTE_SCHEMA.text(text)),
+      RECORD_SCHEMA.node("codeBlock", { language: "ts" }, RECORD_SCHEMA.text(text)),
     );
 
     expect(MdSerialize.serialize(doc)).toContain("`````ts");
@@ -267,19 +269,19 @@ describe("app Markdown conversion", () => {
   });
 
   it("preserves leading, trailing, consecutive, and nested empty paragraphs", () => {
-    const empty = NOTE_SCHEMA.node("paragraph");
-    const text = NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("text"));
+    const empty = RECORD_SCHEMA.node("paragraph");
+    const text = RECORD_SCHEMA.node("paragraph", null, RECORD_SCHEMA.text("text"));
 
-    const doc = NOTE_SCHEMA.node("doc", null, [
+    const doc = RECORD_SCHEMA.node("doc", null, [
       empty,
       empty,
       text,
       empty,
       empty,
-      NOTE_SCHEMA.node("blockquote", null, [empty, text, empty]),
-      NOTE_SCHEMA.node("list", { kind: "toggle" }, [empty, text, empty]),
-      NOTE_SCHEMA.node("list", { kind: "task", checked: true }, [empty, text, empty]),
-      NOTE_SCHEMA.node("list", { kind: "ordered", order: 1 }, [empty, text, empty]),
+      RECORD_SCHEMA.node("blockquote", null, [empty, text, empty]),
+      RECORD_SCHEMA.node("list", { kind: "toggle" }, [empty, text, empty]),
+      RECORD_SCHEMA.node("list", { kind: "task", checked: true }, [empty, text, empty]),
+      RECORD_SCHEMA.node("list", { kind: "ordered", order: 1 }, [empty, text, empty]),
       empty,
     ]);
 
@@ -292,33 +294,33 @@ describe("app Markdown conversion", () => {
       ).toBe(true);
     });
     expect(
-      MdParse.parse(MdSerialize.serialize(NOTE_SCHEMA.node("doc", null, [empty, empty])))
+      MdParse.parse(MdSerialize.serialize(RECORD_SCHEMA.node("doc", null, [empty, empty])))
         .childCount,
     ).toBe(2);
   });
 
   it("keeps the reserved marker literal in text, code, and table cells", () => {
     const marker = "<!-- manotes:empty-paragraph -->";
-    const paragraph = NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text(marker));
-    const code = NOTE_SCHEMA.node("codeBlock", null, NOTE_SCHEMA.text(marker));
-    const cell = (type: string) => NOTE_SCHEMA.node(type, null, paragraph);
+    const paragraph = RECORD_SCHEMA.node("paragraph", null, RECORD_SCHEMA.text(marker));
+    const code = RECORD_SCHEMA.node("codeBlock", null, RECORD_SCHEMA.text(marker));
+    const cell = (type: string) => RECORD_SCHEMA.node(type, null, paragraph);
 
-    const table = NOTE_SCHEMA.node("table", null, [
-      NOTE_SCHEMA.node("tableRow", null, cell("tableHeaderCell")),
-      NOTE_SCHEMA.node("tableRow", null, cell("tableCell")),
+    const table = RECORD_SCHEMA.node("table", null, [
+      RECORD_SCHEMA.node("tableRow", null, cell("tableHeaderCell")),
+      RECORD_SCHEMA.node("tableRow", null, cell("tableCell")),
     ]);
 
-    const doc = NOTE_SCHEMA.node("doc", null, [paragraph, code, table]);
+    const doc = RECORD_SCHEMA.node("doc", null, [paragraph, code, table]);
     const markdown = MdSerialize.serialize(doc);
     expect(markdown).toContain("\\<!-- manotes:empty-paragraph -->");
     expect(MdParse.parse(markdown).eq(doc)).toBe(true);
   });
 
   it("removes unsupported image and underline types and link browser attributes", () => {
-    expect(NOTE_SCHEMA.nodes.image).toBeUndefined();
-    expect(NOTE_SCHEMA.marks.underline).toBeUndefined();
+    expect(RECORD_SCHEMA.nodes.image).toBeUndefined();
+    expect(RECORD_SCHEMA.marks.underline).toBeUndefined();
     expect(
-      NOTE_SCHEMA.mark("link", { href: "https://example.com", target: "_blank", rel: "nofollow" })
+      RECORD_SCHEMA.mark("link", { href: "https://example.com", target: "_blank", rel: "nofollow" })
         .attrs,
     ).toEqual({ href: "https://example.com" });
     expect(() => MdParse.parse("![alt](image.png)")).toThrow(/image/);
@@ -329,7 +331,7 @@ describe("app Markdown conversion", () => {
     "| A | B | C |\n| :--- | :---: | ---: |\n| one | | three |",
     "| **bold** | *italic* |\n| --- | --- |\n| ~~strike~~ | `code` |",
     "| A | B |\n| --- | --- |\n| a\\|b | `c\\|d` |",
-    "| A | B |\n| --- | --- |\n| [note](./note.md) | [web](https://example.com) |",
+    "| A | B |\n| --- | --- |\n| [record](./record.md) | [web](https://example.com) |",
     "| Empty |\n| --- |",
     "> | A | B |\n> | --- | --- |\n> | one | two |",
     "- item\n\n  | A | B |\n  | --- | --- |\n  | one | two |",
@@ -341,23 +343,23 @@ describe("app Markdown conversion", () => {
   });
 
   it("round-trips an editor-created aligned table with a stream ref and records its block span", () => {
-    const cell = (type: string, content: ReturnType<typeof NOTE_SCHEMA.text>[]) => {
-      return NOTE_SCHEMA.node(
+    const cell = (type: string, content: ReturnType<typeof RECORD_SCHEMA.text>[]) => {
+      return RECORD_SCHEMA.node(
         type,
         { align: "center" },
-        NOTE_SCHEMA.node("paragraph", null, content),
+        RECORD_SCHEMA.node("paragraph", null, content),
       );
     };
 
-    const table = NOTE_SCHEMA.node("table", null, [
-      NOTE_SCHEMA.node("tableRow", null, cell("tableHeaderCell", [NOTE_SCHEMA.text("Header")])),
-      NOTE_SCHEMA.node(
+    const table = RECORD_SCHEMA.node("table", null, [
+      RECORD_SCHEMA.node("tableRow", null, cell("tableHeaderCell", [RECORD_SCHEMA.text("Header")])),
+      RECORD_SCHEMA.node(
         "tableRow",
         null,
         cell("tableCell", [
-          NOTE_SCHEMA.text("pipe |", [NOTE_SCHEMA.mark("bold")]),
-          NOTE_SCHEMA.text(" "),
-          NOTE_SCHEMA.node(
+          RECORD_SCHEMA.text("pipe |", [RECORD_SCHEMA.mark("bold")]),
+          RECORD_SCHEMA.text(" "),
+          RECORD_SCHEMA.node(
             "streamRef",
             decodeStreamRefAttrs({
               filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) },
@@ -367,8 +369,8 @@ describe("app Markdown conversion", () => {
       ),
     ]);
 
-    const doc = NOTE_SCHEMA.node("doc", null, [
-      NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("before")),
+    const doc = RECORD_SCHEMA.node("doc", null, [
+      RECORD_SCHEMA.node("paragraph", null, RECORD_SCHEMA.text("before")),
       table,
     ]);
 
@@ -449,14 +451,14 @@ describe("app Markdown conversion", () => {
   });
 
   it("rejects merged cells, multi-block cells, ragged rows, missing headers, and cell line breaks", () => {
-    const paragraph = NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("cell"));
-    const cell = NOTE_SCHEMA.node("tableCell", null, paragraph);
-    const header = NOTE_SCHEMA.node("tableHeaderCell", null, paragraph);
-    const row = (cells: (typeof cell)[]) => NOTE_SCHEMA.node("tableRow", null, cells);
+    const paragraph = RECORD_SCHEMA.node("paragraph", null, RECORD_SCHEMA.text("cell"));
+    const cell = RECORD_SCHEMA.node("tableCell", null, paragraph);
+    const header = RECORD_SCHEMA.node("tableHeaderCell", null, paragraph);
+    const row = (cells: (typeof cell)[]) => RECORD_SCHEMA.node("tableRow", null, cells);
 
     const exportRows = (rows: ReturnType<typeof row>[]) => {
       return MdSerialize.serialize(
-        NOTE_SCHEMA.node("doc", null, NOTE_SCHEMA.node("table", null, rows)),
+        RECORD_SCHEMA.node("doc", null, RECORD_SCHEMA.node("table", null, rows)),
       );
     };
 
@@ -465,23 +467,23 @@ describe("app Markdown conversion", () => {
     expect(() => {
       return exportRows([
         row([header]),
-        row([NOTE_SCHEMA.node("tableCell", { colspan: 2 }, paragraph)]),
+        row([RECORD_SCHEMA.node("tableCell", { colspan: 2 }, paragraph)]),
       ]);
     }).toThrow();
     expect(() => {
       return exportRows([
         row([header]),
-        row([NOTE_SCHEMA.node("tableCell", null, [paragraph, paragraph])]),
+        row([RECORD_SCHEMA.node("tableCell", null, [paragraph, paragraph])]),
       ]);
     }).toThrow();
 
-    const broken = NOTE_SCHEMA.node(
+    const broken = RECORD_SCHEMA.node(
       "tableCell",
       null,
-      NOTE_SCHEMA.node("paragraph", null, [
-        NOTE_SCHEMA.text("a"),
-        NOTE_SCHEMA.node("hardBreak"),
-        NOTE_SCHEMA.text("b"),
+      RECORD_SCHEMA.node("paragraph", null, [
+        RECORD_SCHEMA.text("a"),
+        RECORD_SCHEMA.node("hardBreak"),
+        RECORD_SCHEMA.text("b"),
       ]),
     );
 
@@ -502,7 +504,7 @@ describe("app Markdown conversion", () => {
 
   it("rejects an unsupported internal list kind at schema validation", () => {
     expect(() => {
-      return NOTE_SCHEMA.node("list", { kind: "bullet" }, NOTE_SCHEMA.node("paragraph"));
+      return RECORD_SCHEMA.node("list", { kind: "bullet" }, RECORD_SCHEMA.node("paragraph"));
     }).toThrow();
   });
 
@@ -528,15 +530,15 @@ describe("app Markdown conversion", () => {
   });
 
   it("overrides stored numbering on export without mutating the source", () => {
-    const paragraph = NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("item"));
-    const nested = NOTE_SCHEMA.node("list", { kind: "ordered", order: 9 }, paragraph);
+    const paragraph = RECORD_SCHEMA.node("paragraph", null, RECORD_SCHEMA.text("item"));
+    const nested = RECORD_SCHEMA.node("list", { kind: "ordered", order: 9 }, paragraph);
 
-    const doc = NOTE_SCHEMA.node("doc", null, [
-      NOTE_SCHEMA.node("list", { kind: "ordered", order: 3 }, [paragraph, nested]),
-      NOTE_SCHEMA.node("list", { kind: "ordered", order: 1 }, paragraph),
-      NOTE_SCHEMA.node("list", { kind: "ordered" }, paragraph),
+    const doc = RECORD_SCHEMA.node("doc", null, [
+      RECORD_SCHEMA.node("list", { kind: "ordered", order: 3 }, [paragraph, nested]),
+      RECORD_SCHEMA.node("list", { kind: "ordered", order: 1 }, paragraph),
+      RECORD_SCHEMA.node("list", { kind: "ordered" }, paragraph),
       paragraph,
-      NOTE_SCHEMA.node("list", { kind: "ordered", order: 42 }, paragraph),
+      RECORD_SCHEMA.node("list", { kind: "ordered", order: 42 }, paragraph),
     ]);
 
     const before = doc.toJSON();
@@ -557,33 +559,39 @@ describe("app Markdown conversion", () => {
   `,
   ])("rejects invalid code languages: %s", (language) => {
     expect(() => {
-      const code = NOTE_SCHEMA.node("codeBlock", { language }, NOTE_SCHEMA.text("code"));
-      MdSerialize.serialize(NOTE_SCHEMA.node("doc", null, code));
+      const code = RECORD_SCHEMA.node("codeBlock", { language }, RECORD_SCHEMA.text("code"));
+      MdSerialize.serialize(RECORD_SCHEMA.node("doc", null, code));
     }).toThrow(/language|string/);
   });
 
   it("rejects non-boolean task state and empty backlink ids", () => {
-    const task = NOTE_SCHEMA.node(
+    const task = RECORD_SCHEMA.node(
       "list",
       { kind: "task", checked: "false" },
-      NOTE_SCHEMA.node("paragraph"),
+      RECORD_SCHEMA.node("paragraph"),
     );
 
-    expect(() => MdSerialize.serialize(NOTE_SCHEMA.node("doc", null, task))).toThrow(/boolean/);
-    const paragraph = NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.node("backlink", { id: "" }));
-    expect(() => MdSerialize.serialize(NOTE_SCHEMA.node("doc", null, paragraph))).toThrow(
+    expect(() => MdSerialize.serialize(RECORD_SCHEMA.node("doc", null, task))).toThrow(/boolean/);
+
+    const paragraph = RECORD_SCHEMA.node(
+      "paragraph",
+      null,
+      RECORD_SCHEMA.node("backlink", { id: "" }),
+    );
+
+    expect(() => MdSerialize.serialize(RECORD_SCHEMA.node("doc", null, paragraph))).toThrow(
       /nonempty string/,
     );
   });
 
   it("normalizes collapse state without mutating the source document", () => {
-    const item = NOTE_SCHEMA.node(
+    const item = RECORD_SCHEMA.node(
       "list",
       { kind: "toggle", collapsed: true },
-      NOTE_SCHEMA.node("paragraph", null, NOTE_SCHEMA.text("hidden")),
+      RECORD_SCHEMA.node("paragraph", null, RECORD_SCHEMA.text("hidden")),
     );
 
-    const doc = NOTE_SCHEMA.node("doc", null, item);
+    const doc = RECORD_SCHEMA.node("doc", null, item);
     const before = doc.toJSON();
     expect(MdParse.parse(MdSerialize.serialize(doc)).firstChild!.attrs.collapsed).toBe(false);
     expect(doc.toJSON()).toEqual(before);

@@ -26,7 +26,7 @@ export function use(opts: { doc: Accessor<Y.Doc | undefined> }) {
   const record = createMemo(() => {
     const result = attrs();
 
-    // Atoms retain the previous success while loading; never use another note's attrs.
+    // Atoms retain the previous success while loading; never use another record's attrs.
     if (!AsyncResult.isSuccess(result) || result.value?.doc !== opts.doc()) return undefined;
 
     return result.value;

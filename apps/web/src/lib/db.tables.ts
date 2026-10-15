@@ -2,13 +2,13 @@ import { Column, Table, Type } from "effect-qb";
 import { Schema } from "effect";
 
 export {
-  notes,
+  records,
   props,
   ruleExpects,
   events,
   backlinks,
   materializationCheckpoint,
-  type Note,
+  type Record,
   type Prop,
   type RuleExpect,
   type Event,
@@ -22,7 +22,7 @@ export const recordings = Table.make("recordings", {
   mimeType: Column.text(),
   durationMs: Column.int().pipe(Column.nullable),
   state: Column.custom(Schema.Literals(["pending", "completed", "error"]), Type.text()),
-  noteId: Column.text(),
+  recordId: Column.text(),
   intent: Column.text(),
 });
 

@@ -7,7 +7,7 @@ describe("prefixed menu queries", () => {
   it("preserves action tags and payloads when nesting choices", async () => {
     const Choice = Data.taggedEnum<
       Data.TaggedEnum<{
-        Link: { value: string; label: string; noteId: string };
+        Link: { value: string; label: string; recordId: string };
         Date: { value: string; label: string; date: string };
       }>
     >();
@@ -16,7 +16,7 @@ describe("prefixed menu queries", () => {
       label: "Choose",
       query: MenuQuery.choices(() => {
         return [
-          Choice.Link({ value: "sleep", label: "Sleep Log", noteId: "sleep-note" }),
+          Choice.Link({ value: "sleep", label: "Sleep Log", recordId: "sleep-record" }),
           Choice.Date({ value: "tomorrow", label: "Tomorrow", date: "2026-10-10" }),
         ];
       }),
@@ -27,11 +27,11 @@ describe("prefixed menu queries", () => {
     expect(
       results.map(({ value }) => {
         return Choice.$match(value, {
-          Link: ({ noteId }) => noteId,
+          Link: ({ recordId }) => recordId,
           Date: ({ date }) => date,
         });
       }),
-    ).toEqual(["sleep-note", "2026-10-10"]);
+    ).toEqual(["sleep-record", "2026-10-10"]);
   });
 
   it("strips a leading label with a whitespace boundary, preserving unprefixed requests", async () => {
@@ -51,7 +51,7 @@ describe("prefixed menu queries", () => {
     const results = await read(query({ text: "  LINKS TO   Sleep Log  " }));
     expect(requests[0]?.text).toBe("Sleep Log");
     expect(results[0]?.value).toEqual({
-      value: "Links to:note",
+      value: "Links to:record",
       label: "Sleep Log",
       path: ["Links to"],
     });
@@ -137,7 +137,7 @@ describe("prefixed menu queries", () => {
   it("shares an unprefixed lookup across sibling branches", async () => {
     let calls = 0;
 
-    const notes = QueryEngine.share(() => {
+    const records = QueryEngine.share(() => {
       return Stream.sync(() => {
         calls++;
 
@@ -146,8 +146,8 @@ describe("prefixed menu queries", () => {
     });
 
     const query = QueryEngine.combine(
-      ["Links to", "Links from", "Open note"].map((label) => {
-        return MenuQuery.nested({ label, query: notes });
+      ["Links to", "Links from", "Open record"].map((label) => {
+        return MenuQuery.nested({ label, query: records });
       }),
     );
 

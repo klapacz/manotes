@@ -1,9 +1,9 @@
 import { linkOptions as routerLinkOptions, useRouterState } from "@tanstack/solid-router";
 import { Effect, Match, Option, Schema } from "effect";
-import { NoteSearch } from "@manotes/shared/note/search";
+import { RecordSearch } from "@manotes/shared/record/search";
 
 export const Destination = Schema.TaggedUnion({
-  notes: { ...NoteSearch.Schema.fields, hash: Schema.optional(Schema.String) },
+  records: { ...RecordSearch.Schema.fields, hash: Schema.optional(Schema.String) },
   studio: { hash: Schema.optional(Schema.String) },
 });
 
@@ -26,7 +26,10 @@ export function useCurrent() {
             return Destination.cases.studio.make({ hash: location.hash });
           }),
           Match.when({ routeId: "/$graph/" }, (match) => {
-            return Destination.cases.notes.make({ panes: match.search.panes, hash: location.hash });
+            return Destination.cases.records.make({
+              panes: match.search.panes,
+              hash: location.hash,
+            });
           }),
           Match.orElse(() => undefined),
         );
@@ -43,7 +46,7 @@ export function linkOptions(graph: string, destination?: Destination) {
   if (!destination) return routerLinkOptions({ to: "/$graph", params: { graph }, replace: true });
 
   return Match.value(destination).pipe(
-    Match.tag("notes", (destination) => {
+    Match.tag("records", (destination) => {
       return routerLinkOptions({
         to: "/$graph",
         params: { graph },

@@ -4,9 +4,9 @@ import { Attrs } from "@manotes/shared/attrs.service";
 import { DB } from "@manotes/shared/db.service";
 import { EventRepo } from "@manotes/shared/event.repo";
 import * as Materializer from "@manotes/shared/materializer.service";
-import { NoteRepo } from "@manotes/shared/note.repo";
-import { PaneSchema } from "@manotes/shared/note/pane.schema";
-import { StreamFilter } from "@manotes/shared/note/stream-filter";
+import { RecordRepo } from "@manotes/shared/record.repo";
+import { PaneSchema } from "@manotes/shared/record/pane.schema";
+import { StreamFilter } from "@manotes/shared/record/stream-filter";
 import { PropDef } from "@manotes/shared/prop-def.service";
 import { RuleProps } from "@manotes/shared/rule-props";
 import { RuleRecord } from "@manotes/shared/rule-record.service";
@@ -26,13 +26,13 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
 import { CliRuntime } from "./cli.runtime";
 
-const priority = AttrsSchema.NoteId.make("prop_id:priority");
+const priority = AttrsSchema.RecordId.make("prop_id:priority");
 
-const cycle = AttrsSchema.NoteId.make("prop_id:cycle");
+const cycle = AttrsSchema.RecordId.make("prop_id:cycle");
 
-const task = AttrsSchema.NoteId.make("rule_id:task");
+const task = AttrsSchema.RecordId.make("rule_id:task");
 
-const recordId = AttrsSchema.NoteId.make("record_id:issue");
+const recordId = AttrsSchema.RecordId.make("record_id:issue");
 
 const required = AttrsSchema.RuleExpectation.cases.required.make({});
 
@@ -57,7 +57,7 @@ describe("reactive rule props pipeline", () => {
         yield* save(definition, priority);
 
         const rule = yield* makeDoc();
-        yield* attrs.initializeRule({ doc: rule, targets: notesFilter() });
+        yield* attrs.initializeRule({ doc: rule, targets: recordsFilter() });
         yield* attrs.setRuleStorage({
           doc: rule,
           storage: AttrsSchema.RuleStorage.cases.group.make({}),
@@ -87,7 +87,7 @@ describe("reactive rule props pipeline", () => {
         });
 
         expect(Record.keys(initial.groups)).toEqual([task]);
-        expect(initial.top.props[AttrsSchema.NoteId.make("prop_id:custom")]).toMatchObject({
+        expect(initial.top.props[AttrsSchema.RecordId.make("prop_id:custom")]).toMatchObject({
           expectation: Option.none(),
           value: Attrs.ValueState.Invalid({
             value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
@@ -122,7 +122,7 @@ describe("reactive rule props pipeline", () => {
           );
         });
 
-        yield* attrs.setRuleTargets({ doc: rule, targets: notesFilter() });
+        yield* attrs.setRuleTargets({ doc: rule, targets: recordsFilter() });
         yield* attrs.setRuleExpectation({ doc: rule, propId: cycle, value: required });
         yield* save(rule, task);
         yield* waitFor(latest, (groups) => {
@@ -149,13 +149,13 @@ describe("reactive rule props pipeline", () => {
     await runIntegration(
       Effect.gen(function* () {
         const attrs = yield* Attrs.Service;
-        const person = AttrsSchema.NoteId.make("record_id:person");
-        const assignee = AttrsSchema.NoteId.make("prop_id:assignee");
+        const person = AttrsSchema.RecordId.make("record_id:person");
+        const assignee = AttrsSchema.RecordId.make("prop_id:assignee");
         const target = yield* makeDoc();
         yield* save(target, person);
 
         const rule = yield* makeDoc();
-        yield* attrs.initializeRule({ doc: rule, targets: notesFilter() });
+        yield* attrs.initializeRule({ doc: rule, targets: recordsFilter() });
         yield* attrs.setRuleExpectation({ doc: rule, propId: assignee, value: required });
         yield* save(rule, task);
 
@@ -179,15 +179,15 @@ describe("reactive rule props pipeline", () => {
         yield* waitFor(latest, (groups) => hasPropValueState(groups, undefined, assignee, "Valid"));
 
         // This title change makes the target a Page, outside the default Notes scope.
-        const notes = yield* NoteRepo.Service;
-        yield* notes.updateById(person, { title: "Person" });
-        yield* Reactivity.invalidate(["notes"]);
+        const records = yield* RecordRepo.Service;
+        yield* records.updateById(person, { title: "Person" });
+        yield* Reactivity.invalidate(["records"]);
         yield* waitFor(latest, (groups) => {
           return hasPropValueState(groups, undefined, assignee, "Invalid");
         });
 
-        yield* notes.updateById(person, { title: null });
-        yield* Reactivity.invalidate(["notes"]);
+        yield* records.updateById(person, { title: null });
+        yield* Reactivity.invalidate(["records"]);
         yield* waitFor(latest, (groups) => hasPropValueState(groups, undefined, assignee, "Valid"));
         expect(doc.getMap("attrs").toJSON().props[assignee]).toEqual(
           AttrsSchema.PropVal.cases.link.make({ val: person }),
@@ -197,7 +197,7 @@ describe("reactive rule props pipeline", () => {
   });
 });
 
-function notesFilter() {
+function recordsFilter() {
   return StreamFilter.toAttrs({ type: PaneSchema.StreamFilterType.cases.notes.make({}) });
 }
 
@@ -208,18 +208,18 @@ function makeDoc() {
   );
 }
 
-function save(doc: Y.Doc, noteId: AttrsSchema.NoteId) {
+function save(doc: Y.Doc, recordId: AttrsSchema.RecordId) {
   return Effect.gen(function* () {
     const events = yield* EventRepo.Service;
     yield* events.create({
-      noteId,
+      recordId,
       type: "update",
       payload: Y.encodeStateAsUpdate(doc),
       createdAt: DateTime.makeUnsafe("2026-10-14T10:00:00Z"),
     });
     const materializer = yield* Materializer.Service;
     yield* materializer.catchUp();
-    yield* Reactivity.invalidate(["notes", "props", "rule_expects"]);
+    yield* Reactivity.invalidate(["records", "props", "rule_expects"]);
   });
 }
 
@@ -250,7 +250,7 @@ function waitFor(
 
 function hasGroupStatus(
   groups: RuleProps.EditorGroups,
-  ruleId: AttrsSchema.NoteId,
+  ruleId: AttrsSchema.RecordId,
   status: RuleProps.GroupStatus["_tag"],
 ) {
   return groups.groups[ruleId]?.status._tag === status;
@@ -258,8 +258,8 @@ function hasGroupStatus(
 
 function hasPropValueState(
   groups: RuleProps.EditorGroups,
-  ruleId: AttrsSchema.NoteId | undefined,
-  propId: AttrsSchema.NoteId,
+  ruleId: AttrsSchema.RecordId | undefined,
+  propId: AttrsSchema.RecordId,
   state: RuleProps.Prop["value"]["_tag"],
 ) {
   const group = Option.fromNullishOr(ruleId).pipe(
@@ -277,7 +277,7 @@ type Services =
   | DB.Service
   | EventRepo.Service
   | Materializer.Service
-  | NoteRepo.Service
+  | RecordRepo.Service
   | PropDef.Service
   | RuleRecord.Service
   | Reactivity.Reactivity

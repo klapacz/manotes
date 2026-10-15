@@ -1,9 +1,9 @@
 import { Context, Effect, Layer, Record, Result, Array, Predicate, pipe } from "effect";
 import * as Y from "yjs";
 import { DB } from "../db.service";
-import { NoteRepo } from "../note.repo";
-import { NoteSchema } from "../note.schema";
-import { NoteDoc } from "../note/doc";
+import { RecordRepo } from "../record.repo";
+import { RecordSchema } from "../record.schema";
+import { RecordDoc } from "../record/doc";
 import { PropRepo } from "../prop.repo";
 import { RuleExpectRepo } from "../rule-expect.repo";
 import { YSchema } from "../y-schema";
@@ -11,17 +11,17 @@ import { YSchema } from "../y-schema";
 export class Service extends Context.Service<Service>()("MaterializerAttrs.Service", {
   make: Effect.gen(function* () {
     const db = yield* DB.Service;
-    const noteRepo = yield* NoteRepo.Service;
+    const recordRepo = yield* RecordRepo.Service;
     const propRepo = yield* PropRepo.Service;
     const expectRepo = yield* RuleExpectRepo.Service;
 
     const materialize = Effect.fn("MaterializerAttrs.materialize")(function* (opts: {
-      readonly recordId: NoteSchema.Id;
+      readonly recordId: RecordSchema.Id;
       readonly yDoc: Y.Doc;
     }) {
       const projection = yield* project({ yDoc: opts.yDoc });
 
-      yield* noteRepo.updateAttrs({ id: opts.recordId, columns: projection.columns });
+      yield* recordRepo.updateAttrs({ id: opts.recordId, columns: projection.columns });
 
       yield* propRepo.deleteForRecord({ recordId: opts.recordId });
 
@@ -45,18 +45,18 @@ export class Service extends Context.Service<Service>()("MaterializerAttrs.Servi
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(
     Layer.provide(DB.Service.layer),
-    Layer.provide(NoteRepo.Service.layer),
+    Layer.provide(RecordRepo.Service.layer),
     Layer.provide(PropRepo.Service.layer),
     Layer.provide(RuleExpectRepo.Service.layer),
   );
 }
 
 const project = Effect.fn("MaterializerAttrs.project")(function* (opts: { readonly yDoc: Y.Doc }) {
-  const { attrs } = NoteDoc.fromDoc({ doc: opts.yDoc });
+  const { attrs } = RecordDoc.fromDoc({ doc: opts.yDoc });
   const loose = yield* YSchema.exportLoose(attrs);
   const strict = yield* YSchema.exportStrict(attrs).pipe(Effect.result);
 
-  const columns: NoteRepo.AttrsColumns = {
+  const columns: RecordRepo.AttrsColumns = {
     _tag: loose._tag ?? "note",
     prop_type: loose.prop_type ?? null,
     prop_default: loose.prop_default ?? null,

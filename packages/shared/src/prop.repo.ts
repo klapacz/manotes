@@ -2,14 +2,14 @@ import { Query } from "effect-qb";
 import { Context, Effect, Layer, Array } from "effect";
 import { DB } from "./db.service";
 import { Tables } from "./db.tables";
-import { NoteSchema } from "./note.schema";
+import { RecordSchema } from "./record.schema";
 
 export class Service extends Context.Service<Service>()("PropRepo.Service", {
   make: Effect.gen(function* () {
     const db = yield* DB.Service;
 
     const deleteForRecord = Effect.fn("PropRepo.deleteForRecord")(function* (opts: {
-      readonly recordId: NoteSchema.Id;
+      readonly recordId: RecordSchema.Id;
     }) {
       yield* db.execute(
         Query.delete(Tables.props).pipe(

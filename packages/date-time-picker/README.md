@@ -9,7 +9,7 @@ import { DatePicker, TimeField } from "@manotes/date-time-picker";
 
 const [date, setDate] = createSignal<Temporal.PlainDate | null>(null);
 
-<DatePicker label="Note date" value={date()} onChange={setDate} name="date" />;
+<DatePicker label="Record date" value={date()} onChange={setDate} name="date" />;
 <TimeField label="Time" defaultValue={new Temporal.PlainTime(8, 30)} hourCycle={24} />;
 ```
 

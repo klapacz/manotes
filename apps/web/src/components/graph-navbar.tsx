@@ -43,7 +43,7 @@ export function GraphNavbar() {
               to="/$graph"
               params={{ graph: params().graph }}
               class={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-              title="Back to notes"
+              title="Back to records"
             >
               <HouseIcon />
             </Link>

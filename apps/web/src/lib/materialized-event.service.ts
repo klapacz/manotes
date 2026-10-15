@@ -2,18 +2,18 @@ import { Effect, Layer, Context, DateTime } from "effect";
 import * as EventRepo from "@manotes/shared/event.repo";
 import * as EventSchema from "@manotes/shared/event.schema";
 import * as MaterializationCheckpointRepo from "@manotes/shared/materialization-checkpoint.repo";
-import * as NoteRepo from "@manotes/shared/note.repo";
+import * as RecordRepo from "@manotes/shared/record.repo";
 import * as DB from "@manotes/shared/db.service";
 
 type CreateInput = {
-  noteId: string;
+  recordId: string;
   date?: string;
   createdAt: DateTime.Utc;
   payload: Uint8Array<ArrayBufferLike>;
 };
 
 type SetDateInput = {
-  noteId: string;
+  recordId: string;
   date: string;
   createdAt: DateTime.Utc;
 };
@@ -22,14 +22,14 @@ export class Service extends Context.Service<Service>()("MaterializedEventServic
   make: Effect.gen(function* () {
     const eventRepo = yield* EventRepo.Service;
     const checkpointRepo = yield* MaterializationCheckpointRepo.Service;
-    const noteRepo = yield* NoteRepo.Service;
+    const recordRepo = yield* RecordRepo.Service;
     const db = yield* DB.Service;
 
     const create = Effect.fn("MaterializedEventService.create")(function* (input: CreateInput) {
       const event = yield* db.transaction(
         Effect.gen(function* () {
           const event = yield* eventRepo.create({
-            noteId: input.noteId,
+            recordId: input.recordId,
             payload: input.payload,
             createdAt: input.createdAt,
             type: "update",
@@ -39,7 +39,7 @@ export class Service extends Context.Service<Service>()("MaterializedEventServic
 
           // TODO: we could skip creating date event if update alone would result in requested date
           const setDateEvent = yield* eventRepo.create({
-            noteId: input.noteId,
+            recordId: input.recordId,
             payload: yield* EventSchema.encodeDatePayload({ date: input.date }),
             createdAt: input.createdAt,
             type: "date",
@@ -51,14 +51,14 @@ export class Service extends Context.Service<Service>()("MaterializedEventServic
 
       yield* checkpointRepo.waitUntilAtLeast(event.localSeq);
 
-      return yield* noteRepo.getById(event.noteId);
+      return yield* recordRepo.getById(event.recordId);
     });
 
     const setDate = Effect.fn("MaterializedEventService.setDate")(function* (input: SetDateInput) {
       const payload = yield* EventSchema.encodeDatePayload({ date: input.date });
 
       const event = yield* eventRepo.create({
-        noteId: input.noteId,
+        recordId: input.recordId,
         payload,
         createdAt: input.createdAt,
         type: "date",
@@ -66,7 +66,7 @@ export class Service extends Context.Service<Service>()("MaterializedEventServic
 
       yield* checkpointRepo.waitUntilAtLeast(event.localSeq);
 
-      return yield* noteRepo.getById(event.noteId);
+      return yield* recordRepo.getById(event.recordId);
     });
 
     return {
@@ -79,6 +79,6 @@ export class Service extends Context.Service<Service>()("MaterializedEventServic
     Layer.provide(DB.Service.layer),
     Layer.provide(EventRepo.Service.layer),
     Layer.provide(MaterializationCheckpointRepo.Service.layer),
-    Layer.provide(NoteRepo.Service.layer),
+    Layer.provide(RecordRepo.Service.layer),
   );
 }
