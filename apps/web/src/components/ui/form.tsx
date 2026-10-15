@@ -8,7 +8,7 @@ import {
 import type { Component, ComponentProps, ParentProps, JSX } from "solid-js";
 import { splitProps, Show } from "solid-js";
 
-import { Predicate } from "effect";
+import { Predicate, type Types } from "effect";
 import { cva } from "../../lib/cva";
 import { Button, type ButtonProps } from "./button";
 import { Input } from "./input";
@@ -57,11 +57,10 @@ export const { fieldContext, formContext, useFieldContext, useFormContext } =
 
 const appValidationLogic = revalidateLogic();
 
-type AppTextFieldProps = {
-  label: JSX.Element;
-  description?: JSX.Element;
-  id?: string;
-} & Omit<TextFieldInputProps, "name" | "value" | "onInput" | "onBlur">;
+type AppTextFieldProps = Types.MergeRight<
+  Omit<TextFieldInputProps, "name" | "value" | "onInput" | "onBlur">,
+  { label: JSX.Element; description?: JSX.Element; id?: string }
+>;
 
 function AppTextField(props: AppTextFieldProps) {
   const field = useFieldContext<string>();
@@ -87,11 +86,10 @@ function AppTextField(props: AppTextFieldProps) {
   );
 }
 
-type AppFileFieldProps = {
-  label: JSX.Element;
-  description?: JSX.Element;
-  id?: string;
-} & Omit<ComponentProps<"input">, "name" | "value" | "type" | "onChange" | "onBlur">;
+type AppFileFieldProps = Types.MergeRight<
+  Omit<ComponentProps<"input">, "name" | "value" | "type" | "onChange" | "onBlur">,
+  { label: JSX.Element; description?: JSX.Element; id?: string }
+>;
 
 function AppFileField(props: AppFileFieldProps) {
   const field = useFieldContext<File | null>();

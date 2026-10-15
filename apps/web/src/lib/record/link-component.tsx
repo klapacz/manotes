@@ -1,13 +1,14 @@
+import type { Types } from "effect";
 import { createContext, useContext, type JSX, type ParentProps } from "solid-js";
 
 export type RecordLinkTarget = {
   id: string;
 };
 
-export type RecordLinkProps = RecordLinkTarget &
-  Omit<JSX.AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & {
-    children?: JSX.Element;
-  };
+export type RecordLinkProps = Types.MergeRight<
+  Omit<JSX.AnchorHTMLAttributes<HTMLAnchorElement>, "href">,
+  RecordLinkTarget
+>;
 
 export type RecordLinkRenderer = (props: RecordLinkProps) => JSX.Element;
 

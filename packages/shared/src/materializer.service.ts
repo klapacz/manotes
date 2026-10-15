@@ -231,7 +231,7 @@ function buildMaterializedRecordFields({ yDoc }: { yDoc: Y.Doc }) {
 }
 
 const summarizeEvents = Effect.fn("MaterializerService.summarizeEvents")(function* (
-  events: Arr.NonEmptyReadonlyArray<EventSchema.Record>,
+  events: Arr.NonEmptyReadonlyArray<EventRepo.Record>,
 ) {
   const byType = {
     update: events.filter((event) => event.type === "update"),
@@ -247,7 +247,7 @@ const summarizeEvents = Effect.fn("MaterializerService.summarizeEvents")(functio
 });
 
 const getLatestDate = Effect.fn("MaterializerService.getLatestDate")(function* (
-  dateEvents: ReadonlyArray<EventSchema.Record>,
+  dateEvents: ReadonlyArray<EventRepo.Record>,
 ) {
   const latestDateEventOption = Arr.last(dateEvents);
 

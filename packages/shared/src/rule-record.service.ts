@@ -3,7 +3,6 @@ import { RecordSchema } from "./record.schema";
 import { RuleExpect } from "./rule-expect";
 import { RuleExpectRepo } from "./rule-expect.repo";
 import { RuleRecordRepo } from "./rule-record.repo";
-import type { Tables } from "./db.tables";
 
 export type Rule = RuleRecordRepo.Rule & {
   readonly expects: ReturnType<typeof RuleExpect.reduceExpects>;
@@ -43,7 +42,7 @@ export class Service extends Context.Service<Service>()("RuleRecord.Service", {
 
 function expectsForRule(opts: {
   readonly ruleId: RecordSchema.Id;
-  readonly byRule: Readonly<Record<RecordSchema.Id, readonly Tables.RuleExpect[]>>;
+  readonly byRule: Readonly<Record<RecordSchema.Id, readonly RuleExpectRepo.Record[]>>;
 }) {
   const rows = Record.get(opts.byRule, opts.ruleId).pipe(Option.getOrElse(() => []));
 

@@ -1,7 +1,6 @@
 import { Query, Cast, Type } from "effect-qb";
-import { Array, Effect, Layer, Option, pipe, Schema, Context, Stream } from "effect";
+import { Array, Effect, Layer, Option, pipe, Schema, Context, Stream, type Types } from "effect";
 import * as DB from "./db.service";
-import type { EventSchema } from "./event.schema";
 import { RecordSchema } from "./record.schema";
 import * as Tables from "./db.tables";
 import { nanoid } from "nanoid";
@@ -17,7 +16,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       // Acknowledgements update these rows in place; no separate status is stored.
       return yield* db
         .find(
-          Query.select({ count: Cast.to(Query.count(Tables.events.localSeq), Type.int()) }).pipe(
+          pendingCountSelect.pipe(
             Query.from(Tables.events),
             Query.where(Query.isNull(Tables.events.commitSeq)),
           ),
@@ -25,7 +24,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
         .pipe(Effect.map(Option.match({ onNone: () => 0, onSome: (row) => row.count })));
     });
 
-    const create = Effect.fn("EventRepo.create")(function* (event: EventSchema.Create) {
+    const create = Effect.fn("EventRepo.create")(function* (event: Create) {
       yield* Schema.decodeEffect(RecordSchema.CreateId)(event.recordId);
 
       return yield* db
@@ -55,7 +54,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
 
     const findByEventId = Effect.fn("EventRepo.findByEventId")(function* (eventId: string) {
       return yield* db.find(
-        Query.select(Tables.events.columns).pipe(
+        eventSelect.pipe(
           Query.from(Tables.events),
           Query.where(Query.eq(Tables.events.id, eventId)),
         ),
@@ -64,7 +63,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
 
     const findPending = Effect.fn("EventRepo.findPending")(function* (limit: number) {
       const events = yield* db.query(
-        Query.select(Tables.events.columns).pipe(
+        eventSelect.pipe(
           Query.from(Tables.events),
           Query.where(Query.isNull(Tables.events.commitSeq)),
           Query.orderBy(Tables.events.localSeq, "asc"),
@@ -77,17 +76,14 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
 
     const listAllForBackup = Effect.fn("EventRepo.listAllForBackup")(function* () {
       const events = yield* db.query(
-        Query.select(Tables.events.columns).pipe(
-          Query.from(Tables.events),
-          Query.orderBy(Tables.events.localSeq, "asc"),
-        ),
+        eventSelect.pipe(Query.from(Tables.events), Query.orderBy(Tables.events.localSeq, "asc")),
       );
 
       return events;
     });
 
     const importBackupEvents = Effect.fn("EventRepo.importBackupEvents")(function* (
-      events: ReadonlyArray<EventSchema.Create>,
+      events: ReadonlyArray<Create>,
     ) {
       if (events.length === 0) return;
 
@@ -127,11 +123,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
     });
 
     const getLastCommitSeq = Effect.fn("EventRepo.getLastCommitSeq")(function* () {
-      const result = yield* db.find(
-        Query.select({ commitSeq: Query.max(Tables.events.commitSeq) }).pipe(
-          Query.from(Tables.events),
-        ),
-      );
+      const result = yield* db.find(lastCommitSelect.pipe(Query.from(Tables.events)));
 
       return pipe(
         result,
@@ -142,11 +134,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
 
     const getMaxLocalSeq = Effect.fn("EventRepo.getMaxLocalSeq")(function* () {
       return yield* db
-        .find(
-          Query.select({ localSeq: Query.max(Tables.events.localSeq) }).pipe(
-            Query.from(Tables.events),
-          ),
-        )
+        .find(maxLocalSeqSelect.pipe(Query.from(Tables.events)))
         .pipe(Effect.map(Option.match({ onNone: () => 0, onSome: (row) => row.localSeq ?? 0 })));
     });
 
@@ -154,7 +142,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       recordId: string,
     ) {
       const events = yield* db.query(
-        Query.select(Tables.events.columns).pipe(
+        eventSelect.pipe(
           Query.from(Tables.events),
           Query.where(
             Query.and(
@@ -179,7 +167,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       upToLocalSeq: number;
     }) {
       const events = yield* db.query(
-        Query.select(Tables.events.columns).pipe(
+        eventSelect.pipe(
           Query.from(Tables.events),
           Query.where(
             Query.and(
@@ -197,7 +185,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
 
     const streamHasPending = Effect.fn("EventRepo.streamHasPending")(function* () {
       const stream = yield* db.reactiveQuery(
-        Query.select({ localSeq: Tables.events.localSeq }).pipe(
+        localSeqSelect.pipe(
           Query.from(Tables.events),
           Query.where(Query.isNull(Tables.events.commitSeq)),
           Query.orderBy(Tables.events.localSeq, "asc"),
@@ -216,7 +204,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       afterLocalSeq: number;
     }) {
       const stream = yield* db.reactiveQuery(
-        Query.select(Tables.events.columns).pipe(
+        eventSelect.pipe(
           Query.from(Tables.events),
           Query.where(
             Query.and(
@@ -237,7 +225,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       limit: number,
     ) {
       const stream = yield* db.reactiveQuery(
-        Query.select(Tables.events.columns).pipe(
+        eventSelect.pipe(
           Query.from(Tables.events),
           Query.where(Query.gt(Tables.events.localSeq, afterLocalSeq)),
           Query.orderBy(Tables.events.localSeq, "asc"),
@@ -288,5 +276,29 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
+
+const pendingCountSelect = Query.select({
+  count: Cast.to(Query.count(Tables.events.localSeq), Type.int()),
+});
+
+const eventSelect: ReturnType<typeof Query.select<typeof Tables.events.columns>> = Query.select(
+  Tables.events.columns,
+);
+
+export type Record = Query.ResultRow<typeof eventSelect>;
+
+export type Create = Types.MergeRight<
+  Omit<Record, "localSeq">,
+  {
+    readonly id?: Record["id"];
+    readonly commitSeq?: NonNullable<Record["commitSeq"]>;
+  }
+>;
+
+const lastCommitSelect = Query.select({ commitSeq: Query.max(Tables.events.commitSeq) });
+
+const maxLocalSeqSelect = Query.select({ localSeq: Query.max(Tables.events.localSeq) });
+
+const localSeqSelect = Query.select({ localSeq: Tables.events.localSeq });
 
 export * as EventRepo from "./event.repo";

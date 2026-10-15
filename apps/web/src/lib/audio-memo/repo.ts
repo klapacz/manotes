@@ -6,7 +6,7 @@ import { Tables } from "../db.tables";
 import { AudioMemoIntent } from "./intent";
 
 export type Record = Types.MergeRight<
-  Tables.Recording,
+  Row,
   { recordedAt: DateTime.Utc; intent: AudioMemoIntent.Record }
 >;
 
@@ -34,7 +34,7 @@ export const get = Effect.fn("AudioMemoRepo.get")(function* (path: string) {
 
   return yield* db
     .find(
-      Query.select(Tables.recordings.columns).pipe(
+      recordingSelect.pipe(
         Query.from(Tables.recordings),
         Query.where(Query.eq(Tables.recordings.path, path)),
       ),
@@ -86,7 +86,7 @@ export const remove = Effect.fn("AudioMemoRepo.remove")(function* (path: string)
 
 const decodeRecordedAt = Schema.decodeEffect(Schema.DateTimeUtcFromString);
 
-const decode = Effect.fn("AudioMemoRepo.decode")(function* (row: Tables.Recording) {
+const decode = Effect.fn("AudioMemoRepo.decode")(function* (row: Row) {
   return {
     ...row,
     recordedAt: yield* decodeRecordedAt(row.recordedAt),
@@ -95,7 +95,7 @@ const decode = Effect.fn("AudioMemoRepo.decode")(function* (row: Tables.Recordin
 });
 
 function select(filter: Filter, order: "asc" | "desc") {
-  return Query.select(Tables.recordings.columns).pipe(
+  return recordingSelect.pipe(
     Query.from(Tables.recordings),
     Query.where(where(filter)),
     Query.orderBy(Tables.recordings.recordedAt, order),
@@ -108,5 +108,10 @@ function where(filter: Filter) {
     ...(filter.state === undefined ? [] : [Query.in(Tables.recordings.state, ...filter.state)]),
   ]);
 }
+
+const recordingSelect: ReturnType<typeof Query.select<typeof Tables.recordings.columns>> =
+  Query.select(Tables.recordings.columns);
+
+export type Row = Query.ResultRow<typeof recordingSelect>;
 
 export * as AudioMemoRepo from "./repo";

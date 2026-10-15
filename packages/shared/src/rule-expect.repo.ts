@@ -20,7 +20,7 @@ export class Service extends Context.Service<Service>()("RuleExpectRepo.Service"
     });
 
     const insert = Effect.fn("RuleExpectRepo.insert")(function* (opts: {
-      readonly rows: Array.NonEmptyReadonlyArray<Tables.RuleExpect>;
+      readonly rows: Array.NonEmptyReadonlyArray<Record>;
     }) {
       yield* db.execute(
         Query.insert(Tables.ruleExpects).pipe(Query.from(DB.values(Tables.ruleExpects, opts.rows))),
@@ -29,12 +29,12 @@ export class Service extends Context.Service<Service>()("RuleExpectRepo.Service"
 
     const reactiveAll = Effect.fn("RuleExpectRepo.reactiveAll")(function* (): Effect.fn.Return<
       Stream.Stream<
-        ReadonlyArray<Tables.RuleExpect>,
+        ReadonlyArray<Record>,
         Sqlite.Executor.SqliteExecutorError | Sqlite.Errors.SqliteReadQueryError
       >
     > {
       const rows = yield* db.reactiveQuery(
-        Query.select(Tables.ruleExpects.columns).pipe(
+        expectSelect.pipe(
           Query.from(Tables.ruleExpects),
           Query.orderBy(Tables.ruleExpects.ruleId),
           Query.orderBy(Tables.ruleExpects.propId),
@@ -49,5 +49,10 @@ export class Service extends Context.Service<Service>()("RuleExpectRepo.Service"
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
+
+const expectSelect: ReturnType<typeof Query.select<typeof Tables.ruleExpects.columns>> =
+  Query.select(Tables.ruleExpects.columns);
+
+export type Record = Query.ResultRow<typeof expectSelect>;
 
 export * as RuleExpectRepo from "./rule-expect.repo";

@@ -24,6 +24,7 @@ export default defineConfig({
       ...antiSlopRules,
       "manotes/readable-bodies": "error",
       "manotes/no-type-predicates": "error",
+      "manotes/no-omit-intersection": "error",
     },
   },
   test: {

@@ -47,13 +47,7 @@ export class Service extends Context.Service<Service>()("PropRecordRepo.Service"
 
     const reactiveDefs = Effect.fn("PropRecordRepo.reactiveDefs")(function* () {
       const stream = yield* db.reactiveQuery(
-        Query.select({
-          id: Tables.records.id,
-          title: Tables.records.title,
-          prop_type: Tables.records.prop_type,
-          prop_default: Tables.records.prop_default,
-          prop_targets: Tables.records.prop_targets,
-        }).pipe(
+        defSelect.pipe(
           Query.from(Tables.records),
           Query.where(
             Query.and(
@@ -74,5 +68,17 @@ export class Service extends Context.Service<Service>()("PropRecordRepo.Service"
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
+
+const defFields = ["id", "title", "prop_type", "prop_default", "prop_targets"] as const;
+
+// Preserve named JSON column types in emitted declarations.
+const defColumns: Pick<typeof Tables.records, (typeof defFields)[number]> = Struct.pick(
+  Tables.records,
+  defFields,
+);
+
+const defSelect: ReturnType<typeof Query.select<typeof defColumns>> = Query.select(defColumns);
+
+export type Row = Query.ResultRow<typeof defSelect>;
 
 export * as PropRecordRepo from "./prop-record.repo";

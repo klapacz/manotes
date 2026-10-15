@@ -1,3 +1,4 @@
+import type { Types } from "effect";
 // Adapted from bazza/ui filter-selector.tsx at fe486a6a2ee1779482c0696b5a7008de6039983b.
 // Source: https://github.com/bazzalabs/ui/tree/fe486a6a2ee1779482c0696b5a7008de6039983b/apps/web/registry/data-table-filter/components
 // Shared searchable command pickers; ported to Solid/Kobalte, capped at 50 mounted options.
@@ -111,10 +112,13 @@ function PickerRoot(props: {
 }
 
 function PickerTrigger(
-  props: Omit<ButtonProps, "ref"> & {
-    ref?: (element: HTMLButtonElement) => void;
-    modified?: boolean;
-  },
+  props: Types.MergeRight<
+    ButtonProps,
+    {
+      ref?: (element: HTMLButtonElement) => void;
+      modified?: boolean;
+    }
+  >,
 ) {
   const context = usePicker();
   const [, rest] = splitProps(props, ["children", "class", "modified", "ref"]);

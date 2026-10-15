@@ -1,6 +1,5 @@
 import { Array as Arr, DateTime, Effect, Struct } from "effect";
 import * as EventRepo from "@manotes/shared/event.repo";
-import * as EventSchema from "@manotes/shared/event.schema";
 import * as GraphAccessCommandsProvision from "../graph-access/commands/provision";
 import * as BackupSchema from "@manotes/shared/graph-backup/schema";
 
@@ -11,7 +10,7 @@ export function createBackup({
 }: {
   sourceGraphDisplayName: string;
   exportedAt: BackupSchema.Bundle["exportedAt"];
-  events: ReadonlyArray<EventSchema.Record>;
+  events: ReadonlyArray<EventRepo.Record>;
 }): BackupSchema.Bundle {
   return {
     version: 1,

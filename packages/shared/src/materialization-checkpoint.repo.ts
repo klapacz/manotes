@@ -14,7 +14,7 @@ export class Service extends Context.Service<Service>()("MaterializationCheckpoi
 
     const getOrInit = Effect.fn("MaterializationCheckpointRepo.getOrInit")(function* () {
       const existing = yield* db.find(
-        Query.select(Tables.materializationCheckpoint.columns).pipe(
+        checkpointSelect.pipe(
           Query.from(Tables.materializationCheckpoint),
           Query.where(Query.eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID)),
         ),
@@ -71,9 +71,7 @@ export class Service extends Context.Service<Service>()("MaterializationCheckpoi
       yield* getOrInit();
 
       const stream = yield* db.reactiveQuery(
-        Query.select({
-          lastAppliedLocalSeq: Tables.materializationCheckpoint.lastAppliedLocalSeq,
-        }).pipe(
+        checkpointSequenceSelect.pipe(
           Query.from(Tables.materializationCheckpoint),
           Query.where(Query.eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID)),
         ),
@@ -103,5 +101,15 @@ export class Service extends Context.Service<Service>()("MaterializationCheckpoi
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
+
+const checkpointSelect: ReturnType<
+  typeof Query.select<typeof Tables.materializationCheckpoint.columns>
+> = Query.select(Tables.materializationCheckpoint.columns);
+
+export type Record = Query.ResultRow<typeof checkpointSelect>;
+
+const checkpointSequenceSelect = Query.select({
+  lastAppliedLocalSeq: Tables.materializationCheckpoint.lastAppliedLocalSeq,
+});
 
 export * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";

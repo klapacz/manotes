@@ -1,6 +1,6 @@
 import { Query } from "effect-qb";
 import { RecordFilter } from "./record/filter";
-import { Array, Effect, Layer, Option, Schema, Context, Stream } from "effect";
+import { Array, Effect, Layer, Option, Schema, Context, Stream, Struct, type Types } from "effect";
 import { DB } from "./db.service";
 import { RecordSchema } from "./record.schema";
 import { Tables } from "./db.tables";
@@ -74,16 +74,13 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
       id: string,
     ): Effect.fn.Return<Option.Option<Record>, QueryError> {
       return yield* db.find(
-        Query.select(recordColumns).pipe(
-          Query.from(Tables.records),
-          Query.where(Query.eq(Tables.records.id, id)),
-        ),
+        recordSelect.pipe(Query.from(Tables.records), Query.where(Query.eq(Tables.records.id, id))),
       );
     });
 
     const findIdByTitle = Effect.fn("RecordRepo.findIdByTitle")(function* (title: string) {
       return yield* db.find(
-        Query.select({ id: Tables.records.id }).pipe(
+        idSelect.pipe(
           Query.from(Tables.records),
           Query.where(Query.eq(Tables.records.title, title)),
           Query.orderBy(Tables.records.createdAt, "asc"),
@@ -103,14 +100,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
       function* (id: string) {
         return yield* db
           .query(
-            Query.select({
-              id: Tables.records.id,
-              title: Tables.records.title,
-              text: Tables.records.text,
-              date: Tables.records.date,
-              createdAt: Tables.records.createdAt,
-              updatedAt: Tables.records.updatedAt,
-            }).pipe(
+            previewSelect.pipe(
               Query.from(Tables.records),
               Query.innerJoin(
                 Tables.backlinks,
@@ -141,10 +131,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
     const findBootById = Effect.fn("RecordRepo.findBootById")(function* (id: string) {
       return yield* Effect.zipWith(
         db.find(
-          Query.select({
-            materializedYUpdate: Tables.records.materializedYUpdate,
-            lastEventLocalSeq: Tables.records.lastEventLocalSeq,
-          }).pipe(Query.from(Tables.records), Query.where(Query.eq(Tables.records.id, id))),
+          bootSelect.pipe(Query.from(Tables.records), Query.where(Query.eq(Tables.records.id, id))),
         ),
         findOutgoingBacklinkPreviews(id),
         (record, backlinks) => {
@@ -161,7 +148,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
       QueryError
     > {
       return yield* db.query(
-        Query.select(recordColumns).pipe(
+        recordSelect.pipe(
           Query.from(Tables.records),
           Query.where(Query.eq(Tables.records._tag, "note")),
         ),
@@ -172,7 +159,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
       Stream.Stream<ReadonlyArray<Record>, QueryError>
     > {
       return yield* db.reactiveQuery(
-        Query.select(recordColumns).pipe(
+        recordSelect.pipe(
           Query.from(Tables.records),
           Query.where(Query.eq(Tables.records._tag, "note")),
         ),
@@ -182,7 +169,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
     const reactiveStreamList = Effect.fn("RecordRepo.reactiveStreamList")(function* (
       query: StreamListQuery,
     ) {
-      const plan = Query.select(streamColumns).pipe(
+      const plan = streamSelect.pipe(
         Query.from(Tables.records),
         Query.where(RecordFilter.filterPredicate(query)),
       );
@@ -202,7 +189,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
 
     const reactiveFindPreviewById = Effect.fn("RecordRepo.reactiveFindPreviewById")(
       function* (opts: { readonly id: string; readonly filter?: StreamSettings.Filter }) {
-        const plan = Query.select(previewColumns).pipe(
+        const plan = previewSelect.pipe(
           Query.from(Tables.records),
           Query.where(Query.eq(Tables.records.id, opts.id)),
         );
@@ -240,7 +227,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
               sort: "updated" as const,
             };
 
-      const plan = Query.select(previewColumns).pipe(
+      const plan = previewSelect.pipe(
         Query.from(Tables.records),
         Query.where(RecordFilter.filterPredicate(query)),
         Query.where(Query.neq(Tables.records.text, "")),
@@ -290,34 +277,14 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
 
-export type Record = Pick<
-  Tables.Record,
-  | "id"
-  | "title"
-  | "content"
-  | "text"
-  | "date"
-  | "materializedYUpdate"
-  | "createdAt"
-  | "updatedAt"
-  | "lastEventLocalSeq"
+export type Create = Types.MergeRight<
+  Record,
+  {
+    readonly id?: string;
+    readonly materializedYUpdate?: MaterializedYUpdate;
+    readonly lastEventLocalSeq?: Record["lastEventLocalSeq"];
+  }
 >;
-
-export type MaterializedYUpdate = Record["materializedYUpdate"];
-
-export type Preview = Pick<Record, "id" | "title" | "text" | "date" | "createdAt" | "updatedAt">;
-
-/** One-shot editor boot payload — read atomically once; events drive the doc afterwards. */
-export type BootRecord = Pick<Record, "materializedYUpdate" | "lastEventLocalSeq">;
-
-/** Ordering/grouping metadata for stream lists; content stays out of list queries. */
-export type Meta = Pick<Record, "id" | "date" | "createdAt" | "updatedAt">;
-
-export type Create = Omit<Record, "id" | "materializedYUpdate" | "lastEventLocalSeq"> & {
-  readonly id?: string;
-  readonly materializedYUpdate?: MaterializedYUpdate;
-  readonly lastEventLocalSeq?: Record["lastEventLocalSeq"];
-};
 
 export type Update = Partial<Omit<Record, "id">>;
 
@@ -369,34 +336,62 @@ export type StreamListQuery = {
   readonly sort: "date" | "updated";
 };
 
-const recordColumns = {
-  id: Tables.records.id,
-  title: Tables.records.title,
-  content: Tables.records.content,
-  text: Tables.records.text,
-  date: Tables.records.date,
-  materializedYUpdate: Tables.records.materializedYUpdate,
-  createdAt: Tables.records.createdAt,
-  updatedAt: Tables.records.updatedAt,
-  lastEventLocalSeq: Tables.records.lastEventLocalSeq,
-};
+const recordFields = [
+  "id",
+  "title",
+  "content",
+  "text",
+  "date",
+  "materializedYUpdate",
+  "createdAt",
+  "updatedAt",
+  "lastEventLocalSeq",
+] as const;
+
+// Explicit column and select types keep QB's JSON metadata nameable in emitted declarations.
+const recordColumns: Pick<typeof Tables.records, (typeof recordFields)[number]> = Struct.pick(
+  Tables.records,
+  recordFields,
+);
+
+const recordSelect: ReturnType<typeof Query.select<typeof recordColumns>> =
+  Query.select(recordColumns);
+
+export type Record = Query.ResultRow<typeof recordSelect>;
+
+export type MaterializedYUpdate = Record["materializedYUpdate"];
 
 // Ordering/grouping metadata only — content and Yjs blobs would make every
 // reactive re-query heavy and are served per record instead.
-const streamColumns = {
+const streamSelect = Query.select({
   id: Tables.records.id,
   date: Tables.records.date,
   createdAt: Tables.records.createdAt,
   updatedAt: Tables.records.updatedAt,
-} as const;
+});
 
-const previewColumns = {
+/** Ordering/grouping metadata for stream lists; content stays out of list queries. */
+export type Meta = Query.ResultRow<typeof streamSelect>;
+
+const previewSelect = Query.select({
   id: Tables.records.id,
   title: Tables.records.title,
   text: Tables.records.text,
   date: Tables.records.date,
   createdAt: Tables.records.createdAt,
   updatedAt: Tables.records.updatedAt,
-};
+});
+
+export type Preview = Query.ResultRow<typeof previewSelect>;
+
+const bootSelect = Query.select({
+  materializedYUpdate: Tables.records.materializedYUpdate,
+  lastEventLocalSeq: Tables.records.lastEventLocalSeq,
+});
+
+/** One-shot editor boot payload — read atomically once; events drive the doc afterwards. */
+export type BootRecord = Query.ResultRow<typeof bootSelect>;
+
+const idSelect = Query.select({ id: Tables.records.id });
 
 export * as RecordRepo from "./record.repo";

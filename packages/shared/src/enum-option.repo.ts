@@ -6,8 +6,6 @@ import { DB } from "./db.service";
 import { Tables } from "./db.tables";
 import { RecordSchema } from "./record.schema";
 
-export type Item = Pick<Tables.Record, "id" | "title" | "text">;
-
 export class Service extends Context.Service<Service>()("EnumOptionRepo.Service", {
   make: Effect.gen(function* () {
     const db = yield* DB.Service;
@@ -16,11 +14,7 @@ export class Service extends Context.Service<Service>()("EnumOptionRepo.Service"
       readonly enum_parent: RecordSchema.Id;
     }) {
       const stream = yield* db.reactiveQuery(
-        Query.select({
-          id: Tables.records.id,
-          title: Tables.records.title,
-          text: Tables.records.text,
-        }).pipe(
+        optionSelect.pipe(
           Query.from(Tables.records),
           Query.where(
             Query.and(
@@ -46,5 +40,13 @@ export class Service extends Context.Service<Service>()("EnumOptionRepo.Service"
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
+
+const optionSelect = Query.select({
+  id: Tables.records.id,
+  title: Tables.records.title,
+  text: Tables.records.text,
+});
+
+export type Item = Query.ResultRow<typeof optionSelect>;
 
 export * as EnumOptionRepo from "./enum-option.repo";

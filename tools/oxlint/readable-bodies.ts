@@ -133,7 +133,41 @@ const noTypePredicates = defineRule({
   },
 });
 
+const noOmitIntersection = defineRule({
+  meta: {
+    type: "suggestion",
+    docs: {
+      description: "Use Effect merge helpers instead of intersecting Omit types.",
+    },
+    schema: [],
+    messages: {
+      merge: "Use Types.MergeLeft or Types.MergeRight instead of intersecting Omit types.",
+    },
+  },
+  create(context) {
+    return {
+      TSIntersectionType(node) {
+        const hasOmit = node.types.some((member) => {
+          while (member.type === "TSParenthesizedType") member = member.typeAnnotation;
+
+          return (
+            member.type === "TSTypeReference" &&
+            member.typeName.type === "Identifier" &&
+            member.typeName.name === "Omit"
+          );
+        });
+
+        if (hasOmit) context.report({ node, messageId: "merge" });
+      },
+    };
+  },
+});
+
 export default eslintCompatPlugin({
   meta: { name: "manotes" },
-  rules: { "readable-bodies": readableBodies, "no-type-predicates": noTypePredicates },
+  rules: {
+    "readable-bodies": readableBodies,
+    "no-type-predicates": noTypePredicates,
+    "no-omit-intersection": noOmitIntersection,
+  },
 });
