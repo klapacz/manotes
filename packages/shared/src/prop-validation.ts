@@ -2,7 +2,6 @@ import { Match, Option, Predicate, Stream } from "effect";
 import { AttrsSchema } from "./attrs.schema";
 import { Attrs } from "./attrs.service";
 import { RecordRepo } from "./record.repo";
-import { StreamFilter } from "./record/stream-filter";
 
 export function watch<V extends AttrsSchema.PropVal>(opts: {
   readonly state: Attrs.ValueState<V, AttrsSchema.PropVal>;
@@ -17,10 +16,10 @@ export function watch<V extends AttrsSchema.PropVal>(opts: {
   const value = state.value;
 
   return RecordRepo.Service.use((repo) => {
-    return repo.reactiveFindPreviewById({
-      id: value.val,
-      filter: StreamFilter.fromAttrs(opts.targets),
-    });
+    return repo.reactiveFindPreview([
+      AttrsSchema.makeFilterExpr.cmp({ val: ["id", "=", value.val] }),
+      ...(opts.targets ?? []),
+    ]);
   }).pipe(
     Stream.unwrap,
     // Keep the assignment unchanged; only its displayed validity follows the scope.

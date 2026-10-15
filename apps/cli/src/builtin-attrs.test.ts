@@ -1,5 +1,4 @@
 import { Query } from "effect-qb";
-import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { NodeServices } from "@effect/platform-node";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
@@ -18,7 +17,6 @@ import { RecordRepo } from "@manotes/shared/record.repo";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { RecordDoc } from "@manotes/shared/record/doc";
 import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
-import { StreamFilter } from "@manotes/shared/record/stream-filter";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { YSchema } from "@manotes/shared/y-schema";
 import { DateTime, Effect, Layer, Option, Scope, Stream, Record, Match, Predicate } from "effect";
@@ -103,17 +101,24 @@ describe("Archived builtin", () => {
 
           expect(rows.map(({ id }) => id).toSorted()).toEqual(["high", "untitled"]);
 
-          const type = PaneSchema.StreamFilterType.cases.enum_option.make({ enum_parent: parent });
+          const type = StreamSettings.enumOptions(parent);
 
-          const list = (props: NonNullable<RecordRepo.StreamListQuery["props"]>) => {
-            return records.reactiveStreamList({ type, props, sort: "updated" }).pipe(
-              Effect.flatMap(Stream.runHead),
-              Effect.map(Option.getOrThrow),
-              Effect.map((rows) => rows.map(({ id }) => id).toSorted()),
-            );
+          const list = (props: Readonly<Record<string, AttrsSchema.PropVal>>) => {
+            return records
+              .reactiveStreamList({
+                filter: [type, ...propertyComparisons(props)],
+                sort: "updated",
+              })
+              .pipe(
+                Effect.flatMap(Stream.runHead),
+                Effect.map(Option.getOrThrow),
+                Effect.map((rows) => rows.map(({ id }) => id).toSorted()),
+              );
           };
 
-          expect(yield* list(StreamSettings.propFilters({}))).toEqual(["high", "untitled"]);
+          expect(
+            yield* list({ [BuiltinAttrs.archivedId]: BuiltinAttrs.archived.prop_default }),
+          ).toEqual(["high", "untitled"]);
           expect(yield* list({})).toEqual(["high", "old", "untitled"]);
           expect(yield* records.findAllNotes()).toEqual([]);
         }).pipe(
@@ -157,7 +162,7 @@ describe("Archived builtin", () => {
 
           const properties = Option.getOrThrow(
             yield* (yield* records.reactiveStreamList({
-              type: PaneSchema.StreamFilterType.cases.prop.make({}),
+              filter: [AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "prop"] })],
               sort: "updated",
             })).pipe(Stream.runHead),
           );
@@ -168,7 +173,7 @@ describe("Archived builtin", () => {
             expect(
               Option.getOrThrow(
                 yield* (yield* records.reactiveStreamList({
-                  type: PaneSchema.StreamFilterType.cases[type].make({}),
+                  filter: [StreamSettings.conditions[type]],
                   sort: "date",
                 })).pipe(Stream.runHead),
               ),
@@ -250,7 +255,7 @@ describe("Archived builtin", () => {
 
           const properties = Option.getOrThrow(
             yield* (yield* records.reactiveStreamList({
-              type: PaneSchema.StreamFilterType.cases.prop.make({}),
+              filter: [AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "prop"] })],
               sort: "updated",
             })).pipe(Stream.runHead),
           );
@@ -261,9 +266,13 @@ describe("Archived builtin", () => {
             return Effect.gen(function* () {
               const rows = Option.getOrThrow(
                 yield* (yield* records.reactiveStreamList({
-                  type: PaneSchema.StreamFilterType.cases.notes.make({}),
+                  filter: [
+                    StreamSettings.conditions.notes,
+                    ...propertyComparisons({
+                      [propId]: AttrsSchema.PropVal.cases.number.make({ val }),
+                    }),
+                  ],
                   sort: "date",
-                  props: { [propId]: AttrsSchema.PropVal.cases.number.make({ val }) },
                 })).pipe(Stream.runHead),
               );
 
@@ -271,8 +280,8 @@ describe("Archived builtin", () => {
             });
           };
 
-          expect(yield* ids(0)).toEqual(["number", "old-value", "unset"]);
-          expect(yield* ids(7.5)).toEqual(["number", "old-value", "unset"]);
+          expect(yield* ids(0)).toEqual([]);
+          expect(yield* ids(7.5)).toEqual([]);
           yield* attrs.setPropDefault({
             doc: prop.doc,
             value: AttrsSchema.PropVal.cases.number.make({ val: 7.5 }),
@@ -292,18 +301,20 @@ describe("Archived builtin", () => {
 
           const rows = Option.getOrThrow(
             yield* (yield* records.reactiveStreamList({
-              type: PaneSchema.StreamFilterType.cases.notes.make({}),
-              sort: "date",
-              props: {
-                [propId]: AttrsSchema.PropVal.cases.number.make({ val: 7.5 }),
-                [AttrsSchema.RecordId.make("missing")]: AttrsSchema.PropVal.cases.bool.make({
-                  val: true,
+              filter: [
+                StreamSettings.conditions.notes,
+                ...propertyComparisons({
+                  [propId]: AttrsSchema.PropVal.cases.number.make({ val: 7.5 }),
+                  [AttrsSchema.RecordId.make("missing")]: AttrsSchema.PropVal.cases.bool.make({
+                    val: true,
+                  }),
                 }),
-              },
+              ],
+              sort: "date",
             })).pipe(Stream.runHead),
           );
 
-          expect(rows.map(({ id }) => id).toSorted()).toEqual(["number", "unset"]);
+          expect(rows.map(({ id }) => id).toSorted()).toEqual([]);
         }).pipe(
           Effect.provide(Attrs.Service.layer),
           Effect.provide(PropRecordRepo.Service.layer),
@@ -370,17 +381,12 @@ describe("Archived builtin", () => {
             yield* save(recordId, record.doc);
           }
 
-          const defaults = StreamSettings.defaults(
-            PaneSchema.StreamFilterType.cases.notes.make({}),
-          ).filter;
-
-          const ids = (props: NonNullable<RecordRepo.StreamListQuery["props"]>) => {
+          const ids = (props: Readonly<Record<string, AttrsSchema.PropVal>>) => {
             return Effect.gen(function* () {
               const rows = Option.getOrThrow(
                 yield* (yield* records.reactiveStreamList({
-                  type: PaneSchema.StreamFilterType.cases.notes.make({}),
+                  filter: [StreamSettings.conditions.notes, ...propertyComparisons(props)],
                   sort: "date",
-                  props,
                 })).pipe(Stream.runHead),
               );
 
@@ -388,7 +394,7 @@ describe("Archived builtin", () => {
             });
           };
 
-          const defaultProps = StreamSettings.propFilters(defaults);
+          const defaultProps = { [BuiltinAttrs.archivedId]: BuiltinAttrs.archived.prop_default };
           expect(yield* ids(defaultProps)).toEqual(["false", "unset"]);
           expect(
             yield* ids({
@@ -411,9 +417,8 @@ describe("Archived builtin", () => {
 
           const pull = yield* Stream.toPull(
             (yield* records.reactiveStreamList({
-              type: PaneSchema.StreamFilterType.cases.notes.make({}),
+              filter: [StreamSettings.conditions.notes, ...propertyComparisons(defaultProps)],
               sort: "date",
-              props: defaultProps,
             })).pipe(Stream.changesWith((a, b) => JSON.stringify(a) === JSON.stringify(b))),
           );
 
@@ -601,13 +606,10 @@ describe("Archived builtin", () => {
             ...definitions.map((value) => ({ [`prop:${value._tag}`]: value })),
             props,
           ]) {
-            const filter = {
-              type: PaneSchema.StreamFilterType.cases.notes.make({}),
-              props: filters,
-            };
+            const filter = [StreamSettings.conditions.notes, ...propertyComparisons(filters)];
 
             const rows = Option.getOrThrow(
-              yield* (yield* records.reactiveStreamList({ ...filter, sort: "updated" })).pipe(
+              yield* (yield* records.reactiveStreamList({ filter, sort: "updated" })).pipe(
                 Stream.runHead,
               ),
             );
@@ -615,18 +617,16 @@ describe("Archived builtin", () => {
             expect(rows.map(({ id }) => id).toSorted()).toEqual(["grouped", "repeated", "unset"]);
             expect(
               Option.getOrThrow(
-                yield* (yield* records.reactiveSearchPreview({ search: "", filter })).pipe(
-                  Stream.runHead,
-                ),
+                yield* (yield* records.reactiveSearchPreview(filter)).pipe(Stream.runHead),
               )
                 .map(({ id }) => id)
                 .toSorted(),
             ).toEqual(["grouped", "repeated", "unset"]);
 
-            const found = yield* (yield* records.reactiveFindPreviewById({
-              id: RecordSchema.Id.make("grouped"),
-              filter,
-            })).pipe(Stream.runHead);
+            const found = yield* (yield* records.reactiveFindPreview([
+              AttrsSchema.makeFilterExpr.cmp({ val: ["id", "=", RecordSchema.Id.make("grouped")] }),
+              ...filter,
+            ])).pipe(Stream.runHead);
 
             expect(Option.flatten(found).pipe(Option.map(({ id }) => id))).toEqual(
               Option.some("grouped"),
@@ -744,9 +744,7 @@ describe("Archived builtin", () => {
             AttrsSchema.PropVal.cases.link.make({ val: AttrsSchema.RecordId.make("target") }),
           ];
 
-          const targets = StreamFilter.toAttrs({
-            type: PaneSchema.StreamFilterType.cases.pages.make({}),
-          });
+          const targets = StreamSettings.presets.pages.filter;
 
           for (const value of values) {
             const { doc, attrs } = yield* Effect.acquireRelease(
@@ -896,4 +894,14 @@ function makeDevice() {
 
 function run(program: Effect.Effect<void, unknown, Scope.Scope>) {
   return Effect.runPromise(Effect.scoped(program));
+}
+
+function propertyComparisons(
+  values: Readonly<Record<string, AttrsSchema.PropVal>>,
+): AttrsSchema.TargetFilter {
+  return Record.toEntries(values).map(([id, value]) => {
+    return AttrsSchema.makeTargetFilterExpr.cmp({
+      val: [["prop", AttrsSchema.RecordId.make(id)], "=", value],
+    });
+  });
 }

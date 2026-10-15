@@ -1,4 +1,5 @@
-import { Effect, Equal, Stream, Predicate } from "effect";
+import { StreamSettings } from "@manotes/shared/record/stream-settings";
+import { Effect, Equal, Option, Stream, Predicate } from "effect";
 import { Atom } from "effect/reactivity";
 import {
   Show,
@@ -20,7 +21,6 @@ import {
   createSyncedAtom,
 } from "../../lib";
 import { PaneCtx } from "../../lib/record/pane.ctx";
-import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { RecordStream } from "../../lib/record/stream";
 import { EditorPool } from "./editor-pool";
 import { RecordCreate } from "./record-create";
@@ -39,7 +39,7 @@ export function PaneStream(props: ComponentProps<"section">) {
   const [refreshToken, setRefreshToken] = createSignal(0);
 
   // Display-only pane changes (the snippet view) must not restart the query.
-  const query = createMemo(() => PaneSchema.paneToQuery(pane()), undefined, {
+  const query = createMemo(() => ({ filter: pane().filter, sort: pane().sort }), undefined, {
     equals: Equal.equals,
   });
 
@@ -108,7 +108,17 @@ export function PaneStream(props: ComponentProps<"section">) {
     });
   };
 
-  const handleCreate = () => createRecordOn(pane().filter.date);
+  const filteredDate = () => {
+    return Option.getOrUndefined(StreamSettings.firstDate(pane().filter));
+  };
+
+  const hasSearch = () => {
+    return StreamSettings.firstSearch(pane().filter).pipe(
+      Option.exists((text) => text.trim().length > 0),
+    );
+  };
+
+  const handleCreate = () => createRecordOn(filteredDate());
 
   // From a record, create beside it on its date; otherwise use the pane's date.
   const createNearFocus = () => {
@@ -116,7 +126,7 @@ export function PaneStream(props: ComponentProps<"section">) {
     const rows = Predicate.isTagged(state, "Success") ? state.value.rows : [];
     const row = rows.find((row) => RecordStream.recordId(row) === recordId);
 
-    createRecordOn(row ? RecordStream.date(row) : pane().filter.date);
+    createRecordOn(row ? RecordStream.date(row) : filteredDate());
   };
 
   // Rendering, keyboard order and retention all derive from these same rows.
@@ -127,12 +137,10 @@ export function PaneStream(props: ComponentProps<"section">) {
   const [lastFocused, setLastFocused] = createSignal<RecordSchema.Id>();
 
   const record = recording.createControls({
+    // Recording is available everywhere for now.
+    // TODO: Consider restricting it to streams filtered by `_tag = "note"`.
     enabled: () => {
-      return (
-        Predicate.isTagged(state, "Success") &&
-        (Predicate.isTagged(pane().filter.type, "notes") ||
-          Predicate.isTagged(pane().filter.type, "pages"))
-      );
+      return Predicate.isTagged(state, "Success");
     },
     getFocusedRow() {
       if (!Predicate.isTagged(state, "Success")) return;
@@ -249,9 +257,7 @@ export function PaneStream(props: ComponentProps<"section">) {
                   when={state().value.rows.length > 0}
                   fallback={
                     <PaneEmptyState>
-                      {pane().filter.search?.trim()
-                        ? "No records match your search."
-                        : "No records in this pane."}
+                      {hasSearch() ? "No records match your search." : "No records in this pane."}
                     </PaneEmptyState>
                   }
                 >

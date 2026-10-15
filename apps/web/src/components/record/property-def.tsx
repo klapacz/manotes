@@ -1,5 +1,7 @@
+import { PaneNavigate } from "../../lib/record/pane.navigate";
+import { StreamSettings } from "@manotes/shared/record/stream-settings";
+import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { useAtom } from "@effect/atom-solid";
-import { getRouteApi } from "@tanstack/solid-router";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { Data, Effect, Match, Option } from "effect";
@@ -15,10 +17,6 @@ import { PropQuery } from "./prop-query";
 import { PropPicker } from "./prop-picker";
 import { Focus } from "./focus";
 import { MenuQuery } from "../../lib/menu-query";
-import { PaneCtx } from "../../lib/record/pane.ctx";
-import { PaneCursor } from "../../lib/record/pane.cursor";
-import { PaneMake } from "@manotes/shared/record/pane.make";
-import { PaneScroll } from "../../lib/record/pane.scroll";
 import { RecordLink } from "../../lib/record/link-component";
 import { Button } from "../ui/button";
 import { ButtonGroup } from "../ui/button-group";
@@ -26,8 +24,6 @@ import { ArrowUpRightIcon } from "../icons";
 import { PropScope } from "./prop-scope";
 import { PropState } from "./prop-state";
 import { EnumOptions } from "./enum-options";
-
-const route = getRouteApi("/$graph/");
 
 const typeLabels = {
   text: "Text",
@@ -56,9 +52,7 @@ export function Root(props: {
   };
 }) {
   const focus = Focus.useNode();
-  const ctx = PaneCtx.use();
-  const scroll = PaneScroll.use();
-  const navigate = route.useNavigate();
+  const openNext = PaneNavigate.useOpenNext();
   const [mutation, edit] = useAtom(Edit);
 
   const change = (change: Change) => {
@@ -89,20 +83,10 @@ export function Root(props: {
     );
   };
 
-  const openRecord = (id: AttrsSchema.RecordId) => {
-    const input = PaneMake.record(id);
-
-    if (scroll.scrollToPane(input).found) return;
-
-    void navigate(PaneCtx.linkOptions(ctx, PaneCursor.openNext(input)));
-  };
+  const openRecord = (id: AttrsSchema.RecordId) => openNext(PaneSchema.make.record({ id }));
 
   const openOptions = () => {
-    const input = PaneMake.enumOptions({ enum_parent: props.recordId });
-
-    if (scroll.scrollToPane(input).found) return;
-
-    void navigate(PaneCtx.linkOptions(ctx, PaneCursor.openNext(input)));
+    return openNext(PaneSchema.make.stream(StreamSettings.enumOptionsPreset(props.recordId)));
   };
 
   return (

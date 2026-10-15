@@ -1,48 +1,43 @@
 import { useAtom } from "@effect/atom-solid";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
-import { PaneMake } from "@manotes/shared/record/pane.make";
-import { StreamFilter } from "@manotes/shared/record/stream-filter";
+import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
-import { getRouteApi } from "@tanstack/solid-router";
-import { Effect, Equal, Match } from "effect";
+import { Effect, Equal, Match, Schema } from "effect";
 import { AsyncResult } from "effect/reactivity";
 import { createMemo, Show } from "solid-js";
 import type * as Y from "yjs";
 import { bindRt, createAtomResultStore, createSyncedAtom, MatchTag } from "../../lib";
 import { SyncedAttrs } from "../../lib/editor/synced-attrs";
 import { createStreamRefLabel } from "../../lib/editor/stream-ref/extension";
-import { PaneCtx } from "../../lib/record/pane.ctx";
-import { PaneCursor } from "../../lib/record/pane.cursor";
-import { PaneScroll } from "../../lib/record/pane.scroll";
 import { RecordLink } from "../../lib/record/link-component";
 import { ArrowUpRightIcon } from "../icons";
 import { Alert } from "../ui/alert";
 import { Button } from "../ui/button";
 import { RecordLabel } from "./record-label";
 
-const route = getRouteApi("/$graph/");
+import { PaneNavigate } from "../../lib/record/pane.navigate";
 
 export function Link(props: {
   ruleId: AttrsSchema.RecordId;
   targets: AttrsSchema.TargetFilter | undefined;
 }) {
-  const ctx = PaneCtx.use();
-  const scroll = PaneScroll.use();
-  const navigate = route.useNavigate();
-  const filter = () => StreamFilter.fromAttrs(props.targets);
+  const openNext = PaneNavigate.useOpenNext();
 
-  const label = createStreamRefLabel(() => ({
-    ...StreamSettings.defaults(filter().type),
-    filter: filter(),
-  }));
+  const settings = (): StreamSettings.Settings => ({
+    ...StreamSettings.defaultDisplay,
+    filter: props.targets ?? [],
+  });
+
+  const label = createStreamRefLabel(settings);
 
   const open = () => {
-    const input = PaneMake.ruleTargets({ ruleId: props.ruleId, filter: filter() });
-
-    if (scroll.scrollToPane(input).found) return;
-
-    void navigate(PaneCtx.linkOptions(ctx, PaneCursor.openNext(input)));
+    return openNext(
+      PaneSchema.make.stream({
+        ...settings(),
+        source: PaneSchema.Source.cases.rule.make({ id: props.ruleId }),
+      }),
+    );
   };
 
   return (
@@ -79,11 +74,11 @@ export function Header(props: {
     );
   });
 
-  const savedFilter = () => StreamFilter.fromAttrs(rule()?.targets);
+  const savedFilter = () => rule()?.targets ?? [];
 
   // Compare persisted expressions so omitted/default pane fields do not mark edits.
   const modified = () => {
-    return !Equal.equals(StreamFilter.toAttrs(props.filter), StreamFilter.toAttrs(savedFilter()));
+    return !Equal.equals(props.filter, savedFilter());
   };
 
   const saveChanges = () => {
@@ -91,7 +86,7 @@ export function Header(props: {
 
     if (!current) return;
 
-    save({ doc: current.doc, targets: StreamFilter.toAttrs(props.filter) });
+    save({ doc: current.doc, targets: props.filter });
   };
 
   return (
@@ -151,10 +146,15 @@ const Save = bindRt((rt) => {
   return rt.fn(
     Effect.fn("ComponentsRecordRuleTargets.save")(function* (opts: {
       readonly doc: Y.Doc;
-      readonly targets: AttrsSchema.TargetFilter;
+      readonly targets: AttrsSchema.Filter;
     }) {
       const attrs = yield* Attrs.Service;
-      yield* attrs.setRuleTargets(opts);
+
+      const targets = yield* Schema.decodeEffect(
+        AttrsSchema.Filter.pipe(Schema.decodeTo(AttrsSchema.TargetFilter)),
+      )(opts.targets);
+
+      yield* attrs.setRuleTargets({ doc: opts.doc, targets });
     }),
   );
 });

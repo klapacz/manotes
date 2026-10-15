@@ -1,4 +1,4 @@
-import { Effect, Record, Schema } from "effect";
+import { Data, Effect, Record, Schema } from "effect";
 import { RecordSchema } from "./record.schema";
 import { PlainDateString } from "./temporal.schema";
 import { YSchema } from "./y-schema";
@@ -79,18 +79,21 @@ export type RecordTag = typeof RecordTag.Type;
  */
 const PropTarget = Schema.Tuple([Schema.Literal("prop"), RecordId]);
 
+export const LinkTarget = Schema.Tuple([
+  Schema.Literal("link"),
+  Schema.Literals(["->", "<-"]),
+  RecordId,
+]);
+
 export const TargetFilterCmp = Schema.Union([
+  Schema.Tuple([Schema.Literal("id"), Schema.Literal("="), RecordId]),
   Schema.Tuple([Schema.Literal("_tag"), Schema.Literal("="), RecordTag]),
   Schema.Tuple([Schema.Literal("owned_type"), Schema.Literal("="), Schema.Literal("enum_option")]),
   Schema.Tuple([Schema.Literal("owned_parent"), Schema.Literal("="), RecordId]),
   Schema.Tuple([Schema.Literal("title"), Schema.Literal("exists"), Schema.Boolean]),
   Schema.Tuple([Schema.Literal("body"), Schema.Literal("contains"), Schema.String]),
   Schema.Tuple([Schema.Literal("date"), Schema.Literal("="), PlainDateString]),
-  Schema.Tuple([
-    Schema.Tuple([Schema.Literal("link"), Schema.Literals(["->", "<-"]), RecordId]),
-    Schema.Literal("exists"),
-    Schema.Literal(true),
-  ]),
+  Schema.Tuple([LinkTarget, Schema.Literal("exists"), Schema.Literal(true)]),
   Schema.Tuple([PropTarget, Schema.Literal("="), PropVal]),
   Schema.Tuple([PropTarget, Schema.Literal("exists"), Schema.Boolean]),
 ]);
@@ -106,7 +109,8 @@ export const FilterCmp = Schema.Union([
 export type FilterCmp = typeof FilterCmp.Type;
 
 export type FilterExpr<Cmp = FilterCmp> =
-  | { readonly _tag: "and" | "or"; readonly val: readonly FilterExpr<Cmp>[] }
+  | { readonly _tag: "and"; readonly val: readonly FilterExpr<Cmp>[] }
+  | { readonly _tag: "or"; readonly val: readonly FilterExpr<Cmp>[] }
   | { readonly _tag: "cmp"; readonly val: Cmp };
 
 export const FilterExpr = filterExpr(FilterCmp);
@@ -118,6 +122,10 @@ export type TargetFilterExpr = typeof TargetFilterExpr.Type;
 export const Filter = Schema.Array(FilterExpr);
 
 export type Filter = typeof Filter.Type;
+
+export const makeFilterExpr = Data.taggedEnum<FilterExpr>();
+
+export const makeTargetFilterExpr = Data.taggedEnum<TargetFilterExpr>();
 
 export const TargetFilter = Schema.Array(TargetFilterExpr);
 

@@ -4,13 +4,10 @@ import { Array, Effect, Layer, Option, Schema, Context, Stream, Struct, type Typ
 import { DB } from "./db.service";
 import { RecordSchema } from "./record.schema";
 import { Tables } from "./db.tables";
-import type { PaneSchema } from "./record/pane.schema";
-import { StreamSettings } from "./record/stream-settings";
 import { nanoid } from "nanoid";
 import { EffectOption } from "./effect/effect-option";
 import { AttrsSchema } from "./attrs.schema";
 import type * as Sqlite from "effect-qb/sqlite";
-import type { ReadonlyRecord } from "effect/Record";
 
 type QueryError = Sqlite.Executor.SqliteExecutorError | Sqlite.Errors.SqliteReadQueryError;
 
@@ -171,7 +168,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
     ) {
       const plan = streamSelect.pipe(
         Query.from(Tables.records),
-        Query.where(RecordFilter.filterPredicate(query)),
+        Query.where(RecordFilter.filterPredicate(query.filter)),
       );
 
       const ordered =
@@ -187,74 +184,33 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
       return stream;
     });
 
-    const reactiveFindPreviewById = Effect.fn("RecordRepo.reactiveFindPreviewById")(
-      function* (opts: { readonly id: RecordSchema.Id; readonly filter?: StreamSettings.Filter }) {
-        const plan = previewSelect.pipe(
-          Query.from(Tables.records),
-          Query.where(Query.eq(Tables.records.id, opts.id)),
-        );
-
-        const filtered =
-          opts.filter === undefined
-            ? plan
-            : plan.pipe(
-                Query.where(
-                  RecordFilter.filterPredicate({
-                    ...opts.filter,
-                    props: StreamSettings.propFilters(opts.filter),
-                    sort: "updated",
-                  }),
-                ),
-              );
-
-        const stream = yield* db.reactiveQuery(filtered.pipe(Query.limit(1)));
-
-        return stream.pipe(Stream.map(Array.head));
-      },
-    );
-
-    const reactiveSearchPreview = Effect.fn("RecordRepo.reactiveSearch")(function* (
-      opts: SearchPreviewQuery,
+    const reactiveFindPreview = Effect.fn("RecordRepo.reactiveFindPreview")(function* (
+      filter: AttrsSchema.Filter,
     ) {
-      const trimmed = opts.search.trim();
-
-      const query =
-        opts.filter === undefined
-          ? { sort: "updated" as const }
-          : {
-              ...opts.filter,
-              props: StreamSettings.propFilters(opts.filter),
-              sort: "updated" as const,
-            };
-
-      const plan = previewSelect.pipe(
-        Query.from(Tables.records),
-        Query.where(RecordFilter.filterPredicate(query)),
-        Query.where(Query.neq(Tables.records.text, "")),
-      );
-
-      const searched =
-        trimmed.length === 0
-          ? plan
-          : plan.pipe(
-              Query.where(
-                Query.or(
-                  Query.like(Tables.records.title, `%${trimmed}%`),
-                  Query.like(Tables.records.text, `%${trimmed}%`),
-                ),
-              ),
-              Query.orderBy(
-                Query.case()
-                  .when(Query.like(Tables.records.title, `%${trimmed}%`), 0)
-                  .else(1),
-              ),
-            );
-
       const stream = yield* db.reactiveQuery(
-        searched.pipe(Query.orderBy(Tables.records.createdAt, "desc"), Query.limit(100)),
+        previewSelect.pipe(
+          Query.from(Tables.records),
+          Query.where(RecordFilter.filterPredicate(filter)),
+          Query.limit(1),
+        ),
       );
 
-      return stream;
+      return stream.pipe(Stream.map(Array.head));
+    });
+
+    const reactiveSearchPreview = Effect.fn("RecordRepo.reactiveSearchPreview")(function* (
+      filter: AttrsSchema.Filter,
+    ) {
+      return yield* db.reactiveQuery(
+        previewSelect.pipe(
+          Query.from(Tables.records),
+          Query.where(RecordFilter.filterPredicate(filter)),
+          Query.where(Query.neq(Tables.records.text, "")),
+          Query.orderBy(Query.case().when(RecordFilter.titleMatchPredicate(filter), 0).else(1)),
+          Query.orderBy(Tables.records.createdAt, "desc"),
+          Query.limit(100),
+        ),
+      );
     });
 
     return {
@@ -269,7 +225,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
       findAllNotes,
       reactiveNotes,
       reactiveStreamList,
-      reactiveFindPreviewById,
+      reactiveFindPreview,
       reactiveSearchPreview,
     };
   }),
@@ -321,18 +277,8 @@ export const bootResultEmpty = (): BootResult => ({
   backlinks: [],
 });
 
-export type SearchPreviewQuery = {
-  readonly search: string;
-  readonly filter?: StreamSettings.Filter;
-};
-
 export type StreamListQuery = {
-  readonly type?: PaneSchema.StreamFilterType;
-  readonly date?: string;
-  readonly backlinksTo?: RecordSchema.Id;
-  readonly linksFrom?: RecordSchema.Id;
-  readonly search?: string;
-  readonly props?: ReadonlyRecord<RecordSchema.Id, AttrsSchema.PropVal>;
+  readonly filter: AttrsSchema.Filter;
   readonly sort: "date" | "updated";
 };
 

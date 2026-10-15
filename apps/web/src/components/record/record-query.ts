@@ -1,6 +1,6 @@
 import { Effect, Stream } from "effect";
 import { RecordRepo } from "@manotes/shared/record.repo";
-import type { StreamSettings } from "@manotes/shared/record/stream-settings";
+import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import type { RecordSchema } from "@manotes/shared/record.schema";
 import { QueryEngine } from "../../lib/query-engine";
 
@@ -21,19 +21,22 @@ export function label(record: { title: string | null; text: string }, query = ""
   );
 }
 
-export const query = searchQuery(undefined);
+export const query = searchQuery([]);
 
-export function scoped(opts: { readonly filter: StreamSettings.Filter }) {
+export function scoped(opts: { readonly filter: AttrsSchema.Filter }) {
   return searchQuery(opts.filter);
 }
 
-function searchQuery(filter: StreamSettings.Filter | undefined) {
+function searchQuery(filter: AttrsSchema.Filter) {
   const search = Effect.fn("ComponentsRecordRecordQuery.search")(function* (
     request: QueryEngine.Request,
   ) {
     const repo = yield* RecordRepo.Service;
 
-    return yield* repo.reactiveSearchPreview({ search: request.text, filter });
+    return yield* repo.reactiveSearchPreview([
+      AttrsSchema.makeFilterExpr.cmp({ val: ["body", "contains", request.text.trim()] }),
+      ...filter,
+    ]);
   });
 
   return QueryEngine.share((request) => {

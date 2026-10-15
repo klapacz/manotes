@@ -24,18 +24,29 @@ describe("query table dependencies", () => {
     const plan = Query.select({ id: Tables.records.id }).pipe(
       Query.from(Tables.records),
       Query.where(
-        RecordFilter.filterPredicate({
-          sort: "updated",
-          props: {
-            [BuiltinAttrs.archivedId]: AttrsSchema.PropVal.cases.bool.make({ val: false }),
-            [AttrsSchema.RecordId.make("priority")]: AttrsSchema.PropVal.cases.number.make({
-              val: 7,
-            }),
-          },
-          search: "50%_!",
-          backlinksTo: RecordSchema.Id.make("project"),
-          linksFrom: RecordSchema.Id.make("source"),
-        }),
+        RecordFilter.filterPredicate([
+          AttrsSchema.makeFilterExpr.cmp({
+            val: [
+              ["prop", BuiltinAttrs.archivedId],
+              "=",
+              AttrsSchema.PropVal.cases.bool.make({ val: false }),
+            ],
+          }),
+          AttrsSchema.makeFilterExpr.cmp({
+            val: [
+              ["prop", AttrsSchema.RecordId.make("priority")],
+              "=",
+              AttrsSchema.PropVal.cases.number.make({ val: 7 }),
+            ],
+          }),
+          AttrsSchema.makeFilterExpr.cmp({ val: ["body", "contains", "50%_!"] }),
+          AttrsSchema.makeFilterExpr.cmp({
+            val: [["link", "->", RecordSchema.Id.make("project")], "exists", true],
+          }),
+          AttrsSchema.makeFilterExpr.cmp({
+            val: [["link", "<-", RecordSchema.Id.make("source")], "exists", true],
+          }),
+        ]),
       ),
     );
 

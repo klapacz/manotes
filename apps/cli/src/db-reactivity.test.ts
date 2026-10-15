@@ -35,13 +35,18 @@ describe("automatic reactive query dependencies", () => {
           Query.select({ id: Tables.records.id }).pipe(
             Query.from(Tables.records),
             Query.where(
-              RecordFilter.filterPredicate({
-                sort: "updated",
-                props: {
-                  [BuiltinAttrs.archivedId]: AttrsSchema.PropVal.cases.bool.make({ val: false }),
-                },
-                backlinksTo: RecordSchema.Id.make("project"),
-              }),
+              RecordFilter.filterPredicate([
+                AttrsSchema.makeFilterExpr.cmp({
+                  val: [
+                    ["prop", BuiltinAttrs.archivedId],
+                    "=",
+                    AttrsSchema.PropVal.cases.bool.make({ val: false }),
+                  ],
+                }),
+                AttrsSchema.makeFilterExpr.cmp({
+                  val: [["link", "->", RecordSchema.Id.make("project")], "exists", true],
+                }),
+              ]),
             ),
           ),
         );

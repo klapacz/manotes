@@ -1,17 +1,17 @@
 import { RecordSchema } from "@manotes/shared/record.schema";
 import type { RecordRepo } from "@manotes/shared/record.repo";
 import { useAtom } from "@effect/atom-solid";
-import { DateTime, Effect, Predicate } from "effect";
+import { Array, DateTime, Effect, Match, Option, Result } from "effect";
 import { nanoid } from "nanoid";
 import { toast } from "somoto";
 import { MaterializedEventService, bindRt } from "../../lib";
-import { StreamFilter } from "@manotes/shared/record/stream-filter";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import type { UnknownNodeJSON } from "@manotes/shared/node-json";
 import type { Hotkey } from "@tanstack/hotkeys";
 import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 import { Attrs } from "@manotes/shared/attrs.service";
+import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { RecordDoc } from "@manotes/shared/record/doc";
 import * as Y from "yjs";
 import type { EditorPool } from "./editor-pool";
@@ -88,14 +88,11 @@ export function pagePayload(title: string): Uint8Array<ArrayBufferLike> {
 /** Seeds a new record's content from the stream pane's filters. */
 export const prefilledPayload = Effect.fn("ComponentsRecordRecordCreate.prefilledPayload")(
   function* (pane: PaneSchema.PaneStream) {
-    const content = new Array<UnknownNodeJSON>();
+    const comparisons = StreamSettings.requiredComparisons(pane.filter);
+    const content = Array.empty<UnknownNodeJSON>();
+    const tag = Option.getOrUndefined(StreamSettings.firstTag(pane.filter));
 
-    if (
-      Predicate.isTagged(pane.filter.type, "pages") ||
-      Predicate.isTagged(pane.filter.type, "prop") ||
-      Predicate.isTagged(pane.filter.type, "rule") ||
-      Predicate.isTagged(pane.filter.type, "enum_option")
-    ) {
+    if (needsHeading(comparisons)) {
       content.push({
         type: "heading",
         attrs: { level: 1 },
@@ -103,10 +100,10 @@ export const prefilledPayload = Effect.fn("ComponentsRecordRecordCreate.prefille
       });
     }
 
-    if (pane.filter.backlinksTo !== undefined) {
+    for (const id of StreamSettings.linksTo(pane.filter)) {
       content.push({
         type: "paragraph",
-        content: [{ type: "backlink", attrs: { id: pane.filter.backlinksTo } }],
+        content: [{ type: "backlink", attrs: { id } }],
       });
     }
 
@@ -119,29 +116,41 @@ export const prefilledPayload = Effect.fn("ComponentsRecordRecordCreate.prefille
 
     yield* Effect.sync(() => ProsemirrorEncode.initializeDocument({ doc, content }));
 
-    if (Predicate.isTagged(pane.filter.type, "prop")) {
-      const attrs = yield* Attrs.Service;
-      yield* attrs.initializeProp({ doc });
-    }
+    const attrs = yield* Attrs.Service;
 
-    if (Predicate.isTagged(pane.filter.type, "enum_option")) {
-      const attrs = yield* Attrs.Service;
-      yield* attrs.initializeEnumOption({ doc, enum_parent: pane.filter.type.enum_parent });
-    }
-
-    if (Predicate.isTagged(pane.filter.type, "rule")) {
-      const attrs = yield* Attrs.Service;
-      yield* attrs.initializeRule({
-        doc,
-        targets: StreamFilter.toAttrs(
-          StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({})).filter,
-        ),
-      });
-    }
+    yield* Match.value(tag).pipe(
+      Match.when("prop", () => attrs.initializeProp({ doc })),
+      Match.when("rule", () => {
+        return attrs.initializeRule({ doc, targets: StreamSettings.defaultPreset.filter });
+      }),
+      Match.when("owned", () => {
+        return Array.findFirst(pane.filter, (expression) => {
+          return StreamSettings.enumOptionsParent(expression).pipe(Result.getSuccess);
+        }).pipe(
+          Option.match({
+            onNone: () => Effect.void,
+            onSome: (enum_parent) => {
+              return attrs.initializeEnumOption({ doc, enum_parent });
+            },
+          }),
+        );
+      }),
+      Match.orElse(() => Effect.void),
+    );
 
     return yield* Effect.sync(() => Y.encodeStateAsUpdate(doc));
   },
   Effect.scoped,
 );
+
+function needsHeading(comparisons: readonly AttrsSchema.FilterCmp[]): boolean {
+  return Array.some(comparisons, (comparison) => {
+    return Match.value(comparison).pipe(
+      Match.when(["title", "exists", true], () => true),
+      Match.when(["_tag", "=", Match.is("prop", "rule", "owned")], () => true),
+      Match.orElse(() => false),
+    );
+  });
+}
 
 export * as RecordCreate from "./record-create";

@@ -1,8 +1,6 @@
-import { Array, Equal, Option, Predicate, Record, pipe } from "effect";
-import { PaneMake } from "@manotes/shared/record/pane.make";
+import { Array, Equal, Match, Option, pipe } from "effect";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
-import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 
 export type Stack = Array.NonEmptyReadonlyArray<PaneSchema.Pane>;
 
@@ -27,7 +25,7 @@ export const openNext = (next: PaneSchema.PaneInput): Transform => {
 };
 
 export const close: Transform = (cursor) => {
-  if (cursor.index === 0) return [PaneMake.notes()];
+  if (cursor.index === 0) return [PaneSchema.make.stream(StreamSettings.defaultPreset)];
 
   return Array.splitAtNonEmpty(cursor.stack, cursor.index)[0];
 };
@@ -69,41 +67,18 @@ export const inputMatches = (input: PaneSchema.PaneInput) => {
   };
 };
 
-type ComparablePane =
-  | readonly [variant: "recordings"]
-  | readonly [variant: "record", id: string]
-  | readonly [
-      variant: "stream",
-      type: typeof PaneSchema.StreamFilterType.Encoded,
-      scope: string | null,
-      matches: string | null,
-      backlinksTo: string | null,
-      linksFrom: string | null,
-      date: string | null,
-      search: string | null,
-      sort: PaneSchema.StreamSort,
-      props: readonly (readonly [string, typeof AttrsSchema.PropVal.Encoded])[],
-    ];
-
-function normalizeToInput(value: PaneSchema.PaneInput | PaneSchema.Pane): ComparablePane {
-  if (Predicate.isTagged(value, "recordings")) return ["recordings"];
-
-  if (Predicate.isTagged(value, "record")) return ["record", value.id];
-
-  return [
-    "stream",
-    value.filter.type ?? PaneSchema.StreamFilterType.cases.notes.make({}),
-    value.scope?.propId ?? null,
-    value.matches?.ruleId ?? null,
-    value.filter.backlinksTo ?? null,
-    value.filter.linksFrom ?? null,
-    value.filter.date ?? null,
-    value.filter.search?.trim() || null,
-    value.sort ?? "date",
-    Record.toEntries(value.filter.props ?? StreamSettings.propFilters({})).toSorted(([a], [b]) => {
-      return a.localeCompare(b);
-    }),
-  ];
+function normalizeToInput(value: PaneSchema.PaneInput | PaneSchema.Pane) {
+  return Match.value(value).pipe(
+    Match.tag("recordings", () => PaneSchema.make.recordings({})),
+    Match.tag("record", ({ id }) => PaneSchema.make.record({ id })),
+    Match.tag("stream", (pane) => ({
+      ...PaneSchema.make.stream({}),
+      filter: pane.filter ?? StreamSettings.defaultPreset.filter,
+      source: pane.source ?? null,
+      sort: pane.sort ?? StreamSettings.defaultDisplay.sort,
+    })),
+    Match.exhaustive,
+  );
 }
 
 const throughCurrent = (cursor: Cursor): InputStack => {

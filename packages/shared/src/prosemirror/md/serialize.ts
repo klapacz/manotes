@@ -146,6 +146,7 @@ function createSerializer(options: Options): MarkdownSerializer {
       },
       streamRef(state, node) {
         const attrs = StreamRefSpec.decodeAttrs(node.attrs);
+        const label = StreamRefSpec.renderLabels(StreamRefSpec.labels(attrs));
 
         const data = encodeURIComponent(JSON.stringify(attrs)).replace(
           /[!'()*]/g,
@@ -153,7 +154,7 @@ function createSerializer(options: Options): MarkdownSerializer {
         );
 
         // Markdown transport only; the document stores settings, never a URL.
-        state.text(`[${state.esc(StreamRefSpec.label(attrs))}](stream:${data})`, false);
+        state.text(`[${state.esc(label)}](stream:${data})`, false);
       },
       backlink(state, node) {
         const { id } = BacklinkSpec.decodeAttrs(node.attrs);

@@ -1,31 +1,8 @@
-import { Effect, Schema } from "effect";
+import { Data, Effect, Schema } from "effect";
 import { nanoid } from "nanoid";
-import type { RecordRepo } from "../record.repo";
 import { RecordSchema } from "../record.schema";
-import { TemporalSchema } from "../temporal.schema";
 import { StreamSettings as Settings } from "./stream-settings";
 import { AttrsSchema } from "../attrs.schema";
-
-export const StreamFilterType = Schema.TaggedUnion({
-  notes: {},
-  pages: {},
-  prop: {},
-  rule: {},
-  enum_option: { enum_parent: RecordSchema.Id },
-});
-
-export type StreamFilterType = typeof StreamFilterType.Type;
-
-const StreamFilter = Schema.Struct({
-  type: StreamFilterType.pipe(
-    Schema.withDecodingDefault(Effect.sync(() => StreamFilterType.cases.notes.make({}))),
-  ),
-  backlinksTo: Schema.optional(RecordSchema.Id),
-  linksFrom: Schema.optional(RecordSchema.Id),
-  date: Schema.optional(TemporalSchema.PlainDateString),
-  search: Schema.optional(Schema.String),
-  props: Schema.optional(Schema.Record(RecordSchema.Id, AttrsSchema.PropVal)),
-});
 
 const StreamSort = Schema.Literals(["date", "updated"]).pipe(
   Schema.withDecodingDefault(Effect.sync(() => "date" as const)),
@@ -42,7 +19,11 @@ const StreamView = Schema.Literals(["full", "snippets"]).pipe(
 export type StreamView = typeof StreamView.Type;
 
 export const StreamSettings = Schema.Struct({
-  filter: StreamFilter,
+  filter: AttrsSchema.Filter.pipe(
+    Schema.withDecodingDefault(
+      Effect.sync((): AttrsSchema.Filter => Settings.defaultPreset.filter),
+    ),
+  ),
   sort: StreamSort,
   view: StreamView,
 });
@@ -55,6 +36,11 @@ export type Id = typeof Id.Type;
 
 const PaneId = Id.pipe(Schema.withDecodingDefaultKey(Effect.sync(makeId)));
 
+export const Source = Schema.TaggedUnion({
+  prop: { id: RecordSchema.Id },
+  rule: { id: RecordSchema.Id },
+});
+
 export const Pane = Schema.TaggedUnion({
   recordings: { paneId: PaneId },
   record: {
@@ -64,8 +50,7 @@ export const Pane = Schema.TaggedUnion({
   stream: {
     paneId: PaneId,
     ...StreamSettings.fields,
-    scope: Schema.optional(Schema.Struct({ propId: RecordSchema.Id })),
-    matches: Schema.optional(Schema.Struct({ ruleId: RecordSchema.Id })),
+    source: Schema.optional(Source),
   },
 });
 
@@ -79,17 +64,7 @@ export type PaneRecord = typeof Pane.cases.record.Type;
 
 export type PaneRecordings = typeof Pane.cases.recordings.Type;
 
-export function paneToQuery(pane: PaneStream): RecordRepo.StreamListQuery {
-  return {
-    type: pane.filter.type,
-    date: pane.filter.date,
-    backlinksTo: pane.filter.backlinksTo,
-    linksFrom: pane.filter.linksFrom,
-    search: pane.filter.search?.trim() || undefined,
-    props: Settings.propFilters(pane.filter),
-    sort: pane.sort,
-  };
-}
+export const make = Data.taggedEnum<PaneInput>();
 
 function makeId(): Id {
   return Id.make(nanoid());

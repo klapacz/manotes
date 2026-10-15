@@ -1,3 +1,6 @@
+import { AttrsSchema } from "@manotes/shared/attrs.schema";
+import { PaneNavigate } from "../../lib/record/pane.navigate";
+import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import type { RecordRepo } from "@manotes/shared/record.repo";
 import { getRouteApi } from "@tanstack/solid-router";
 import { Data, Exit, type Types } from "effect";
@@ -7,9 +10,7 @@ import { Show, createMemo, createSignal } from "solid-js";
 import { RecordFormat } from "../../lib/record";
 import { PaneCursor } from "../../lib/record/pane.cursor";
 import { PaneCtx } from "../../lib/record/pane.ctx";
-import { PaneMake } from "@manotes/shared/record/pane.make";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
-import { PaneScroll } from "../../lib/record/pane.scroll";
 import {
   ArrowsOutIcon,
   ArrowUpRightIcon,
@@ -166,21 +167,60 @@ export function RecordActions(props: { record: RecordRepo.Meta }) {
   });
 
   const ctx = PaneCtx.use();
-  const scroll = PaneScroll.use();
   const navigate = route.useNavigate();
   const fnode = Focus.useNode();
 
-  const openNext = (pane: PaneSchema.PaneInput) => {
-    const result = scroll.scrollToPane(pane);
+  const openNext = PaneNavigate.useOpenNext();
 
-    if (result.found) return;
+  const openBacklinks = () => {
+    return openNext(
+      PaneSchema.make.stream({
+        filter: [
+          AttrsSchema.makeFilterExpr.cmp({
+            val: [["link", "->", props.record.id], "exists", true],
+          }),
+          StreamSettings.conditions.unarchived,
+        ],
+        sort: "date",
+        view: "full",
+      }),
+    );
+  };
 
-    return void navigate(PaneCtx.linkOptions(ctx, PaneCursor.openNext(pane)));
+  const openOutgoing = () => {
+    return openNext(
+      PaneSchema.make.stream({
+        filter: [
+          AttrsSchema.makeFilterExpr.cmp({
+            val: [["link", "<-", props.record.id], "exists", true],
+          }),
+          StreamSettings.conditions.unarchived,
+        ],
+        sort: "updated",
+        view: "full",
+      }),
+    );
+  };
+
+  const openDate = () => {
+    return openNext(
+      PaneSchema.make.stream({
+        filter: [
+          AttrsSchema.makeFilterExpr.cmp({ val: ["date", "=", props.record.date] }),
+          StreamSettings.conditions.unarchived,
+        ],
+        sort: "date",
+        view: "full",
+      }),
+    );
   };
 
   const openOnly = () => {
     const pane = ctx.pane();
-    const input = PaneSchema.Pane.guards.record(pane) ? pane : PaneMake.record(props.record.id);
+
+    const input = PaneSchema.Pane.guards.record(pane)
+      ? pane
+      : PaneSchema.make.record({ id: props.record.id });
 
     return void navigate(PaneCtx.linkOptions(ctx, PaneCursor.replaceAll(input)));
   };
@@ -206,7 +246,7 @@ export function RecordActions(props: { record: RecordRepo.Meta }) {
     {
       key: [["B", "I"]],
       handler: () => {
-        openNext(PaneMake.backlink(props.record.id));
+        openBacklinks();
 
         return true;
       },
@@ -214,7 +254,7 @@ export function RecordActions(props: { record: RecordRepo.Meta }) {
     {
       key: [["B", "O"]],
       handler: () => {
-        openNext(PaneMake.outgoing(props.record.id));
+        openOutgoing();
 
         return true;
       },
@@ -230,7 +270,7 @@ export function RecordActions(props: { record: RecordRepo.Meta }) {
     {
       key: [["D"]],
       handler: () => {
-        openNext(PaneMake.date(props.record.date));
+        openDate();
 
         return true;
       },
@@ -297,7 +337,7 @@ export function RecordActions(props: { record: RecordRepo.Meta }) {
               },
               {
                 ...RecordMenuAction.Navigate({
-                  run: () => openNext(PaneMake.backlink(props.record.id)),
+                  run: () => openBacklinks(),
                 }),
                 value: "backlinks",
                 label: "Link to",
@@ -306,7 +346,7 @@ export function RecordActions(props: { record: RecordRepo.Meta }) {
               },
               {
                 ...RecordMenuAction.Navigate({
-                  run: () => openNext(PaneMake.outgoing(props.record.id)),
+                  run: () => openOutgoing(),
                 }),
                 value: "outgoing",
                 label: "Outgoing links",
@@ -315,7 +355,7 @@ export function RecordActions(props: { record: RecordRepo.Meta }) {
               },
               {
                 ...RecordMenuAction.Navigate({
-                  run: () => openNext(PaneMake.date(props.record.date)),
+                  run: () => openDate(),
                 }),
                 value: "date",
                 label: "Go to date",
@@ -391,7 +431,9 @@ export function RecordActions(props: { record: RecordRepo.Meta }) {
                           doc={doc()}
                           selection={page().selection}
                           onBack={() => setPage(MenuPage.Actions())}
-                          onOpenRecord={(id) => close(() => openNext(PaneMake.record(id)))}
+                          onOpenRecord={(id) => {
+                            return close(() => openNext(PaneSchema.make.record({ id: id })));
+                          }}
                         />
                       )}
                     </Show>

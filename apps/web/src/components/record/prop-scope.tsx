@@ -1,19 +1,14 @@
 import { useAtom } from "@effect/atom-solid";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
-import { PaneMake } from "@manotes/shared/record/pane.make";
-import { StreamFilter } from "@manotes/shared/record/stream-filter";
+import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
-import { getRouteApi } from "@tanstack/solid-router";
-import { Effect, Equal, Exit, Predicate } from "effect";
+import { Effect, Equal, Exit, Predicate, Schema } from "effect";
 import { AsyncResult } from "effect/reactivity";
 import { createMemo, Show } from "solid-js";
 import type * as Y from "yjs";
 import { bindRt, createAtomResultStore, createSyncedAtom, MatchTag } from "../../lib";
 import { createStreamRefLabel } from "../../lib/editor/stream-ref/extension";
-import { PaneCtx } from "../../lib/record/pane.ctx";
-import { PaneCursor } from "../../lib/record/pane.cursor";
-import { PaneScroll } from "../../lib/record/pane.scroll";
 import { RecordLink } from "../../lib/record/link-component";
 import { ArrowUpRightIcon } from "../icons";
 import { Alert } from "../ui/alert";
@@ -21,27 +16,28 @@ import { Button } from "../ui/button";
 import { RecordLabel } from "./record-label";
 import { SyncedAttrs } from "../../lib/editor/synced-attrs";
 
-const route = getRouteApi("/$graph/");
+import { PaneNavigate } from "../../lib/record/pane.navigate";
 
 export function Link(props: {
   propId: AttrsSchema.RecordId;
   targets: AttrsSchema.TargetFilter | undefined;
 }) {
-  const ctx = PaneCtx.use();
-  const scroll = PaneScroll.use();
-  const navigate = route.useNavigate();
-  const filter = () => StreamFilter.fromAttrs(props.targets);
+  const openNext = PaneNavigate.useOpenNext();
 
-  const label = createStreamRefLabel(() => ({
-    ...StreamSettings.defaults(filter().type),
-    filter: filter(),
-  }));
+  const settings = (): StreamSettings.Settings => ({
+    ...StreamSettings.defaultDisplay,
+    filter: props.targets ?? [],
+  });
+
+  const label = createStreamRefLabel(settings);
 
   const open = () => {
-    const input = PaneMake.propScope({ propId: props.propId, filter: filter() });
-
-    if (scroll.scrollToPane(input).found) return;
-    void navigate(PaneCtx.linkOptions(ctx, PaneCursor.openNext(input)));
+    return openNext(
+      PaneSchema.make.stream({
+        ...settings(),
+        source: PaneSchema.Source.cases.prop.make({ id: props.propId }),
+      }),
+    );
   };
 
   return (
@@ -74,10 +70,10 @@ export function Header(props: {
     return { doc: state.value.doc, targets: prop_targets };
   });
 
-  const savedFilter = () => StreamFilter.fromAttrs(definition()?.targets);
+  const savedFilter = () => definition()?.targets ?? [];
 
   const modified = () => {
-    return !Equal.equals(StreamFilter.toAttrs(props.filter), StreamFilter.toAttrs(savedFilter()));
+    return !Equal.equals(props.filter, savedFilter());
   };
 
   const saveChanges = () => {
@@ -85,7 +81,7 @@ export function Header(props: {
 
     if (!current) return;
 
-    void save({ doc: current.doc, targets: StreamFilter.toAttrs(props.filter) });
+    void save({ doc: current.doc, targets: props.filter });
   };
 
   const clearScope = async () => {
@@ -97,7 +93,7 @@ export function Header(props: {
 
     if (Exit.isFailure(exit)) return;
 
-    props.onDiscard(StreamFilter.fromAttrs(undefined));
+    props.onDiscard([]);
   };
 
   return (
@@ -171,10 +167,15 @@ const Save = bindRt((rt) => {
   return rt.fn(
     Effect.fn("ComponentsRecordPropScope.save")(function* (opts: {
       readonly doc: Y.Doc;
-      readonly targets: AttrsSchema.TargetFilter | undefined;
+      readonly targets: AttrsSchema.Filter | undefined;
     }) {
       const attrs = yield* Attrs.Service;
-      yield* attrs.setPropTargets(opts);
+
+      const targets = yield* Schema.decodeEffect(
+        Schema.UndefinedOr(AttrsSchema.Filter.pipe(Schema.decodeTo(AttrsSchema.TargetFilter))),
+      )(opts.targets);
+
+      yield* attrs.setPropTargets({ doc: opts.doc, targets });
     }),
   );
 });

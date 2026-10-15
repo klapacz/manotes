@@ -1,3 +1,4 @@
+import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { Cache, Context, Effect, Layer, Option, RcMap, Stream } from "effect";
 import { RecordRepo } from "@manotes/shared/record.repo";
@@ -33,7 +34,10 @@ export class Service extends Context.Service<Service>()("RecordCache.Service", {
       idleTimeToLive: ENTRY_IDLE_TTL,
       lookup: (id: RecordSchema.Id) => {
         return Effect.gen(function* () {
-          const source = yield* recordRepo.reactiveFindPreviewById({ id });
+          const source = yield* recordRepo.reactiveFindPreview([
+            AttrsSchema.makeFilterExpr.cmp({ val: ["id", "=", id] }),
+          ]);
+
           const seed = yield* takeSeed(id);
 
           const seeded = Option.match(seed, {

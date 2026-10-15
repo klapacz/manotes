@@ -1,9 +1,9 @@
+import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { Effect, Match } from "effect";
 import { CliError } from "effect/cli";
 import { ChildProcess } from "effect/process";
 import type { RecordSearch } from "@manotes/shared/record/search";
-import { PaneMake } from "@manotes/shared/record/pane.make";
 import type { CliConfig } from "./cli.config";
 
 export function make(
@@ -15,7 +15,7 @@ export function make(
   if (id === undefined) return url.href;
 
   const search = {
-    panes: [PaneMake.record(id)],
+    panes: [PaneSchema.make.record({ id: id })],
   } satisfies typeof RecordSearch.Schema.Encoded;
 
   url.searchParams.set("panes", JSON.stringify(search.panes));

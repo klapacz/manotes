@@ -1,3 +1,4 @@
+import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import type { RecordRepo } from "@manotes/shared/record.repo";
 import { Data, Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
@@ -72,7 +73,7 @@ describe("blank record creation", () => {
       prefilledPayload(
         PaneSchema.Pane.cases.stream.make({
           paneId: PaneSchema.Id.make("rules"),
-          filter: { type: PaneSchema.StreamFilterType.cases.rule.make({}) },
+          filter: [AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "rule"] })],
           sort: "updated",
           view: "full",
         }),
@@ -80,7 +81,6 @@ describe("blank record creation", () => {
     );
 
     const { doc, attrs } = RecordDoc.make();
-    const filter = Data.taggedEnum<AttrsSchema.TargetFilterExpr>();
 
     try {
       Y.applyUpdate(doc, payload);
@@ -89,17 +89,7 @@ describe("blank record creation", () => {
           props: {},
           rule_storage: AttrsSchema.RuleStorage.cases.top.make({}),
           rule_expects: {},
-          rule_targets: [
-            filter.cmp({ val: ["_tag", "=", "note"] }),
-            filter.cmp({ val: ["title", "exists", false] }),
-            filter.cmp({
-              val: [
-                ["prop", AttrsSchema.RecordId.make("builtin:archived")],
-                "=",
-                AttrsSchema.PropVal.cases.bool.make({ val: false }),
-              ],
-            }),
-          ],
+          rule_targets: StreamSettings.defaultPreset.filter,
         }),
       );
       expect(ProsemirrorMaterializer.yDocToNodeJSON({ yDoc: doc })).toMatchObject({
@@ -117,7 +107,7 @@ describe("blank record creation", () => {
       prefilledPayload(
         PaneSchema.Pane.cases.stream.make({
           paneId: PaneSchema.Id.make("options"),
-          filter: { type: PaneSchema.StreamFilterType.cases.enum_option.make({ enum_parent }) },
+          filter: [StreamSettings.enumOptions(enum_parent)],
           sort: "updated",
           view: "full",
         }),
@@ -148,7 +138,7 @@ describe("blank record creation", () => {
       prefilledPayload(
         PaneSchema.Pane.cases.stream.make({
           paneId: PaneSchema.Id.make("prop"),
-          filter: { type: PaneSchema.StreamFilterType.cases.prop.make({}) },
+          filter: [AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "prop"] })],
           sort: "updated",
           view: "full",
         }),
@@ -187,13 +177,75 @@ describe("blank record creation", () => {
         prefilledPayload(
           PaneSchema.Pane.cases.stream.make({
             paneId: PaneSchema.Id.make("stream"),
-            filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) },
+            filter: StreamSettings.defaultPreset.filter,
             sort: "date",
             view: "full",
           }),
         ).pipe(Effect.provide(Attrs.Service.layer)),
       ),
     );
+  });
+
+  it("seeds the Pages preset with an editable heading", () => {
+    const payload = Effect.runSync(
+      prefilledPayload(
+        PaneSchema.Pane.cases.stream.make({
+          paneId: PaneSchema.Id.make("pages"),
+          ...StreamSettings.presets.pages,
+        }),
+      ).pipe(Effect.provide(Attrs.Service.layer)),
+    );
+
+    const doc = new Y.Doc();
+
+    try {
+      Y.applyUpdate(doc, payload);
+      expect(ProsemirrorMaterializer.yDocToNodeJSON({ yDoc: doc })).toEqual({
+        type: "doc",
+        content: [
+          { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Untitled" }] },
+        ],
+      });
+    } finally {
+      doc.destroy();
+    }
+  });
+
+  it("prefills all required outgoing links and skips incoming and optional links", () => {
+    const first = RecordSchema.Id.make("first");
+    const second = RecordSchema.Id.make("second");
+    const ignored = RecordSchema.Id.make("ignored");
+    const expr = AttrsSchema.makeFilterExpr;
+
+    const payload = Effect.runSync(
+      prefilledPayload(
+        PaneSchema.Pane.cases.stream.make({
+          paneId: PaneSchema.Id.make("links"),
+          ...StreamSettings.defaultDisplay,
+          filter: [
+            expr.and({ val: [expr.cmp({ val: [["link", "->", first], "exists", true] })] }),
+            expr.or({ val: [expr.cmp({ val: [["link", "->", ignored], "exists", true] })] }),
+            expr.cmp({ val: [["link", "<-", ignored], "exists", true] }),
+            expr.cmp({ val: [["link", "->", second], "exists", true] }),
+          ],
+        }),
+      ).pipe(Effect.provide(Attrs.Service.layer)),
+    );
+
+    const doc = new Y.Doc();
+
+    try {
+      Y.applyUpdate(doc, payload);
+      expect(ProsemirrorMaterializer.yDocToNodeJSON({ yDoc: doc })).toEqual({
+        type: "doc",
+        content: [
+          { type: "paragraph", content: [{ type: "backlink", attrs: { id: first } }] },
+          { type: "paragraph", content: [{ type: "backlink", attrs: { id: second } }] },
+        ],
+      });
+    } finally {
+      doc.destroy();
+    }
   });
 });
 

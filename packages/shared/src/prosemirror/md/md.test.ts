@@ -1,5 +1,6 @@
+import { AttrsSchema } from "../../attrs.schema";
+import { StreamSettings } from "../../record/stream-settings";
 import { RecordSchema } from "../../record.schema";
-import { PaneSchema } from "../../record/pane.schema";
 import dedent from "dedent";
 import { createEditor, union } from "prosekit/core";
 import { defineAppSchema } from "../../editor.schema";
@@ -147,13 +148,17 @@ describe("app Markdown conversion", () => {
     const attrs = StreamRefSpec.decodeAttrs({
       paneId: "source-pane",
       href: "https://old-device.example/graph",
-      filter: {
-        type: PaneSchema.StreamFilterType.cases.pages.make({}),
-        search: "a & b [x] (é)!",
-        backlinksTo: RecordSchema.Id.make("project"),
-        linksFrom: RecordSchema.Id.make("article"),
-        date: "2026-10-04",
-      },
+      filter: [
+        StreamSettings.conditions.pages,
+        AttrsSchema.makeFilterExpr.cmp({ val: ["body", "contains", "a & b [x] (é)!"] }),
+        AttrsSchema.makeFilterExpr.cmp({
+          val: [["link", "->", RecordSchema.Id.make("project")], "exists", true],
+        }),
+        AttrsSchema.makeFilterExpr.cmp({
+          val: [["link", "<-", RecordSchema.Id.make("article")], "exists", true],
+        }),
+        AttrsSchema.makeFilterExpr.cmp({ val: ["date", "=", "2026-10-04"] }),
+      ],
       sort: "updated",
       view: "snippets",
     });
@@ -175,23 +180,27 @@ describe("app Markdown conversion", () => {
     expect(MdParse.parse(markdown).toJSON()).toEqual(doc.toJSON());
     expect(markdown).toContain("stream:");
     expect(
-      StreamRefSpec.label({
-        filter: { type: PaneSchema.StreamFilterType.cases.pages.make({}) },
-        sort: "updated",
-        view: "full",
-      }),
-    ).toBe("Pages");
+      StreamRefSpec.renderLabels(
+        StreamRefSpec.labels({
+          filter: [StreamSettings.conditions.pages],
+          sort: "updated",
+          view: "full",
+        }),
+      ),
+    ).toBe("Pages · updated");
     expect(
-      StreamRefSpec.label({
-        filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) },
-        sort: "date",
-        view: "full",
-      }),
+      StreamRefSpec.renderLabels(
+        StreamRefSpec.labels({
+          filter: [StreamSettings.conditions.notes],
+          sort: "date",
+          view: "full",
+        }),
+      ),
     ).toBe("Notes");
-    expect(StreamRefSpec.label(attrs)).toContain("snippets");
+    expect(StreamRefSpec.renderLabels(StreamRefSpec.labels(attrs))).toContain("snippets");
     expect(
       StreamRefSpec.decodeAttrs({
-        filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) },
+        filter: [StreamSettings.conditions.notes],
       }),
     ).toMatchObject({
       sort: "date",
@@ -365,7 +374,7 @@ describe("app Markdown conversion", () => {
           RECORD_SCHEMA.node(
             "streamRef",
             StreamRefSpec.decodeAttrs({
-              filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) },
+              filter: [StreamSettings.conditions.notes],
             }),
           ),
         ]),

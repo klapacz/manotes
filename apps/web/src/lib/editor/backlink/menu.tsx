@@ -1,3 +1,4 @@
+import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { Effect, Exit, flow, Stream, Array, Struct } from "effect";
 import { useEditor } from "prosekit/solid";
@@ -84,7 +85,11 @@ export default function BacklinkMenu(props: { currentRecordId: RecordSchema.Id }
 
         if (!get(openAtom)) return Stream.succeed(EMPTY_BACKLINK_RECORDS);
 
-        return RecordRepo.Service.use((repo) => repo.reactiveSearchPreview({ search: query })).pipe(
+        return RecordRepo.Service.use((repo) => {
+          return repo.reactiveSearchPreview([
+            AttrsSchema.makeFilterExpr.cmp({ val: ["body", "contains", query.trim()] }),
+          ]);
+        }).pipe(
           Stream.unwrap,
           Stream.map(
             flow(
@@ -239,7 +244,7 @@ export function StreamRefMenu() {
 
     // Capture the settings now; later edits to the source pane do not change the ref.
     const attrs: StreamRefSpec.Attrs = {
-      filter: { ...pane.filter },
+      filter: pane.filter,
       sort: pane.sort,
       view: pane.view,
     };

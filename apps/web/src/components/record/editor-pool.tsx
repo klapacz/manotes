@@ -1,3 +1,6 @@
+import type { AttrsSchema } from "@manotes/shared/attrs.schema";
+import { StreamSettings } from "@manotes/shared/record/stream-settings";
+import { Option } from "effect";
 import { Data, Deferred, Effect, RcMap, Scope } from "effect";
 import {
   createContext,
@@ -49,7 +52,7 @@ export type Pool = {
 
 export const make = Effect.fn("EditorPool.make")(function* (
   owner: Owner | null,
-  filter: Accessor<{ search?: string; backlinksTo?: RecordSchema.Id }>,
+  filter: Accessor<AttrsSchema.Filter>,
 ) {
   // Slots are created under the pane's owner so pooled editors keep its contexts
   // (graph runtime, atom registry, RecordLinkScope, router).
@@ -105,10 +108,7 @@ type PooledSlot = Slot & {
   readonly dispose: () => void;
 };
 
-function createSlot(
-  recordId: RecordSchema.Id,
-  filter: Accessor<{ search?: string; backlinksTo?: RecordSchema.Id }>,
-): PooledSlot {
+function createSlot(recordId: RecordSchema.Id, filter: Accessor<AttrsSchema.Filter>): PooledSlot {
   const ready = Deferred.makeUnsafe<void, EditorBootError>();
 
   return createRoot((dispose) => {
@@ -135,8 +135,8 @@ function createSlot(
         <Editor
           recordId={recordId}
           attached={attached()}
-          search={filter().search}
-          backlinksTo={filter().backlinksTo}
+          search={Option.getOrUndefined(StreamSettings.firstSearch(filter()))}
+          backlinksTo={Option.getOrUndefined(StreamSettings.firstLinkTo(filter()))}
         />
       </div>
     ) as HTMLDivElement;

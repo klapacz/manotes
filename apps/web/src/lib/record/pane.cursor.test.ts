@@ -1,145 +1,78 @@
+import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Schema } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { PaneCursor } from "./pane.cursor";
-import { PaneMake } from "@manotes/shared/record/pane.make";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { RecordSchema } from "@manotes/shared/record.schema";
-import { AttrsSchema } from "@manotes/shared/attrs.schema";
+import { StreamSettings } from "@manotes/shared/record/stream-settings";
 
 const decodePane = Schema.decodeUnknownSync(PaneSchema.Pane);
 
+const id = RecordSchema.Id.make("record-a");
+
 describe("PaneCursor.inputMatches", () => {
-  it("matches record inputs by record ID and ignores pane ID", () => {
-    const pane = PaneSchema.Pane.cases.record.make({
-      paneId: PaneSchema.Id.make("pane-a"),
-      id: RecordSchema.Id.make("record-a"),
-    });
-
-    expect(PaneCursor.inputMatches(PaneMake.record(RecordSchema.Id.make("record-a")))(pane)).toBe(
-      true,
-    );
-    expect(PaneCursor.inputMatches(PaneMake.record(RecordSchema.Id.make("record-b")))(pane)).toBe(
-      false,
-    );
-  });
-
-  it("matches stream inputs with omitted defaults or explicit undefined fields", () => {
-    const pane = PaneSchema.Pane.cases.stream.make({
-      paneId: PaneSchema.Id.make("pane-a"),
-      filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) },
-      sort: "date",
-    });
-
-    const explicitUndefined = {
-      ...PaneMake.notes(),
-      filter: {
-        type: PaneSchema.StreamFilterType.cases.notes.make({}),
-        backlinksTo: undefined,
-        linksFrom: undefined,
-        date: undefined,
-      },
-    } satisfies PaneSchema.PaneInput;
-
-    const omittedDefaults = {
-      ...PaneMake.notes(),
-      filter: { type: undefined },
-      sort: undefined,
-    } satisfies PaneSchema.PaneInput;
-
-    expect(PaneCursor.inputMatches(explicitUndefined)(pane)).toBe(true);
-    expect(PaneCursor.inputMatches(omittedDefaults)(pane)).toBe(true);
-  });
-
-  it("distinguishes stream filters and sort order", () => {
-    const pane = PaneSchema.Pane.cases.stream.make({
-      paneId: PaneSchema.Id.make("pane-a"),
-      filter: {
-        type: PaneSchema.StreamFilterType.cases.notes.make({}),
-        backlinksTo: RecordSchema.Id.make("record-a"),
-      },
-      sort: "date",
-    });
-
-    const differentSort = PaneSchema.Pane.cases.stream.make({
-      paneId: PaneSchema.Id.make("pane-b"),
-      filter: {
-        type: PaneSchema.StreamFilterType.cases.notes.make({}),
-        backlinksTo: RecordSchema.Id.make("record-a"),
-      },
-      sort: "updated",
-    });
-
-    expect(PaneCursor.inputMatches(PaneMake.backlink(RecordSchema.Id.make("record-a")))(pane)).toBe(
-      true,
-    );
-    expect(PaneCursor.inputMatches(PaneMake.backlink(RecordSchema.Id.make("record-b")))(pane)).toBe(
-      false,
-    );
+  it("matches records by ID and ignores pane identity", () => {
+    const input = PaneSchema.make.record({ id });
+    expect(PaneCursor.inputMatches(input)(decodePane(input))).toBe(true);
     expect(
-      PaneCursor.inputMatches(PaneMake.backlink(RecordSchema.Id.make("record-a")))(differentSort),
+      PaneCursor.inputMatches(PaneSchema.make.record({ id: RecordSchema.Id.make("other") }))(
+        decodePane(input),
+      ),
     ).toBe(false);
   });
 
-  it("distinguishes cleared property filters and ignores their insertion order", () => {
-    const pane = decodePane(PaneMake.notes());
+  it("fills omitted defaults but preserves explicitly cleared filters", () => {
+    const pane = decodePane(PaneSchema.make.stream(StreamSettings.defaultPreset));
+    expect(PaneCursor.inputMatches(PaneSchema.make.stream({}))(pane)).toBe(true);
+    expect(PaneCursor.inputMatches(PaneSchema.make.stream({ filter: [] }))(pane)).toBe(false);
+  });
+
+  it("compares nested expressions and sort while ignoring display view", () => {
+    const filter = [
+      AttrsSchema.makeFilterExpr.or({
+        val: [StreamSettings.conditions.notes, StreamSettings.conditions.pages],
+      }),
+    ] as const;
+
+    const input = PaneSchema.make.stream({ filter, sort: "date" });
+    const pane = decodePane(input);
+    expect(PaneCursor.inputMatches({ ...input, view: "snippets" })(pane)).toBe(true);
+    expect(PaneCursor.inputMatches({ ...input, sort: "updated" })(pane)).toBe(false);
     expect(
       PaneCursor.inputMatches({
-        ...PaneMake.notes(),
-        filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}), props: {} },
+        ...input,
+        filter: [...filter, StreamSettings.conditions.unarchived],
       })(pane),
     ).toBe(false);
+  });
 
-    const filtered = decodePane({
-      ...PaneMake.notes(),
-      filter: {
-        type: PaneSchema.StreamFilterType.cases.notes.make({}),
-        props: {
-          a: AttrsSchema.PropVal.cases.bool.make({ val: true }),
-          b: AttrsSchema.PropVal.cases.bool.make({ val: false }),
-        },
-      },
+  it("distinguishes source tags and IDs", () => {
+    const input = PaneSchema.make.stream({
+      ...StreamSettings.defaultPreset,
+      source: PaneSchema.Source.cases.prop.make({ id }),
     });
 
+    const pane = decodePane(input);
+    expect(PaneCursor.inputMatches(input)(pane)).toBe(true);
+    expect(
+      PaneCursor.inputMatches({ ...input, source: PaneSchema.Source.cases.rule.make({ id }) })(
+        pane,
+      ),
+    ).toBe(false);
     expect(
       PaneCursor.inputMatches({
-        ...PaneMake.notes(),
-        filter: {
-          type: PaneSchema.StreamFilterType.cases.notes.make({}),
-          props: {
-            b: AttrsSchema.PropVal.cases.bool.make({ val: false }),
-            a: AttrsSchema.PropVal.cases.bool.make({ val: true }),
-          },
-        },
-      })(filtered),
-    ).toBe(true);
+        ...input,
+        source: PaneSchema.Source.cases.prop.make({ id: RecordSchema.Id.make("other") }),
+      })(pane),
+    ).toBe(false);
+    expect(
+      PaneCursor.inputMatches(PaneSchema.make.stream(StreamSettings.defaultPreset))(pane),
+    ).toBe(false);
   });
-});
 
-describe("PaneMake", () => {
-  const inputs: ReadonlyArray<{ readonly name: string; readonly input: PaneSchema.PaneInput }> = [
-    { name: "notes", input: PaneMake.notes() },
-    { name: "record", input: PaneMake.record(RecordSchema.Id.make("record-a")) },
-    { name: "backlink", input: PaneMake.backlink(RecordSchema.Id.make("record-a")) },
-    { name: "outgoing", input: PaneMake.outgoing(RecordSchema.Id.make("record-a")) },
-    { name: "date", input: PaneMake.date("2026-09-12") },
-  ];
-
-  it.each(inputs)("$name leaves pane ID generation to schema decoding", ({ input }) => {
+  it("leaves identity generation to decoding", () => {
+    const input = PaneSchema.make.stream(StreamSettings.defaultPreset);
     expect(input).not.toHaveProperty("paneId");
-
-    const pane = decodePane(input);
-
-    expect(pane.paneId.length).toBeGreaterThan(0);
+    expect(decodePane(input).paneId.length).toBeGreaterThan(0);
   });
-});
-
-it("distinguishes rule match streams from ordinary streams and other rules", () => {
-  const filter = { type: PaneSchema.StreamFilterType.cases.notes.make({}) };
-  const first = PaneMake.ruleTargets({ ruleId: RecordSchema.Id.make("first-rule"), filter });
-  const second = PaneMake.ruleTargets({ ruleId: RecordSchema.Id.make("second-rule"), filter });
-  const pane = decodePane(first);
-
-  expect(PaneCursor.inputMatches(first)(pane)).toBe(true);
-  expect(PaneCursor.inputMatches(second)(pane)).toBe(false);
-  expect(PaneCursor.inputMatches(PaneMake.notes())(pane)).toBe(false);
 });

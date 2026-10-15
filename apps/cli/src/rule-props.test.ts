@@ -5,8 +5,7 @@ import { DB } from "@manotes/shared/db.service";
 import { EventRepo } from "@manotes/shared/event.repo";
 import { Materializer } from "@manotes/shared/materializer.service";
 import { RecordRepo } from "@manotes/shared/record.repo";
-import { PaneSchema } from "@manotes/shared/record/pane.schema";
-import { StreamFilter } from "@manotes/shared/record/stream-filter";
+import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { PropDef } from "@manotes/shared/prop-def.service";
 import { RuleProps } from "@manotes/shared/rule-props";
 import { RuleRecord } from "@manotes/shared/rule-record.service";
@@ -107,7 +106,7 @@ describe("reactive rule props pipeline", () => {
         // Target changes stop expectations but retain the saved group's values.
         yield* attrs.setRuleTargets({
           doc: rule,
-          targets: StreamFilter.toAttrs({ type: PaneSchema.StreamFilterType.cases.pages.make({}) }),
+          targets: StreamSettings.presets.pages.filter,
         });
         yield* save(rule, task);
         yield* waitFor(latest, (groups) => {
@@ -175,10 +174,11 @@ describe("reactive rule props pipeline", () => {
         const definition = yield* makeDoc();
         yield* attrs.initializeProp({ doc: definition });
         yield* attrs.setPropType({ doc: definition, type: "link" });
+        yield* attrs.setPropTargets({ doc: definition, targets: recordsFilter() });
         yield* save(definition, assignee);
         yield* waitFor(latest, (groups) => hasPropValueState(groups, undefined, assignee, "Valid"));
 
-        // This title change makes the target a Page, outside the default Notes scope.
+        // This title change makes the target a Page, outside the explicit Notes scope.
         const records = yield* RecordRepo.Service;
         yield* records.updateById(person, { title: "Person" });
         yield* Reactivity.invalidate(["records"]);
@@ -189,6 +189,16 @@ describe("reactive rule props pipeline", () => {
         yield* records.updateById(person, { title: null });
         yield* Reactivity.invalidate(["records"]);
         yield* waitFor(latest, (groups) => hasPropValueState(groups, undefined, assignee, "Valid"));
+        // The explicit scope rejects a property target; an unset scope accepts it.
+        yield* attrs.initializeProp({ doc: target });
+        yield* save(target, person);
+        yield* waitFor(latest, (groups) => {
+          return hasPropValueState(groups, undefined, assignee, "Invalid");
+        });
+        yield* attrs.setPropTargets({ doc: definition, targets: undefined });
+        yield* save(definition, assignee);
+        yield* waitFor(latest, (groups) => hasPropValueState(groups, undefined, assignee, "Valid"));
+
         expect(doc.getMap("attrs").toJSON().props[assignee]).toEqual(
           AttrsSchema.PropVal.cases.link.make({ val: person }),
         );
@@ -198,7 +208,7 @@ describe("reactive rule props pipeline", () => {
 });
 
 function recordsFilter() {
-  return StreamFilter.toAttrs({ type: PaneSchema.StreamFilterType.cases.notes.make({}) });
+  return StreamSettings.presets.notes.filter;
 }
 
 function makeDoc() {

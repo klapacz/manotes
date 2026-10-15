@@ -1,10 +1,10 @@
+import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { Link } from "@tanstack/solid-router";
 import { splitProps, type ComponentProps, type Ref } from "solid-js";
 import { MatchTag } from "../../lib";
 import { callHandler } from "../../lib/call-handler";
 import { PaneCursor } from "../../lib/record/pane.cursor";
 import { PaneCtx } from "../../lib/record/pane.ctx";
-import { PaneMake } from "@manotes/shared/record/pane.make";
 import { PaneScroll } from "../../lib/record/pane.scroll";
 import { RecordLinkScope, type RecordLinkRenderer } from "../../lib/record/link-component";
 import { PaneRecord } from "./pane-record";
@@ -27,7 +27,7 @@ export function Pane(props: { ref: Ref<HTMLElement | undefined> }) {
 
   const renderRecordLink: RecordLinkRenderer = (linkProps) => {
     const [target, anchorProps] = splitProps(linkProps, ["id", "children", "onClick"]);
-    const input = () => PaneMake.record(target.id);
+    const input = () => PaneSchema.make.record({ id: target.id });
 
     return (
       <Link

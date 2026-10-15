@@ -30,7 +30,7 @@ export class Service extends Context.Service<Service>()("RecordStreamCache.Servi
     const changes = Effect.fn("RecordStreamCache.changes")(function* (
       query: RecordRepo.StreamListQuery,
     ) {
-      return yield* RcMap.get(entries, cacheKey(query));
+      return yield* RcMap.get(entries, structuredClone(query));
     });
 
     return {
@@ -41,20 +41,6 @@ export class Service extends Context.Service<Service>()("RecordStreamCache.Servi
   static readonly layer = Layer.effect(this, this.make).pipe(
     Layer.provide(RecordRepo.Service.layer),
   );
-}
-
-// Copy the query before using it as an RcMap key. Effect structurally hashes
-// object keys, so keys must not be mutated after insertion.
-function cacheKey(query: RecordRepo.StreamListQuery): RecordRepo.StreamListQuery {
-  return {
-    type: query.type,
-    date: query.date,
-    backlinksTo: query.backlinksTo,
-    linksFrom: query.linksFrom,
-    search: query.search,
-    sort: query.sort,
-    props: query.props && { ...query.props },
-  };
 }
 
 export * as RecordStreamCache from "./record-stream-cache.service";

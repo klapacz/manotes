@@ -7,7 +7,6 @@ import { Match, Option, pipe, Schema, Stream, String, Types } from "effect";
 import { MenuQuery } from "../../lib/menu-query";
 import { QueryEngine } from "../../lib/query-engine";
 import type { Picker } from "../ui/picker";
-import { StreamFilter } from "@manotes/shared/record/stream-filter";
 import { RecordQuery } from "./record-query";
 
 export const editableTypes = ["bool", "number", "text", "link", "enum"] as const;
@@ -105,7 +104,7 @@ export function linkQuery(opts: {
   targets: AttrsSchema.TargetFilter | undefined;
   defaultValue: Option.Option<Types.ExtractTag<AttrsSchema.PropVal, "link">>;
 }) {
-  const query = RecordQuery.scoped({ filter: StreamFilter.fromAttrs(opts.targets) });
+  const query = RecordQuery.scoped({ filter: opts.targets ?? [] });
 
   return QueryEngine.map(query, (record) => {
     const propVal = AttrsSchema.PropVal.cases.link.make({ val: record.value });

@@ -1,3 +1,4 @@
+import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { useAtomSubscribe } from "@effect/atom-solid";
 import { DateTime, Effect, Option, Stream } from "effect";
 import { AsyncResult } from "effect/reactivity";
@@ -67,14 +68,17 @@ export function use() {
       // Resolve the originating row and snapshot its context only when clicked.
       const now = Effect.runSync(DateTime.now);
       const row = options.getFocusedRow();
-      const backlink = pane().filter.backlinksTo;
+      const filter = pane().filter;
 
       const value: AudioMemo.Draft = {
         id: RecordSchema.Id.make(nanoid()),
         createdAt: now,
         intent: {
-          date: row?.record.date ?? pane().filter.date ?? toLocalDateString(now),
-          backlink: backlink === undefined ? null : backlink,
+          date:
+            row?.record.date ??
+            Option.getOrUndefined(StreamSettings.firstDate(filter)) ??
+            toLocalDateString(now),
+          backlink: Option.getOrNull(StreamSettings.firstLinkTo(filter)),
         },
       };
 

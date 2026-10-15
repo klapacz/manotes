@@ -1,18 +1,15 @@
+import { PaneNavigate } from "../../lib/record/pane.navigate";
+import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
-import { PaneMake } from "@manotes/shared/record/pane.make";
 import type { RecordSchema } from "@manotes/shared/record.schema";
 import { RuleProps } from "@manotes/shared/rule-props";
-import { getRouteApi } from "@tanstack/solid-router";
 import { Option, Record, type Types } from "effect";
 import { For, Show } from "solid-js";
 import type * as Y from "yjs";
 import { createAtomResultStore, MatchTag } from "../../lib";
 import { LivePropsAtom } from "../../lib/live-props.atom";
 import { RecordLink } from "../../lib/record/link-component";
-import { PaneCtx } from "../../lib/record/pane.ctx";
-import { PaneCursor } from "../../lib/record/pane.cursor";
-import { PaneScroll } from "../../lib/record/pane.scroll";
 import { DescriptionList } from "../ui/description-list";
 import { Picker } from "../ui/picker";
 import { Surface } from "../ui/surface";
@@ -21,8 +18,6 @@ import { RecordLabel } from "./record-label";
 import { PropPicker } from "./prop-picker";
 import { RecordProps } from "./record-props";
 import { RecordPropsEntries } from "./record-props.entries";
-
-const route = getRouteApi("/$graph/");
 
 export function Root(props: { readonly recordId: RecordSchema.Id; readonly doc: Y.Doc }) {
   const state = createAtomResultStore(() => {
@@ -186,18 +181,10 @@ function ValueControl(props: RowProps) {
 }
 
 function ValueMenu(props: RowProps & { readonly close: (action?: () => void) => void }) {
-  const ctx = PaneCtx.use();
-  const scroll = PaneScroll.use();
-  const navigate = route.useNavigate();
+  const openNext = PaneNavigate.useOpenNext();
 
   const openRecord = (id: RecordSchema.Id) => {
-    props.close(() => {
-      const input = PaneMake.record(id);
-
-      if (scroll.scrollToPane(input).found) return;
-
-      void navigate(PaneCtx.linkOptions(ctx, PaneCursor.openNext(input)));
-    });
+    props.close(() => openNext(PaneSchema.make.record({ id })));
   };
 
   return (

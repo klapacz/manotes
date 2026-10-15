@@ -36,8 +36,7 @@ export function Menu(props: {
   };
 
   const resetDisplay = () => {
-    const { sort, view } = StreamSettings.defaults(props.settings.filter.type);
-    changeDisplay({ sort, view });
+    changeDisplay(StreamSettings.defaultDisplay);
   };
 
   const changeSort = (sort: StreamSettings.Display["sort"]) => {

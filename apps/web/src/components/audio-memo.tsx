@@ -1,3 +1,4 @@
+import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { useAtom, useAtomMount, useAtomSubscribe, useAtomValue } from "@effect/atom-solid";
 import { createEventListener } from "@solid-primitives/event-listener";
 import { keyArray } from "@solid-primitives/keyed";
@@ -17,7 +18,6 @@ import { GraphWorkerClient } from "../lib/graph-worker.client";
 import { RecordFormat } from "@manotes/shared/record/format";
 import { PaneCursor } from "../lib/record/pane.cursor";
 import { PaneCtx } from "../lib/record/pane.ctx";
-import { PaneMake } from "@manotes/shared/record/pane.make";
 import { LoadingIcon, PauseIcon, PlayIcon, RetryIcon, StopIcon, XIcon } from "./icons";
 import { PaneEmptyState } from "./record/shared";
 import { Button, buttonVariants } from "./ui/button";
@@ -94,7 +94,7 @@ export function RecordingsLink() {
         from="/$graph/"
         to="/$graph"
         search={{
-          panes: PaneCursor.openNext(PaneMake.recordings())({
+          panes: PaneCursor.openNext(PaneSchema.make.recordings({}))({
             stack: panes(),
             index: panes().length - 1,
           }),
@@ -151,7 +151,7 @@ export function useNotifyReady(): (recordId: RecordSchema.Id) => void {
 
   return (recordId) => {
     const link = {
-      ...PaneCtx.linkOptions(ctx, PaneCursor.openNext(PaneMake.record(recordId))),
+      ...PaneCtx.linkOptions(ctx, PaneCursor.openNext(PaneSchema.make.record({ id: recordId }))),
       params: params(),
     };
 
