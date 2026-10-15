@@ -1,10 +1,11 @@
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import type { NoteSchema } from "@manotes/shared/note.schema";
-import { PropDef } from "@manotes/shared/prop-def.service";
 import { RuleProps } from "@manotes/shared/rule-props";
-import { Data, Effect, Option, Record, Stream, pipe } from "effect";
-import type * as Y from "yjs";
+import { Data, Option, Record, pipe } from "effect";
+import { Atom, AsyncResult } from "effect/unstable/reactivity";
+import { bindRt } from "../../lib/rt-atom";
+import { LivePropsAtom } from "../../lib/live-props.atom";
 
 export type Selection = Data.TaggedEnum<{
   Top: { readonly propId: NoteSchema.Id };
@@ -17,22 +18,15 @@ export type Entry = RuleProps.Prop & {
   readonly group: RuleProps.EditorGroup;
 };
 
-export function watch(opts: { readonly recordId: NoteSchema.Id; readonly doc: Y.Doc }) {
-  return Stream.unwrap(
-    Effect.gen(function* () {
-      const definitions = yield* PropDef.Service;
-      const defs = yield* definitions.reactiveDefs();
-
-      return Stream.zipLatestWith(
-        RuleProps.watch(opts),
-        defs.pipe(Stream.map(PropDef.asRecord)),
-        (groups, defs) => {
-          return includeUnusedDefs({ groups, defs, recordId: opts.recordId });
-        },
-      );
-    }),
-  );
-}
+export const byRecord = bindRt(() => {
+  return Atom.family((recordId: NoteSchema.Id) => {
+    return Atom.map(LivePropsAtom.byRecord()(recordId), (result) => {
+      return AsyncResult.map(result, ({ groups, defs }) => {
+        return includeUnusedDefs({ groups, defs, recordId });
+      });
+    });
+  });
+});
 
 export function includeUnusedDefs(opts: {
   readonly groups: RuleProps.EditorGroups;

@@ -1,7 +1,7 @@
 import { getRouteApi } from "@tanstack/solid-router";
 import { Data, Exit, type Types } from "effect";
 import { useAtom } from "@effect/atom-solid";
-import { AsyncResult } from "effect/unstable/reactivity";
+import { Atom, AsyncResult } from "effect/unstable/reactivity";
 import { Show, createMemo, createSignal } from "solid-js";
 import { NoteFormat } from "../../lib/note";
 import { PaneCursor } from "../../lib/note/pane.cursor";
@@ -34,8 +34,9 @@ import { splitProps, type ComponentProps, type ParentProps } from "solid-js";
 import { MatchTag, type NoteSchema } from "../../lib";
 import { Focus } from "./focus";
 import { NoteProps } from "./note-props";
-import type { NotePropsEntries } from "./note-props.entries";
-import type * as Y from "yjs";
+import { NotePropsEntries } from "./note-props.entries";
+import { LiveDoc } from "../../lib/live-doc.service";
+import { LiveDocAtom } from "../../lib/live-doc.atom";
 
 const route = getRouteApi("/$graph/");
 
@@ -155,7 +156,14 @@ function PaneActions(props: PaneActionsProps) {
   );
 }
 
-export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefined }) {
+export function NoteActions(props: { note: NoteSchema.Meta }) {
+  const state = LiveDocAtom.use({ recordId: () => props.note.id });
+  const doc = createMemo(() => LiveDoc.readyDoc(state()));
+
+  const propGroups = createMemo(() => {
+    return Atom.toStreamResult(NotePropsEntries.byRecord()(props.note.id));
+  });
+
   const ctx = PaneCtx.use();
   const scroll = PaneScroll.use();
   const navigate = route.useNavigate();
@@ -256,10 +264,12 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
             const setProperty = async (
               action: Types.ExtractTag<NoteProps.Action, "SetProperty">,
             ) => {
-              if (!props.doc) return;
+              const currentDoc = doc();
+
+              if (!currentDoc) return;
 
               const exit = await editProperty({
-                doc: props.doc,
+                doc: currentDoc,
                 recordId: props.note.id,
                 selection: action.selection,
                 value: action.propVal,
@@ -325,7 +335,7 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
               return QueryEngine.combine([
                 MenuQuery.choices(() => actions),
                 MenuQuery.nested({ label: "Change date", query: dates }),
-                NoteProps.query({ recordId: props.note.id, doc: props.doc }),
+                NoteProps.query({ groups: propGroups() }),
               ]);
             });
 
@@ -344,7 +354,7 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
                             OpenDatePicker: () => setPage(MenuPage.ChangeDate()),
                             SetDate: ({ date }) => void changeDate(date),
                             OpenProperty: ({ selection }) => {
-                              if (props.doc) setPage(MenuPage.Property({ selection }));
+                              if (doc()) setPage(MenuPage.Property({ selection }));
                             },
                             SetProperty: (action) => void setProperty(action),
                           });
@@ -371,7 +381,7 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
                     </>
                   ),
                   Property: (page) => (
-                    <Show when={props.doc}>
+                    <Show when={doc()}>
                       {(doc) => (
                         <NoteProps.Menu
                           noteId={props.note.id}

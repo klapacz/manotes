@@ -7,7 +7,8 @@ import { getRouteApi } from "@tanstack/solid-router";
 import { Option, Record, type Types } from "effect";
 import { For, Show } from "solid-js";
 import type * as Y from "yjs";
-import { bindRt, createAtomResultStore, createSyncedAtom, MatchTag } from "../../lib";
+import { createAtomResultStore, MatchTag } from "../../lib";
+import { LivePropsAtom } from "../../lib/live-props.atom";
 import { NoteLink } from "../../lib/note/link-component";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneCursor } from "../../lib/note/pane.cursor";
@@ -24,50 +25,42 @@ import { NotePropsEntries } from "./note-props.entries";
 const route = getRouteApi("/$graph/");
 
 export function Root(props: { readonly recordId: NoteSchema.Id; readonly doc: Y.Doc }) {
-  const state = useGroups(props);
+  const state = createAtomResultStore(() => {
+    return LivePropsAtom.byRecord()(props.recordId);
+  });
 
   return (
     <MatchTag
       when={state}
       cases={{
         Error: () => <p class="px-4 pb-4 text-sm text-error-fg">Unable to load props.</p>,
-        Success: (result) => (
-          <Show
-            when={
-              !Record.isEmptyReadonlyRecord(result().value.top.props) ||
-              Record.some(
-                result().value.groups,
-                (group) => !Record.isEmptyReadonlyRecord(group.props),
-              )
-            }
-          >
-            <div class="space-y-2 px-4 pb-4">
-              <Group group={result().value.top} recordId={props.recordId} doc={props.doc} />
-              <For each={Record.keys(result().value.groups)}>
-                {(ruleId) => (
-                  <Show when={result().value.groups[ruleId]}>
-                    {(group) => <Group group={group()} recordId={props.recordId} doc={props.doc} />}
-                  </Show>
-                )}
-              </For>
-            </div>
-          </Show>
-        ),
+        Success: (result) => {
+          const groups = () => result().value.groups;
+
+          return (
+            <Show
+              when={
+                !Record.isEmptyReadonlyRecord(groups().top.props) ||
+                Record.some(groups().groups, (group) => !Record.isEmptyReadonlyRecord(group.props))
+              }
+            >
+              <div class="space-y-2 px-4 pb-4">
+                <Group group={groups().top} recordId={props.recordId} doc={props.doc} />
+                <For each={Record.keys(groups().groups)}>
+                  {(ruleId) => (
+                    <Show when={groups().groups[ruleId]}>
+                      {(group) => (
+                        <Group group={group()} recordId={props.recordId} doc={props.doc} />
+                      )}
+                    </Show>
+                  )}
+                </For>
+              </div>
+            </Show>
+          );
+        },
       }}
     />
-  );
-}
-
-function useGroups(props: { readonly recordId: NoteSchema.Id; readonly doc: Y.Doc }) {
-  const input = createSyncedAtom(() => ({ recordId: props.recordId, doc: props.doc }));
-
-  return createAtomResultStore(
-    bindRt((rt) => {
-      return rt.atom((get) => {
-        // Changing the record or document replaces its subscriptions.
-        return RuleProps.watch(get(input));
-      });
-    }),
   );
 }
 

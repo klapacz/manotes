@@ -2,6 +2,7 @@ import { Data, Deferred, Effect, RcMap, Scope } from "effect";
 import {
   createContext,
   createRoot,
+  createEffect,
   createSignal,
   runWithOwner,
   useContext,
@@ -10,7 +11,9 @@ import {
   type Owner,
   type ParentProps,
 } from "solid-js";
-import Editor, { BootState } from "../../editor";
+import Editor from "../../editor";
+import { LiveDoc } from "../../lib/live-doc.service";
+import { LiveDocAtom } from "../../lib/live-doc.atom";
 import type { NoteSchema } from "@manotes/shared/note.schema";
 
 // Pool of persistent editors (corvu createPersistent-style: render once into a
@@ -33,7 +36,6 @@ export class EditorBootError extends Data.TaggedError("EditorBootError")<{
 
 export type Slot = {
   readonly container: HTMLDivElement;
-  readonly bootState: Accessor<BootState>;
   readonly ready: Effect.Effect<void, EditorBootError>;
   readonly setAttached: (attached: boolean) => void;
 };
@@ -100,25 +102,25 @@ type PooledSlot = Slot & {
 };
 
 function createSlot(
-  noteId: NoteSchema.Id,
+  recordId: NoteSchema.Id,
   filter: Accessor<{ search?: string; backlinksTo?: string }>,
 ): PooledSlot {
   const ready = Deferred.makeUnsafe<void, EditorBootError>();
 
   return createRoot((dispose) => {
-    const [bootState, setBootState] = createSignal<BootState>(BootState.Loading());
+    const docState = LiveDocAtom.use({ recordId: () => recordId });
 
-    const setBootStateReady = (state: BootState) => {
-      setBootState(state);
-
-      BootState.$match(state, {
+    createEffect(() => {
+      LiveDoc.Doc.$match(docState(), {
         Loading: () => undefined,
         Ready: () => Effect.runSync(Deferred.succeed(ready, undefined)),
         Error: ({ message }) => {
-          return Effect.runSync(Deferred.fail(ready, new EditorBootError({ noteId, message })));
+          return Effect.runSync(
+            Deferred.fail(ready, new EditorBootError({ noteId: recordId, message })),
+          );
         },
       });
-    };
+    });
 
     const [attached, setAttached] = createSignal(false);
 
@@ -127,18 +129,16 @@ function createSlot(
     const container = (
       <div>
         <Editor
-          noteId={noteId}
+          noteId={recordId}
           attached={attached()}
           search={filter().search}
           backlinksTo={filter().backlinksTo}
-          onBootStateChange={setBootStateReady}
         />
       </div>
     ) as HTMLDivElement;
 
     return {
       container,
-      bootState,
       ready: Deferred.await(ready),
       setAttached,
       dispose,

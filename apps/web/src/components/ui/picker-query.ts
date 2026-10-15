@@ -8,7 +8,7 @@ import {
   onMount,
   useContext,
 } from "solid-js";
-import { Atom, AsyncResult } from "effect/unstable/reactivity";
+import { Atom, AsyncResult, type AtomRegistry } from "effect/unstable/reactivity";
 import { Option } from "effect";
 import { useAtomResource, useAtomValue } from "@effect/atom-solid";
 import { bindRt, createSyncedAtom } from "../../lib";
@@ -17,7 +17,7 @@ import { QueryEngine } from "../../lib/query-engine";
 import { MenuSearch } from "../../lib/menu-search";
 
 export type Options<T> = {
-  query: QueryEngine.Query<T, unknown, RuntimeContext>;
+  query: QueryEngine.Query<T, unknown, RuntimeContext | AtomRegistry.AtomRegistry>;
   label: string;
   initialSearch?: string;
   defaultSearch?: string;

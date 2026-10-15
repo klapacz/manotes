@@ -227,7 +227,7 @@ function startWatching(doc: Y.Doc) {
   return Effect.gen(function* () {
     const latest = yield* SubscriptionRef.make<RuleProps.EditorGroups | undefined>(undefined);
     yield* RuleProps.watch({ recordId, doc }).pipe(
-      Stream.runForEach((groups) => SubscriptionRef.set(latest, groups)),
+      Stream.runForEach(({ groups }) => SubscriptionRef.set(latest, groups)),
       Effect.forkChild,
     );
 

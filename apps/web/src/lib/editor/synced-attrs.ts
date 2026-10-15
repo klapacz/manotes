@@ -1,28 +1,25 @@
 import { Attrs } from "@manotes/shared/attrs.service";
 import type { NoteSchema } from "@manotes/shared/note.schema";
-import { Deferred, Effect, Fiber, Stream } from "effect";
-import * as Y from "yjs";
-import * as EditorSyncService from "../editor-sync.service";
+import { Effect, Stream, SubscriptionRef } from "effect";
+import { LiveDoc } from "../live-doc.service";
 
-// A stream owns the document and its synchronization until the pane releases it.
+// Scope and rule-target panes acquire the same doc used by their editors.
 export function watch(opts: { readonly id: NoteSchema.Id }) {
   return Stream.unwrap(
     Effect.gen(function* () {
-      const doc = yield* Effect.acquireRelease(
-        Effect.sync(() => new Y.Doc()),
-        (doc) => Effect.sync(() => doc.destroy()),
+      const docs = yield* LiveDoc.Service;
+      const attrs = yield* Attrs.Service;
+      const state = yield* docs.acquire({ recordId: opts.id });
+
+      return SubscriptionRef.changes(state).pipe(
+        Stream.switchMap((state) => {
+          return LiveDoc.Doc.$match(state, {
+            Loading: () => Stream.never,
+            Ready: ({ doc }) => attrs.watch({ doc }),
+            Error: (error) => Stream.fail(error),
+          });
+        }),
       );
-
-      const ready = yield* Deferred.make<void>();
-
-      const sync = yield* EditorSyncService.Service.use((service) => {
-        return service.setupDoc(doc, { noteId: opts.id }, ready);
-      }).pipe(Effect.forkScoped);
-
-      // Surface a boot failure instead of waiting forever for the ready signal.
-      yield* Deferred.await(ready).pipe(Effect.raceFirst(Fiber.join(sync)));
-
-      return yield* Attrs.Service.use((attrs) => Effect.succeed(attrs.watch({ doc })));
     }),
   );
 }

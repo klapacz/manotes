@@ -1,6 +1,7 @@
 import { useAtomValue } from "@effect/atom-solid";
 import { AsyncResult } from "effect/unstable/reactivity";
-import { BootState } from "../../editor";
+import { LiveDoc } from "../../lib/live-doc.service";
+import { LiveDocAtom } from "../../lib/live-doc.atom";
 import { Equal, Option, Stream } from "effect";
 import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import {
@@ -116,22 +117,10 @@ function NoteContent(props: { note: NoteSchema.Meta; groupKey: string; firstInGr
 
   const listRow = VirtualList.useRow();
 
+  const docState = LiveDocAtom.use({ recordId: () => props.note.id });
+
   const editorReady = () => {
-    const slot = slotResult();
-
-    return AsyncResult.isSuccess(slot) && BootState.$is("Ready")(slot.value.bootState());
-  };
-
-  const doc = () => {
-    const slot = slotResult();
-
-    if (!AsyncResult.isSuccess(slot)) return;
-
-    return BootState.$match(slot.value.bootState(), {
-      Ready: ({ doc }) => doc,
-      Loading: () => undefined,
-      Error: () => undefined,
-    });
+    return AsyncResult.isSuccess(slotResult()) && LiveDoc.Doc.$is("Ready")(docState());
   };
 
   const fnode = Focus.createNoteNode(
@@ -175,7 +164,7 @@ function NoteContent(props: { note: NoteSchema.Meta; groupKey: string; firstInGr
         </Show>
 
         <NoteShell>
-          <NoteActions note={props.note} doc={doc()} />
+          <NoteActions note={props.note} />
           <MatchAsyncResult
             when={slotResult()}
             onSuccess={(slot) => {

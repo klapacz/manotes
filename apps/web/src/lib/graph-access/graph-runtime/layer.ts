@@ -1,5 +1,5 @@
 import { Effect, Layer, References } from "effect";
-import * as EditorSyncService from "../../editor-sync.service";
+import { LiveDoc } from "../../live-doc.service";
 import * as EventRepo from "@manotes/shared/event.repo";
 import * as GraphSyncConfig from "@manotes/shared/graph-sync/config";
 import * as GraphWorkerClient from "../../graph-worker.client";
@@ -51,7 +51,7 @@ export const makeLayer = (opts: SetupOpts) => {
         MaterializationCheckpointRepo.Service.layer,
         MaterializedEventService.Service.layer,
         BrowserExtensionTabNoteService.Service.layer,
-        EditorSyncService.Service.layer,
+        LiveDoc.Service.layer,
         GraphWorkerClient.Service.layer,
         SyncSessionWatcher.Service.layer,
         Layer.succeed(References.MinimumLogLevel, "Debug"),

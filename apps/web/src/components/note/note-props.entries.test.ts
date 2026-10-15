@@ -4,8 +4,15 @@ import { PropDef } from "@manotes/shared/prop-def.service";
 import { PropRecordRepo } from "@manotes/shared/prop-record.repo";
 import { RuleProps } from "@manotes/shared/rule-props";
 import { Option } from "effect";
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { NotePropsEntries } from "./note-props.entries";
+
+// Pure entry transformations never acquire graph-scoped atoms.
+vi.mock("../../lib/graph-access/graph-runtime/context", () => ({
+  useGraph: () => {
+    throw new Error("Unexpected graph access in entry transformations");
+  },
+}));
 
 const priority = AttrsSchema.NoteId.make("prop_id:priority");
 

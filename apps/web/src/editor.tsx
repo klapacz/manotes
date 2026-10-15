@@ -2,7 +2,7 @@ import "./editor.css";
 
 import { createEditor, Priority, union, withPriority } from "prosekit/core";
 import { ProseKit } from "prosekit/solid";
-import { createEffect, createMemo, on, onCleanup, Show, type JSX } from "solid-js";
+import { createEffect, createMemo, onCleanup, Show, type JSX } from "solid-js";
 import * as Y from "yjs";
 import {
   defineYjsCommands,
@@ -13,16 +13,15 @@ import {
   type YjsUndoPluginOptions,
 } from "prosekit/extensions/yjs";
 import { defineAppExtension } from "./editor.extension";
-import { EditorSyncService, MatchTag, bindRt, createSyncedAtom } from "./lib";
+import { MatchTag } from "./lib";
+import { LiveDoc } from "./lib/live-doc.service";
+import { LiveDocAtom } from "./lib/live-doc.atom";
 import { defineReadonly } from "prosekit/extensions/readonly";
 import { PropertyDef } from "./components/note/property-def";
 import { RuleDef } from "./components/note/rule-def";
 import { NotePropGroups } from "./components/note/note-prop-groups";
 import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
-import { Cause, Data, Deferred, Effect, SubscriptionRef } from "effect";
-import { AsyncResult, type Atom } from "effect/unstable/reactivity";
 import BacklinkMenu, { StreamRefMenu, TabMenu } from "./lib/editor/backlink/menu";
-import { useAtomValue } from "@effect/atom-solid";
 import { Focus } from "./components/note/focus";
 import type { NoteSchema } from "@manotes/shared/note.schema";
 import { EditorFocus } from "./lib/editor/focus.extension";
@@ -33,168 +32,66 @@ import { SlashMenu } from "./lib/editor/slash-menu";
 import { TableControls } from "./lib/editor/table/controls";
 import { defineSearchHighlight, setSearchHighlight } from "./lib/editor/search-highlight.extension";
 
-export type BootState = Data.TaggedEnum<{
-  Loading: {};
-  Ready: { doc: Y.Doc };
-  Error: { message: string };
-}>;
-
-type BootStateSnapshot = {
-  doc: Y.Doc;
-  state: BootState;
-};
-
-export const BootState = Data.taggedEnum<BootState>();
-
-const EDITOR_LOAD_ERROR_MESSAGE = "Failed to load note content.";
-
 type Props = {
   noteId: NoteSchema.Id;
   attached?: boolean;
   search?: string;
   backlinksTo?: string;
-  onBootStateChange?: (state: BootState) => void;
   style?: JSX.CSSProperties;
 };
 
 export default function Editor(props: Props): JSX.Element {
+  const state = LiveDocAtom.use({ recordId: () => props.noteId });
+  const doc = createMemo(() => LiveDoc.readyDoc(state()));
+
+  return (
+    <>
+      <MatchTag
+        when={state()}
+        cases={{
+          Error: (error) => <p class="mb-3 text-sm text-error-fg">{error().message}</p>,
+        }}
+      />
+      <Show when={doc()} keyed>
+        {(doc) => <ReadyEditor {...props} doc={doc} />}
+      </Show>
+    </>
+  );
+}
+
+function ReadyEditor(props: Props & { readonly doc: Y.Doc }) {
   const focus = Focus.use();
 
-  // The editor stack is recreated per note-id boundary so future route/view
-  // changes can swap notes in-place without leaking Y.Doc/editor state.
-  const state = createMemo(
-    on(
-      () => props.noteId,
-      (noteId) => {
-        const doc = new Y.Doc();
-
-        const extension = union([
-          defineYjs({ doc }),
-          defineAppExtension(),
-          EditorFocus.define(() => focus.requestParent()),
-          defineSearchHighlight(),
-        ]);
-
-        const editor = createEditor({ extension });
-
-        return {
-          doc,
-          editor,
-          noteId,
-        };
-      },
-      // Build the first editor state immediately so render/effect can consume it
-      // on initial mount without waiting for the first dependency change.
-      { defer: false },
-    ),
-  );
-
-  const editorStateAtom = createSyncedAtom(() => {
-    const current = state();
-
-    return {
-      doc: current.doc,
-      noteId: current.noteId,
-    };
+  const editor = createEditor({
+    extension: union([
+      defineYjs({ doc: props.doc }),
+      defineAppExtension(),
+      EditorFocus.define(() => focus.requestParent()),
+      defineSearchHighlight(),
+    ]),
   });
 
-  const ready = Deferred.makeUnsafe<void>();
+  onCleanup(() => editor.unmount());
 
-  const editorBootStateAtom = bindRt((rt) => {
-    return rt.subscriptionRef(
-      Effect.fn("Editor.bootState")(function* (get: Atom.AtomContext) {
-        const { doc, noteId } = get(editorStateAtom);
-        yield* Effect.addFinalizer(() => Effect.sync(() => doc.destroy()));
+  const attrs = EditorAttrs.use({ doc: () => props.doc });
 
-        const bootStateRef = yield* SubscriptionRef.make<BootStateSnapshot>({
-          doc,
-          state: BootState.Loading(),
-        });
-
-        yield* Effect.gen(function* () {
-          const service = yield* EditorSyncService.Service;
-
-          yield* Effect.all(
-            [
-              Effect.scoped(service.setupDoc(doc, { noteId }, ready)),
-              Effect.gen(function* () {
-                yield* Deferred.await(ready);
-                yield* SubscriptionRef.set(bootStateRef, { doc, state: BootState.Ready({ doc }) });
-              }),
-            ],
-            { concurrency: "unbounded" },
-          );
-        }).pipe(
-          Effect.catchCause((cause) => {
-            if (Cause.hasInterruptsOnly(cause)) return Effect.void;
-
-            return SubscriptionRef.set(bootStateRef, {
-              doc,
-              state: BootState.Error({ message: EDITOR_LOAD_ERROR_MESSAGE }),
-            });
-          }),
-          Effect.forkScoped,
-        );
-
-        return bootStateRef;
-      }),
-    );
-  });
-
-  const bootStateResult = useAtomValue(editorBootStateAtom);
-
-  const bootState = createMemo(() => {
-    const currentDoc = state().doc;
-    const result = bootStateResult();
-
-    // Runtime atoms keep the previous successful value while the next async read
-    // is spinning up. Tagging boot state with the Y.Doc lets us ignore that stale
-    // Ready/Error from the previous note and keep the new session in Loading.
-    if (AsyncResult.isSuccess(result)) {
-      return result.value.doc === currentDoc ? result.value.state : BootState.Loading();
-    }
-
-    return AsyncResult.matchWithError(result, {
-      onInitial: () => BootState.Loading(),
-      onSuccess: () => BootState.Loading(),
-      onError: () => BootState.Error({ message: EDITOR_LOAD_ERROR_MESSAGE }),
-      onDefect: () => BootState.Error({ message: EDITOR_LOAD_ERROR_MESSAGE }),
-    });
-  });
-
-  const attrs = EditorAttrs.use({
-    doc: () => {
-      const current = bootState();
-
-      if (!BootState.$is("Ready")(current)) return undefined;
-
-      return current.doc;
-    },
+  createEffect(() => {
+    if (!attrs.editable()) onCleanup(editor.use(defineReadonly()));
   });
 
   createEffect(() => {
-    if (!attrs.editable()) onCleanup(state().editor.use(defineReadonly()));
-  });
-
-  createEffect(() => {
-    props.onBootStateChange?.(bootState());
-  });
-
-  createEffect(() => {
-    if (BootState.$is("Ready")(bootState())) {
-      setSearchHighlight(state().editor.view, props.search ?? "", props.backlinksTo);
-    }
+    setSearchHighlight(editor.view, props.search ?? "", props.backlinksTo);
   });
 
   const fid = Focus.useId();
 
   const fnode = Focus.createNode(() => ({
     id: fid.editor(props.noteId),
-    enabled: (props.attached ?? true) && BootState.$is("Ready")(bootState()),
+    enabled: props.attached ?? true,
     focus: (_element, options) => {
       // The pooled view keeps a live, transaction-mapped selection; reuse it
       // only while visible, so entering a long note does not jump.
-      const view = state().editor.view;
+      const view = editor.view;
       EditorFocus.placeCaretInView(view);
       view.focus();
 
@@ -202,67 +99,42 @@ export default function Editor(props: Props): JSX.Element {
     },
   }));
 
-  return (
-    <Show when={state()} keyed>
-      {(current) => {
-        const linkEdit = createLinkEdit();
+  const linkEdit = createLinkEdit();
 
-        return (
-          <ProseKit editor={current.editor}>
-            {/* ProseKit appends node view portals after its children, and Solid
-                re-inserts trailing siblings when they mount. Re-inserting the
-                autocomplete elements reconfigures the editor mid-transaction,
-                which reverts it from Yjs, so keep a single stable child. */}
-            <div class="contents">
-              <MatchTag
-                when={bootState()}
-                cases={{
-                  Error: (value) => <p class="text-error-fg mb-3 text-sm">{value().message}</p>,
-                }}
-              />
-              <div
-                ref={(element) => {
-                  current.editor.mount(element);
-                  fnode.setElement(element);
-                }}
-                class="outline-none p-4"
-                style={props.style}
-              />
-              <Show when={attrs.definition()}>
-                {(definition) => (
-                  <PropertyDef.Root
-                    recordId={props.noteId}
-                    doc={current.doc}
-                    attrs={definition()}
-                  />
-                )}
-              </Show>
-              <Show when={attrs.rule()}>
-                {(rule) => (
-                  <RuleDef.Root recordId={props.noteId} doc={current.doc} attrs={rule()} />
-                )}
-              </Show>
-              <MatchTag
-                when={bootState()}
-                cases={{
-                  Ready: (ready) => (
-                    <NotePropGroups.Root recordId={props.noteId} doc={ready().doc} />
-                  ),
-                }}
-              />
-              <BacklinkMenu currentNoteId={props.noteId} />
-              <TabMenu />
-              <StreamRefMenu />
-              <SlashMenu />
-              <TableControls />
-              <LinkMenu edit={linkEdit} />
-              {/* Leaving to the note, like Escape, drops the keyboard; a plain blur gets refocused. */}
-              <MobileToolbar linkEdit={linkEdit} onDismiss={() => focus.requestParent()} />
-            </div>
-          </ProseKit>
-        );
-      }}
-    </Show>
+  return (
+    <ProseKit editor={editor}>
+      {/* ProseKit appends node view portals after its children, and Solid
+          re-inserts trailing siblings when they mount. Re-inserting the
+          autocomplete elements reconfigures the editor mid-transaction,
+          which reverts it from Yjs, so keep a single stable child. */}
+      <div class="contents">
+        <div
+          ref={(element) => {
+            editor.mount(element);
+            fnode.setElement(element);
+          }}
+          class="outline-none p-4"
+          style={props.style}
+        />
+        <Show when={attrs.definition()}>
+          {(definition) => (
+            <PropertyDef.Root recordId={props.noteId} doc={props.doc} attrs={definition()} />
+          )}
+        </Show>
+        <Show when={attrs.rule()}>
+          {(rule) => <RuleDef.Root recordId={props.noteId} doc={props.doc} attrs={rule()} />}
+        </Show>
+        <NotePropGroups.Root recordId={props.noteId} doc={props.doc} />
+        <BacklinkMenu currentNoteId={props.noteId} />
+        <TabMenu />
+        <StreamRefMenu />
+        <SlashMenu />
+        <TableControls />
+        <LinkMenu edit={linkEdit} />
+        {/* Leaving to the note, like Escape, drops the keyboard; a plain blur gets refocused. */}
+        <MobileToolbar linkEdit={linkEdit} onDismiss={() => focus.requestParent()} />
+      </div>
+    </ProseKit>
   );
 }
 

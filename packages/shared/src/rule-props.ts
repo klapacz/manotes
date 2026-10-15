@@ -75,7 +75,7 @@ export function watch(opts: { readonly recordId: NoteSchema.Id; readonly doc: Y.
       const saved = attrs.watchGroups({ doc: opts.doc, defs });
 
       return Stream.zipLatestWith(expectations, saved, (expectations, { saved, defs }) => {
-        return reconcileGroups({ expectations, saved, defs });
+        return { groups: reconcileGroups({ expectations, saved, defs }), defs };
       });
     }),
   );

@@ -9,7 +9,7 @@ import { Stream } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { Show } from "solid-js";
 import type * as Y from "yjs";
-import { bindRt, createAtomResultStore, createSyncedAtom, MatchTag } from "../../lib";
+import { bindRt, createAtomResultStore, MatchTag } from "../../lib";
 import { QueryEngine } from "../../lib/query-engine";
 import { MenuQuery } from "../../lib/menu-query";
 import { CommandList, CommandScroll } from "../ui/command";
@@ -31,15 +31,11 @@ export const Action = Data.taggedEnum<Action>();
 
 export type Choice = Picker.Choice & Action;
 
-export function query(opts: { readonly recordId: NoteSchema.Id; readonly doc: Y.Doc | undefined }) {
+export function query<E, R>(opts: {
+  readonly groups: Stream.Stream<RuleProps.EditorGroups, E, R>;
+}) {
   return (request: QueryEngine.Request) => {
-    const doc = opts.doc;
-
-    if (!doc) return Stream.succeed([]);
-
-    return NotePropsEntries.watch({ recordId: opts.recordId, doc }).pipe(
-      Stream.switchMap((groups) => makeQuery(groups)(request)),
-    );
+    return opts.groups.pipe(Stream.switchMap((groups) => makeQuery(groups)(request)));
   };
 }
 
@@ -50,25 +46,9 @@ export function Menu(props: {
   readonly onBack: () => void;
   readonly onOpenNote: (id: NoteSchema.Id) => void;
 }) {
-  const input = createSyncedAtom(() => ({
-    recordId: props.noteId,
-    doc: props.doc,
-    selection: props.selection,
-  }));
-
-  const state = createAtomResultStore(
-    bindRt((rt) => {
-      return rt.atom((get) => {
-        const { recordId, doc, selection } = get(input);
-
-        return NotePropsEntries.watch({ recordId, doc }).pipe(
-          Stream.map((groups) => {
-            return NotePropsEntries.find({ groups, selection });
-          }),
-        );
-      });
-    }),
-  );
+  const state = createAtomResultStore(() => {
+    return NotePropsEntries.byRecord()(props.noteId);
+  });
 
   return (
     <MatchTag
@@ -79,7 +59,9 @@ export function Menu(props: {
         Success: (result) => {
           return (
             <Show
-              when={Option.getOrUndefined(result().value)}
+              when={Option.getOrUndefined(
+                NotePropsEntries.find({ groups: result().value, selection: props.selection }),
+              )}
               fallback={
                 <PropPicker.Unavailable>
                   <Picker.Footer>
