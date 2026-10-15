@@ -65,6 +65,9 @@ function DateEditor(props: {
 }) {
   const field = createDateFieldState({
     defaultValue: props.value ? Temporal.PlainDate.from(props.value) : null,
+    get isInvalid(): boolean {
+      return !field.value() && isDirty();
+    },
   });
 
   const calendar = createCalendarState({
@@ -112,12 +115,12 @@ function DateEditor(props: {
           }
         }}
       >
-        <div class="-mx-1 flex min-h-9 items-center gap-2 border-y border-border px-3">
+        <div class="-mx-1 flex min-h-9 items-center gap-2 border-y border-border px-3 has-[[aria-invalid=true]]:border-error-border has-[[aria-invalid=true]]:bg-error-bg">
           <FieldInput
             state={field}
             label="Date"
             class="
-              min-w-0 flex-1 text-sm
+              min-w-0 flex-1 text-sm data-invalid:text-error-fg
               [&>span]:sr-only
               [&_[data-date-input]]:flex
               [&_[data-date-input]]:min-h-9
@@ -129,6 +132,9 @@ function DateEditor(props: {
               [&_[data-segment]]:py-px
               [&_[data-segment]]:outline-none
               [&_[data-placeholder]]:text-fg-subtle
+              [&[data-invalid]_[data-placeholder]]:text-error-fg
+              [&[data-invalid]_[data-segment]:focus]:bg-error-solid
+              [&[data-invalid]_[data-segment]:focus]:text-error-fg-solid
               [&_[data-segment]:focus]:bg-primary-solid
               [&_[data-segment]:focus]:text-primary-fg-solid
               [&_[role=alert]]:mt-1

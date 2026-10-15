@@ -97,6 +97,7 @@ export function createDateRangeFieldState<T extends DateValue = Temporal.PlainDa
       if (compare(current.end, current.start, "date") < 0) {
         errors.add("End date must be on or after start date.");
       }
+
       const error = props.validate?.(current);
 
       if (error) errors.add(error);
