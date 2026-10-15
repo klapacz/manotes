@@ -15,12 +15,11 @@ import { MenuQuery } from "../../lib/menu-query";
 import { NoteQuery } from "./note-query";
 import { NoteLabel } from "./note-label";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
-import { Button } from "../ui/button";
-import { ButtonGroup } from "../ui/button-group";
+import { FilterPill } from "../ui/filter-pill";
 import { Command, CommandItem, CommandList, CommandScroll } from "../ui/command";
 import { Picker } from "../ui/picker";
 import { DateCommand } from "./date-command";
-import { FilterIcon, XIcon, RetryIcon, ArrowUpRightIcon } from "../icons";
+import { FilterIcon, RetryIcon, ArrowUpRightIcon } from "../icons";
 
 type Filter = StreamSettings.Filter;
 
@@ -410,28 +409,23 @@ export function StreamFilterEditor(props: {
     <>
       <For each={fields.filter((field) => hasCondition(field.value))}>
         {(field) => (
-          <FilterPill
+          <FilterPill.Root
             label={field.label}
+            operator={EffectMatch.value(field.value).pipe(
+              EffectMatch.when("type", () => "is"),
+              EffectMatch.when("search", () => "contains"),
+              EffectMatch.orElse(() => undefined),
+            )}
             onClear={() => {
               props.onChange(StreamSettings.clearFilter(props.filter, field.value));
             }}
           >
-            <Show when={field.value === "type" || field.value === "search"}>
-              <span class="px-2 text-sm text-fg-subtle">
-                {field.value === "type" ? "is" : "contains"}
-              </span>
-            </Show>
-            <Button
-              variant="ghost"
-              size="xs"
-              class="h-full min-w-0 max-w-48"
+            <FilterPill.Value
               aria-label={`Change ${field.label.toLowerCase()} filter`}
               onClick={() => open(field.field)}
             >
-              <span class="min-w-0 truncate">
-                <FilterValue field={field.value} filter={props.filter} />
-              </span>
-            </Button>
+              <FilterValue field={field.value} filter={props.filter} />
+            </FilterPill.Value>
             <Show
               when={
                 (field.value === "backlinksTo" || field.value === "linksFrom") &&
@@ -439,60 +433,49 @@ export function StreamFilterEditor(props: {
               }
             >
               {(id) => (
-                <Button
+                <FilterPill.Action
                   as={NoteLink}
                   id={id()}
-                  variant="ghost"
-                  size="icon-xs"
-                  class="h-full text-fg-subtle"
                   aria-label={`Open ${field.label.toLowerCase()} note`}
                   title="Open note"
                 >
                   <ArrowUpRightIcon />
-                </Button>
+                </FilterPill.Action>
               )}
             </Show>
-          </FilterPill>
+          </FilterPill.Root>
         )}
       </For>
       <For each={propertyFilters.entries().filter((entry) => entry.showChip)}>
         {(entry) => (
-          <FilterPill
+          <FilterPill.Root
             label={entry.label}
+            operator="is"
             onClear={() => propertyFilters.set({ propId: entry.id, value: undefined })}
           >
-            <span class="px-2 text-sm text-fg-subtle">is</span>
-            <Button
-              variant="ghost"
-              size="xs"
-              class="h-full min-w-0 max-w-48"
+            <FilterPill.Value
               aria-label={`Change ${entry.label} filter`}
               onClick={() => open(Field.prop({ propId: entry.id }))}
             >
-              <span class="min-w-0 truncate">
-                <StreamPropFilter.ValueLabel entry={entry} />
-              </span>
-            </Button>
+              <StreamPropFilter.ValueLabel entry={entry} />
+            </FilterPill.Value>
             <Show
               when={Option.getOrUndefined(
                 entry.value.pipe(Option.filter(AttrsSchema.PropVal.guards.link)),
               )}
             >
               {(value) => (
-                <Button
+                <FilterPill.Action
                   as={NoteLink}
                   id={value().val}
-                  variant="ghost"
-                  size="icon-xs"
-                  class="h-full text-fg-subtle"
                   aria-label={`Open ${entry.label} reference`}
                   title="Open note"
                 >
                   <ArrowUpRightIcon />
-                </Button>
+                </FilterPill.Action>
               )}
             </Show>
-          </FilterPill>
+          </FilterPill.Root>
         )}
       </For>
     </>
@@ -625,29 +608,5 @@ function NoteFilterPicker(
         </CommandList>
       )}
     </Picker.Query>
-  );
-}
-
-function FilterPill(props: { label: string; onClear: () => void; children: JSX.Element }) {
-  return (
-    <ButtonGroup.Root
-      aria-label={`${props.label} filter`}
-      class="h-7 shrink-0 items-center divide-x divide-border-subtle rounded-full border border-border-subtle bg-bg text-sm shadow-xs"
-    >
-      <span class="max-w-40 truncate px-2" title={props.label}>
-        {props.label}
-      </span>
-      {props.children}
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        rounded="full"
-        class="h-full text-fg-subtle"
-        aria-label={`Clear ${props.label} filter`}
-        onClick={props.onClear}
-      >
-        <XIcon />
-      </Button>
-    </ButtonGroup.Root>
   );
 }
