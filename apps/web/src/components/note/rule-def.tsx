@@ -132,7 +132,7 @@ export function Root(props: { recordId: AttrsSchema.NoteId; doc: Y.Doc; attrs: S
               <DescriptionList.Root>
                 <For each={Record.keys(expects())}>
                   {(propId) => (
-                    <DescriptionList.Row>
+                    <DescriptionList.Row class="first:pt-0">
                       <DescriptionList.Term>
                         <Show
                           when={Option.getOrUndefined(BuiltinAttrs.find(propId))}
