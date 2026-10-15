@@ -19,7 +19,18 @@ import { RecordDoc } from "@manotes/shared/record/doc";
 import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { YSchema } from "@manotes/shared/y-schema";
-import { DateTime, Effect, Layer, Option, Scope, Stream, Record, Match, Predicate } from "effect";
+import {
+  DateTime,
+  Effect,
+  Layer,
+  Option,
+  Scope,
+  Stream,
+  Record,
+  Match,
+  Predicate,
+  Schema,
+} from "effect";
 import { Reactivity } from "effect/reactivity";
 import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
@@ -735,6 +746,7 @@ describe("Archived builtin", () => {
           const events = yield* EventRepo.Service;
           const materializer = yield* Materializer.Service;
           const repo = yield* PropRecordRepo.Service;
+          const records = yield* RecordRepo.Service;
 
           const values = [
             AttrsSchema.PropVal.cases.text.make({ val: "hello" }),
@@ -779,6 +791,21 @@ describe("Archived builtin", () => {
             expect(defs.find((def) => def.prop_type === value._tag)).toMatchObject({
               prop_default: value,
             });
+
+            const filter = Schema.decodeUnknownSync(AttrsSchema.TargetFilter)([
+              AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "prop"] }),
+              AttrsSchema.makeTargetFilterExpr.cmp({
+                val: ["prop_type", "=", value._tag],
+              }),
+            ]);
+
+            const rows = Option.getOrThrow(
+              yield* (yield* records.reactiveStreamList({ filter, sort: "updated" })).pipe(
+                Stream.runHead,
+              ),
+            );
+
+            expect(rows.map(({ id }) => id)).toEqual([value._tag]);
           }
 
           expect(defs.find((def) => def.prop_type === "link")).toMatchObject({

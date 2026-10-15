@@ -168,6 +168,9 @@ function comparisonPredicate(comparison: AttrsSchema.FilterCmp): RecordPredicate
     Match.when(["_tag", "=", Schema.is(AttrsSchema.RecordTag)], ([, , tag]) => {
       return Query.eq(Tables.records._tag, tag);
     }),
+    Match.when(["prop_type", "=", Schema.is(AttrsSchema.PropValTag)], ([, , type]) => {
+      return Query.eq(Tables.records.prop_type, type);
+    }),
     Match.when(["owned_type", "=", "enum_option"], () => {
       return Query.eq(Tables.records.owned_type, "enum_option");
     }),

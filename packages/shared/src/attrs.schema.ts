@@ -88,6 +88,7 @@ export const LinkTarget = Schema.Tuple([
 export const TargetFilterCmp = Schema.Union([
   Schema.Tuple([Schema.Literal("id"), Schema.Literal("="), RecordId]),
   Schema.Tuple([Schema.Literal("_tag"), Schema.Literal("="), RecordTag]),
+  Schema.Tuple([Schema.Literal("prop_type"), Schema.Literal("="), PropValTag]),
   Schema.Tuple([Schema.Literal("owned_type"), Schema.Literal("="), Schema.Literal("enum_option")]),
   Schema.Tuple([Schema.Literal("owned_parent"), Schema.Literal("="), RecordId]),
   Schema.Tuple([Schema.Literal("title"), Schema.Literal("exists"), Schema.Boolean]),
