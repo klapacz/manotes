@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "07b903bf-2d27-445a-a2c8-460ab716d47d",
+  "id": "dd810a90-85e2-4b4f-9beb-26089b96f307",
   "prevId": "2d8d83be-8f4f-48e0-bf01-a3b5a3a43903",
   "tables": {
     "backlinks": {
@@ -312,6 +312,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "path": {
+          "name": "path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "propId": {
           "name": "propId",
           "type": "text",
@@ -338,12 +345,13 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {
-        "props_recordId_propId_pk": {
+        "props_recordId_path_propId_pk": {
           "columns": [
             "recordId",
+            "path",
             "propId"
           ],
-          "name": "props_recordId_propId_pk"
+          "name": "props_recordId_path_propId_pk"
         }
       },
       "uniqueConstraints": {},

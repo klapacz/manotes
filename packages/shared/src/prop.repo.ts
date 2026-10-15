@@ -7,6 +7,7 @@ import { AttrsSchema } from "./attrs.schema";
 
 export const PropRow = Schema.Struct({
   recordId: NoteSchema.Id,
+  path: Schema.fromJsonString(Schema.Array(NoteSchema.Id)),
   propId: NoteSchema.Id,
   value: Schema.NullOr(Schema.fromJsonString(AttrsSchema.PropVal)),
 });

@@ -535,6 +535,7 @@ describe("Archived builtin", () => {
           expect(yield* values).toEqual([
             {
               recordId,
+              path: "[]",
               propId: BuiltinAttrs.archivedId,
               value: JSON.stringify(AttrsSchema.PropVal.cases.bool.make({ val: false })),
             },
@@ -550,6 +551,7 @@ describe("Archived builtin", () => {
           expect(yield* values).toEqual([
             {
               recordId,
+              path: "[]",
               propId: BuiltinAttrs.archivedId,
               value: JSON.stringify(AttrsSchema.PropVal.cases.bool.make({ val: true })),
             },

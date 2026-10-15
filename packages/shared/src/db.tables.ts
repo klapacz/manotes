@@ -48,12 +48,14 @@ export const props = sqliteTable(
   "props",
   {
     recordId: text("recordId").notNull(),
+    // JSON array of rule IDs; [] identifies a top-level assignment.
+    path: text("path").notNull(),
     propId: text("propId").notNull(),
     value: text("value"),
   },
   (table) => {
     return [
-      primaryKey({ columns: [table.recordId, table.propId] }),
+      primaryKey({ columns: [table.recordId, table.path, table.propId] }),
       index("props_prop_id_idx").on(table.propId),
     ];
   },

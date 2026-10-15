@@ -1,8 +1,9 @@
 CREATE TABLE `props` (
 	`recordId` text NOT NULL,
+	`path` text NOT NULL,
 	`propId` text NOT NULL,
 	`value` text,
-	PRIMARY KEY(`recordId`, `propId`)
+	PRIMARY KEY(`recordId`, `path`, `propId`)
 );
 --> statement-breakpoint
 CREATE INDEX `props_prop_id_idx` ON `props` (`propId`);--> statement-breakpoint
