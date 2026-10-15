@@ -20,7 +20,7 @@ import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 import { StreamFilter } from "@manotes/shared/note/stream-filter";
 import { StreamSettings } from "@manotes/shared/note/stream-settings";
 import { YSchema } from "@manotes/shared/y-schema";
-import { DateTime, Effect, Layer, Option, Scope, Stream } from "effect";
+import { DateTime, Effect, Layer, Option, Scope, Stream, Record, Match, Predicate } from "effect";
 import * as Reactivity from "effect/unstable/reactivity/Reactivity";
 import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
@@ -73,6 +73,16 @@ describe("Archived builtin", () => {
                 recordId: NoteSchema.Id.make(input.id),
                 propId: BuiltinAttrs.archivedId,
                 value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+              });
+            }
+
+            for (const ruleId of ["first", "second"]) {
+              yield* attrs.setGroupProp({
+                doc,
+                recordId: NoteSchema.Id.make(input.id),
+                ruleId: NoteSchema.Id.make(ruleId),
+                propId: BuiltinAttrs.archivedId,
+                value: AttrsSchema.PropVal.cases.bool.make({ val: input.archived }),
               });
             }
 
@@ -476,6 +486,145 @@ describe("Archived builtin", () => {
             expect(
               yield* ids({ [propId]: AttrsSchema.PropVal.cases.bool.make({ val: false }) }),
             ).toEqual([]);
+          }
+        }).pipe(Effect.provide(Attrs.Service.layer), Effect.provideContext(device));
+      }),
+    );
+  });
+
+  it("filters across independent paths with defaults only for completely unset props", async () => {
+    await run(
+      Effect.gen(function* () {
+        const device = yield* makeDevice();
+        yield* Effect.gen(function* () {
+          const attrs = yield* Attrs.Service;
+          const events = yield* EventRepo.Service;
+          const materializer = yield* Materializer.Service;
+          const notes = yield* NoteRepo.Service;
+          const first = NoteSchema.Id.make("rule:first");
+          const second = NoteSchema.Id.make("rule:second");
+
+          const definitions = [
+            AttrsSchema.PropVal.cases.bool.make({ val: true }),
+            AttrsSchema.PropVal.cases.text.make({ val: "high" }),
+            AttrsSchema.PropVal.cases.number.make({ val: 7 }),
+            AttrsSchema.PropVal.cases.enum.make({ val: NoteSchema.Id.make("high") }),
+            AttrsSchema.PropVal.cases.link.make({ val: NoteSchema.Id.make("person") }),
+          ];
+
+          const createDoc = () => {
+            return Effect.acquireRelease(
+              Effect.sync(() => NoteDoc.make()),
+              ({ doc }) => Effect.sync(() => doc.destroy()),
+            );
+          };
+
+          const save = (id: string, doc: Y.Doc) => {
+            return events.create({
+              noteId: id,
+              type: "update",
+              createdAt,
+              payload: Y.encodeStateAsUpdate(doc),
+            });
+          };
+
+          for (const value of definitions) {
+            const definition = yield* createDoc();
+            yield* attrs.initializeProp({ doc: definition.doc, defaultValue: value });
+            yield* save(`prop:${value._tag}`, definition.doc);
+          }
+
+          for (const id of ["unset", "grouped", "repeated", "wrong-kind", "different"]) {
+            const recordId = NoteSchema.Id.make(id);
+            const { doc } = yield* createDoc();
+            ProsemirrorEncode.initializeDocument({
+              doc,
+              content: [{ type: "paragraph", content: [{ type: "text", text: id }] }],
+            });
+
+            for (const value of definitions) {
+              const propId = NoteSchema.Id.make(`prop:${value._tag}`);
+
+              const wrong = Predicate.isTagged(value, "bool")
+                ? AttrsSchema.PropVal.cases.number.make({ val: 1 })
+                : AttrsSchema.PropVal.cases.bool.make({ val: true });
+
+              const different = Match.value(value).pipe(
+                Match.tag("bool", () => AttrsSchema.PropVal.cases.bool.make({ val: false })),
+                Match.tag("text", () => AttrsSchema.PropVal.cases.text.make({ val: "low" })),
+                Match.tag("number", () => AttrsSchema.PropVal.cases.number.make({ val: 8 })),
+                Match.tag("enum", () => {
+                  return AttrsSchema.PropVal.cases.enum.make({ val: NoteSchema.Id.make("low") });
+                }),
+                Match.tag("link", () => {
+                  return AttrsSchema.PropVal.cases.link.make({ val: NoteSchema.Id.make("other") });
+                }),
+                Match.exhaustive,
+              );
+
+              if (id === "unset") continue;
+
+              yield* attrs.setGroupProp({
+                doc,
+                recordId,
+                propId,
+                ruleId: Predicate.isTagged(value, "link") ? second : first,
+                value: Match.value(id).pipe(
+                  Match.when("wrong-kind", () => wrong),
+                  Match.when("different", () => different),
+                  Match.orElse(() => value),
+                ),
+              });
+
+              if (id === "repeated") {
+                yield* attrs.setProp({ doc, recordId, propId, value: wrong });
+                yield* attrs.setGroupProp({ doc, recordId, ruleId: second, propId, value });
+              }
+            }
+
+            yield* save(id, doc);
+          }
+
+          yield* materializer.catchUp();
+
+          const props = Record.fromEntries(
+            definitions.map((value) => [`prop:${value._tag}`, value]),
+          );
+
+          for (const filters of [
+            ...definitions.map((value) => ({ [`prop:${value._tag}`]: value })),
+            props,
+          ]) {
+            const filter = {
+              type: PaneSchema.StreamFilterType.cases.notes.make({}),
+              props: filters,
+            };
+
+            const rows = Option.getOrThrow(
+              yield* (yield* notes.reactiveStreamList({ ...filter, sort: "updated" })).pipe(
+                Stream.runHead,
+              ),
+            );
+
+            expect(rows.map(({ id }) => id).toSorted()).toEqual(["grouped", "repeated", "unset"]);
+            expect(
+              Option.getOrThrow(
+                yield* (yield* notes.reactiveSearchPreview({ search: "", filter })).pipe(
+                  Stream.runHead,
+                ),
+              )
+                .map(({ id }) => id)
+                .toSorted(),
+            ).toEqual(["grouped", "repeated", "unset"]);
+
+            const found = yield* (yield* notes.reactiveFindPreviewById({
+              id: "grouped",
+              filter,
+            })).pipe(Stream.runHead);
+
+            expect(Option.flatten(found).pipe(Option.map(({ id }) => id))).toEqual(
+              Option.some("grouped"),
+            );
           }
         }).pipe(Effect.provide(Attrs.Service.layer), Effect.provideContext(device));
       }),

@@ -7,7 +7,7 @@ import * as Materializer from "@manotes/shared/materializer.service";
 import { MaterializerAttrs } from "@manotes/shared/materializer/attrs.service";
 import { StreamFilter } from "@manotes/shared/note/stream-filter";
 import { NoteRepo } from "@manotes/shared/note.repo";
-import { DateTime, Effect, Layer, Result, type Scope } from "effect";
+import { DateTime, Effect, Layer, Result, Record, type Scope } from "effect";
 import * as Reactivity from "effect/unstable/reactivity/Reactivity";
 import { SqlClient } from "effect/unstable/sql";
 import { describe, expect, it } from "vite-plus/test";
@@ -179,6 +179,59 @@ describe("attrs materialization", () => {
         expect(
           yield* sql`SELECT _tag AS tag, rule_targets, attrs_valid FROM notes WHERE id = 'rule'`,
         ).toEqual([{ tag: "note", rule_targets: null, attrs_valid: 1 }]);
+      }),
+    );
+  });
+
+  it("projects independent paths and replaces grouped assignments without changing Yjs", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        const doc = yield* makeDoc();
+        const props = new Y.Map<unknown>();
+        doc.getMap("attrs").set("props", props);
+        props.set("priority", AttrsSchema.PropVal.cases.number.make({ val: 1 }));
+
+        const groups = Record.map({ task: 2, other: 3, empty: undefined }, (value, id) => {
+          const group = new Y.Map<unknown>();
+          const values = new Y.Map<unknown>();
+          group.set("_tag", "group");
+          group.set("props", values);
+          props.set(id, group);
+
+          if (value !== undefined) {
+            values.set("priority", AttrsSchema.PropVal.cases.number.make({ val: value }));
+          }
+
+          return values;
+        });
+
+        const update = Y.encodeStateAsUpdate(doc);
+        yield* save(doc, "note");
+        yield* save(doc, "note");
+        const sql = yield* SqlClient.SqlClient;
+
+        const rows = sql`SELECT path, propId, json_extract(value, '$.val') AS val
+          FROM props ORDER BY path`;
+
+        expect(yield* rows).toEqual([
+          { path: '["other"]', propId: "priority", val: 3 },
+          { path: '["task"]', propId: "priority", val: 2 },
+          { path: "[]", propId: "priority", val: 1 },
+        ]);
+        expect(Y.encodeStateAsUpdate(doc)).toEqual(update);
+        yield* expectSnapshot("note", update);
+
+        groups.task.set("priority", AttrsSchema.PropVal.cases.number.make({ val: 4 }));
+        groups.other.delete("priority");
+        yield* save(doc, "note");
+        expect(yield* rows).toEqual([
+          { path: '["task"]', propId: "priority", val: 4 },
+          { path: "[]", propId: "priority", val: 1 },
+        ]);
+
+        props.delete("task");
+        yield* save(doc, "note");
+        expect(yield* rows).toEqual([{ path: "[]", propId: "priority", val: 1 }]);
       }),
     );
   });

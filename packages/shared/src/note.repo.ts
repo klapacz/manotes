@@ -24,6 +24,7 @@ import { LibOption } from "./effect/option";
 import { EffectOption } from "./effect/effect-option";
 import { BuiltinAttrs } from "./builtin-attrs";
 import { AttrsSchema } from "./attrs.schema";
+import { PropFilterSql } from "./prop-filter.sql";
 
 const decodeRecord = Schema.decodeEffect(NoteSchema.Record);
 
@@ -385,11 +386,6 @@ function filterStatement<T extends SQLiteSelect>(
   const conditions = [...streamFilterConditions(query), ...opts.conditions];
 
   for (const [index, [propId, value]] of Record.toEntries(query.props ?? {}).entries()) {
-    const prop = alias(Tables.props, `prop_${index}`);
-    // Each filter gets its own assignment join. LEFT JOIN keeps records with
-    // no stored value so the comparison can use the definition's default.
-    statement.leftJoin(prop, and(eq(prop.recordId, Tables.notes.id), eq(prop.propId, propId)));
-
     const builtin = BuiltinAttrs.find(propId);
 
     if (Option.isSome(builtin)) {
@@ -400,30 +396,30 @@ function filterStatement<T extends SQLiteSelect>(
         continue;
       }
 
-      // Builtins have code-defined defaults, without a definition row.
-      // Only missing assignments use the default; wrong tags become NULL
-      // and cannot match the requested value.
-      conditions.push(sql`CASE
-        WHEN ${prop.recordId} IS NULL THEN ${propSqlValue(def.prop_default)}
-        WHEN json_extract(${prop.value}, '$._tag') = ${value._tag}
-          THEN json_extract(${prop.value}, '$.val')
-        ELSE NULL
-      END = ${propSqlValue(value)}`);
+      conditions.push(
+        PropFilterSql.equals({
+          propId,
+          value,
+          defaultValue: sql`${JSON.stringify(def.prop_default)}`,
+        }),
+      );
       continue;
     }
 
     const def = alias(Tables.notes, `prop_def_${index}`);
     statement.leftJoin(def, and(eq(def.id, propId), eq(def._tag, "prop"), eq(def.attrs_valid, 1)));
 
-    // An unavailable or invalid definition leaves the saved filter inactive.
-    // Otherwise compare the stored value, or the default when unset. A wrong
-    // definition/value tag cannot match, including when a default exists.
-    conditions.push(sql`(${def.id} IS NULL OR (${def.prop_type} = ${value._tag} AND CASE
-      WHEN ${prop.recordId} IS NULL THEN json_extract(${def.prop_default}, '$.val')
-      WHEN json_extract(${prop.value}, '$._tag') = ${value._tag}
-        THEN json_extract(${prop.value}, '$.val')
-      ELSE NULL
-    END = ${propSqlValue(value)}))`);
+    const comparison = PropFilterSql.equals({
+      propId,
+      value,
+      defaultValue: sql`${def.prop_default}`,
+    });
+
+    // Available definitions compare values; unavailable definitions leave filters inactive.
+    conditions.push(sql`(
+      ${def.id} IS NULL
+      OR (${def.prop_type} = ${value._tag} AND ${comparison})
+    )`);
   }
 
   if (query.backlinksTo !== undefined) {
@@ -477,14 +473,6 @@ function streamFilterConditions(query: StreamListQuery): Array<SQL> {
   }
 
   return conditions;
-}
-
-function propSqlValue(value: AttrsSchema.PropVal | null) {
-  if (value === null) return null;
-
-  if (Predicate.isTagged(value, "bool")) return value.val ? 1 : 0;
-
-  return value.val;
 }
 
 export * as NoteRepo from "./note.repo";
