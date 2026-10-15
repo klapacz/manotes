@@ -16,7 +16,7 @@ const decodeFilter = Schema.decodeUnknownSync(
   ),
 );
 
-export function defineSearchHighlight(): PlainExtension {
+export function define(): PlainExtension {
   return definePlugin(
     new Plugin<State>({
       key,
@@ -47,11 +47,7 @@ export function defineSearchHighlight(): PlainExtension {
   );
 }
 
-export function setSearchHighlight(
-  view: EditorView,
-  search: string,
-  backlinksTo?: RecordSchema.Id,
-): void {
+export function set(view: EditorView, search: string, backlinksTo?: RecordSchema.Id): void {
   const query = foldCase(search.trim());
   const previous = key.getState(view.state);
 
@@ -97,3 +93,5 @@ function highlight(doc: Node, query: string, backlinksTo?: RecordSchema.Id): Dec
 function foldCase(text: string): string {
   return text.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
 }
+
+export * as EditorSearchHighlight from "./search-highlight.extension";

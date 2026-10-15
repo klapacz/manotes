@@ -9,7 +9,7 @@ import { BacklinkService } from "./materializer/backlink/service";
 import { MaterializerAttrs } from "./materializer/attrs.service";
 import { RecordRepo } from "./record.repo";
 import { RecordDoc } from "./record/doc";
-import { extractText, findFirstH1Text, yDocToNodeJSON } from "./prosemirror-materializer.utils";
+import { ProsemirrorMaterializer } from "./prosemirror-materializer.utils";
 import { toLocalDateString } from "./temporal/utils";
 
 const MAX_FETCHED_UNDONE_EVENTS = 100;
@@ -219,14 +219,14 @@ const applyMaterializationUpdates = Effect.fn("MaterializerService.applyMaterial
 
 function buildMaterializedRecordFields({ yDoc }: { yDoc: Y.Doc }) {
   const materializedYUpdate = Y.encodeStateAsUpdate(yDoc);
-  const content = yDocToNodeJSON({ yDoc });
-  const extractedTitle = findFirstH1Text(content);
+  const content = ProsemirrorMaterializer.yDocToNodeJSON({ yDoc });
+  const extractedTitle = ProsemirrorMaterializer.findFirstH1Text(content);
   const title = extractedTitle.length > 0 ? extractedTitle : null;
 
   return {
     title,
     content,
-    text: extractText(content),
+    text: ProsemirrorMaterializer.extractText(content),
     materializedYUpdate,
   };
 }

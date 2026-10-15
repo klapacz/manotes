@@ -14,7 +14,9 @@ let runtime: Atom.AtomRuntime<LiveDoc.Service, never>;
 
 // Exercise the real atom families without mounting a router or graph UI.
 vi.mock("./graph-access/graph-runtime/context", () => ({
-  useGraph: () => () => ({ runtime: { atom: runtime } }),
+  GraphRuntimeContext: {
+    use: () => () => ({ runtime: { atom: runtime } }),
+  },
 }));
 
 vi.mock("@manotes/shared/rule-props", async (importOriginal) => {

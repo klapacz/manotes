@@ -80,3 +80,5 @@ function collectText(node: UnknownNodeJSON): string {
 
   return `${ownText}${nestedText}`;
 }
+
+export * as ProsemirrorMaterializer from "./prosemirror-materializer.utils";

@@ -30,7 +30,7 @@ import { createLinkEdit, LinkMenu } from "./lib/editor/link/menu";
 import { MobileToolbar } from "./lib/editor/mobile-toolbar";
 import { SlashMenu } from "./lib/editor/slash-menu";
 import { TableControls } from "./lib/editor/table/controls";
-import { defineSearchHighlight, setSearchHighlight } from "./lib/editor/search-highlight.extension";
+import { EditorSearchHighlight } from "./lib/editor/search-highlight.extension";
 
 type Props = {
   recordId: RecordSchema.Id;
@@ -67,7 +67,7 @@ function ReadyEditor(props: Props & { readonly doc: Y.Doc }) {
       defineYjs({ doc: props.doc }),
       defineAppExtension(),
       EditorFocus.define(() => focus.requestParent()),
-      defineSearchHighlight(),
+      EditorSearchHighlight.define(),
     ]),
   });
 
@@ -80,7 +80,7 @@ function ReadyEditor(props: Props & { readonly doc: Y.Doc }) {
   });
 
   createEffect(() => {
-    setSearchHighlight(editor.view, props.search ?? "", props.backlinksTo);
+    EditorSearchHighlight.set(editor.view, props.search ?? "", props.backlinksTo);
   });
 
   const fid = Focus.useId();

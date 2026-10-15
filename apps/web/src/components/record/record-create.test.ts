@@ -9,7 +9,7 @@ import { Attrs } from "@manotes/shared/attrs.service";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { RecordDoc } from "@manotes/shared/record/doc";
 import { YSchema } from "@manotes/shared/y-schema";
-import { yDocToNodeJSON } from "@manotes/shared/prosemirror-materializer.utils";
+import { ProsemirrorMaterializer } from "@manotes/shared/prosemirror-materializer.utils";
 import { RECORD_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
 import { MdSerialize } from "@manotes/shared/prosemirror/md/serialize";
 import { prefilledPayload, useCreateRecord, type CreateInput } from "./record-create";
@@ -102,7 +102,7 @@ describe("blank record creation", () => {
           ],
         }),
       );
-      expect(yDocToNodeJSON({ yDoc: doc })).toMatchObject({
+      expect(ProsemirrorMaterializer.yDocToNodeJSON({ yDoc: doc })).toMatchObject({
         content: [{ type: "heading", attrs: { level: 1 }, content: [{ text: "Untitled" }] }],
       });
     } finally {
@@ -135,7 +135,7 @@ describe("blank record creation", () => {
         owned_parent: enum_parent,
         props: {},
       });
-      expect(yDocToNodeJSON({ yDoc: doc })).toMatchObject({
+      expect(ProsemirrorMaterializer.yDocToNodeJSON({ yDoc: doc })).toMatchObject({
         content: [{ type: "heading", attrs: { level: 1 }, content: [{ text: "Untitled" }] }],
       });
     } finally {
@@ -164,7 +164,7 @@ describe("blank record creation", () => {
           prop_type: "bool",
         }),
       );
-      expect(yDocToNodeJSON({ yDoc: doc })).toEqual({
+      expect(ProsemirrorMaterializer.yDocToNodeJSON({ yDoc: doc })).toEqual({
         type: "doc",
         content: [
           { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Untitled" }] },
@@ -202,7 +202,7 @@ function expectBlankPayload(payload: Uint8Array<ArrayBufferLike>): void {
 
   try {
     Y.applyUpdate(yDoc, payload);
-    const content = yDocToNodeJSON({ yDoc });
+    const content = ProsemirrorMaterializer.yDocToNodeJSON({ yDoc });
     expect(content).toEqual({ type: "doc", content: [{ type: "paragraph" }] });
     const doc = RECORD_SCHEMA.nodeFromJSON(content);
     doc.check();

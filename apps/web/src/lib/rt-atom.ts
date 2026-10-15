@@ -1,5 +1,5 @@
 import type { Atom } from "effect/reactivity";
-import { useGraph } from "./graph-access/graph-runtime/context";
+import { GraphRuntimeContext } from "./graph-access/graph-runtime/context";
 
 function createBindRt<R, ER>(getRt: () => Atom.AtomRuntime<R, ER>) {
   return <T>(creator: (rt: Atom.AtomRuntime<R, ER>) => T) => {
@@ -20,4 +20,4 @@ function createBindRt<R, ER>(getRt: () => Atom.AtomRuntime<R, ER>) {
   };
 }
 
-export const bindRt = createBindRt(() => useGraph()().runtime.atom);
+export const bindRt = createBindRt(() => GraphRuntimeContext.use()().runtime.atom);

@@ -1,4 +1,4 @@
-export * as Context from "./context";
+export { GraphRuntimeContext as Context } from "./context";
 
 export * as DBResolution from "./db-resolution";
 
@@ -12,7 +12,7 @@ export * as ManagedRuntime from "./managed-runtime";
 
 export * as Manager from "./manager";
 
-export * as Router from "./router";
+export { GraphRuntimeRouter as Router } from "./router";
 
 export * as SyncSessionWatcher from "./sync-session-watcher";
 

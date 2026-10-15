@@ -9,8 +9,10 @@ import { RecordPropsEntries } from "./record-props.entries";
 
 // Pure entry transformations never acquire graph-scoped atoms.
 vi.mock("../../lib/graph-access/graph-runtime/context", () => ({
-  useGraph: () => {
-    throw new Error("Unexpected graph access in entry transformations");
+  GraphRuntimeContext: {
+    use: () => {
+      throw new Error("Unexpected graph access in entry transformations");
+    },
   },
 }));
 

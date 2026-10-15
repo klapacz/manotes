@@ -2,7 +2,8 @@ import { useAtomValue } from "@effect/atom-solid";
 import { createFileRoute, Navigate, Outlet } from "@tanstack/solid-router";
 import { GraphNavbar } from "../components/graph-navbar";
 import { MatchAsyncResult, MatchTag, createSyncedAtom } from "../lib";
-import { GraphProvider } from "../lib/graph-access/graph-runtime/context";
+import { GraphRuntimeContext } from "../lib/graph-access/graph-runtime/context";
+import { GraphRuntimeRouter } from "../lib/graph-access/graph-runtime/router";
 import { GraphRuntime } from "../lib/graph-access/graph-runtime";
 import { GraphAccessRuntime } from "../lib/graph-access/runtime";
 import { Stream } from "effect";
@@ -40,12 +41,12 @@ function RouteComponent() {
         <MatchTag
           when={state()}
           cases={{
-            Missing: (state) => <Navigate {...GraphRuntime.Router.redirectLinkOptions(state())} />,
+            Missing: (state) => <Navigate {...GraphRuntimeRouter.redirectLinkOptions(state())} />,
             Locked: (state) => (
-              <Navigate {...GraphRuntime.Router.redirectLinkOptions(state(), returnTo())} />
+              <Navigate {...GraphRuntimeRouter.redirectLinkOptions(state(), returnTo())} />
             ),
             Ready: (graph) => (
-              <GraphProvider graph={graph}>
+              <GraphRuntimeContext.Provider graph={graph}>
                 {/* The mobile editor toolbar fits the shell above the keyboard. */}
                 <div
                   class="flex flex-col overflow-hidden"
@@ -58,7 +59,7 @@ function RouteComponent() {
                     <Outlet />
                   </div>
                 </div>
-              </GraphProvider>
+              </GraphRuntimeContext.Provider>
             ),
           }}
         />

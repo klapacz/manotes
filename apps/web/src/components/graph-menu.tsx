@@ -4,7 +4,7 @@ import { Show } from "solid-js";
 import { toast } from "somoto";
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { bindRt } from "../lib";
-import { useGraph } from "../lib/graph-access/graph-runtime/context";
+import { GraphRuntimeContext } from "../lib/graph-access/graph-runtime/context";
 import { KeyStore } from "../lib/graph-access/key-store/service";
 import { LocalRegistry } from "../lib/graph-access/local-registry";
 import { GraphBackupFile } from "../lib/graph-backup/file";
@@ -63,7 +63,7 @@ const GraphMenuIdentity = (props: { graph: LocalRegistry.Schema.Record }) => {
 };
 
 export const GraphMenu = () => {
-  const graph = useGraph();
+  const graph = GraphRuntimeContext.use();
   const [exportBackupResult, exportBackup] = useAtom(ExportBackup, { mode: "promiseExit" });
   const [lockGraphResult, lockGraph] = useAtom(() => LockGraph, { mode: "promiseExit" });
 

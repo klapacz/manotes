@@ -47,3 +47,5 @@ export const runPromiseExitOrRedirect = <A, E>(
   localGraphId: string,
   effect: Effect.Effect<A, E, RuntimeContext>,
 ) => getReadyOrRedirect(localGraphId).then((ready) => ready.runtime.runPromiseExit(effect));
+
+export * as GraphRuntimeRouter from "./router";
