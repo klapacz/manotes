@@ -4,9 +4,9 @@
 import { Array, Effect, Layer, Option, pipe, Context } from "effect";
 import { DB } from "../db.service";
 import { EventRepo } from "../event.repo";
-import { GraphSyncMessages as Messages } from "./contract/messages";
+import { GraphSyncMessages } from "./contract/messages";
 import { MAX_EVENTS_PER_COMMIT } from "./contract/limits";
-import { GraphSyncMachineErrors as Errors } from "./machine/errors";
+import { GraphSyncMachineErrors } from "./machine/errors";
 import { GraphSyncEncryption } from "./encryption/service";
 import { GraphSyncEncryptionSchema } from "./encryption/schema";
 import type { NonEmptyReadonlyArray } from "effect/Array";
@@ -29,7 +29,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
       const actual = yield* getLastCommitSeq();
 
       if (actual !== expected) {
-        return yield* new Errors.LastCommitSeqMismatchError({
+        return yield* new GraphSyncMachineErrors.LastCommitSeqMismatchError({
           expected,
           actual,
         });
@@ -43,7 +43,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
      * state is derived from `max(commitSeq)`.
      */
     const applyCommittedEvents = Effect.fn("GraphSyncEventLogService.applyCommittedEvents")(
-      function* (events: NonEmptyReadonlyArray<Messages.CommittedEvent>) {
+      function* (events: NonEmptyReadonlyArray<GraphSyncMessages.CommittedEvent>) {
         const lastCommitSeq = yield* getLastCommitSeq();
 
         const unappliedEvents = pipe(
@@ -63,7 +63,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
                 if (event.commitSeq <= lastCommitSeq) return;
 
                 if (event.commitSeq !== lastCommitSeq + 1) {
-                  return yield* new Errors.NextCommitSeqMismatchError({
+                  return yield* new GraphSyncMachineErrors.NextCommitSeqMismatchError({
                     expected: lastCommitSeq + 1,
                     actual: event.commitSeq,
                   });
@@ -83,7 +83,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
                     }
 
                     if (existing.commitSeq !== event.commitSeq) {
-                      return yield* new Errors.CommittedEventConflictError({
+                      return yield* new GraphSyncMachineErrors.CommittedEventConflictError({
                         eventId: event.id,
                         expectedCommitSeq: existing.commitSeq,
                         actualCommitSeq: event.commitSeq,
@@ -149,7 +149,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
 
           const encodedEnvelope = yield* GraphSyncEncryptionSchema.encodeEnvelope(encryptedPayload);
 
-          return new Messages.PendingEvent({
+          return new GraphSyncMessages.PendingEvent({
             id: event.id,
             streamRef,
             payload: encodedEnvelope,

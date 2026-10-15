@@ -1,7 +1,7 @@
 import { Effect, Layer, Option, Context } from "effect";
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { GraphAccessErrors } from "../errors";
-import { KeyStore as KeyStoreService } from "../key-store/service";
+import { KeyStore } from "../key-store/service";
 import { LocalRegistry } from "../local-registry";
 import { RemoteRegistryService } from "../remote-registry/service";
 import { SessionService } from "../session/service";
@@ -17,7 +17,7 @@ export type DetachInput = {
 
 export class Service extends Context.Service<Service>()("GraphAccess.Commands.Sync.Service", {
   make: Effect.gen(function* () {
-    const keyStore = yield* KeyStoreService.Service;
+    const keyStore = yield* KeyStore.Service;
 
     const upload = Effect.fn("GraphAccessCommandsSync.upload")(function* ({
       localGraphId,
@@ -107,7 +107,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Sy
   }),
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(
-    Layer.provide(KeyStoreService.Service.layer),
+    Layer.provide(KeyStore.Service.layer),
     Layer.provide(SessionService.Service.layer),
   );
 }

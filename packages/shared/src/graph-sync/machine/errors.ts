@@ -2,8 +2,8 @@
  * Defines domain errors raised while running the graph sync machine.
  */
 import { Data, Schema } from "effect";
-import { GraphSyncMessages as Messages } from "../contract/messages";
-import { GraphSyncModel as Model } from "./model";
+import { GraphSyncMessages } from "../contract/messages";
+import { GraphSyncModel } from "./model";
 import type { Socket } from "effect/socket";
 
 export class LastCommitSeqMismatchError extends Data.TaggedError(
@@ -43,7 +43,7 @@ export class CommittedEventConflictError extends Data.TaggedError(
 export class DuplicateConnectError extends Data.TaggedError(
   "GraphSyncMachineDuplicateConnectError",
 )<{
-  stateTag: Model.State["_tag"];
+  stateTag: GraphSyncModel.State["_tag"];
 }> {
   get message(): string {
     return `Received Connect while ${this.stateTag}`;
@@ -53,8 +53,8 @@ export class DuplicateConnectError extends Data.TaggedError(
 export class UnexpectedServerMessageError extends Data.TaggedError(
   "GraphSyncMachineUnexpectedServerMessageError",
 )<{
-  stateTag: Model.State["_tag"];
-  messageTag: Messages.ServerMessage["_tag"];
+  stateTag: GraphSyncModel.State["_tag"];
+  messageTag: GraphSyncMessages.ServerMessage["_tag"];
 }> {
   get message(): string {
     return `Received ${this.messageTag} while ${this.stateTag}`;

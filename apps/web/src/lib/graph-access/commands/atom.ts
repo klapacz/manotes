@@ -1,63 +1,63 @@
 import { Effect } from "effect";
-import { GraphAccessRuntime as Runtime } from "../runtime";
-import { GraphAccessCommandsDelete as Delete } from "./delete";
-import { GraphAccessCommandsProvision as Provision } from "./provision";
-import { GraphAccessCommandsSync as Sync } from "./sync";
-import { GraphAccessCommandsUnlock as Unlock } from "./unlock";
-import { GraphAccessCommandsRename as Rename } from "./rename";
+import { GraphAccessRuntime } from "../runtime";
+import { GraphAccessCommandsDelete } from "./delete";
+import { GraphAccessCommandsProvision } from "./provision";
+import { GraphAccessCommandsSync } from "./sync";
+import { GraphAccessCommandsUnlock } from "./unlock";
+import { GraphAccessCommandsRename } from "./rename";
 
-export const deleteLocal = Runtime.atom.fn(
+export const deleteLocal = GraphAccessRuntime.atom.fn(
   Effect.fn("GraphAccessCommandsAtom.deleteLocal")(function* (localGraphId: string) {
-    const service = yield* Delete.Service;
+    const service = yield* GraphAccessCommandsDelete.Service;
     yield* service.deleteLocal(localGraphId);
   }),
 );
 
-export type OpenCloudOnDeviceInput = Provision.OpenCloudOnDeviceInput;
+export type OpenCloudOnDeviceInput = GraphAccessCommandsProvision.OpenCloudOnDeviceInput;
 
-export const openCloudOnDevice = Runtime.atom.fn(
+export const openCloudOnDevice = GraphAccessRuntime.atom.fn(
   Effect.fn("GraphAccessCommandsAtom.openCloudOnDevice")(function* (opts: OpenCloudOnDeviceInput) {
-    const service = yield* Provision.Service;
+    const service = yield* GraphAccessCommandsProvision.Service;
 
     return yield* service.openCloudOnDevice(opts);
   }),
 );
 
-export type UploadInput = Sync.UploadInput;
+export type UploadInput = GraphAccessCommandsSync.UploadInput;
 
-export const upload = Runtime.atom.fn(
+export const upload = GraphAccessRuntime.atom.fn(
   Effect.fn("GraphAccessCommandsAtom.upload")(function* (opts: UploadInput) {
-    const service = yield* Sync.Service;
+    const service = yield* GraphAccessCommandsSync.Service;
 
     return yield* service.upload(opts);
   }),
 );
 
-export type DetachInput = Sync.DetachInput;
+export type DetachInput = GraphAccessCommandsSync.DetachInput;
 
-export const detach = Runtime.atom.fn(
+export const detach = GraphAccessRuntime.atom.fn(
   Effect.fn("GraphAccessCommandsAtom.detach")(function* (opts: DetachInput) {
-    const service = yield* Sync.Service;
+    const service = yield* GraphAccessCommandsSync.Service;
 
     return yield* service.detach(opts);
   }),
 );
 
-export type UnlockCloudGraphInput = Unlock.UnlockCloudGraphInput;
+export type UnlockCloudGraphInput = GraphAccessCommandsUnlock.UnlockCloudGraphInput;
 
-export const unlockCloudGraph = Runtime.atom.fn(
+export const unlockCloudGraph = GraphAccessRuntime.atom.fn(
   Effect.fn("GraphAccessCommandsAtom.unlockCloudGraph")(function* (opts: UnlockCloudGraphInput) {
-    const service = yield* Unlock.Service;
+    const service = yield* GraphAccessCommandsUnlock.Service;
 
     return yield* service.unlockCloudGraph(opts);
   }),
 );
 
-export type RenameGraphInput = Rename.RenameGraphInput;
+export type RenameGraphInput = GraphAccessCommandsRename.RenameGraphInput;
 
-export const renameGraph = Runtime.atom.fn(
+export const renameGraph = GraphAccessRuntime.atom.fn(
   Effect.fn("GraphAccessCommandsAtom.renameGraph")(function* (opts: RenameGraphInput) {
-    const service = yield* Rename.Service;
+    const service = yield* GraphAccessCommandsRename.Service;
 
     return yield* service.renameGraph(opts);
   }),

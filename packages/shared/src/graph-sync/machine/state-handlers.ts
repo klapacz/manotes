@@ -2,10 +2,10 @@
  * Handles each input for each graph sync machine state.
  */
 import { Effect, Match, Types, pipe } from "effect";
-import { GraphSyncModel as Model } from "./model";
-import { GraphSyncMachineCommands as Commands } from "./commands";
-import { GraphSyncMachineErrors as Errors } from "./errors";
-import { GraphSyncMachineTransition as Transition } from "./transition";
+import { GraphSyncModel } from "./model";
+import { GraphSyncMachineCommands } from "./commands";
+import { GraphSyncMachineErrors } from "./errors";
+import { GraphSyncMachineTransition } from "./transition";
 
 /**
  * Handles the initial catch-up phase.
@@ -14,42 +14,49 @@ import { GraphSyncMachineTransition as Transition } from "./transition";
  * local log is caught up to a contiguous server prefix.
  */
 export function bootstrapping(
-  state: Types.ExtractTag<Model.State, "Bootstrapping">,
-  input: Model.Input,
+  state: Types.ExtractTag<GraphSyncModel.State, "Bootstrapping">,
+  input: GraphSyncModel.Input,
 ) {
   return Match.value(input).pipe(
     Match.tagsExhaustive({
-      SocketOpened: () => pipe(Commands.sendConnect(), Transition.stayInState(state)),
+      SocketOpened: () => {
+        return pipe(
+          GraphSyncMachineCommands.sendConnect(),
+          GraphSyncMachineTransition.stayInState(state),
+        );
+      },
       // Local writes can keep happening during catch-up, but they must not be
       // pushed until the socket has confirmed the current committed prefix.
-      PendingEvents: () => pipe(Effect.void, Transition.stayInState(state)),
+      PendingEvents: () => pipe(Effect.void, GraphSyncMachineTransition.stayInState(state)),
       ServerMessage: ({ message }) => {
         return Match.value(message).pipe(
           Match.tagsExhaustive({
             Replay: (message) => {
               return pipe(
-                Commands.applyEventsFromMessages([message]),
-                Transition.stayInState(state),
+                GraphSyncMachineCommands.applyEventsFromMessages([message]),
+                GraphSyncMachineTransition.stayInState(state),
               );
             },
             ReplayDone: ({ upToCommitSeq }) => {
               return pipe(
-                Commands.ensureLastCommitSeqEquals(upToCommitSeq),
-                Effect.andThen(Commands.applyEventsFromMessages(state.bufferedCommitted)),
+                GraphSyncMachineCommands.ensureLastCommitSeqEquals(upToCommitSeq),
+                Effect.andThen(
+                  GraphSyncMachineCommands.applyEventsFromMessages(state.bufferedCommitted),
+                ),
                 // Once catch-up is complete, immediately re-check local pending
                 // rows so edits made during bootstrap do not wait for another
                 // notification edge.
-                Effect.andThen(Transition.readyOrCommitPending),
+                Effect.andThen(GraphSyncMachineTransition.readyOrCommitPending),
               );
             },
-            Committed: (committed) => Transition.bufferCommitted(state, committed),
+            Committed: (committed) => GraphSyncMachineTransition.bufferCommitted(state, committed),
             CommitAck: (message) => {
               return (
                 // `CommitAck` only makes sense after this client has sent a
                 // commit, so seeing it during bootstrap means the protocol is out
                 // of sync and the session should fail fast.
                 Effect.fail(
-                  new Errors.UnexpectedServerMessageError({
+                  new GraphSyncMachineErrors.UnexpectedServerMessageError({
                     stateTag: state._tag,
                     messageTag: message._tag,
                   }),
@@ -66,18 +73,21 @@ export function bootstrapping(
 /**
  * Handles the steady state where local commits may be sent immediately.
  */
-export function ready(state: Types.ExtractTag<Model.State, "Ready">, input: Model.Input) {
+export function ready(
+  state: Types.ExtractTag<GraphSyncModel.State, "Ready">,
+  input: GraphSyncModel.Input,
+) {
   return Match.value(input).pipe(
     Match.tagsExhaustive({
-      PendingEvents: Transition.readyOrCommitPending,
+      PendingEvents: GraphSyncMachineTransition.readyOrCommitPending,
       ServerMessage: ({ message }) => {
         return Match.value(message).pipe(
           Match.tag("Committed", (message) => {
             return pipe(
-              Commands.applyEventsFromMessages([message]),
+              GraphSyncMachineCommands.applyEventsFromMessages([message]),
               // Applying a remote batch can reveal that local pending work is
               // now ready to send from the updated tip.
-              Effect.andThen(Transition.readyOrCommitPending),
+              Effect.andThen(GraphSyncMachineTransition.readyOrCommitPending),
             );
           }),
           Match.tag("Replay", "ReplayDone", "CommitAck", (message) => {
@@ -85,7 +95,7 @@ export function ready(state: Types.ExtractTag<Model.State, "Ready">, input: Mode
               // In `Ready`, the client is already caught up and has no in-flight
               // commit, so these messages indicate a broken message sequence.
               Effect.fail(
-                new Errors.UnexpectedServerMessageError({
+                new GraphSyncMachineErrors.UnexpectedServerMessageError({
                   stateTag: state._tag,
                   messageTag: message._tag,
                 }),
@@ -99,7 +109,7 @@ export function ready(state: Types.ExtractTag<Model.State, "Ready">, input: Mode
         return (
           // A session should observe exactly one socket open transition.
           Effect.fail(
-            new Errors.DuplicateConnectError({
+            new GraphSyncMachineErrors.DuplicateConnectError({
               stateTag: state._tag,
             }),
           )
@@ -116,34 +126,41 @@ export function ready(state: Types.ExtractTag<Model.State, "Ready">, input: Mode
  * batches are buffered so they can be applied only after the current commit is
  * resolved against the local log.
  */
-export function committing(state: Types.ExtractTag<Model.State, "Committing">, input: Model.Input) {
+export function committing(
+  state: Types.ExtractTag<GraphSyncModel.State, "Committing">,
+  input: GraphSyncModel.Input,
+) {
   return Match.value(input).pipe(
     Match.tagsExhaustive({
       // Another pending notification does not matter while one commit is
       // already in flight; the machine re-reads pending rows after it resolves.
-      PendingEvents: () => pipe(Effect.void, Transition.stayInState(state)),
+      PendingEvents: () => pipe(Effect.void, GraphSyncMachineTransition.stayInState(state)),
       ServerMessage: ({ message }) => {
         return Match.value(message).pipe(
           Match.tagsExhaustive({
             CommitAck: (message) => {
               return pipe(
-                Commands.applyEventsFromMessages([message]),
-                Effect.andThen(Commands.applyEventsFromMessages(state.bufferedCommitted)),
+                GraphSyncMachineCommands.applyEventsFromMessages([message]),
+                Effect.andThen(
+                  GraphSyncMachineCommands.applyEventsFromMessages(state.bufferedCommitted),
+                ),
                 // After the in-flight commit is reflected locally, re-check for
                 // more unsent rows before returning to `Ready`.
-                Effect.andThen(Transition.readyOrCommitPending),
+                Effect.andThen(GraphSyncMachineTransition.readyOrCommitPending),
               );
             },
             Replay: (message) => {
               return pipe(
-                Commands.applyEventsFromMessages([message]),
-                Transition.stayInState(state),
+                GraphSyncMachineCommands.applyEventsFromMessages([message]),
+                GraphSyncMachineTransition.stayInState(state),
               );
             },
             ReplayDone: ({ upToCommitSeq }) => {
               return pipe(
-                Commands.ensureLastCommitSeqEquals(upToCommitSeq),
-                Effect.andThen(Commands.applyEventsFromMessages(state.bufferedCommitted)),
+                GraphSyncMachineCommands.ensureLastCommitSeqEquals(upToCommitSeq),
+                Effect.andThen(
+                  GraphSyncMachineCommands.applyEventsFromMessages(state.bufferedCommitted),
+                ),
                 // We intentionally do not track whether this `ReplayDone` was
                 // preceded by `Replay` while `Committing`. A bare `ReplayDone`
                 // is treated as a no-op stale-base resolution because the local
@@ -153,16 +170,16 @@ export function committing(state: Types.ExtractTag<Model.State, "Committing">, i
                 // A replay here means the local base cursor was stale, so once
                 // the missing suffix is applied we can decide whether to retry
                 // the pending commit immediately.
-                Effect.andThen(Transition.readyOrCommitPending),
+                Effect.andThen(GraphSyncMachineTransition.readyOrCommitPending),
               );
             },
-            Committed: (committed) => Transition.bufferCommitted(state, committed),
+            Committed: (committed) => GraphSyncMachineTransition.bufferCommitted(state, committed),
           }),
         );
       },
       SocketOpened: () => {
         return Effect.fail(
-          new Errors.DuplicateConnectError({
+          new GraphSyncMachineErrors.DuplicateConnectError({
             stateTag: state._tag,
           }),
         );

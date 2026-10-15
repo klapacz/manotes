@@ -1,19 +1,17 @@
-import { Root as ButtonPrimitive } from "@kobalte/core/button";
+import { Root } from "@kobalte/core/button";
 import type { ComponentProps, ValidComponent } from "solid-js";
 import { splitProps } from "solid-js";
 
 import { cx } from "../../lib/cva";
 
-export type LinkButtonProps<T extends ValidComponent = "button"> = ComponentProps<
-  typeof ButtonPrimitive<T>
->;
+export type LinkButtonProps<T extends ValidComponent = "button"> = ComponentProps<typeof Root<T>>;
 
 export const LinkButton = <T extends ValidComponent = "button">(props: LinkButtonProps<T>) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as LinkButtonProps, ["class"]);
 
   return (
-    <ButtonPrimitive
+    <Root
       type="button"
       data-slot="link-button"
       class={cx(

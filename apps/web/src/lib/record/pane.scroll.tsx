@@ -11,7 +11,7 @@ import {
 } from "solid-js";
 import { PaneCursor } from "./pane.cursor";
 import type { PaneSchema } from "@manotes/shared/record/pane.schema";
-import { Array as Arr, pipe, Option, Number } from "effect";
+import { Array, pipe, Option, Number } from "effect";
 import { DOMScroll } from "../dom-scroll";
 import { animate } from "motion";
 import { Focus } from "../../components/record/focus";
@@ -60,12 +60,12 @@ export function Root(props: Props): JSX.Element {
       if (prev.length > next.length) {
         // Pure back navigation: A B C -> A B. Removed panes must stay until scroll ends.
         if (prefix.length === next.length) {
-          return void fadeRemovedAndScrollTo(Arr.lastNonEmpty(next));
+          return void fadeRemovedAndScrollTo(Array.lastNonEmpty(next));
         }
 
         // Pure back navigation from the front: A B C -> B C. Removed panes must stay until scroll ends.
         if (postfix.length === next.length) {
-          return void fadeRemovedAndScrollTo(Arr.headNonEmpty(next));
+          return void fadeRemovedAndScrollTo(Array.headNonEmpty(next));
         }
       }
 
@@ -74,7 +74,7 @@ export function Root(props: Props): JSX.Element {
       if (previousSingleRecord) return void fadeRemovedAndScrollTo(previousSingleRecord);
 
       // Branch/forward navigation: A B C -> A B D. Remove old branch, then scroll to D.
-      void removeImmediatelyAndScrollTo(Arr.lastNonEmpty(next));
+      void removeImmediatelyAndScrollTo(Array.lastNonEmpty(next));
     },
   });
 
@@ -107,22 +107,22 @@ export function Root(props: Props): JSX.Element {
     );
 
     // Shared leading panes: A B C -> A B D has prefix A B.
-    const prefix = Arr.takeWhile(next, (item, i) => item === prev[i]);
+    const prefix = Array.takeWhile(next, (item, i) => item === prev[i]);
     // Same stack; no navigation change to animate.
     const unchanged = prev.length === next.length && prefix.length === next.length;
 
-    if (!Arr.isArrayNonEmpty(next) || unchanged) {
+    if (!Array.isArrayNonEmpty(next) || unchanged) {
       finish();
 
       return Option.none();
     }
 
     // Shared trailing panes: A B C -> B C has postfix B C.
-    const prevReversed = Arr.reverse(prev);
+    const prevReversed = Array.reverse(prev);
 
     const postfix = pipe(
-      Arr.reverse(next),
-      Arr.takeWhile((item, i) => item === prevReversed[i]),
+      Array.reverse(next),
+      Array.takeWhile((item, i) => item === prevReversed[i]),
     );
 
     async function fadeRemovedAndScrollTo(target: Item) {
@@ -176,7 +176,7 @@ export function Root(props: Props): JSX.Element {
     const actual = current();
 
     const index = pipe(
-      Arr.findFirstIndex(actual, (value) => value.value().paneId === focusedPane?.paneId),
+      Array.findFirstIndex(actual, (value) => value.value().paneId === focusedPane?.paneId),
       Option.getOrElse(() => 0),
       (idx) => idx + delta,
       Number.clamp({
@@ -230,11 +230,14 @@ export function use(): Ctx {
   return ctx;
 }
 
-function singlePreviousRecordTarget(prev: Item[], next: Arr.NonEmptyArray<Item>): Item | undefined {
+function singlePreviousRecordTarget(
+  prev: Item[],
+  next: Array.NonEmptyArray<Item>,
+): Item | undefined {
   if (prev.length === 1 || next.length !== 1) return;
 
-  const target = Arr.headNonEmpty(next);
-  const existed = Arr.findFirst(prev, (item) => item === target);
+  const target = Array.headNonEmpty(next);
+  const existed = Array.findFirst(prev, (item) => item === target);
 
   return Option.isSome(existed) ? target : undefined;
 }

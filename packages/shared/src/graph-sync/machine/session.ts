@@ -6,10 +6,10 @@ import { Effect, Predicate, Queue, Stream, SubscriptionRef } from "effect";
 import { decodeServerMessage } from "../contract/codec";
 import { EventRepo } from "../../event.repo";
 import { GraphSyncContext } from "../context";
-import { GraphSyncStatus as Status } from "../status";
-import { GraphSyncModel as Model } from "./model";
-import { GraphSyncMachineRunner as Runner } from "./runner";
-import { GraphSyncMachineErrors as Errors } from "./errors";
+import { GraphSyncStatus } from "../status";
+import { GraphSyncModel } from "./model";
+import { GraphSyncMachineRunner } from "./runner";
+import { GraphSyncMachineErrors } from "./errors";
 import { SyncStatusCloud } from "../status.schema";
 
 /**
@@ -20,8 +20,12 @@ import { SyncStatusCloud } from "../status.schema";
  */
 export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
   const eventRepo = yield* EventRepo.Service;
-  const statusRef = yield* Status.Ref;
-  const inputQueue = yield* Queue.unbounded<Model.Input, Errors.RunnerQueueErrors>();
+  const statusRef = yield* GraphSyncStatus.Ref;
+
+  const inputQueue = yield* Queue.unbounded<
+    GraphSyncModel.Input,
+    GraphSyncMachineErrors.RunnerQueueErrors
+  >();
 
   const hasPendingStream = yield* eventRepo.streamHasPending();
 
@@ -36,7 +40,7 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
 
         // Pending notifications are wake-up hints only; the machine re-reads the
         // actual pending rows before sending a commit.
-        if (hasPending) yield* Queue.offer(inputQueue, Model.Input.PendingEvents());
+        if (hasPending) yield* Queue.offer(inputQueue, GraphSyncModel.Input.PendingEvents());
       });
     }),
     Effect.forkScoped,
@@ -47,7 +51,7 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
 
   yield* Effect.gen(function* () {
     const reader = yield* socket.reader;
-    yield* Queue.offer(inputQueue, Model.Input.SocketOpened());
+    yield* Queue.offer(inputQueue, GraphSyncModel.Input.SocketOpened());
 
     while (true) {
       const frames = yield* reader.pull;
@@ -57,7 +61,7 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
           Predicate.isString(data) ? new TextEncoder().encode(data) : data,
         );
 
-        yield* Queue.offer(inputQueue, Model.Input.ServerMessage({ message }));
+        yield* Queue.offer(inputQueue, GraphSyncModel.Input.ServerMessage({ message }));
       }
     }
   }).pipe(
@@ -66,13 +70,13 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
       // supervisor can distinguish normal closes from open failures. A clean
       // close produces no failure of its own, so we synthesize
       // SocketClosedError here to represent that case.
-      onSuccess: () => Queue.fail(inputQueue, new Errors.SocketClosedError()),
+      onSuccess: () => Queue.fail(inputQueue, new GraphSyncMachineErrors.SocketClosedError()),
       onFailure: (cause) => Queue.failCause(inputQueue, cause),
     }),
     Effect.forkScoped,
   );
 
-  return yield* Runner.run({ inputQueue: inputQueue, write: writer.write });
+  return yield* GraphSyncMachineRunner.run({ inputQueue: inputQueue, write: writer.write });
 });
 
 /**

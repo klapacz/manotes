@@ -1,4 +1,4 @@
-import { Root as SeparatorPrimitive } from "@kobalte/core/separator";
+import { Root } from "@kobalte/core/separator";
 import type { ComponentProps, ValidComponent } from "solid-js";
 import { splitProps } from "solid-js";
 
@@ -8,16 +8,14 @@ import { cx } from "../../lib/cva";
 // Source: apps/docs/src/registry/ui/separator.tsx
 // Why: the pre-graph home route needed a reusable divider between graph sections.
 // Modifications: replaced registry alias imports with the local cva helper and remapped the separator color to Manotes tokens.
-export type SeparatorProps<T extends ValidComponent = "hr"> = ComponentProps<
-  typeof SeparatorPrimitive<T>
->;
+export type SeparatorProps<T extends ValidComponent = "hr"> = ComponentProps<typeof Root<T>>;
 
 export const Separator = <T extends ValidComponent = "hr">(props: SeparatorProps<T>) => {
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as SeparatorProps, ["class"]);
 
   return (
-    <SeparatorPrimitive
+    <Root
       data-slot="separator"
       class={cx(
         "bg-border-subtle shrink-0 border-none data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px",

@@ -2,11 +2,11 @@ import { RecordSchema } from "../../record.schema";
 import { Effect, Layer, Context } from "effect";
 import type { UnknownNodeJSON } from "../../node-json";
 import { collectBacklinkTargetIds } from "./target";
-import { BacklinkRepo as Repo } from "./repo";
+import { BacklinkRepo } from "./repo";
 
 export class Service extends Context.Service<Service>()("Materializer.Backlink.Service", {
   make: Effect.gen(function* () {
-    const repo = yield* Repo.Service;
+    const repo = yield* BacklinkRepo.Service;
 
     const replaceForSourceRecord = Effect.fn("Materializer.Backlink.replaceForSourceRecord")(
       function* (options: { sourceId: RecordSchema.Id; content: UnknownNodeJSON }) {
@@ -19,7 +19,9 @@ export class Service extends Context.Service<Service>()("Materializer.Backlink.S
     };
   }),
 }) {
-  static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(Repo.Service.layer));
+  static readonly layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(BacklinkRepo.Service.layer),
+  );
 }
 
 export * as BacklinkService from "./service";

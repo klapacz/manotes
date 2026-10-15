@@ -1,12 +1,12 @@
 import { Effect, Layer } from "effect";
-import { SqliteWasmClient as SqliteClient } from "@manotes/sql-sqlite-wasm/sqlite-client";
+import { SqliteWasmClient } from "@manotes/sql-sqlite-wasm/sqlite-client";
 import { DB } from "@manotes/shared/db.service";
 
 export const SqlLive = Layer.unwrap(
   Effect.gen(function* () {
     const config = yield* DB.Config;
 
-    return SqliteClient.layer({
+    return SqliteWasmClient.layer({
       worker: Effect.gen(function* () {
         const worker = yield* Effect.acquireRelease(
           Effect.sync(() => {

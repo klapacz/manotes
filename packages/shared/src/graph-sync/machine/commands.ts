@@ -2,7 +2,7 @@
  * Implements machine side effects like log updates and socket writes.
  */
 import { Effect, Option } from "effect";
-import { GraphSyncMessages as Messages } from "../contract/messages";
+import { GraphSyncMessages } from "../contract/messages";
 import { GraphSyncEventLog } from "../event-log.service";
 import { GraphSyncContext } from "../context";
 import { MachineContext } from "./context";
@@ -15,7 +15,7 @@ export const applyEventsFromMessages = Effect.fn(
   "GraphSyncMachineCommands.applyEventsFromMessages",
 )(function* (
   messages: ReadonlyArray<{
-    events: NonEmptyReadonlyArray<Messages.CommittedEvent>;
+    events: NonEmptyReadonlyArray<GraphSyncMessages.CommittedEvent>;
   }>,
 ) {
   const eventLog = yield* GraphSyncEventLog.Service;
@@ -42,7 +42,7 @@ export const sendConnect = Effect.fn("GraphSyncMachineCommands.sendConnect")(fun
   const lastCommitSeq = yield* eventLog.getLastCommitSeq();
 
   yield* context.write(
-    new Messages.Connect({
+    new GraphSyncMessages.Connect({
       graphId: sync.graphId,
       lastCommitSeq,
     }),
@@ -69,7 +69,7 @@ export const sendPendingCommit = Effect.fn("GraphSyncMachineCommands.sendPending
     if (Option.isNone(pendingCommit)) return { didSendCommit: false };
 
     yield* context.write(
-      new Messages.Commit({
+      new GraphSyncMessages.Commit({
         baseCommitSeq: pendingCommit.value.baseCommitSeq,
         events: pendingCommit.value.events,
       }),

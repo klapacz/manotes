@@ -6,7 +6,7 @@ import { AppForm, useAppForm } from "../components/ui/form";
 import { MatchAsyncResult, MatchTag, createSyncedAtom } from "../lib";
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { GraphAccessCommands } from "../lib/graph-access/commands";
-import { GraphAccessResolution as Resolution } from "../lib/graph-access/resolution/service";
+import { GraphAccessResolution } from "../lib/graph-access/resolution/service";
 import { GraphAccessRuntime } from "../lib/graph-access/runtime";
 import { GraphDestination } from "../lib/graph-access/graph-runtime/destination";
 
@@ -18,7 +18,9 @@ const UnlockGraphFormSchema = Schema.Struct({
 export const Route = createFileRoute("/$graph_/unlock")({
   validateSearch: GraphDestination.UnlockSearch.pipe(Schema.toStandardSchemaV1),
   beforeLoad: async ({ params, search }) => {
-    const resolution = await GraphAccessRuntime.rt.runPromise(Resolution.find(params.graph));
+    const resolution = await GraphAccessRuntime.rt.runPromise(
+      GraphAccessResolution.find(params.graph),
+    );
 
     return Match.value(resolution).pipe(
       Match.tag("Missing", () => {
@@ -41,7 +43,7 @@ function RouteComponent() {
   const localGraphIdAtom = createSyncedAtom(() => params().graph);
 
   const resolutionAtom = GraphAccessRuntime.atom.atom((get) => {
-    return Resolution.findReactive(get(localGraphIdAtom));
+    return GraphAccessResolution.findReactive(get(localGraphIdAtom));
   });
 
   const resolution = useAtomValue(() => resolutionAtom);

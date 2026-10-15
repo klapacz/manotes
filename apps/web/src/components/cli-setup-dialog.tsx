@@ -5,7 +5,7 @@ import { Atom } from "effect/reactivity";
 import { splitProps, type ValidComponent } from "solid-js";
 import { MatchAsyncResult } from "../lib";
 import { CliSetup } from "../lib/graph-access/commands/cli-setup";
-import type { LocalRegistrySchema as LocalRegistry } from "../lib/graph-access/local-registry/schema";
+import type { LocalRegistrySchema } from "../lib/graph-access/local-registry/schema";
 import { GraphAccessRuntime } from "../lib/graph-access/runtime";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
@@ -23,7 +23,7 @@ import {
 import { Input } from "./ui/input";
 
 type Props<T extends ValidComponent = typeof Button> = {
-  readonly graph: LocalRegistry.CloudRecord;
+  readonly graph: LocalRegistrySchema.CloudRecord;
 } & DialogTriggerProps<T>;
 
 export function CliSetupDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
@@ -42,9 +42,9 @@ export function CliSetupDialog<T extends ValidComponent = typeof Button>(props: 
   );
 }
 
-function CliSetupContent(props: { readonly graph: LocalRegistry.CloudRecord }) {
+function CliSetupContent(props: { readonly graph: LocalRegistrySchema.CloudRecord }) {
   // Each opening owns fresh mutation state; creating the atom does not issue a token.
-  const prepareAtom = GraphAccessRuntime.atom.fn((graph: LocalRegistry.CloudRecord) => {
+  const prepareAtom = GraphAccessRuntime.atom.fn((graph: LocalRegistrySchema.CloudRecord) => {
     return CliSetup.prepare({ graph, origin: window.location.origin }).pipe(
       Effect.provide(FetchHttpClient.layer),
     );

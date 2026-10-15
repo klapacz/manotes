@@ -2,11 +2,11 @@ import * as Cloudflare from "alchemy/Cloudflare";
 import { SqliteClient } from "@effect/sql-sqlite-do";
 import { Boolean, Cause, Effect, Exit, Predicate } from "effect";
 
-import { GraphSyncCodec as Codec } from "@manotes/shared/graph-sync/contract/codec";
-import { GraphSyncMessages as Messages } from "@manotes/shared/graph-sync/contract/messages";
-import { GraphSyncProtocol as Protocol } from "./protocol.ts";
-import { GraphSyncRepo as Repo } from "./repo.ts";
-import { GraphSyncErrors as Errors } from "./errors.ts";
+import { GraphSyncCodec } from "@manotes/shared/graph-sync/contract/codec";
+import { GraphSyncMessages } from "@manotes/shared/graph-sync/contract/messages";
+import { GraphSyncProtocol } from "./protocol.ts";
+import { GraphSyncRepo } from "./repo.ts";
+import { GraphSyncErrors } from "./errors.ts";
 import { webSocketMessageToUint8Array } from "./websocket-message.ts";
 
 export default class GraphSyncDurableObject extends Cloudflare.DurableObject<GraphSyncDurableObject>()(
@@ -26,14 +26,16 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObject<Gra
       yield* state.setHibernatableWebSocketEventTimeout(5_000);
 
       yield* state.blockConcurrencyWhile(() => {
-        return Repo.migrate.pipe(Effect.provide(layer), Effect.orDie);
+        return GraphSyncRepo.migrate.pipe(Effect.provide(layer), Effect.orDie);
       });
 
       const parseWebsocketMessage = Effect.fn(function* (message: string | ArrayBuffer) {
-        return yield* Codec.decodeClientMessage(webSocketMessageToUint8Array(message)).pipe(
+        return yield* GraphSyncCodec.decodeClientMessage(
+          webSocketMessageToUint8Array(message),
+        ).pipe(
           Effect.catchTag("SchemaError", () => {
             return Effect.fail(
-              new Errors.ProtocolViolationError({ reason: "Malformed client message" }),
+              new GraphSyncErrors.ProtocolViolationError({ reason: "Malformed client message" }),
             );
           }),
         );
@@ -41,7 +43,7 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObject<Gra
 
       const handleWebSocketFailure = Effect.fn(function* <E>(
         ws: Cloudflare.WebSocket,
-        cause: Cause.Cause<Errors.ProtocolViolationError | E>,
+        cause: Cause.Cause<GraphSyncErrors.ProtocolViolationError | E>,
       ) {
         const failure = cause.reasons.find(Cause.isFailReason);
 
@@ -61,8 +63,10 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObject<Gra
         yield* ws.close(1011, "Internal error");
       });
 
-      const executeWebSocketMessage = Effect.fn(function* (message: Messages.ClientMessage) {
-        const plan = Protocol.getExecutionPlan(message);
+      const executeWebSocketMessage = Effect.fn(function* (
+        message: GraphSyncMessages.ClientMessage,
+      ) {
+        const plan = GraphSyncProtocol.getExecutionPlan(message);
 
         return yield* Boolean.match(plan.runSerialized, {
           onFalse: () => plan.effect.pipe(Effect.exit),
@@ -76,19 +80,19 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObject<Gra
 
       const respondToWebSocketMessage = Effect.fn(function* (
         ws: Cloudflare.WebSocket,
-        result: Protocol.ResponsePlan,
+        result: GraphSyncProtocol.ResponsePlan,
       ) {
         for (const response of result.reply)
-          yield* ws.send(Codec.encodeServerMessageUnsafe(response));
+          yield* ws.send(GraphSyncCodec.encodeServerMessageUnsafe(response));
 
         for (const response of result.broadcast) yield* broadcast(response, ws);
       });
 
       const broadcast = Effect.fn(function* (
-        message: Messages.ServerMessage,
+        message: GraphSyncMessages.ServerMessage,
         except: Cloudflare.WebSocket,
       ) {
-        const encoded = Codec.encodeServerMessageUnsafe(message);
+        const encoded = GraphSyncCodec.encodeServerMessageUnsafe(message);
 
         for (const socket of yield* state.getWebSockets()) {
           if (socket === except) continue;

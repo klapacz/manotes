@@ -3,20 +3,20 @@
  */
 import { Socket } from "effect/socket";
 import { Data, Effect } from "effect";
-import { GraphSyncMessages as Messages } from "../contract/messages";
+import { GraphSyncMessages } from "../contract/messages";
 
 export type Input = Data.TaggedEnum<{
   SocketOpened: {};
   PendingEvents: {};
-  ServerMessage: { message: Messages.ServerMessage };
+  ServerMessage: { message: GraphSyncMessages.ServerMessage };
 }>;
 
 export const Input = Data.taggedEnum<Input>();
 
 export type State = Data.TaggedEnum<{
-  Bootstrapping: { bufferedCommitted: ReadonlyArray<Messages.Committed> };
+  Bootstrapping: { bufferedCommitted: ReadonlyArray<GraphSyncMessages.Committed> };
   Ready: {};
-  Committing: { bufferedCommitted: ReadonlyArray<Messages.Committed> };
+  Committing: { bufferedCommitted: ReadonlyArray<GraphSyncMessages.Committed> };
 }>;
 
 export const State = Data.taggedEnum<State>();

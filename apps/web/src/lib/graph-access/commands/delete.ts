@@ -3,7 +3,7 @@ import { Data, Effect, Layer, Context } from "effect";
 import { AudioMemoFiles } from "../../audio-memo/files";
 import { OPFS } from "../../opfs.service";
 import { GraphRuntime } from "../graph-runtime";
-import { GraphRuntimeDBResolution as DBResolution } from "../graph-runtime/db-resolution";
+import { GraphRuntimeDBResolution } from "../graph-runtime/db-resolution";
 import { LocalRegistry } from "../local-registry";
 
 export class LockTimeout extends Data.TaggedError("GraphAccessCommandsDelete.LockTimeout")<{
@@ -33,7 +33,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.De
 
           yield* AudioMemoFiles.removeGraph(localGraphId);
 
-          yield* OPFS.removeEntryFromOpfsRoot(DBResolution.getPath(localGraphId)).pipe(
+          yield* OPFS.removeEntryFromOpfsRoot(GraphRuntimeDBResolution.getPath(localGraphId)).pipe(
             Effect.catchTag("NotFoundError", () => Effect.void),
           );
 

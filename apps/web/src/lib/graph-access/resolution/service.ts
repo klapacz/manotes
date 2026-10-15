@@ -1,8 +1,8 @@
 import { Data, Effect, Option, Result, Stream, Types } from "effect";
-import { KeyStore as KeyStoreService } from "../key-store/service";
+import { KeyStore } from "../key-store/service";
 import { LocalRegistry } from "../local-registry";
 import { SessionService } from "../session/service";
-import { SessionApiContract as SessionApi } from "@manotes/shared/session/api";
+import { SessionApiContract } from "@manotes/shared/session/api";
 import type { SchemaError } from "effect/Schema";
 import type { SqlError } from "effect/sql/SqlError";
 
@@ -21,7 +21,7 @@ export type ResolutionReady = Types.ExtractTag<Resolution, "CloudUnlocked" | "Lo
 export const Resolution = Data.taggedEnum<Resolution>();
 
 export const find = Effect.fn("GraphAccessResolution.find")(function* (localGraphId: string) {
-  const keyStore = yield* KeyStoreService.Service;
+  const keyStore = yield* KeyStore.Service;
   const sessionService = yield* SessionService.Service;
 
   const [sessionOpt, recordOption] = yield* Effect.all([
@@ -47,7 +47,7 @@ export const find = Effect.fn("GraphAccessResolution.find")(function* (localGrap
 export const findReactive = Effect.fn("GraphAccessResolution.findReactive")(function* (
   localGraphId: string,
 ) {
-  const keyStore = yield* KeyStoreService.Service;
+  const keyStore = yield* KeyStore.Service;
   const sessionService = yield* SessionService.Service;
 
   return Stream.zipLatest(
@@ -85,7 +85,7 @@ type ResolveWithoutKeyLookupResult = Result.Result<
 // are returned in the failure channel so callers can continue with key lookup.
 const resolveWithoutKeyLookup = (
   option: Option.Option<LocalRegistry.Schema.Record>,
-  session: Option.Option<SessionApi.Session>,
+  session: Option.Option<SessionApiContract.Session>,
 ): ResolveWithoutKeyLookupResult => {
   if (Option.isNone(option)) return Result.succeed(Resolution.Missing());
   const record = option.value;

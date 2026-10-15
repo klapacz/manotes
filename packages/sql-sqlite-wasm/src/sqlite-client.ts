@@ -9,7 +9,7 @@
  * @since 1.0.0
  */
 import { Reactivity } from "effect/reactivity";
-import { SqlClient as Client, Statement } from "effect/sql";
+import { SqlClient, Statement } from "effect/sql";
 import type { Connection } from "effect/sql/SqlConnection";
 import { classifySqliteError, SqlError } from "effect/sql/SqlError";
 import {
@@ -49,7 +49,7 @@ export type TypeId = "~@effect/sql-sqlite-wasm/SqliteClient";
  * @category models
  * @since 1.0.0
  */
-export interface SqliteClient extends Client.SqlClient {
+export interface SqliteClient extends SqlClient.SqlClient {
   readonly [TypeId]: TypeId;
   readonly config: SqliteClientConfig;
   readonly export: Effect.Effect<Uint8Array, SqlError>;
@@ -247,7 +247,7 @@ export const make = (
     );
 
     return Object.assign(
-      (yield* Client.make({
+      (yield* SqlClient.make({
         acquirer,
         compiler,
         transactionAcquirer,
@@ -310,10 +310,10 @@ export const withTransferables = (transferables: ReadonlyArray<Transferable>) =>
  */
 export const layer = (
   config: SqliteClientConfig,
-): Layer.Layer<SqliteClient | Client.SqlClient, SqlError> => {
+): Layer.Layer<SqliteClient | SqlClient.SqlClient, SqlError> => {
   return Layer.effectContext(
     Effect.map(make(config), (client) => {
-      return Context.make(SqliteClient, client).pipe(Context.add(Client.SqlClient, client));
+      return Context.make(SqliteClient, client).pipe(Context.add(SqlClient.SqlClient, client));
     }),
   ).pipe(Layer.provide(Reactivity.layer));
 };

@@ -1,5 +1,5 @@
 import { Data, Effect, Match, Schema, Types } from "effect";
-import { GraphAccessResolution as Resolution } from "../resolution/service";
+import { GraphAccessResolution } from "../resolution/service";
 
 export type Fingerprint = Data.TaggedEnum<{
   Local: {
@@ -17,7 +17,7 @@ export const Fingerprint = Data.taggedEnum<Fingerprint>();
 const encodeGraphKeyId = Schema.encodeEffect(Schema.Uint8ArrayFromBase64);
 
 export const create = Effect.fn("GraphRuntimeFingerprint.create")(function* (
-  resolution: Types.ExtractTag<Resolution.Resolution, "CloudUnlocked" | "Local">,
+  resolution: Types.ExtractTag<GraphAccessResolution.Resolution, "CloudUnlocked" | "Local">,
 ) {
   const result: Fingerprint = yield* Match.value(resolution).pipe(
     Match.tagsExhaustive({

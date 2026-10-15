@@ -8,7 +8,7 @@ import { EventRepo } from "@manotes/shared/event.repo";
 import { MaterializationCheckpointRepo } from "@manotes/shared/materialization-checkpoint.repo";
 import { MaterializedEventService } from "./materialized-event.service";
 import { BacklinkService } from "@manotes/shared/materializer/backlink/service";
-import { Materializer as MaterializerService } from "@manotes/shared/materializer.service";
+import { Materializer } from "@manotes/shared/materializer.service";
 import { RecordRepo } from "@manotes/shared/record.repo";
 import { GraphSync } from "@manotes/shared/graph-sync/service";
 import { GraphSyncContext } from "@manotes/shared/graph-sync/context";
@@ -19,7 +19,7 @@ import { SyncStatusCloud, SyncStatusLocal } from "@manotes/shared/graph-sync/sta
 import { GraphSyncStatus } from "@manotes/shared/graph-sync/status";
 import { GraphRuntimeDBResolution } from "./graph-access/graph-runtime/db-resolution";
 import { SqlLive } from "./db/sql-live";
-import { GraphSyncConfiguration as GraphSyncConfig } from "@manotes/shared/graph-sync/config";
+import { GraphSyncConfiguration } from "@manotes/shared/graph-sync/config";
 
 const bootstrapEffect = Effect.gen(function* () {
   // Build the bootstrap layers (WorkerRunner on `self`) using the Layer.unwrap
@@ -75,12 +75,15 @@ BrowserRuntime.runMain(
 type Handlers = RpcGroup.HandlersFrom<RpcGroup.Rpcs<typeof GraphDedicatedRpc>>;
 
 /** RPC handler layer with graph-scoped materialization logic. */
-function makeRpcHandler(localGraphId: string, graphSyncConfig: GraphSyncConfig.GraphSyncConfig) {
+function makeRpcHandler(
+  localGraphId: string,
+  graphSyncConfig: GraphSyncConfiguration.GraphSyncConfig,
+) {
   return GraphDedicatedRpc.toLayer(
     Effect.gen(function* () {
       yield* Effect.logInfo("RPC handler started");
 
-      const materializer = yield* MaterializerService.Service;
+      const materializer = yield* Materializer.Service;
 
       yield* materializer.start().pipe(
         Effect.catchCause((cause) => Effect.logError("Materializer failed", cause)),
@@ -157,7 +160,7 @@ function makeRpcHandler(localGraphId: string, graphSyncConfig: GraphSyncConfig.G
 /** Builds the service layer for a specific graph. */
 function buildServiceLayer(opts: {
   localGraphId: string;
-  graphSyncConfig: GraphSyncConfig.GraphSyncConfig;
+  graphSyncConfig: GraphSyncConfiguration.GraphSyncConfig;
 }) {
   const ConfigLayer = Layer.succeed(
     DB.Config,
@@ -170,8 +173,8 @@ function buildServiceLayer(opts: {
   const DBWithConfigLayer = Layer.provideMerge(SqlLive, ConfigLayer);
 
   const GraphSyncConfigLayer = Layer.succeed(
-    GraphSyncConfig.Config,
-    GraphSyncConfig.Config.of(opts.graphSyncConfig),
+    GraphSyncConfiguration.Config,
+    GraphSyncConfiguration.Config.of(opts.graphSyncConfig),
   );
 
   return Layer.mergeAll(
@@ -181,7 +184,7 @@ function buildServiceLayer(opts: {
     BacklinkService.Service.layer,
     MaterializationCheckpointRepo.Service.layer,
     MaterializedEventService.Service.layer,
-    MaterializerService.Service.layer,
+    Materializer.Service.layer,
     Socket.layerWebSocketConstructorGlobal,
     Layer.succeed(References.MinimumLogLevel, "Debug"),
   ).pipe(

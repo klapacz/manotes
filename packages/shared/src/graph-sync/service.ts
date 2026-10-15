@@ -15,12 +15,12 @@ import { Socket } from "effect/socket";
 import { EventRepo } from "../event.repo";
 import { GraphSyncEventLog } from "./event-log.service";
 import { Session } from "./machine/session";
-import { GraphSyncStatus as Status } from "./status";
+import { GraphSyncStatus } from "./status";
 import { SyncStatusCloud } from "./status.schema";
 
 export class Service extends Context.Service<Service>()("GraphSyncService", {
   make: Effect.gen(function* () {
-    const status = yield* Status.Ref;
+    const status = yield* GraphSyncStatus.Ref;
 
     const run = Effect.fn("GraphSyncService.run")(function* () {
       return yield* Session.run().pipe(

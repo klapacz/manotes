@@ -1,16 +1,16 @@
-import { DateTime, Effect, Layer, Schema as S, Context } from "effect";
+import { DateTime, Effect, Layer, Schema, Context } from "effect";
 import { EffectOption } from "@manotes/shared/effect/effect-option";
 import { nanoid } from "nanoid";
 import { SqlClient, SqlSchema } from "effect/sql";
-import { AccountsSchema as Schema } from "./schema.ts";
+import { AccountsSchema } from "./schema.ts";
 
 const ACCOUNT_ID_LENGTH = 12;
 
 const ACCOUNT_COLUMNS = "accountId, email, status, createdAt, updatedAt";
 
-const CreateAccountRequest = S.Struct({
-  email: S.String,
-  status: Schema.Status,
+const CreateAccountRequest = Schema.Struct({
+  email: Schema.String,
+  status: AccountsSchema.Status,
 });
 
 export class Service extends Context.Service<Service>()("AccountsRepo.Service", {
@@ -18,8 +18,8 @@ export class Service extends Context.Service<Service>()("AccountsRepo.Service", 
     const sql = yield* SqlClient.SqlClient;
 
     const getAccountByEmail = SqlSchema.findOneOption({
-      Request: S.Struct({ email: S.String }),
-      Result: Schema.Account,
+      Request: Schema.Struct({ email: Schema.String }),
+      Result: AccountsSchema.Account,
       execute: ({ email }) => {
         return sql`
         SELECT ${sql.literal(ACCOUNT_COLUMNS)}
@@ -32,11 +32,11 @@ export class Service extends Context.Service<Service>()("AccountsRepo.Service", 
 
     const createAccount = SqlSchema.findOne({
       Request: CreateAccountRequest,
-      Result: Schema.Account,
+      Result: AccountsSchema.Account,
       execute: Effect.fn("AccountsRepo.createAccount.execute")(function* ({ email, status }) {
         const timestamp = yield* DateTime.now;
 
-        const values = yield* Schema.encodeAccount({
+        const values = yield* AccountsSchema.encodeAccount({
           accountId: nanoid(ACCOUNT_ID_LENGTH),
           email,
           status,
@@ -60,11 +60,11 @@ export class Service extends Context.Service<Service>()("AccountsRepo.Service", 
     });
 
     const activateByEmail = SqlSchema.void({
-      Request: S.Struct({ email: S.NonEmptyString }),
+      Request: Schema.Struct({ email: Schema.NonEmptyString }),
       execute: Effect.fn("AccountsRepo.activateByEmail.execute")(function* ({ email }) {
         const timestamp = yield* DateTime.now;
 
-        const values = yield* Schema.encodeAccount({
+        const values = yield* AccountsSchema.encodeAccount({
           accountId: nanoid(ACCOUNT_ID_LENGTH),
           email,
           status: "ACTIVE",

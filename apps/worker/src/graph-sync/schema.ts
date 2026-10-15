@@ -1,5 +1,5 @@
 import { Schema, SchemaGetter, Struct } from "effect";
-import { GraphSyncMessages as Messages } from "@manotes/shared/graph-sync/contract/messages";
+import { GraphSyncMessages } from "@manotes/shared/graph-sync/contract/messages";
 
 export const Record = Schema.Struct({
   commitSeq: Schema.Number.check(Schema.isGreaterThanOrEqualTo(0)),
@@ -11,8 +11,8 @@ export const Record = Schema.Struct({
 });
 
 export const CommittedEventFromRecord = Record.pipe(
-  Schema.decodeTo(Schema.toType(Messages.CommittedEvent), {
-    decode: SchemaGetter.transform((record) => new Messages.CommittedEvent(record)),
+  Schema.decodeTo(Schema.toType(GraphSyncMessages.CommittedEvent), {
+    decode: SchemaGetter.transform((record) => new GraphSyncMessages.CommittedEvent(record)),
     encode: SchemaGetter.passthrough({ strict: false }),
   }),
 );

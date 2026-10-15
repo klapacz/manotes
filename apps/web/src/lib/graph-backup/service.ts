@@ -1,7 +1,7 @@
-import { Array as Arr, DateTime, Effect, Struct } from "effect";
+import { Array, DateTime, Effect, Struct } from "effect";
 import { EventRepo } from "@manotes/shared/event.repo";
 import { GraphAccessCommandsProvision } from "../graph-access/commands/provision";
-import { GraphBackupSchema as BackupSchema } from "@manotes/shared/graph-backup/schema";
+import { GraphBackupSchema } from "@manotes/shared/graph-backup/schema";
 
 export function createBackup({
   sourceGraphDisplayName,
@@ -9,14 +9,14 @@ export function createBackup({
   events,
 }: {
   sourceGraphDisplayName: string;
-  exportedAt: BackupSchema.Bundle["exportedAt"];
+  exportedAt: GraphBackupSchema.Bundle["exportedAt"];
   events: ReadonlyArray<EventRepo.Record>;
-}): BackupSchema.Bundle {
+}): GraphBackupSchema.Bundle {
   return {
     version: 1,
     exportedAt,
     sourceGraphDisplayName,
-    events: Arr.map(events, Struct.omit(["localSeq", "commitSeq"])),
+    events: Array.map(events, Struct.omit(["localSeq", "commitSeq"])),
   };
 }
 
@@ -24,7 +24,7 @@ export function getSuggestedGraphName({
   backup,
   fileName,
 }: {
-  backup: BackupSchema.Bundle;
+  backup: GraphBackupSchema.Bundle;
   fileName: string;
 }) {
   const backupName = backup.sourceGraphDisplayName.trim();
@@ -53,7 +53,7 @@ export const exportBackup = Effect.fn("GraphBackupService.exportBackup")(functio
 });
 
 export const importBackupToNewGraph = Effect.fn("GraphBackupService.importBackupToNewGraph")(
-  function* ({ backup, displayName }: { backup: BackupSchema.Bundle; displayName: string }) {
+  function* ({ backup, displayName }: { backup: GraphBackupSchema.Bundle; displayName: string }) {
     const provision = yield* GraphAccessCommandsProvision.Service;
 
     return yield* provision.createLocal({ displayName, events: backup.events });

@@ -2,7 +2,7 @@ import { RecordSchema } from "../../record.schema";
 import { Data, Effect, Layer, Context } from "effect";
 import { castArray } from "../../graph-encryption";
 import { GraphSyncContext } from "../context";
-import { GraphSyncEncryptionSchema as EncryptionSchema } from "./schema";
+import { GraphSyncEncryptionSchema } from "./schema";
 
 export class StreamRefDerivationError extends Data.TaggedError(
   "GraphSyncEncryption.StreamRefDerivationError",
@@ -63,13 +63,13 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
     }: {
       id: string;
       streamRef: Uint8Array<ArrayBufferLike>;
-      createdAt: EncryptionSchema.CreatedAt;
+      createdAt: GraphSyncEncryptionSchema.CreatedAt;
       recordId: RecordSchema.Id;
-      type: EncryptionSchema.Body["type"];
+      type: GraphSyncEncryptionSchema.Body["type"];
       payload: Uint8Array<ArrayBufferLike>;
     }) {
       const authenticatedMetadata = yield* remapError(
-        EncryptionSchema.encodeAuthenticatedMetadata({
+        GraphSyncEncryptionSchema.encodeAuthenticatedMetadata({
           version: 0,
           id,
           streamRef: castArray(streamRef),
@@ -79,7 +79,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
       );
 
       const body = yield* remapError(
-        EncryptionSchema.encodeBody({
+        GraphSyncEncryptionSchema.encodeBody({
           recordId,
           type,
           payload,
@@ -108,7 +108,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
         version: 0,
         iv,
         ciphertext: new Uint8Array(ciphertext),
-      } satisfies EncryptionSchema.Envelope;
+      } satisfies GraphSyncEncryptionSchema.Envelope;
     });
 
     const decryptEventBody = Effect.fn("GraphSyncEncryptionService.decryptEventBody")(function* ({
@@ -119,11 +119,11 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
     }: {
       id: string;
       streamRef: Uint8Array<ArrayBufferLike>;
-      createdAt: EncryptionSchema.CreatedAt;
-      envelope: EncryptionSchema.Envelope;
+      createdAt: GraphSyncEncryptionSchema.CreatedAt;
+      envelope: GraphSyncEncryptionSchema.Envelope;
     }) {
       const authenticatedMetadata = yield* remapError(
-        EncryptionSchema.encodeAuthenticatedMetadata({
+        GraphSyncEncryptionSchema.encodeAuthenticatedMetadata({
           version: envelope.version,
           id,
           streamRef: castArray(streamRef),
@@ -148,7 +148,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
       });
 
       return yield* remapError(
-        EncryptionSchema.decodeBody(new Uint8Array(decrypted)),
+        GraphSyncEncryptionSchema.decodeBody(new Uint8Array(decrypted)),
         (cause) => new InvalidEncryptedEventError({ cause }),
       );
     });

@@ -1,6 +1,6 @@
 import type { ComponentProps, ValidComponent } from "solid-js";
 import { splitProps } from "solid-js";
-import { Root as ButtonPrimitive } from "@kobalte/core/button";
+import { Root } from "@kobalte/core/button";
 import type { VariantProps } from "cva";
 
 import { cva } from "../../lib/cva";
@@ -57,9 +57,7 @@ export const buttonVariants = cva({
   },
 });
 
-export type ButtonProps<T extends ValidComponent = "button"> = ComponentProps<
-  typeof ButtonPrimitive<T>
-> &
+export type ButtonProps<T extends ValidComponent = "button"> = ComponentProps<typeof Root<T>> &
   VariantProps<typeof buttonVariants>;
 
 export const Button = <T extends ValidComponent = "button">(props: ButtonProps<T>) => {
@@ -73,7 +71,7 @@ export const Button = <T extends ValidComponent = "button">(props: ButtonProps<T
   ]);
 
   return (
-    <ButtonPrimitive
+    <Root
       data-slot="button"
       class={buttonVariants({
         variant: props.variant,

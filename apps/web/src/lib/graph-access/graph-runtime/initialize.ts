@@ -1,6 +1,6 @@
 import { Data, Effect, Layer } from "effect";
 import { EventRepo } from "@manotes/shared/event.repo";
-import type { GraphBackupSchema as BackupSchema } from "@manotes/shared/graph-backup/schema";
+import type { GraphBackupSchema } from "@manotes/shared/graph-backup/schema";
 import { Materializer } from "@manotes/shared/materializer.service";
 import { GraphDatabase } from "./database";
 
@@ -10,7 +10,7 @@ export class InitializationError extends Data.TaggedError("GraphInitializationEr
 
 export const initialize = Effect.fn("GraphInitialize.initialize")(function* (opts: {
   readonly localGraphId: string;
-  readonly events?: BackupSchema.Bundle["events"];
+  readonly events?: GraphBackupSchema.Bundle["events"];
 }) {
   yield* Effect.gen(function* () {
     if (opts.events !== undefined) {

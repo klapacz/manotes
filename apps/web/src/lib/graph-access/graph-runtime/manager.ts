@@ -10,10 +10,10 @@ import {
   Context,
   Match,
 } from "effect";
-import { GraphAccessResolution as Resolution } from "../resolution/service";
+import { GraphAccessResolution } from "../resolution/service";
 import { GraphRuntimeLayer } from "./layer";
-import { GraphRuntimeManagedRuntime as ManagedRuntime } from "./managed-runtime";
-import { GraphRuntimeFingerprint as Fingerprint } from "./fingerprint";
+import { GraphRuntimeManagedRuntime } from "./managed-runtime";
+import { GraphRuntimeFingerprint } from "./fingerprint";
 import { LocalRegistry } from "../local-registry";
 import { SessionService } from "../session/service";
 
@@ -21,7 +21,7 @@ export type RuntimeContext = Layer.Success<GraphRuntimeLayer.AppLayer>;
 
 export type RuntimeError = Layer.Error<GraphRuntimeLayer.AppLayer>;
 
-export type Runtime = ManagedRuntime.ManagedRuntime<RuntimeContext, RuntimeError>;
+export type Runtime = GraphRuntimeManagedRuntime.ManagedRuntime<RuntimeContext, RuntimeError>;
 
 export type State = Data.TaggedEnum<{
   Missing: {};
@@ -33,7 +33,7 @@ export const State = Data.taggedEnum<State>();
 
 export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntime.Manager", {
   make: Effect.gen(function* () {
-    type Entry = { fingerprint: Fingerprint.Fingerprint; runtime: Runtime };
+    type Entry = { fingerprint: GraphRuntimeFingerprint.Fingerprint; runtime: Runtime };
 
     const sessionService = yield* SessionService.Service;
     const ref = yield* SynchronizedRef.make(HashMap.empty<string, Entry>());
@@ -69,15 +69,15 @@ export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntim
 
     const makeState = Effect.fn("GraphRuntimeManager.makeState")(function* (
       localGraphId: string,
-      resolution: Resolution.Resolution,
+      resolution: GraphAccessResolution.Resolution,
     ) {
-      if (Resolution.Resolution.$is("Missing")(resolution)) {
+      if (GraphAccessResolution.Resolution.$is("Missing")(resolution)) {
         yield* remove(localGraphId);
 
         return State.Missing();
       }
 
-      if (Resolution.Resolution.$is("CloudLocked")(resolution)) {
+      if (GraphAccessResolution.Resolution.$is("CloudLocked")(resolution)) {
         yield* remove(localGraphId);
 
         return State.Locked({ record: resolution.record });
@@ -87,9 +87,9 @@ export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntim
     });
 
     const makeReadyState = Effect.fn("GraphRuntimeManager.makeReadyState")(function* (
-      resolution: Resolution.ResolutionReady,
+      resolution: GraphAccessResolution.ResolutionReady,
     ) {
-      const fingerprint = yield* Fingerprint.create(resolution);
+      const fingerprint = yield* GraphRuntimeFingerprint.create(resolution);
 
       const next = yield* SynchronizedRef.modifyEffect(ref, (entries) => {
         return Effect.gen(function* () {
@@ -119,7 +119,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntim
             sessionService,
           });
 
-          const runtime = yield* ManagedRuntime.createScoped(runtimeLayer);
+          const runtime = yield* GraphRuntimeManagedRuntime.createScoped(runtimeLayer);
 
           return [
             { runtime, previous: existing },
@@ -135,14 +135,14 @@ export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntim
 
     const findReactive = Effect.fn("GraphRuntimeManager.findReactive")((localGraphId: string) => {
       return Effect.succeed(
-        Resolution.findReactive(localGraphId).pipe(
+        GraphAccessResolution.findReactive(localGraphId).pipe(
           Stream.mapEffect((resolution) => makeState(localGraphId, resolution)),
         ),
       );
     });
 
     const find = Effect.fn("GraphRuntimeManager.find")(function* (localGraphId: string) {
-      const resolution = yield* Resolution.find(localGraphId);
+      const resolution = yield* GraphAccessResolution.find(localGraphId);
 
       return yield* makeState(localGraphId, resolution);
     });

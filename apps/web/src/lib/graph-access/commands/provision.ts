@@ -2,16 +2,16 @@ import { Effect, Layer, Context } from "effect";
 import { nanoid } from "nanoid";
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { type Graph } from "@manotes/shared/graph-registry/contract";
-import { KeyStore as KeyStoreService } from "../key-store/service";
+import { KeyStore } from "../key-store/service";
 import { LocalRegistry } from "../local-registry";
 import { RemoteRegistryService } from "../remote-registry/service";
 import { SessionService } from "../session/service";
-import type { GraphBackupSchema as BackupSchema } from "@manotes/shared/graph-backup/schema";
+import type { GraphBackupSchema } from "@manotes/shared/graph-backup/schema";
 import { GraphInitialize } from "../graph-runtime/initialize";
 
 export type CreateLocalInput = {
   displayName: string;
-  events?: BackupSchema.Bundle["events"];
+  events?: GraphBackupSchema.Bundle["events"];
 };
 
 export type CreateSyncedInput = {
@@ -25,7 +25,7 @@ export type OpenCloudOnDeviceInput = {
 
 export class Service extends Context.Service<Service>()("GraphAccess.Commands.Provision.Service", {
   make: Effect.gen(function* () {
-    const keyStore = yield* KeyStoreService.Service;
+    const keyStore = yield* KeyStore.Service;
 
     const createLocal = Effect.fn("GraphAccessCommandsProvision.createLocal")(function* ({
       displayName,
@@ -82,7 +82,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Pr
   }),
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(
-    Layer.provide(KeyStoreService.Service.layer),
+    Layer.provide(KeyStore.Service.layer),
     Layer.provide(SessionService.Service.layer),
   );
 }

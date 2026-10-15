@@ -14,7 +14,7 @@ import { Button, type ButtonProps } from "./button";
 import { Input } from "./input";
 import { Label } from "./label";
 import {
-  TextField as TextFieldRoot,
+  TextField,
   TextFieldDescription,
   TextFieldErrorMessage,
   TextFieldInput,
@@ -69,7 +69,7 @@ function AppTextField(props: AppTextFieldProps) {
   const [, inputProps] = splitProps(props, ["label", "description", "id"]);
 
   return (
-    <TextFieldRoot validationState={hasErrors() ? "invalid" : "valid"}>
+    <TextField validationState={hasErrors() ? "invalid" : "valid"}>
       <TextFieldLabel>{props.label}</TextFieldLabel>
       <TextFieldInput
         name={field().name}
@@ -82,7 +82,7 @@ function AppTextField(props: AppTextFieldProps) {
         {(description) => <TextFieldDescription>{description()}</TextFieldDescription>}
       </Show>
       <TextFieldErrorMessage errors={messages().map((message) => ({ message }))} />
-    </TextFieldRoot>
+    </TextField>
   );
 }
 

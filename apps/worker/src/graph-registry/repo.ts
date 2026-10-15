@@ -4,7 +4,7 @@ import { SqlClient } from "effect/sql";
 import type { SqlError } from "effect/sql";
 import type { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { DisplayNameTakenError } from "@manotes/shared/graph-registry/contract";
-import { GraphRegistrySchema as Schema } from "./schema.ts";
+import { GraphRegistrySchema } from "./schema.ts";
 import { EffectOption } from "@manotes/shared/effect/effect-option";
 
 const GRAPH_ID_LENGTH = 12;
@@ -14,11 +14,11 @@ export class Service extends Context.Service<Service>()("GraphRegistryRepo.Servi
     const sql = yield* SqlClient.SqlClient;
 
     const listGraphs = Effect.fn("GraphRegistryRepo.listGraphs")(function* () {
-      return yield* sql<Schema.RawRecord>`
+      return yield* sql<GraphRegistrySchema.RawRecord>`
         SELECT graphId, displayName, createdAt, graphKeyEnvelope
         FROM graphs
         ORDER BY displayName ASC
-      `.pipe(Effect.flatMap(Schema.decodeArray));
+      `.pipe(Effect.flatMap(GraphRegistrySchema.decodeArray));
     });
 
     const getGraph = Effect.fn("GraphRegistryRepo.getGraph")(function* ({
@@ -26,12 +26,12 @@ export class Service extends Context.Service<Service>()("GraphRegistryRepo.Servi
     }: {
       graphId: string;
     }) {
-      return yield* sql<Schema.RawRecord>`
+      return yield* sql<GraphRegistrySchema.RawRecord>`
         SELECT graphId, displayName, createdAt, graphKeyEnvelope
         FROM graphs
         WHERE graphId = ${graphId}
         LIMIT 1
-      `.pipe(Effect.map(Array.head), EffectOption.traverse(Schema.decodeRecord));
+      `.pipe(Effect.map(Array.head), EffectOption.traverse(GraphRegistrySchema.decodeRecord));
     });
 
     const createGraph = Effect.fn("GraphRegistryRepo.createGraph")(function* ({
@@ -41,21 +41,21 @@ export class Service extends Context.Service<Service>()("GraphRegistryRepo.Servi
       displayName: string;
       graphKeyEnvelope: GraphEncryption.GraphKeyEnvelope;
     }) {
-      const values = yield* Schema.encodeRecord({
+      const values = yield* GraphRegistrySchema.encodeRecord({
         graphId: nanoid(GRAPH_ID_LENGTH),
         displayName,
         createdAt: new Date().toISOString(),
         graphKeyEnvelope,
       });
 
-      return yield* sql<Schema.RawRecord>`
+      return yield* sql<GraphRegistrySchema.RawRecord>`
         INSERT INTO graphs ${sql.insert(values)}
         RETURNING graphId, displayName, createdAt, graphKeyEnvelope
       `.pipe(
         Effect.catchTag("SqlError", (error) => {
           return Effect.fail(remapDisplayNameSqlError(error, displayName));
         }),
-        Effect.flatMap(Schema.decodeArray),
+        Effect.flatMap(GraphRegistrySchema.decodeArray),
         Effect.map(Array.head),
         EffectOption.getOrEffect(() => Effect.die(new Error("Graph insert returned no rows"))),
       );
@@ -68,7 +68,7 @@ export class Service extends Context.Service<Service>()("GraphRegistryRepo.Servi
       graphId: string;
       displayName: string;
     }) {
-      return yield* sql<Schema.RawRecord>`
+      return yield* sql<GraphRegistrySchema.RawRecord>`
         UPDATE graphs
         SET displayName = ${displayName}
         WHERE graphId = ${graphId}
@@ -78,7 +78,7 @@ export class Service extends Context.Service<Service>()("GraphRegistryRepo.Servi
           return Effect.fail(remapDisplayNameSqlError(error, displayName));
         }),
         Effect.map(Array.head),
-        EffectOption.traverse(Schema.decodeRecord),
+        EffectOption.traverse(GraphRegistrySchema.decodeRecord),
       );
     });
 

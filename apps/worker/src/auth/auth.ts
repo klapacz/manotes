@@ -2,7 +2,7 @@ import { Context, Effect, Layer, Schema } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { Accounts } from "../accounts/durable-object.ts";
 import { EmailService } from "./email.ts";
-import { AuthErrors as Errors } from "./errors.ts";
+import { AuthErrors } from "./errors.ts";
 import { OtpService } from "./otp.ts";
 import { SessionKvService } from "./session-kv.ts";
 import AccountsDurableObject from "../accounts/durable-object.ts";
@@ -58,7 +58,7 @@ export class AuthService extends Context.Service<AuthService>()("Auth.AuthServic
         .ensureAccount(email)
         .pipe(
           Effect.mapError(
-            (cause) => new Errors.AccountResolutionError({ operation: "ensure", cause }),
+            (cause) => new AuthErrors.AccountResolutionError({ operation: "ensure", cause }),
           ),
         );
 
@@ -93,17 +93,19 @@ export class AuthService extends Context.Service<AuthService>()("Auth.AuthServic
     const resolve = Effect.fn("Auth.resolve")(function* () {
       const token = yield* readSessionToken.pipe(
         Effect.mapError(
-          (cause) => new Errors.UnauthorizedError({ reason: "Missing session token", cause }),
+          (cause) => new AuthErrors.UnauthorizedError({ reason: "Missing session token", cause }),
         ),
       );
 
       return yield* session.resolve(token).pipe(
         Effect.catchTag("Auth.SessionNotFoundError", (cause) => {
-          return Effect.fail(new Errors.UnauthorizedError({ reason: "Invalid session", cause }));
+          return Effect.fail(
+            new AuthErrors.UnauthorizedError({ reason: "Invalid session", cause }),
+          );
         }),
         Effect.catchTag("SchemaError", (cause) => {
           return Effect.fail(
-            new Errors.UnauthorizedError({ reason: "Invalid session payload", cause }),
+            new AuthErrors.UnauthorizedError({ reason: "Invalid session payload", cause }),
           );
         }),
       );

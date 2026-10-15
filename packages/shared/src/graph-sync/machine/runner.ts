@@ -3,25 +3,25 @@
  */
 import { Effect, Match, Queue, Stream, SubscriptionRef } from "effect";
 import { encodeClientMessage } from "../contract/codec";
-import { GraphSyncStatus as Status } from "../status";
+import { GraphSyncStatus } from "../status";
 import { MachineContext } from "./context";
-import { GraphSyncModel as Model } from "./model";
-import { GraphSyncMachineErrors as Errors } from "./errors";
-import { GraphSyncMachineStateHandlers as StateHandlers } from "./state-handlers";
+import { GraphSyncModel } from "./model";
+import { GraphSyncMachineErrors } from "./errors";
+import { GraphSyncMachineStateHandlers } from "./state-handlers";
 import { SyncStatusCloud } from "../status.schema";
 
 export const run = Effect.fn("GraphSyncMachineRunner.run")(function* ({
   inputQueue,
   write,
 }: {
-  inputQueue: Queue.Dequeue<Model.Input, Errors.RunnerQueueErrors>;
-  write: Model.Write;
+  inputQueue: Queue.Dequeue<GraphSyncModel.Input, GraphSyncMachineErrors.RunnerQueueErrors>;
+  write: GraphSyncModel.Write;
 }) {
-  const status = yield* Status.Ref;
+  const status = yield* GraphSyncStatus.Ref;
 
   return yield* Stream.fromQueue(inputQueue).pipe(
     Stream.runFoldEffect(
-      (): Model.State => Model.State.Bootstrapping({ bufferedCommitted: [] }),
+      (): GraphSyncModel.State => GraphSyncModel.State.Bootstrapping({ bufferedCommitted: [] }),
       Effect.fn(function* (currentState, signal) {
         yield* Effect.logDebug("Received Message", { currentState, signal });
         const nextState = yield* step(currentState, signal);
@@ -43,12 +43,12 @@ export const run = Effect.fn("GraphSyncMachineRunner.run")(function* ({
   );
 });
 
-function step(currentState: Model.State, input: Model.Input) {
+function step(currentState: GraphSyncModel.State, input: GraphSyncModel.Input) {
   return Match.value(currentState).pipe(
     Match.tagsExhaustive({
-      Bootstrapping: (state) => StateHandlers.bootstrapping(state, input),
-      Ready: (state) => StateHandlers.ready(state, input),
-      Committing: (state) => StateHandlers.committing(state, input),
+      Bootstrapping: (state) => GraphSyncMachineStateHandlers.bootstrapping(state, input),
+      Ready: (state) => GraphSyncMachineStateHandlers.ready(state, input),
+      Committing: (state) => GraphSyncMachineStateHandlers.committing(state, input),
     }),
   );
 }

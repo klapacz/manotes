@@ -1,17 +1,17 @@
 import { Effect } from "effect";
-import { GraphBackupSchema as BackupSchema } from "@manotes/shared/graph-backup/schema";
+import { GraphBackupSchema } from "@manotes/shared/graph-backup/schema";
 
 export const readBackupFile = Effect.fn("GraphBackupFile.readBackupFile")(function* (file: File) {
   const text = yield* Effect.tryPromise(() => file.text());
 
-  return yield* BackupSchema.decodeFile(text);
+  return yield* GraphBackupSchema.decodeFile(text);
 });
 
 export const downloadBackupFile = Effect.fn("GraphBackupFile.downloadBackupFile")(function* (
-  backup: BackupSchema.Bundle,
+  backup: GraphBackupSchema.Bundle,
 ) {
   const [encoded, fileName] = yield* Effect.all([
-    BackupSchema.encodeFile(backup),
+    GraphBackupSchema.encodeFile(backup),
     getDownloadFileName(backup),
   ]);
 
@@ -32,10 +32,14 @@ export const downloadBackupFile = Effect.fn("GraphBackupFile.downloadBackupFile"
 });
 
 const getDownloadFileName = Effect.fn("GraphBackupFile.getDownloadFileName")(function* (
-  backup: BackupSchema.Bundle,
+  backup: GraphBackupSchema.Bundle,
 ) {
   const graphName = sanitizeFileName(backup.sourceGraphDisplayName);
-  const exportedAt = (yield* BackupSchema.encodeBundle(backup)).exportedAt.replaceAll(":", "-"); // TODO: we encode just to get date as string
+
+  const exportedAt = (yield* GraphBackupSchema.encodeBundle(backup)).exportedAt.replaceAll(
+    ":",
+    "-",
+  ); // TODO: we encode just to get date as string
 
   return `${graphName}-${exportedAt}.manotes-events.json`;
 });

@@ -1,5 +1,5 @@
 import { RecordSchema } from "./record.schema";
-import { Array as Arr, Effect, Layer, Option, Order, pipe, Record, Context, Stream } from "effect";
+import { Array, Effect, Layer, Option, Order, pipe, Record, Context, Stream } from "effect";
 import * as Y from "yjs";
 import { DB } from "./db.service";
 import { EventSchema } from "./event.schema";
@@ -36,7 +36,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
             upToLocalSeq,
           });
 
-          if (!Arr.isReadonlyArrayNonEmpty(events)) return;
+          if (!Array.isReadonlyArrayNonEmpty(events)) return;
 
           const summary = yield* summarizeEvents(events);
 
@@ -75,7 +75,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
           upToLocalSeq,
         });
 
-        if (!Arr.isReadonlyArrayNonEmpty(events)) return;
+        if (!Array.isReadonlyArrayNonEmpty(events)) return;
 
         const summary = yield* summarizeEvents(events);
 
@@ -119,7 +119,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
       );
 
       const nextBatch = yield* stream.pipe(
-        Stream.filter(Arr.isReadonlyArrayNonEmpty),
+        Stream.filter(Array.isReadonlyArrayNonEmpty),
         Stream.runHead,
       );
 
@@ -130,7 +130,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
       }
 
       const batch = nextBatch.value;
-      const newestLocalSeq = Arr.lastNonEmpty(batch).localSeq;
+      const newestLocalSeq = Array.lastNonEmpty(batch).localSeq;
       const targets = buildMaterializationTargets(batch);
 
       // Checkpoint advances only after a batch is fully materialized.
@@ -232,7 +232,7 @@ function buildMaterializedRecordFields({ yDoc }: { yDoc: Y.Doc }) {
 }
 
 const summarizeEvents = Effect.fn("MaterializerService.summarizeEvents")(function* (
-  events: Arr.NonEmptyReadonlyArray<EventRepo.Record>,
+  events: Array.NonEmptyReadonlyArray<EventRepo.Record>,
 ) {
   const byType = {
     update: events.filter((event) => event.type === "update"),
@@ -240,8 +240,8 @@ const summarizeEvents = Effect.fn("MaterializerService.summarizeEvents")(functio
   };
 
   return {
-    first: Arr.headNonEmpty(events),
-    last: Arr.lastNonEmpty(events),
+    first: Array.headNonEmpty(events),
+    last: Array.lastNonEmpty(events),
     byType,
     latestDate: yield* getLatestDate(byType.date),
   };
@@ -250,7 +250,7 @@ const summarizeEvents = Effect.fn("MaterializerService.summarizeEvents")(functio
 const getLatestDate = Effect.fn("MaterializerService.getLatestDate")(function* (
   dateEvents: ReadonlyArray<EventRepo.Record>,
 ) {
-  const latestDateEventOption = Arr.last(dateEvents);
+  const latestDateEventOption = Array.last(dateEvents);
 
   if (Option.isNone(latestDateEventOption)) return null;
 
@@ -272,11 +272,11 @@ function buildMaterializationTargets(
   return pipe(
     events,
     // 1) Partition the batch by record so each record is handled once.
-    Arr.groupBy((event) => event.recordId),
+    Array.groupBy((event) => event.recordId),
     // 2) For each record, keep only the event with the highest localSeq.
     //    Materializing up to that localSeq implicitly covers earlier events.
     Record.map((recordEvents) => {
-      return Arr.max(
+      return Array.max(
         recordEvents,
         pipe(
           Order.Number,
@@ -288,12 +288,12 @@ function buildMaterializationTargets(
     }),
     // 3) Convert the record back into explicit targets.
     Record.toEntries,
-    Arr.map(([recordId, event]) => ({
+    Array.map(([recordId, event]) => ({
       recordId,
       upToLocalSeq: event.localSeq,
     })),
     // 4) Process targets in ascending event localSeq order for deterministic replay.
-    Arr.sort(
+    Array.sort(
       pipe(
         Order.Number,
         Order.mapInput((record: MaterializationTarget) => record.upToLocalSeq),

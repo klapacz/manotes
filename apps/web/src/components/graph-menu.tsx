@@ -5,7 +5,7 @@ import { toast } from "somoto";
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { bindRt } from "../lib";
 import { useGraph } from "../lib/graph-access/graph-runtime/context";
-import { KeyStore as KeyStoreService } from "../lib/graph-access/key-store/service";
+import { KeyStore } from "../lib/graph-access/key-store/service";
 import { LocalRegistry } from "../lib/graph-access/local-registry";
 import { GraphBackupFile } from "../lib/graph-backup/file";
 import { GraphBackupService } from "../lib/graph-backup/service";
@@ -46,7 +46,7 @@ const LockGraph = GraphAccessRuntime.atom.fn(
   Effect.fn("ComponentsGraphMenu.lockGraph")(function* (
     envelope: GraphEncryption.GraphKeyEnvelope,
   ) {
-    const keyStore = yield* KeyStoreService.Service;
+    const keyStore = yield* KeyStore.Service;
     yield* keyStore.remove(envelope);
   }),
 );

@@ -2,28 +2,30 @@
  * Builds next-state transitions after machine commands complete.
  */
 import { Effect, Match, Types } from "effect";
-import { GraphSyncMessages as Messages } from "../contract/messages";
-import { GraphSyncModel as Model } from "./model";
-import { GraphSyncMachineCommands as Commands } from "./commands";
+import { GraphSyncMessages } from "../contract/messages";
+import { GraphSyncModel } from "./model";
+import { GraphSyncMachineCommands } from "./commands";
 
-export const stayInState = <TState extends Model.State>(state: TState) => Effect.as<TState>(state);
+export const stayInState = <TState extends GraphSyncModel.State>(state: TState) => {
+  return Effect.as<TState>(state);
+};
 
 export function bufferCommitted(
-  state: Types.ExtractTag<Model.State, "Bootstrapping" | "Committing">,
-  committed: Messages.Committed,
+  state: Types.ExtractTag<GraphSyncModel.State, "Bootstrapping" | "Committing">,
+  committed: GraphSyncMessages.Committed,
 ) {
   return Match.value(state).pipe(
     Match.tagsExhaustive({
       Bootstrapping: ({ bufferedCommitted }) => {
         return Effect.succeed(
-          Model.State.Bootstrapping({
+          GraphSyncModel.State.Bootstrapping({
             bufferedCommitted: [...bufferedCommitted, committed],
           }),
         );
       },
       Committing: ({ bufferedCommitted }) => {
         return Effect.succeed(
-          Model.State.Committing({
+          GraphSyncModel.State.Committing({
             bufferedCommitted: [...bufferedCommitted, committed],
           }),
         );
@@ -40,15 +42,15 @@ export function bufferCommitted(
  */
 export const readyOrCommitPending = Effect.fn("GraphSyncMachineTransition.readyOrCommitPending")(
   function* () {
-    const { didSendCommit } = yield* Commands.sendPendingCommit();
+    const { didSendCommit } = yield* GraphSyncMachineCommands.sendPendingCommit();
 
     if (didSendCommit) {
-      return Model.State.Committing({
+      return GraphSyncModel.State.Committing({
         bufferedCommitted: [],
       });
     }
 
-    return Model.State.Ready();
+    return GraphSyncModel.State.Ready();
   },
 );
 

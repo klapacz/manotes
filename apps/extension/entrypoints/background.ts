@@ -1,4 +1,4 @@
-import { BrowserExtension as Contract } from "@manotes/shared/browser-extension/contract";
+import { BrowserExtension } from "@manotes/shared/browser-extension/contract";
 import { Match, Option, pipe } from "effect";
 import { isAppUrl } from "../app-url";
 
@@ -6,7 +6,7 @@ const ports = new Set<Browser.runtime.Port>();
 
 export default defineBackground(() => {
   browser.runtime.onConnect.addListener((port) => {
-    if (port.name !== Contract.BridgePortName) return;
+    if (port.name !== BrowserExtension.BridgePortName) return;
 
     ports.add(port);
 
@@ -16,7 +16,7 @@ export default defineBackground(() => {
 
     port.onMessage.addListener((message) => {
       const request = pipe(
-        Contract.decodeBridgeRequest(message),
+        BrowserExtension.decodeBridgeRequest(message),
         Option.getOrElse(() => null),
       );
 
@@ -38,7 +38,7 @@ export default defineBackground(() => {
   });
 });
 
-async function handleMessage(request: Contract.BridgeRequest) {
+async function handleMessage(request: BrowserExtension.BridgeRequest) {
   await Match.value(request).pipe(
     Match.when({ type: "listTabs" }, async () => {
       await broadcastTabs();
@@ -52,7 +52,7 @@ async function broadcastTabs() {
     const tabs = await browser.tabs.query({});
 
     broadcastMessage(
-      Contract.makeListTabsResponse(
+      BrowserExtension.makeListTabsResponse(
         tabs.flatMap((tab) => {
           const normalized = normalizeTab(tab);
 
@@ -65,7 +65,7 @@ async function broadcastTabs() {
   }
 }
 
-function broadcastMessage(message: Contract.BridgeResponse) {
+function broadcastMessage(message: BrowserExtension.BridgeResponse) {
   for (const port of ports) {
     try {
       port.postMessage(message);
@@ -75,7 +75,7 @@ function broadcastMessage(message: Contract.BridgeResponse) {
   }
 }
 
-function normalizeTab(tab: Browser.tabs.Tab): Contract.TabCandidate | null {
+function normalizeTab(tab: Browser.tabs.Tab): BrowserExtension.TabCandidate | null {
   if (tab.id === undefined || tab.windowId === undefined || !tab.url || isAppUrl(tab.url)) {
     return null;
   }

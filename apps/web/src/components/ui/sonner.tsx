@@ -1,6 +1,6 @@
 import { createSignal, onCleanup, onMount, splitProps } from "solid-js";
 import { CircleCheck, Info, LoaderCircle, OctagonX, TriangleAlert } from "lucide-solid";
-import { Toaster as Sonner, type ToasterProps as SonnerProps } from "somoto";
+import { Toaster as Sonner, type ToasterProps } from "somoto";
 
 // Adapted from shadcn-solid using @kobalte/core 0.13.11 / solid-js 1.9.10 / somoto 0.0.2.
 // Source: .reference/shadcn-solid/apps/docs/src/registry/ui/sonner.tsx
@@ -10,7 +10,7 @@ const readTheme = (): "light" | "dark" => {
   return document.documentElement.dataset.kbTheme === "dark" ? "dark" : "light";
 };
 
-export const Toaster = (props: SonnerProps) => {
+export const Toaster = (props: ToasterProps) => {
   const [local, rest] = splitProps(props, ["style", "theme"]);
   const [theme, setTheme] = createSignal<"light" | "dark">("light");
 

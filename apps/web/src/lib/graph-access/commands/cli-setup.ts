@@ -1,11 +1,11 @@
 import { Effect, Option, Schema } from "effect";
 import { HttpApiClient } from "effect/http-api";
-import { SessionApiContract as SessionApi } from "@manotes/shared/session/api";
+import { SessionApiContract } from "@manotes/shared/session/api";
 import { KeyStore } from "../key-store/service";
-import type { LocalRegistrySchema as LocalRegistry } from "../local-registry/schema";
+import type { LocalRegistrySchema } from "../local-registry/schema";
 
 export const prepare = Effect.fn("GraphAccessCommandsCliSetup.prepare")(function* (input: {
-  readonly graph: LocalRegistry.CloudRecord;
+  readonly graph: LocalRegistrySchema.CloudRecord;
   readonly origin: string;
 }) {
   const keyStore = yield* KeyStore.Service;
@@ -19,7 +19,10 @@ export const prepare = Effect.fn("GraphAccessCommandsCliSetup.prepare")(function
 
   // The graph key decrypts content; a separate bearer session authorizes server access.
   // Only issue it on the user's prepare action, never when opening the menu or dialog.
-  const client = yield* HttpApiClient.make(SessionApi.SessionApi, { baseUrl: input.origin });
+  const client = yield* HttpApiClient.make(SessionApiContract.SessionApi, {
+    baseUrl: input.origin,
+  });
+
   const { apiKey } = yield* client.session.createApiKey();
 
   return [

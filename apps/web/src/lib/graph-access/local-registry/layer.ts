@@ -1,11 +1,11 @@
 import { Effect, Context, Layer as EffectLayer } from "effect";
 import { SqlClient } from "effect/sql";
-import { SqliteWasmClient as SqliteClient } from "@manotes/sql-sqlite-wasm/sqlite-client";
-import { LocalRegistryRepo as Repo } from "./repo";
+import { SqliteWasmClient } from "@manotes/sql-sqlite-wasm/sqlite-client";
+import { LocalRegistryRepo } from "./repo";
 
 const REGISTRY_DATABASE_PATH = "local-registry.sqlite3";
 
-const BaseLayer = SqliteClient.layer({
+const BaseLayer = SqliteWasmClient.layer({
   worker: Effect.gen(function* () {
     const worker = yield* Effect.acquireRelease(
       Effect.sync(() => {
@@ -26,10 +26,10 @@ const BaseLayer = SqliteClient.layer({
 export const Layer = EffectLayer.unwrap(
   Effect.gen(function* () {
     const context = yield* EffectLayer.build(BaseLayer);
-    yield* Repo.migrate.pipe(Effect.provide(context));
+    yield* LocalRegistryRepo.migrate.pipe(Effect.provide(context));
 
     return EffectLayer.succeedContext(
-      context.pipe(Context.pick(SqliteClient.SqliteClient, SqlClient.SqlClient)),
+      context.pipe(Context.pick(SqliteWasmClient.SqliteClient, SqlClient.SqlClient)),
     );
   }),
 );

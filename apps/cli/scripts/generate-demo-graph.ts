@@ -11,7 +11,7 @@ import { nanoid } from "nanoid";
 import { prosemirrorJSONToYDoc } from "y-prosemirror";
 import * as Y from "yjs";
 import { EventSchema } from "@manotes/shared/event.schema";
-import { GraphBackupSchema as BackupSchema } from "@manotes/shared/graph-backup/schema";
+import { GraphBackupSchema } from "@manotes/shared/graph-backup/schema";
 import { RECORD_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
 import { PROSEMIRROR_XML_FRAGMENT_KEY } from "@manotes/shared/prosemirror/yjs";
 import { toLocalDateString } from "@manotes/shared/temporal/utils";
@@ -49,13 +49,13 @@ function event(
   type: "update" | "date",
   payload: Uint8Array<ArrayBufferLike>,
   createdAt: DateTime.Utc,
-): BackupSchema.Record {
+): GraphBackupSchema.Record {
   return { recordId, type, payload, createdAt, id: nanoid() };
 }
 
 const now = DateTime.nowUnsafe();
 
-const events: Array<BackupSchema.Record> = [];
+const events: Array<GraphBackupSchema.Record> = [];
 
 // Pages are created first (oldest), staggered by a second so order is stable.
 for (const [index, [key, page]] of Record.toEntries(PAGES).entries()) {
@@ -76,7 +76,7 @@ for (const entry of ENTRIES) {
 
 events.sort((a, b) => DateTime.toEpochMillis(a.createdAt) - DateTime.toEpochMillis(b.createdAt));
 
-export const bundle: BackupSchema.Bundle = {
+export const bundle: GraphBackupSchema.Bundle = {
   version: 1,
   exportedAt: now,
   sourceGraphDisplayName: SOURCE_GRAPH_DISPLAY_NAME,
@@ -91,7 +91,7 @@ if (import.meta.main) {
     process.exit(1);
   }
 
-  writeFileSync(outputPath, Effect.runSync(BackupSchema.encodeFile(bundle)));
+  writeFileSync(outputPath, Effect.runSync(GraphBackupSchema.encodeFile(bundle)));
   console.log(
     `Wrote ${events.length} events (${Object.keys(PAGES).length} pages, ${ENTRIES.length} entries) to ${outputPath}`,
   );

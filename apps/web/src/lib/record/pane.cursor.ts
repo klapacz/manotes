@@ -1,12 +1,12 @@
-import { Array as Arr, Equal, Option, Predicate, Record, pipe } from "effect";
+import { Array, Equal, Option, Predicate, Record, pipe } from "effect";
 import { PaneMake } from "@manotes/shared/record/pane.make";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 
-export type Stack = Arr.NonEmptyReadonlyArray<PaneSchema.Pane>;
+export type Stack = Array.NonEmptyReadonlyArray<PaneSchema.Pane>;
 
-export type InputStack = Arr.NonEmptyReadonlyArray<PaneSchema.PaneInput>;
+export type InputStack = Array.NonEmptyReadonlyArray<PaneSchema.PaneInput>;
 
 export type Cursor = {
   stack: Stack;
@@ -22,20 +22,20 @@ export const pane = (cursor: Cursor): PaneSchema.Pane => {
 /** Opens `next` after the current pane, closing panes to the right. */
 export const openNext = (next: PaneSchema.PaneInput): Transform => {
   return (cursor) => {
-    return Arr.append(throughCurrent(cursor), next);
+    return Array.append(throughCurrent(cursor), next);
   };
 };
 
 export const close: Transform = (cursor) => {
   if (cursor.index === 0) return [PaneMake.notes()];
 
-  return Arr.splitAtNonEmpty(cursor.stack, cursor.index)[0];
+  return Array.splitAtNonEmpty(cursor.stack, cursor.index)[0];
 };
 
 export const focus: Transform = (cursor) => {
   const current = pane(cursor);
 
-  return Arr.prepend(Arr.drop(cursor.stack, cursor.index + 1), current);
+  return Array.prepend(Array.drop(cursor.stack, cursor.index + 1), current);
 };
 
 export const updateCurrent = (
@@ -43,7 +43,7 @@ export const updateCurrent = (
 ): Transform => {
   return (cursor) => {
     return Option.getOrElse(
-      Arr.replace(cursor.stack, cursor.index, update(pane(cursor))),
+      Array.replace(cursor.stack, cursor.index, update(pane(cursor))),
       () => cursor.stack,
     );
   };
@@ -52,9 +52,9 @@ export const updateCurrent = (
 export const replaceCurrentAndCloseRest = (next: PaneSchema.PaneInput): Transform => {
   return (cursor) => {
     return pipe(
-      Arr.modify(cursor.stack, cursor.index, () => next),
+      Array.modify(cursor.stack, cursor.index, () => next),
       Option.getOrElse(() => cursor.stack),
-      Arr.splitAtNonEmpty(cursor.index + 1),
+      Array.splitAtNonEmpty(cursor.index + 1),
     )[0];
   };
 };
@@ -107,7 +107,7 @@ function normalizeToInput(value: PaneSchema.PaneInput | PaneSchema.Pane): Compar
 }
 
 const throughCurrent = (cursor: Cursor): InputStack => {
-  return Arr.splitAtNonEmpty(cursor.stack, cursor.index + 1)[0];
+  return Array.splitAtNonEmpty(cursor.stack, cursor.index + 1)[0];
 };
 
 export * as PaneCursor from "./pane.cursor";

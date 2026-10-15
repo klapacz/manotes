@@ -1,7 +1,7 @@
 import type { ComponentProps } from "solid-js";
 import { splitProps } from "solid-js";
 import { Command as CommandPrimitive } from "cmdk-solid";
-import { Dialog as DialogPrimitive } from "@kobalte/core";
+import { Dialog } from "@kobalte/core";
 
 import { cx } from "../../lib/cva";
 import { SearchIcon } from "../icons";
@@ -66,16 +66,16 @@ export const CommandDialog = (props: CommandDialogProps) => {
   // Composition from cmdk-solid@1.1.2 dist/index.jsx (Dialog), using the app's
   // Kobalte version to expose close autofocus. Keep our existing markup and styles.
   return (
-    <DialogPrimitive.Root {...dialogProps}>
-      <DialogPrimitive.Portal mount={props.container}>
-        <DialogPrimitive.Overlay
+    <Dialog.Root {...dialogProps}>
+      <Dialog.Portal mount={props.container}>
+        <Dialog.Overlay
           cmdk-overlay=""
           class={cx(
             "data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 bg-overlay fixed inset-0 z-50",
             props.overlayClassName,
           )}
         />
-        <DialogPrimitive.Content
+        <Dialog.Content
           aria-label={props.label}
           cmdk-dialog=""
           onCloseAutoFocus={props.onCloseAutoFocus}
@@ -90,9 +90,9 @@ export const CommandDialog = (props: CommandDialogProps) => {
             class={cx(commandDialogClass, props.class)}
             {...rest}
           />
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 };
 

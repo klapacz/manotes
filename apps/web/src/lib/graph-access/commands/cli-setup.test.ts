@@ -2,10 +2,10 @@ import { Effect } from "effect";
 import { FetchHttpClient } from "effect/http";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { KeyStore } from "../key-store/service";
-import type { LocalRegistrySchema as LocalRegistry } from "../local-registry/schema";
+import type { LocalRegistrySchema } from "../local-registry/schema";
 import { CliSetup } from "./cli-setup";
 
-const graph: LocalRegistry.CloudRecord = {
+const graph: LocalRegistrySchema.CloudRecord = {
   localGraphId: "local-id",
   graphId: "cloud'id; $(printf wrong)",
   displayName: "My graph",

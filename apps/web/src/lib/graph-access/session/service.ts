@@ -1,18 +1,18 @@
 import { Effect, Layer, Context } from "effect";
-import { AtomRegistry, Atom as A } from "effect/reactivity";
-import { SessionAtom as Atom } from "./atom";
+import { AtomRegistry, Atom } from "effect/reactivity";
+import { SessionAtom } from "./atom";
 
 export class Service extends Context.Service<Service>()("GraphAccess.Session.Service", {
   make: Effect.gen(function* () {
     const registry = yield* AtomRegistry.AtomRegistry;
 
-    const get = AtomRegistry.getResult(registry, Atom.get);
-    const find = AtomRegistry.getResult(registry, Atom.find);
-    const refresh = Effect.sync(() => registry.refresh(Atom.get));
+    const get = AtomRegistry.getResult(registry, SessionAtom.get);
+    const find = AtomRegistry.getResult(registry, SessionAtom.find);
+    const refresh = Effect.sync(() => registry.refresh(SessionAtom.get));
 
     const stream = {
-      get: A.toStreamResult(Atom.get),
-      find: A.toStreamResult(Atom.find),
+      get: Atom.toStreamResult(SessionAtom.get),
+      find: Atom.toStreamResult(SessionAtom.find),
     };
 
     return { get, find, refresh, stream };

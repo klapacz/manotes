@@ -4,7 +4,7 @@ import { DisplayNameTakenError, GraphRegistryRpc } from "@manotes/shared/graph-r
 import { Effect, Layer, Option, Predicate, Scope, Context } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { RpcSerialization, RpcServer } from "effect/rpc";
-import { GraphRegistryRepo as Repo } from "./repo.ts";
+import { GraphRegistryRepo } from "./repo.ts";
 
 // ---------------------------------------------------------------------------
 // RPC HttpApp tag
@@ -25,7 +25,7 @@ class RpcHttpApp extends Context.Service<
 
 const HandlersLayer = GraphRegistryRpc.toLayer(
   Effect.gen(function* () {
-    const repo = yield* Repo.Service;
+    const repo = yield* GraphRegistryRepo.Service;
 
     return {
       listGraphs: Effect.fn("GraphRegistry.listGraphs")(function* () {
@@ -70,7 +70,7 @@ export default class GraphRegistryDurableObject extends Cloudflare.DurableObject
       const layer = RpcHttpAppLayer.pipe(
         Layer.provide(HandlersLayer),
         Layer.provide(RpcSerialization.layerJson),
-        Layer.provideMerge(Repo.Service.layer),
+        Layer.provideMerge(GraphRegistryRepo.Service.layer),
         Layer.provideMerge(
           SqliteClient.layer({
             db: state.storage.sql.raw,
@@ -80,7 +80,7 @@ export default class GraphRegistryDurableObject extends Cloudflare.DurableObject
       );
 
       yield* state.blockConcurrencyWhile(() => {
-        return Repo.migrate.pipe(Effect.provide(layer), Effect.orDie);
+        return GraphRegistryRepo.migrate.pipe(Effect.provide(layer), Effect.orDie);
       });
 
       return {
@@ -91,7 +91,7 @@ export default class GraphRegistryDurableObject extends Cloudflare.DurableObject
         }).pipe(Effect.scoped, Effect.provide(layer)),
 
         graphExists: Effect.fn(function* (graphId: string) {
-          const repo = yield* Repo.Service;
+          const repo = yield* GraphRegistryRepo.Service;
           const graph = yield* repo.getGraph({ graphId });
 
           return Option.isSome(graph);

@@ -4,13 +4,13 @@ import {
   MAX_EVENTS_PER_COMMIT,
   MAX_EVENTS_PER_REPLAY,
 } from "@manotes/shared/graph-sync/contract/limits";
-import { GraphSyncMessages as Messages } from "@manotes/shared/graph-sync/contract/messages";
-import { GraphSyncErrors as Errors } from "./errors.ts";
-import { GraphSyncRepo as Repo } from "./repo.ts";
+import { GraphSyncMessages } from "@manotes/shared/graph-sync/contract/messages";
+import { GraphSyncErrors } from "./errors.ts";
+import { GraphSyncRepo } from "./repo.ts";
 
 export class ResponsePlan extends Data.TaggedClass("ResponsePlan")<{
-  reply: ReadonlyArray<Messages.ServerMessage>;
-  broadcast: ReadonlyArray<Messages.ServerMessage>;
+  reply: ReadonlyArray<GraphSyncMessages.ServerMessage>;
+  broadcast: ReadonlyArray<GraphSyncMessages.ServerMessage>;
 }> {}
 
 class ExecutionPlan<E, R> extends Data.TaggedClass("ExecutionPlan")<{
@@ -21,7 +21,7 @@ class ExecutionPlan<E, R> extends Data.TaggedClass("ExecutionPlan")<{
 // Server-side protocol entrypoint: either bootstrap a reconnecting client
 // with the missing committed suffix, or reconcile a new commit attempt over
 // opaque encrypted event payloads keyed by stable stream references.
-export function getExecutionPlan(message: Messages.ClientMessage) {
+export function getExecutionPlan(message: GraphSyncMessages.ClientMessage) {
   return Match.value(message).pipe(
     Match.tag("Commit", (message) => {
       return new ExecutionPlan({
@@ -44,7 +44,7 @@ export function getExecutionPlan(message: Messages.ClientMessage) {
 }
 
 const handleConnect = Effect.fn("GraphSyncProtocol.handleConnect")(function* (
-  message: Messages.Connect,
+  message: GraphSyncMessages.Connect,
 ) {
   // `lastCommitSeq` is the client's derived contiguous prefix cursor from the
   // ADR. We replay everything strictly after it, or just acknowledge that the
@@ -53,9 +53,9 @@ const handleConnect = Effect.fn("GraphSyncProtocol.handleConnect")(function* (
   // TODO(graph-sync): Validate `message.graphId` against the graph identity
   // selected by the router / Durable Object binding. Right now the routed DO
   // chooses the graph, but this field is otherwise ignored on the server.
-  const maxCommitSeq = yield* Repo.getLastCommitSeq();
+  const maxCommitSeq = yield* GraphSyncRepo.getLastCommitSeq();
 
-  const events = yield* Repo.getEventsBetweenSeq({
+  const events = yield* GraphSyncRepo.getEventsBetweenSeq({
     afterSeq: message.lastCommitSeq,
     upToCommitSeq: maxCommitSeq,
   });
@@ -70,12 +70,12 @@ const handleConnect = Effect.fn("GraphSyncProtocol.handleConnect")(function* (
 });
 
 const handleCommit = Effect.fn("GraphSyncProtocol.handleCommit")(function* (
-  message: Messages.Commit,
+  message: GraphSyncMessages.Commit,
 ) {
-  const maxCommitSeq = yield* Repo.getLastCommitSeq();
+  const maxCommitSeq = yield* GraphSyncRepo.getLastCommitSeq();
 
   if (message.baseCommitSeq > maxCommitSeq) {
-    return yield* new Errors.ProtocolViolationError({
+    return yield* new GraphSyncErrors.ProtocolViolationError({
       reason: "Client baseCommitSeq is ahead of server tip",
     });
   }
@@ -83,7 +83,7 @@ const handleCommit = Effect.fn("GraphSyncProtocol.handleCommit")(function* (
   if (message.baseCommitSeq < maxCommitSeq) {
     // Replay is always a suffix of the authoritative log starting just after
     // the client's last known contiguous commit.
-    const missing = yield* Repo.getEventsBetweenSeq({
+    const missing = yield* GraphSyncRepo.getEventsBetweenSeq({
       afterSeq: message.baseCommitSeq,
       upToCommitSeq: maxCommitSeq,
     });
@@ -92,23 +92,23 @@ const handleCommit = Effect.fn("GraphSyncProtocol.handleCommit")(function* (
   }
 
   if (message.events.length > MAX_EVENTS_PER_COMMIT) {
-    return yield* new Errors.ProtocolViolationError({
+    return yield* new GraphSyncErrors.ProtocolViolationError({
       reason: `Commit exceeds max batch size of ${MAX_EVENTS_PER_COMMIT} events`,
     });
   }
 
-  const committed = yield* Repo.insertEvents(message.events).pipe(
+  const committed = yield* GraphSyncRepo.insertEvents(message.events).pipe(
     Effect.catchTag("SqlError", (error) => Effect.fail(remapCommitInsertSqlError(error))),
   );
 
   return new ResponsePlan({
-    reply: [new Messages.CommitAck({ events: committed })],
-    broadcast: [new Messages.Committed({ events: committed })],
+    reply: [new GraphSyncMessages.CommitAck({ events: committed })],
+    broadcast: [new GraphSyncMessages.Committed({ events: committed })],
   });
 });
 
 function createReplayOrDoneResponsePlan(
-  events: ReadonlyArray<Messages.CommittedEvent>,
+  events: ReadonlyArray<GraphSyncMessages.CommittedEvent>,
   upToCommitSeq: number,
 ) {
   // `Replay` is optional data; `ReplayDone` is the protocol boundary that tells
@@ -116,11 +116,11 @@ function createReplayOrDoneResponsePlan(
   // Events are chunked to keep each WebSocket frame under Cloudflare's size
   // limits. The client state machine already handles multiple `Replay` messages.
   const replayMessages = Array.chunksOf(events, MAX_EVENTS_PER_REPLAY).map(
-    (chunk) => new Messages.Replay({ events: chunk }),
+    (chunk) => new GraphSyncMessages.Replay({ events: chunk }),
   );
 
   return new ResponsePlan({
-    reply: [...replayMessages, new Messages.ReplayDone({ upToCommitSeq })],
+    reply: [...replayMessages, new GraphSyncMessages.ReplayDone({ upToCommitSeq })],
     broadcast: [],
   });
 }
@@ -134,7 +134,7 @@ function remapCommitInsertSqlError(error: SqlError.SqlError) {
   // but we have not verified that the driver consistently exposes the error
   // message in `cause` yet. Keep this path covered by follow-up testing.
   if (isEventIdUniquenessSqlError(error.cause)) {
-    return new Errors.ProtocolViolationError({
+    return new GraphSyncErrors.ProtocolViolationError({
       reason: "Commit contains an already-committed event id",
     });
   }

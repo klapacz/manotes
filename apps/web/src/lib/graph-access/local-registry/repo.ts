@@ -1,7 +1,7 @@
 import { SqlClient, SqlSchema } from "effect/sql";
-import { Array, Effect, Option, Stream, Schema as S } from "effect";
-import { LocalRegistrySchema as Schema } from "./schema";
-import { LocalRegistryErrors as Errors } from "./errors";
+import { Array, Effect, Option, Stream, Schema } from "effect";
+import { LocalRegistrySchema } from "./schema";
+import { LocalRegistryErrors } from "./errors";
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
 
 const GRAPH_COLUMNS =
@@ -40,10 +40,10 @@ export const migrate = Effect.gen(function* () {
 });
 
 export const listGraphs = SqlSchema.findAll({
-  Request: S.Struct({
-    accountId: S.Option(S.String),
+  Request: Schema.Struct({
+    accountId: Schema.Option(Schema.String),
   }),
-  Result: Schema.Record,
+  Result: LocalRegistrySchema.Record,
   execute: Effect.fn("LocalRegistryRepo.listGraphs.execute")(function* ({ accountId }) {
     const sql = yield* SqlClient.SqlClient;
 
@@ -69,10 +69,10 @@ export const listGraphs = SqlSchema.findAll({
 });
 
 export const findGraph = SqlSchema.findOneOption({
-  Request: S.Struct({
-    localGraphId: S.String,
+  Request: Schema.Struct({
+    localGraphId: Schema.String,
   }),
-  Result: Schema.Record,
+  Result: LocalRegistrySchema.Record,
   execute: Effect.fn("LocalRegistryRepo.findGraph.execute")(function* ({ localGraphId }) {
     const sql = yield* SqlClient.SqlClient;
 
@@ -85,12 +85,14 @@ export const findGraph = SqlSchema.findOneOption({
   }),
 });
 
-const RememberedKeyRequest = S.Struct({
-  envelope: S.fromJsonString(GraphEncryption.GraphKeyEnvelopeSchema),
+const RememberedKeyRequest = Schema.Struct({
+  envelope: Schema.fromJsonString(GraphEncryption.GraphKeyEnvelopeSchema),
 });
 
-const RememberedKeyResult = S.Struct({
-  rememberedGraphKey: S.Uint8ArrayFromBase64.pipe(S.check(S.isMinLength(32), S.isMaxLength(32))),
+const RememberedKeyResult = Schema.Struct({
+  rememberedGraphKey: Schema.Uint8ArrayFromBase64.pipe(
+    Schema.check(Schema.isMinLength(32), Schema.isMaxLength(32)),
+  ),
 });
 
 export const findRememberedKey = SqlSchema.findOneOption({
@@ -119,11 +121,11 @@ export const findRememberedKeyReactive = Effect.fn("LocalRegistryRepo.findRememb
 );
 
 export const saveRememberedKey = SqlSchema.findOne({
-  Request: S.Struct({
+  Request: Schema.Struct({
     ...RememberedKeyRequest.fields,
     graphKey: RememberedKeyResult.fields.rememberedGraphKey,
   }),
-  Result: S.Struct({ localGraphId: S.String }),
+  Result: Schema.Struct({ localGraphId: Schema.String }),
   execute: Effect.fn("LocalRegistryRepo.saveRememberedKey.execute")(function* ({
     envelope,
     graphKey,
@@ -148,8 +150,8 @@ export const forgetRememberedKey = SqlSchema.void({
 });
 
 export const insertGraph = SqlSchema.findOne({
-  Request: Schema.Record,
-  Result: Schema.Record,
+  Request: LocalRegistrySchema.Record,
+  Result: LocalRegistrySchema.Record,
   execute: Effect.fn("LocalRegistryRepo.insertGraph.execute")(function* (record) {
     const sql = yield* SqlClient.SqlClient;
 
@@ -158,15 +160,15 @@ export const insertGraph = SqlSchema.findOne({
       RETURNING ${sql.literal(GRAPH_COLUMNS)}
     `.pipe(
       Effect.catchTag("SqlError", (error) => {
-        return Effect.fail(Errors.remapDisplayNameSqlError(error, record.displayName));
+        return Effect.fail(LocalRegistryErrors.remapDisplayNameSqlError(error, record.displayName));
       }),
     );
   }),
 });
 
 export const updateGraph = SqlSchema.findOne({
-  Request: Schema.Record,
-  Result: Schema.Record,
+  Request: LocalRegistrySchema.Record,
+  Result: LocalRegistrySchema.Record,
   execute: Effect.fn(function* (values) {
     const sql = yield* SqlClient.SqlClient;
 
@@ -179,11 +181,11 @@ export const updateGraph = SqlSchema.findOne({
 });
 
 export const renameGraph = SqlSchema.findOne({
-  Request: S.Struct({
-    localGraphId: S.String,
-    displayName: S.String,
+  Request: Schema.Struct({
+    localGraphId: Schema.String,
+    displayName: Schema.String,
   }),
-  Result: Schema.Record,
+  Result: LocalRegistrySchema.Record,
   execute: Effect.fn("LocalRegistryRepo.renameGraph.execute")(function* ({
     localGraphId,
     displayName,
@@ -197,19 +199,19 @@ export const renameGraph = SqlSchema.findOne({
       RETURNING ${sql.literal(GRAPH_COLUMNS)}
     `.pipe(
       Effect.catchTag("SqlError", (error) => {
-        return Effect.fail(Errors.remapDisplayNameSqlError(error, displayName));
+        return Effect.fail(LocalRegistryErrors.remapDisplayNameSqlError(error, displayName));
       }),
     );
   }),
 });
 
-const LocalGraphIdRequest = S.Struct({
-  localGraphId: S.String,
+const LocalGraphIdRequest = Schema.Struct({
+  localGraphId: Schema.String,
 });
 
 export const markGraphDeleting = SqlSchema.findOne({
   Request: LocalGraphIdRequest,
-  Result: Schema.Record,
+  Result: LocalRegistrySchema.Record,
   execute: Effect.fn("LocalRegistryRepo.markGraphDeleting.execute")(function* ({ localGraphId }) {
     const sql = yield* SqlClient.SqlClient;
 
@@ -225,7 +227,7 @@ export const markGraphDeleting = SqlSchema.findOne({
 
 export const deleteLocalGraph = SqlSchema.findOne({
   Request: LocalGraphIdRequest,
-  Result: Schema.Record,
+  Result: LocalRegistrySchema.Record,
   execute: Effect.fn("LocalRegistryRepo.deleteLocalGraph.execute")(function* ({ localGraphId }) {
     const sql = yield* SqlClient.SqlClient;
 
@@ -240,10 +242,10 @@ export const deleteLocalGraph = SqlSchema.findOne({
 });
 
 export const findGraphByGraphId = SqlSchema.findOneOption({
-  Request: S.Struct({
-    graphId: S.String,
+  Request: Schema.Struct({
+    graphId: Schema.String,
   }),
-  Result: Schema.Record,
+  Result: LocalRegistrySchema.Record,
   execute: Effect.fn("LocalRegistryRepo.findGraphByGraphId.execute")(function* ({ graphId }) {
     const sql = yield* SqlClient.SqlClient;
 
@@ -264,7 +266,7 @@ export const findGraphReactive = Effect.fn("LocalRegistryRepo.findGraphReactive"
   return sql
     .reactive(
       ["graphs"],
-      sql<Schema.RawRecord>`
+      sql<LocalRegistrySchema.RawRecord>`
         SELECT ${sql.literal(GRAPH_COLUMNS)}
         FROM graphs
         WHERE localGraphId = ${localGraphId}
@@ -272,7 +274,7 @@ export const findGraphReactive = Effect.fn("LocalRegistryRepo.findGraphReactive"
       `,
     )
     .pipe(
-      Stream.mapEffect((rows) => Schema.decodeArray(rows)),
+      Stream.mapEffect((rows) => LocalRegistrySchema.decodeArray(rows)),
       Stream.map(Array.head),
     );
 }, Stream.unwrap);
@@ -286,7 +288,7 @@ export const reactiveListGraph = Effect.fn("LocalRegistryRepo.reactiveListGraph"
 
   const query = Option.match(accountId, {
     onNone: () => {
-      return sql<Schema.RawRecord>`
+      return sql<LocalRegistrySchema.RawRecord>`
       SELECT ${sql.literal(GRAPH_COLUMNS)}
       FROM graphs
       WHERE mode = 'local'
@@ -294,7 +296,7 @@ export const reactiveListGraph = Effect.fn("LocalRegistryRepo.reactiveListGraph"
     `;
     },
     onSome: (id) => {
-      return sql<Schema.RawRecord>`
+      return sql<LocalRegistrySchema.RawRecord>`
       SELECT ${sql.literal(GRAPH_COLUMNS)}
       FROM graphs
       WHERE mode = 'local' OR accountId = ${id}
@@ -303,7 +305,9 @@ export const reactiveListGraph = Effect.fn("LocalRegistryRepo.reactiveListGraph"
     },
   });
 
-  return sql.reactive(["graphs"], query).pipe(Stream.mapEffect((rows) => Schema.decodeArray(rows)));
+  return sql
+    .reactive(["graphs"], query)
+    .pipe(Stream.mapEffect((rows) => LocalRegistrySchema.decodeArray(rows)));
 }, Stream.unwrap);
 
 export * as LocalRegistryRepo from "./repo";

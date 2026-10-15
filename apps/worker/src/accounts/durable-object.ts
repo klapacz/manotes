@@ -1,7 +1,7 @@
 import { Config, Data, Effect, Layer, Option } from "effect";
 import { Struct } from "effect";
 import { SqliteClient } from "@effect/sql-sqlite-do";
-import { AccountsRepo as Repo } from "./repo.ts";
+import { AccountsRepo } from "./repo.ts";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { Email } from "@manotes/shared/schema/email";
 
@@ -28,7 +28,7 @@ export default class AccountsDurableObject extends Cloudflare.DurableObject<Acco
     return Effect.gen(function* () {
       const state = yield* Cloudflare.DurableObjectState;
 
-      const layer = Repo.Service.layer.pipe(
+      const layer = AccountsRepo.Service.layer.pipe(
         Layer.provideMerge(
           SqliteClient.layer({
             db: state.storage.sql.raw,
@@ -39,11 +39,11 @@ export default class AccountsDurableObject extends Cloudflare.DurableObject<Acco
 
       yield* state.blockConcurrencyWhile(() => {
         return Effect.gen(function* () {
-          yield* Repo.migrate;
+          yield* AccountsRepo.migrate;
 
           // One-way bootstrap: removing the setting does not deactivate an existing account.
           if (Option.isSome(bootstrapEmail)) {
-            const repo = yield* Repo.Service;
+            const repo = yield* AccountsRepo.Service;
             yield* repo.activateByEmail({ email: bootstrapEmail.value });
           }
         }).pipe(Effect.provide(layer), Effect.orDie);
@@ -76,7 +76,7 @@ export default class AccountsDurableObject extends Cloudflare.DurableObject<Acco
 ) {}
 
 const ensureAccount = Effect.fn("AccountsDurableObject.ensureAccount")(function* (email: string) {
-  const repo = yield* Repo.Service;
+  const repo = yield* AccountsRepo.Service;
   const account = yield* repo.findOrCreate({ email, status: "ACTIVE" });
 
   if (account.status !== "ACTIVE") return yield* Effect.fail(new AccountNotActiveError({ email }));
@@ -87,7 +87,7 @@ const ensureAccount = Effect.fn("AccountsDurableObject.ensureAccount")(function*
 const checkOrWaitlist = Effect.fn("AccountsDurableObject.checkOrWaitlist")(function* (
   email: string,
 ) {
-  const repo = yield* Repo.Service;
+  const repo = yield* AccountsRepo.Service;
 
   return yield* repo.findOrCreate({ email, status: "WAITLIST" });
 });

@@ -1,7 +1,7 @@
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { describe, expect, it } from "vite-plus/test";
 import { Effect, Schema } from "effect";
-import { GraphBackupSchema as BackupSchema } from "@manotes/shared/graph-backup/schema";
+import { GraphBackupSchema } from "@manotes/shared/graph-backup/schema";
 import { createBackup, getSuggestedGraphName } from "./service";
 
 describe("graph backup service", () => {
@@ -37,8 +37,8 @@ describe("graph backup service", () => {
       ],
     });
 
-    const encoded = await Effect.runPromise(BackupSchema.encodeBundle(backup));
-    const decoded = await Effect.runPromise(BackupSchema.decodeBundle(encoded));
+    const encoded = await Effect.runPromise(GraphBackupSchema.encodeBundle(backup));
+    const decoded = await Effect.runPromise(GraphBackupSchema.decodeBundle(encoded));
 
     expect(encoded.events).toEqual([
       {
@@ -79,7 +79,7 @@ describe("graph backup service", () => {
   it("rejects unsupported backup versions", async () => {
     await expect(
       Effect.runPromise(
-        BackupSchema.decodeBundle({
+        GraphBackupSchema.decodeBundle({
           version: 2,
           exportedAt: "2026-04-01T12:00:00.000Z",
           sourceGraphDisplayName: "Work",
@@ -91,7 +91,7 @@ describe("graph backup service", () => {
 
   it("falls back to the filename stem when backup metadata has no name", async () => {
     const backup = await Effect.runPromise(
-      BackupSchema.decodeBundle({
+      GraphBackupSchema.decodeBundle({
         version: 1,
         exportedAt: "2026-04-01T12:00:00.000Z",
         sourceGraphDisplayName: "   ",

@@ -2,7 +2,7 @@ import { BrowserWorker } from "@effect/platform-browser";
 import { Data, Duration, Effect, Exit, Layer, Schedule, Scope, Context } from "effect";
 import { RpcClient, RpcClientError, RpcGroup, RpcWorker } from "effect/rpc";
 import { DB } from "@manotes/shared/db.service";
-import { GraphSyncConfiguration as GraphSyncConfig } from "@manotes/shared/graph-sync/config";
+import { GraphSyncConfiguration } from "@manotes/shared/graph-sync/config";
 import {
   GraphSharedWorkerRpc,
   GraphSharedInitialMessageSchema,
@@ -29,7 +29,7 @@ const createDedicatedWorker = Effect.fn("GraphWorkerClient.createDedicatedWorker
   graphSyncConfig,
 }: {
   localGraphId: string;
-  graphSyncConfig: GraphSyncConfig.GraphSyncConfig;
+  graphSyncConfig: GraphSyncConfiguration.GraphSyncConfig;
 }) {
   // Create MessageChannel - ports will be distributed to both workers.
   const mc = new MessageChannel();
@@ -105,7 +105,7 @@ const SharedInitialMessageLayer = RpcWorker.layerInitialMessage(
   GraphSharedInitialMessageSchema,
   Effect.gen(function* () {
     const config = yield* DB.Config;
-    const graphSyncConfig = yield* GraphSyncConfig.Config;
+    const graphSyncConfig = yield* GraphSyncConfiguration.Config;
 
     return {
       localGraphId: config.localGraphId,
@@ -153,7 +153,7 @@ const SharedRpcProtocol = Layer.unwrap(
 export class Service extends Context.Service<Service>()("GraphWorkerClient.Service", {
   make: Effect.gen(function* () {
     const config = yield* DB.Config;
-    const graphSyncConfig = yield* GraphSyncConfig.Config;
+    const graphSyncConfig = yield* GraphSyncConfiguration.Config;
     const localGraphId = config.localGraphId;
 
     yield* Effect.annotateLogsScoped({ localGraphId });
@@ -201,7 +201,7 @@ const becomeLeader = Effect.fn("GraphWorkerClient.becomeLeader")(function* (
   sharedClient: GraphSharedRpcClient,
   config: {
     localGraphId: string;
-    graphSyncConfig: GraphSyncConfig.GraphSyncConfig;
+    graphSyncConfig: GraphSyncConfiguration.GraphSyncConfig;
   },
 ) {
   yield* Effect.logInfo("Became leader");

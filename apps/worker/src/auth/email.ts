@@ -1,6 +1,6 @@
 import * as Cloudflare from "alchemy/Cloudflare";
 import { Config, Context, Effect, Layer } from "effect";
-import { AuthErrors as Errors } from "./errors.ts";
+import { AuthErrors } from "./errors.ts";
 
 export type EmailMessage = {
   readonly to: string;
@@ -32,7 +32,7 @@ export class EmailService extends Context.Service<EmailService>()("Auth.EmailSer
           from: EMAIL_ADDRESS,
           ...message,
         })
-        .pipe(Effect.mapError((cause) => new Errors.EmailSendError({ cause })));
+        .pipe(Effect.mapError((cause) => new AuthErrors.EmailSendError({ cause })));
     });
 
     return { send };

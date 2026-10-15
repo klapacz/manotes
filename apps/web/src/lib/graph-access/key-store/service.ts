@@ -2,7 +2,7 @@ import { Effect, HashMap, Layer, Schema, Context, Stream, SubscriptionRef, Optio
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { SqlClient } from "effect/sql";
 import { LocalRegistry } from "../local-registry";
-import { GraphAccessLocalRegistryLayer as LocalRegistryLayer } from "../local-registry/layer";
+import { GraphAccessLocalRegistryLayer } from "../local-registry/layer";
 
 type GraphKeyId = string;
 
@@ -97,7 +97,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.KeyStore.Se
   }),
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(
-    Layer.provide(LocalRegistryLayer.Layer),
+    Layer.provide(GraphAccessLocalRegistryLayer.Layer),
   );
 }
 

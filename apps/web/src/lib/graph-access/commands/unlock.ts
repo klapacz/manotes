@@ -1,6 +1,6 @@
 import { Effect, Layer, Context } from "effect";
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
-import { KeyStore as KeyStoreService } from "../key-store/service";
+import { KeyStore } from "../key-store/service";
 import { LocalRegistry } from "../local-registry";
 
 export type UnlockCloudGraphInput = {
@@ -11,7 +11,7 @@ export type UnlockCloudGraphInput = {
 
 export class Service extends Context.Service<Service>()("GraphAccess.Commands.Unlock.Service", {
   make: Effect.gen(function* () {
-    const keyStore = yield* KeyStoreService.Service;
+    const keyStore = yield* KeyStore.Service;
 
     const unlockCloudGraph = Effect.fn("GraphAccessCommandsUnlock.unlockCloudGraph")(function* ({
       graph,
@@ -48,9 +48,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Un
     return { unlockCloudGraph };
   }),
 }) {
-  static readonly layer = Layer.effect(this, this.make).pipe(
-    Layer.provide(KeyStoreService.Service.layer),
-  );
+  static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(KeyStore.Service.layer));
 }
 
 export * as GraphAccessCommandsUnlock from "./unlock";
