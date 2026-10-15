@@ -10,11 +10,7 @@ import { PaneCursor } from "../../record/pane.cursor";
 import { PaneCtx } from "../../record/pane.ctx";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { PaneScroll } from "../../record/pane.scroll";
-import {
-  decodeStreamRefAttrs,
-  streamRefLabel,
-  type StreamRefAttrs,
-} from "@manotes/shared/editor/stream-ref/spec";
+import { StreamRefSpec } from "@manotes/shared/editor/stream-ref/spec";
 
 const makePane = Data.taggedEnum<PaneSchema.PaneInput>();
 
@@ -22,12 +18,12 @@ export function defineStreamRefRuntime() {
   return defineSolidNodeView({ name: "streamRef", component: StreamRefView });
 }
 
-export function createStreamRefLabel(attrs: () => StreamRefAttrs) {
+export function createStreamRefLabel(attrs: () => StreamRefSpec.Attrs) {
   const backlinksTo = createRecordLabel(() => attrs().filter.backlinksTo);
   const linksFrom = createRecordLabel(() => attrs().filter.linksFrom);
 
   return () => {
-    return streamRefLabel(
+    return StreamRefSpec.label(
       attrs(),
       (id) => (id === attrs().filter.backlinksTo ? backlinksTo() : linksFrom()) ?? id,
     );
@@ -37,7 +33,7 @@ export function createStreamRefLabel(attrs: () => StreamRefAttrs) {
 function StreamRefView(props: SolidNodeViewProps) {
   const ctx = PaneCtx.use();
   const scroll = PaneScroll.use();
-  const attrs = createMemo(() => decodeStreamRefAttrs(props.node.attrs));
+  const attrs = createMemo(() => StreamRefSpec.decodeAttrs(props.node.attrs));
   const label = createStreamRefLabel(attrs);
   const input = () => makePane.stream(attrs());
 

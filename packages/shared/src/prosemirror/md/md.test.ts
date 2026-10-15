@@ -8,7 +8,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { RECORD_SCHEMA } from "../app-schema";
 import { MdParse } from "./parse";
 import { MdSerialize } from "./serialize";
-import { decodeStreamRefAttrs, streamRefLabel } from "../../editor/stream-ref/spec";
+import { StreamRefSpec } from "../../editor/stream-ref/spec";
 
 describe("app Markdown conversion", () => {
   it.each(["list", "blockquote"])("keeps code fences inside %s containers", (container) => {
@@ -144,7 +144,7 @@ describe("app Markdown conversion", () => {
   });
 
   it("round-trips stream settings as an inline ref without a pane identity or URL", () => {
-    const attrs = decodeStreamRefAttrs({
+    const attrs = StreamRefSpec.decodeAttrs({
       paneId: "source-pane",
       href: "https://old-device.example/graph",
       filter: {
@@ -175,27 +175,29 @@ describe("app Markdown conversion", () => {
     expect(MdParse.parse(markdown).toJSON()).toEqual(doc.toJSON());
     expect(markdown).toContain("stream:");
     expect(
-      streamRefLabel({
+      StreamRefSpec.label({
         filter: { type: PaneSchema.StreamFilterType.cases.pages.make({}) },
         sort: "updated",
         view: "full",
       }),
     ).toBe("Pages");
     expect(
-      streamRefLabel({
+      StreamRefSpec.label({
         filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) },
         sort: "date",
         view: "full",
       }),
     ).toBe("Notes");
-    expect(streamRefLabel(attrs)).toContain("snippets");
+    expect(StreamRefSpec.label(attrs)).toContain("snippets");
     expect(
-      decodeStreamRefAttrs({ filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) } }),
+      StreamRefSpec.decodeAttrs({
+        filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) },
+      }),
     ).toMatchObject({
       sort: "date",
       view: "full",
     });
-    expect(() => decodeStreamRefAttrs({ ...attrs, sort: "invalid" })).toThrow();
+    expect(() => StreamRefSpec.decodeAttrs({ ...attrs, sort: "invalid" })).toThrow();
     expect(() => MdParse.parse("[Stream](stream:%7Bbroken)")).toThrow();
   });
 
@@ -362,7 +364,7 @@ describe("app Markdown conversion", () => {
           RECORD_SCHEMA.text(" "),
           RECORD_SCHEMA.node(
             "streamRef",
-            decodeStreamRefAttrs({
+            StreamRefSpec.decodeAttrs({
               filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}) },
             }),
           ),

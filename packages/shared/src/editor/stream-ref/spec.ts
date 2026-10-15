@@ -1,37 +1,41 @@
 import { RecordSchema } from "../../record.schema";
 import { Option, Schema } from "effect";
-import { defineCommands, defineNodeSpec, insertNode } from "prosekit/core";
+import {
+  defineCommands as defineProsekitCommands,
+  defineNodeSpec,
+  insertNode,
+} from "prosekit/core";
 import { PaneSchema } from "../../record/pane.schema";
 import { StreamSettings } from "../../record/stream-settings";
 
-export const StreamRefAttrs = PaneSchema.StreamSettings;
+export const Attrs = PaneSchema.StreamSettings;
 
-export type StreamRefAttrs = typeof StreamRefAttrs.Type;
+export type Attrs = typeof Attrs.Type;
 
-export const decodeStreamRefAttrs = Schema.decodeUnknownSync(StreamRefAttrs);
+export const decodeAttrs = Schema.decodeUnknownSync(Attrs);
 
-const decodeJson = Schema.decodeUnknownOption(Schema.fromJsonString(StreamRefAttrs));
+const decodeJson = Schema.decodeUnknownOption(Schema.fromJsonString(Attrs));
 
-export function defineStreamRefSpec() {
-  return defineNodeSpec<"streamRef", StreamRefAttrs>({
+export function define() {
+  return defineNodeSpec<"streamRef", Attrs>({
     name: "streamRef",
     atom: true,
     group: "inline",
     inline: true,
     attrs: {
       filter: {
-        validate: Schema.decodeUnknownSync(StreamRefAttrs.fields.filter),
+        validate: Schema.decodeUnknownSync(Attrs.fields.filter),
       },
       sort: {
         default: "date",
-        validate: Schema.decodeUnknownSync(StreamRefAttrs.fields.sort),
+        validate: Schema.decodeUnknownSync(Attrs.fields.sort),
       },
       view: {
         default: "full",
-        validate: Schema.decodeUnknownSync(StreamRefAttrs.fields.view),
+        validate: Schema.decodeUnknownSync(Attrs.fields.view),
       },
     },
-    leafText: (node) => streamRefLabel(decodeStreamRefAttrs(node.attrs)),
+    leafText: (node) => label(decodeAttrs(node.attrs)),
     parseDOM: [
       {
         tag: "span[data-stream-ref]",
@@ -44,21 +48,21 @@ export function defineStreamRefSpec() {
       },
     ],
     toDOM(node) {
-      const attrs = decodeStreamRefAttrs(node.attrs);
+      const attrs = decodeAttrs(node.attrs);
 
-      return ["span", { "data-stream-ref": JSON.stringify(attrs) }, streamRefLabel(attrs)];
+      return ["span", { "data-stream-ref": JSON.stringify(attrs) }, label(attrs)];
     },
   });
 }
 
-export function defineStreamRefCommands() {
-  return defineCommands({
-    insertStreamRef: (attrs: StreamRefAttrs) => insertNode({ type: "streamRef", attrs }),
+export function defineCommands() {
+  return defineProsekitCommands({
+    insertStreamRef: (attrs: Attrs) => insertNode({ type: "streamRef", attrs }),
   });
 }
 
-export function streamRefLabel(
-  { filter, sort, view }: StreamRefAttrs,
+export function label(
+  { filter, sort, view }: Attrs,
   recordLabel: (id: RecordSchema.Id) => string = (id) => id,
 ): string {
   return [
@@ -73,3 +77,5 @@ export function streamRefLabel(
     .filter(Boolean)
     .join(" · ");
 }
+
+export * as StreamRefSpec from "./spec";

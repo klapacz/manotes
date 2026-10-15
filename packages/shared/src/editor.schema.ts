@@ -13,8 +13,8 @@ import { defineBold } from "prosekit/extensions/bold";
 import { defineStrike } from "prosekit/extensions/strike";
 import { defineCode } from "prosekit/extensions/code";
 import { defineAppLink } from "./editor/link/spec";
-import { defineBacklinkSpec } from "./editor/backlink/spec";
-import { defineStreamRefSpec } from "./editor/stream-ref/spec";
+import { BacklinkSpec } from "./editor/backlink/spec";
+import { StreamRefSpec } from "./editor/stream-ref/spec";
 import { defineAppListSpec } from "./editor/list/spec";
 
 function defineDoc() {
@@ -46,8 +46,8 @@ export function defineAppSchema() {
       name: "codeBlock",
       attrs: { language: { default: "", validate: Schema.decodeUnknownSync(CodeLanguage) } },
     }),
-    defineBacklinkSpec(),
-    defineStreamRefSpec(),
+    BacklinkSpec.define(),
+    StreamRefSpec.define(),
     // Marks
     defineItalic(),
     defineBold(),

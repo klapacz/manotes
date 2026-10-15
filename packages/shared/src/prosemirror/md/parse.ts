@@ -5,7 +5,7 @@ import type { Node, Schema } from "prosekit/pm/model";
 import { RECORD_SCHEMA } from "../app-schema";
 import { checkMarkdownTable } from "../../editor/table/spec";
 import { numberOrderedLists } from "./number-ordered-lists";
-import { decodeStreamRefAttrs } from "../../editor/stream-ref/spec";
+import { StreamRefSpec } from "../../editor/stream-ref/spec";
 
 /** Parse CommonMark plus strikethrough and tasks directly into the app schema. */
 export function parse(markdown: string, schema: Schema = RECORD_SCHEMA): Node {
@@ -64,7 +64,7 @@ export function parse(markdown: string, schema: Schema = RECORD_SCHEMA): Node {
     backlink: { node: "backlink", getAttrs: (token) => ({ id: token.attrGet("id") }) },
     stream_ref: {
       node: "streamRef",
-      getAttrs: (token) => decodeStreamRefAttrs(JSON.parse(token.content)),
+      getAttrs: (token) => StreamRefSpec.decodeAttrs(JSON.parse(token.content)),
     },
   });
 

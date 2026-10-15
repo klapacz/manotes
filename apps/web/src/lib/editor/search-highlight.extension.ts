@@ -4,7 +4,7 @@ import { Schema } from "effect";
 import type { Node } from "prosekit/pm/model";
 import { Plugin, PluginKey } from "prosekit/pm/state";
 import { Decoration, DecorationSet, type EditorView } from "prosekit/pm/view";
-import { decodeBacklinkAttrs } from "@manotes/shared/editor/backlink/spec";
+import { BacklinkSpec } from "@manotes/shared/editor/backlink/spec";
 
 type State = { query: string; backlinksTo?: RecordSchema.Id; decorations: DecorationSet };
 
@@ -63,7 +63,7 @@ function highlight(doc: Node, query: string, backlinksTo?: RecordSchema.Id): Dec
 
   doc.descendants((node, position) => {
     if (node.type.name === "backlink") {
-      if (backlinksTo && decodeBacklinkAttrs(node.attrs).id === backlinksTo) {
+      if (backlinksTo && BacklinkSpec.decodeAttrs(node.attrs).id === backlinksTo) {
         decorations.push(
           Decoration.node(position, position + node.nodeSize, { class: "search-highlight" }),
         );

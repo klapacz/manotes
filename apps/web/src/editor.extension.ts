@@ -5,9 +5,9 @@ import { defineVirtualSelection } from "prosekit/extensions/virtual-selection";
 import { defineModClickPrevention } from "prosekit/extensions/mod-click-prevention";
 import { defineTaskListToggle } from "./editor.task-list-toggle.extension";
 import { defineCodeBlockBackspace } from "./lib/editor/code-block-backspace/extension";
-import { defineBacklinkCommands } from "@manotes/shared/editor/backlink/spec";
+import { BacklinkSpec } from "@manotes/shared/editor/backlink/spec";
 import { defineBacklinkRuntime } from "./lib/editor/backlink/extension";
-import { defineStreamRefCommands } from "@manotes/shared/editor/stream-ref/spec";
+import { StreamRefSpec } from "@manotes/shared/editor/stream-ref/spec";
 import { defineStreamRefRuntime } from "./lib/editor/stream-ref/extension";
 import { defineAppListExtension } from "./lib/editor/list/extension";
 import { EditorLink } from "./lib/editor/link/extension";
@@ -24,8 +24,8 @@ export function defineAppExtension() {
     defineAppSchema(),
     // Commands
     defineBaseCommands(),
-    defineBacklinkCommands(),
-    defineStreamRefCommands(),
+    BacklinkSpec.defineCommands(),
+    StreamRefSpec.defineCommands(),
     // Keymaps & plugins
     defineAppListExtension(),
     defineTableExtension(),

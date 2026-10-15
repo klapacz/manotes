@@ -4,8 +4,8 @@ import { Schema } from "effect";
 import { defaultMarkdownSerializer, MarkdownSerializer } from "prosemirror-markdown";
 import { Fragment, type Node } from "prosekit/pm/model";
 import { numberOrderedLists } from "./number-ordered-lists";
-import { decodeBacklinkAttrs } from "../../editor/backlink/spec";
-import { decodeStreamRefAttrs, streamRefLabel } from "../../editor/stream-ref/spec";
+import { BacklinkSpec } from "../../editor/backlink/spec";
+import { StreamRefSpec } from "../../editor/stream-ref/spec";
 import { decodeResolvedAppListAttrs } from "../../editor/list/spec";
 
 export type Options = {
@@ -145,7 +145,7 @@ function createSerializer(options: Options): MarkdownSerializer {
         });
       },
       streamRef(state, node) {
-        const attrs = decodeStreamRefAttrs(node.attrs);
+        const attrs = StreamRefSpec.decodeAttrs(node.attrs);
 
         const data = encodeURIComponent(JSON.stringify(attrs)).replace(
           /[!'()*]/g,
@@ -153,10 +153,10 @@ function createSerializer(options: Options): MarkdownSerializer {
         );
 
         // Markdown transport only; the document stores settings, never a URL.
-        state.text(`[${state.esc(streamRefLabel(attrs))}](stream:${data})`, false);
+        state.text(`[${state.esc(StreamRefSpec.label(attrs))}](stream:${data})`, false);
       },
       backlink(state, node) {
-        const { id } = decodeBacklinkAttrs(node.attrs);
+        const { id } = BacklinkSpec.decodeAttrs(node.attrs);
 
         // Labels are display-only; the encoded record id is the link destination.
         const label = options.backlinkLabel?.(id) ?? id;

@@ -1,17 +1,21 @@
 import { RecordSchema } from "../../record.schema";
 import { Schema } from "effect";
-import { defineCommands, defineNodeSpec, insertNode } from "prosekit/core";
+import {
+  defineCommands as defineProsekitCommands,
+  defineNodeSpec,
+  insertNode,
+} from "prosekit/core";
 
-export const BacklinkAttrs = Schema.Struct({
+export const Attrs = Schema.Struct({
   id: RecordSchema.Id.annotate({ expected: "a nonempty string backlink id" }),
 });
 
-export type BacklinkAttrs = typeof BacklinkAttrs.Type;
+export type Attrs = typeof Attrs.Type;
 
-export const decodeBacklinkAttrs = Schema.decodeUnknownSync(BacklinkAttrs);
+export const decodeAttrs = Schema.decodeUnknownSync(Attrs);
 
-export function defineBacklinkSpec() {
-  return defineNodeSpec<"backlink", BacklinkAttrs>({
+export function define() {
+  return defineNodeSpec<"backlink", Attrs>({
     name: "backlink",
     atom: true,
     group: "inline",
@@ -19,19 +23,19 @@ export function defineBacklinkSpec() {
       id: { validate: "string" },
     },
     inline: true,
-    leafText: (node) => `[[${decodeBacklinkAttrs(node.attrs).id}]]`,
+    leafText: (node) => `[[${decodeAttrs(node.attrs).id}]]`,
     parseDOM: [
       {
         tag: "span[data-backlink-id]",
-        getAttrs: (dom: HTMLElement): BacklinkAttrs | false => {
+        getAttrs: (dom: HTMLElement): Attrs | false => {
           const attrs = { id: dom.getAttribute("data-backlink-id") };
 
-          return Schema.is(BacklinkAttrs)(attrs) ? attrs : false;
+          return Schema.is(Attrs)(attrs) ? attrs : false;
         },
       },
     ],
     toDOM(node) {
-      const { id } = decodeBacklinkAttrs(node.attrs);
+      const { id } = decodeAttrs(node.attrs);
 
       return [
         "span",
@@ -45,10 +49,12 @@ export function defineBacklinkSpec() {
   });
 }
 
-export function defineBacklinkCommands() {
-  return defineCommands({
-    insertBacklink: (attrs: BacklinkAttrs) => {
+export function defineCommands() {
+  return defineProsekitCommands({
+    insertBacklink: (attrs: Attrs) => {
       return insertNode({ type: "backlink", attrs });
     },
   });
 }
+
+export * as BacklinkSpec from "./spec";

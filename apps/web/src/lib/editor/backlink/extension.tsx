@@ -11,11 +11,9 @@ import {
 import { createEffect, createMemo, type JSX } from "solid-js";
 import { RecordCache } from "../../record-cache.service";
 import { bindRt, createAtomStore, createSyncedAtom } from "../..";
-import { decodeBacklinkAttrs, type BacklinkAttrs } from "@manotes/shared/editor/backlink/spec";
+import { BacklinkSpec } from "@manotes/shared/editor/backlink/spec";
 import { RecordFormat } from "../../record";
 import { RecordLink } from "../../record/link-component";
-
-export type { BacklinkAttrs };
 
 // ---------------------------------------------------------------------------
 // Node View
@@ -31,7 +29,7 @@ const BacklinkLabelEntry = Data.taggedEnum<BacklinkLabelEntry>();
 
 function createBacklinkView(labelSnapshot: Map<RecordSchema.Id, string>) {
   return function BacklinkView(props: SolidNodeViewProps): JSX.Element {
-    const attrs = createMemo(() => decodeBacklinkAttrs(props.node.attrs));
+    const attrs = createMemo(() => BacklinkSpec.decodeAttrs(props.node.attrs));
     const recordId = () => attrs().id;
     const recordIdAtom = createSyncedAtom(recordId);
 
@@ -93,7 +91,7 @@ function clipboardLeafText(
   labelSnapshot: ReadonlyMap<RecordSchema.Id, string>,
 ): string {
   if (node.type.name === "backlink") {
-    const { id } = decodeBacklinkAttrs(node.attrs);
+    const { id } = BacklinkSpec.decodeAttrs(node.attrs);
 
     return labelSnapshot.get(id) ?? id;
   }
@@ -118,7 +116,7 @@ export function defineBacklinkRuntime() {
           return {
             ...nodes,
             backlink: (node) => {
-              const { id } = decodeBacklinkAttrs(node.attrs);
+              const { id } = BacklinkSpec.decodeAttrs(node.attrs);
 
               return [
                 "span",
