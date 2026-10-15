@@ -88,9 +88,9 @@ function watch(opts: { readonly doc: Y.Doc }) {
   const { attrs } = NoteDoc.fromDoc(opts);
 
   return changes(opts.doc).pipe(
-    Stream.mapEffect(() =>
-      YSchema.exportLoose(attrs).pipe(Effect.map((attrs) => ({ doc: opts.doc, attrs }))),
-    ),
+    Stream.mapEffect(() => {
+      return YSchema.exportLoose(attrs).pipe(Effect.map((attrs) => ({ doc: opts.doc, attrs })));
+    }),
   );
 }
 
@@ -101,13 +101,13 @@ function watchProps<E, R>(opts: {
   const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
 
   return Stream.zipLatestWith(opts.defs, changes(opts.doc), (defs) => defs).pipe(
-    Stream.mapEffect((defs) =>
-      Effect.gen(function* () {
+    Stream.mapEffect((defs) => {
+      return Effect.gen(function* () {
         const props = yield* attrs.pipe(YSchema.findMap("props"));
 
         return yield* Effect.forEach(defs, (def) => readEntry({ props, def }));
-      }),
-    ),
+      });
+    }),
   );
 }
 
@@ -119,13 +119,13 @@ function watchGroups<E, R>(opts: {
 
   // Re-read saved data when definitions or any nested attrs value change.
   return Stream.zipLatestWith(opts.defs, changes(opts.doc), (defs) => defs).pipe(
-    Stream.mapEffect((defs) =>
-      readGroups({ attrs }).pipe(Effect.map((saved) => ({ saved, defs }))),
-    ),
+    Stream.mapEffect((defs) => {
+      return readGroups({ attrs }).pipe(Effect.map((saved) => ({ saved, defs })));
+    }),
     // Replace scope subscriptions using the newly read values and definitions.
-    Stream.switchMap(({ saved, defs }) =>
-      watchSavedGroups({ saved, defs }).pipe(Stream.map((saved) => ({ saved, defs }))),
-    ),
+    Stream.switchMap(({ saved, defs }) => {
+      return watchSavedGroups({ saved, defs }).pipe(Stream.map((saved) => ({ saved, defs })));
+    }),
   );
 }
 
@@ -138,12 +138,12 @@ const readGroups = Effect.fn("Attrs.readGroups")(function* (opts: {
     Effect.map(Record.filter(Predicate.isNotUndefined)),
     // Split scalar values from saved rule groups through the existing loose schema.
     Effect.map(
-      Record.partition((value: AttrsSchema.PropVal | AttrsSchema.PropGroup) =>
-        Match.value(value).pipe(
+      Record.partition((value: AttrsSchema.PropVal | AttrsSchema.PropGroup) => {
+        return Match.value(value).pipe(
           Match.tag("group", (group) => Result.succeed(group)),
           Match.orElse((value) => Result.fail(value)),
-        ),
-      ),
+        );
+      }),
     ),
   );
 
@@ -180,18 +180,18 @@ function watchProp(opts: {
   return Match.value(opts.def).pipe(
     // Preserve a supported value when its definition is unavailable.
     Match.tag("None", () => Stream.succeed(ValueState.Invalid({ value: opts.value }))),
-    Match.tag("Some", ({ value: def }) =>
-      Stream.fromEffect(validateValueType({ value: opts.value, def })).pipe(
-        Stream.flatMap((state) =>
-          Match.value(def).pipe(
-            Match.when({ prop_type: "link" }, (def) =>
-              PropValidation.watch({ state, targets: def.prop_targets ?? undefined }),
-            ),
+    Match.tag("Some", ({ value: def }) => {
+      return Stream.fromEffect(validateValueType({ value: opts.value, def })).pipe(
+        Stream.flatMap((state) => {
+          return Match.value(def).pipe(
+            Match.when({ prop_type: "link" }, (def) => {
+              return PropValidation.watch({ state, targets: def.prop_targets ?? undefined });
+            }),
             Match.orElse(() => Stream.succeed(state)),
-          ),
-        ),
-      ),
-    ),
+          );
+        }),
+      );
+    }),
     Match.exhaustive,
   );
 }
@@ -229,9 +229,9 @@ const readEntry = Effect.fn("Attrs.readEntry")(function* <K extends AttrsSchema.
       return validateValueType({ value: selection.value, def: opts.def });
     }),
     Effect.map(Option.getOrElse(() => ValueState.Unset())),
-    Effect.catchTag("YSchemaError", () =>
-      Effect.succeed(ValueState.Invalid<never, AttrsSchema.PropVal>({})),
-    ),
+    Effect.catchTag("YSchemaError", () => {
+      return Effect.succeed(ValueState.Invalid<never, AttrsSchema.PropVal>({}));
+    }),
   );
 
   return { def: opts.def, value: state } satisfies Entry<K>;
@@ -281,9 +281,7 @@ const clearProp = Effect.fn("Attrs.clearProp")(function* (opts: {
   const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
   const props = yield* attrs.pipe(YSchema.findMap("props"));
 
-  if (Option.isSome(props)) {
-    yield* props.value.pipe(YSchema.clear({ id: opts.propId }));
-  }
+  if (Option.isSome(props)) yield* props.value.pipe(YSchema.clear({ id: opts.propId }));
 });
 
 const setGroupProp = Effect.fn("Attrs.setGroupProp")(function* (opts: {
@@ -293,8 +291,9 @@ const setGroupProp = Effect.fn("Attrs.setGroupProp")(function* (opts: {
   readonly propId: AttrsSchema.NoteId;
   readonly value: AttrsSchema.PropVal;
 }) {
-  if (opts.recordId === opts.propId)
+  if (opts.recordId === opts.propId) {
     return yield* Effect.fail(new SelfAssignmentError({ propId: opts.propId }));
+  }
 
   const { attrs } = NoteDoc.fromDoc({ doc: opts.doc });
   const props = yield* attrs.pipe(YSchema.upsertMap("props"));
@@ -390,9 +389,7 @@ const setPropTargets = Effect.fn("Attrs.setPropTargets")(function* (opts: {
     Effect.flatMap(YSchema.expect("link")),
   );
 
-  if (opts.targets === undefined) {
-    return yield* link.pipe(YSchema.clear("prop_targets"));
-  }
+  if (opts.targets === undefined) return yield* link.pipe(YSchema.clear("prop_targets"));
 
   yield* link.pipe(YSchema.set("prop_targets", opts.targets));
 });
@@ -454,9 +451,7 @@ const clearRuleExpectation = Effect.fn("Attrs.clearRuleExpectation")(function* (
   const rule = yield* editableRuleAttrs({ doc: opts.doc });
   const expects = yield* rule.pipe(YSchema.findMap("rule_expects"));
 
-  if (Option.isSome(expects)) {
-    yield* expects.value.pipe(YSchema.clear({ propId: opts.propId }));
-  }
+  if (Option.isSome(expects)) yield* expects.value.pipe(YSchema.clear({ propId: opts.propId }));
 });
 
 const editableRuleAttrs = Effect.fn("Attrs.editableRuleAttrs")(function* (opts: {

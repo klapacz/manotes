@@ -17,9 +17,7 @@ export function reduceExpects(
 
 // Optional is neutral; one required expectation wins regardless of rule order.
 const ExpectationReducer = Reducer.make<AttrsSchema.RuleExpectation>((left, right) => {
-  if (Predicate.isTagged(left, "required")) {
-    return left;
-  }
+  if (Predicate.isTagged(left, "required")) return left;
 
   return right;
 }, AttrsSchema.RuleExpectation.cases.optional.make({}));

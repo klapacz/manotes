@@ -47,16 +47,16 @@ function expectsForRule(opts: {
   const rows = Record.get(opts.byRule, opts.ruleId).pipe(Option.getOrElse(() => []));
 
   return RuleExpect.reduceExpects(
-    Array.filterMap(rows, (row) =>
-      Option.fromNullishOr(row.value).pipe(
+    Array.filterMap(rows, (row) => {
+      return Option.fromNullishOr(row.value).pipe(
         Option.map((expectation): RuleExpect.Expect => ({
           propId: row.propId,
           ruleId: row.ruleId,
           expectation,
         })),
         Result.fromOption(() => undefined),
-      ),
-    ),
+      );
+    }),
   );
 }
 

@@ -10,11 +10,12 @@ export const Defs = Struct.evolve(AttrsSchema.PropVal.cases, {
   number: (schema) => defSchema(schema),
   bool: (schema) => defSchema(schema),
   enum: (schema) => defSchema(schema),
-  link: (schema) =>
-    defSchema(schema).mapFields((fields) => ({
+  link: (schema) => {
+    return defSchema(schema).mapFields((fields) => ({
       ...fields,
       prop_targets: Schema.NullOr(Schema.fromJsonString(AttrsSchema.TargetFilter)),
-    })),
+    }));
+  },
 });
 
 function defSchema<const Tag extends AttrsSchema.PropValTag, const Value extends Schema.Constraint>(
@@ -45,8 +46,8 @@ export class Service extends Context.Service<Service>()("PropRecordRepo.Service"
     const db = yield* DB.Service;
 
     const reactiveDefs = Effect.fn("PropRecordRepo.reactiveDefs")(function* () {
-      const stream = yield* db.reactiveQuery((db) =>
-        db
+      const stream = yield* db.reactiveQuery((db) => {
+        return db
           .select({
             id: Tables.notes.id,
             title: Tables.notes.title,
@@ -56,8 +57,8 @@ export class Service extends Context.Service<Service>()("PropRecordRepo.Service"
           })
           .from(Tables.notes)
           .where(and(eq(Tables.notes._tag, "prop"), eq(Tables.notes.attrs_valid, 1)))
-          .orderBy(asc(Tables.notes.title), asc(Tables.notes.id)),
-      );
+          .orderBy(asc(Tables.notes.title), asc(Tables.notes.id));
+      });
 
       return stream.pipe(Stream.mapEffect((rows) => decodeDefs(rows)));
     });

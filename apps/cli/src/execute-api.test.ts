@@ -481,8 +481,9 @@ describe("ExecuteApi.createNote", () => {
 
           expect(Result.isFailure(result)).toBe(true);
 
-          if (Result.isFailure(result))
+          if (Result.isFailure(result)) {
             expect(String(result.failure)).toContain(`Note already exists: ${id}`);
+          }
         }
 
         expect(yield* noteRepo.getById(NOTE_ID)).toEqual(before);

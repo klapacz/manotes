@@ -82,13 +82,14 @@ export interface MatchAsyncResultProps<A, E> {
 
 export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.Element {
   const stateValue = createMemo(
-    () =>
-      AsyncResult.matchWithError(props.when, {
+    () => {
+      return AsyncResult.matchWithError(props.when, {
         onInitial: (result) => ({ _tag: "Initial" as const, result }),
         onSuccess: (result) => ({ _tag: "Success" as const, result }),
         onError: (error, result) => ({ _tag: "Error" as const, error, result }),
         onDefect: (defect, result) => ({ _tag: "Defect" as const, defect, result }),
-      }),
+      });
+    },
     undefined,
     { name: "async result value" },
   );
@@ -125,12 +126,12 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
           const onSuccess = props.onSuccess;
 
           return onSuccess
-            ? untrack(() =>
-                onSuccess(
+            ? untrack(() => {
+                return onSuccess(
                   () => expectState("Success").result.value,
                   () => expectState("Success").result,
-                ),
-              )
+                );
+              })
             : (props.fallback ?? null);
         }
 
@@ -139,12 +140,12 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
           const onFailure = props.onFailure;
 
           return onError
-            ? untrack(() =>
-                onError(
+            ? untrack(() => {
+                return onError(
                   () => expectState("Error").error,
                   () => expectState("Error").result,
-                ),
-              )
+                );
+              })
             : onFailure
               ? untrack(() => onFailure(() => expectState("Error").result))
               : (props.fallback ?? null);
@@ -155,12 +156,12 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
           const onFailure = props.onFailure;
 
           return onDefect
-            ? untrack(() =>
-                onDefect(
+            ? untrack(() => {
+                return onDefect(
                   () => expectState("Defect").defect,
                   () => expectState("Defect").result,
-                ),
-              )
+                );
+              })
             : onFailure
               ? untrack(() => onFailure(() => expectState("Defect").result))
               : (props.fallback ?? null);

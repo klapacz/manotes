@@ -22,12 +22,13 @@ const unusedSessionDependencies = Layer.mergeAll(
   }),
 );
 
-const initialStatus = () =>
-  new SyncStatusCloud({
+const initialStatus = () => {
+  return new SyncStatusCloud({
     mode: "cloud",
     syncState: "Disconnected",
     hasPending: false,
   });
+};
 
 describe("CliSync.run", () => {
   it("waits for Ready and stops the background session on completion", async () => {

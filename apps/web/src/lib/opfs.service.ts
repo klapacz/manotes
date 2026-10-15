@@ -6,17 +6,19 @@ export class NotFoundError extends Data.TaggedClass("NotFoundError")<{
   cause: DOMException;
 }> {}
 
-export const getFileHandleFromOpfsRoot = Effect.fn("OpfsService.getFileHandleFromOpfsRoot")(
-  (path: string, options: FileSystemGetFileOptions = {}) =>
-    Effect.tryPromise({
-      async try() {
-        const { directory, name } = await parentDirectory(path, options.create);
+export const getFileHandleFromOpfsRoot = Effect.fn("OpfsService.getFileHandleFromOpfsRoot")((
+  path: string,
+  options: FileSystemGetFileOptions = {},
+) => {
+  return Effect.tryPromise({
+    async try() {
+      const { directory, name } = await parentDirectory(path, options.create);
 
-        return directory.getFileHandle(name, options);
-      },
-      catch: fromError,
-    }),
-);
+      return directory.getFileHandle(name, options);
+    },
+    catch: fromError,
+  });
+});
 
 export const readFileFromOpfsRoot = Effect.fn("OpfsService.readFileFromOpfsRoot")(function* (
   path: string,
@@ -47,16 +49,18 @@ export const writeFileToOpfsRoot = Effect.fn("OpfsService.writeFileToOpfsRoot")(
   });
 });
 
-export const removeEntryFromOpfsRoot = Effect.fn("OpfsService.removeEntryFromOpfsRoot")(
-  (path: string, options: FileSystemRemoveOptions = {}) =>
-    Effect.tryPromise({
-      async try() {
-        const { directory, name } = await parentDirectory(path);
-        await directory.removeEntry(name, options);
-      },
-      catch: fromError,
-    }),
-);
+export const removeEntryFromOpfsRoot = Effect.fn("OpfsService.removeEntryFromOpfsRoot")((
+  path: string,
+  options: FileSystemRemoveOptions = {},
+) => {
+  return Effect.tryPromise({
+    async try() {
+      const { directory, name } = await parentDirectory(path);
+      await directory.removeEntry(name, options);
+    },
+    catch: fromError,
+  });
+});
 
 async function parentDirectory(path: string, create = false) {
   const separator = path.lastIndexOf("/");

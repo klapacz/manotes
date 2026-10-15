@@ -1,8 +1,8 @@
 import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
 import { Effect, Option, pipe, Queue, Stream } from "effect";
 
-export const watchTabs = Stream.callback<BrowserExtension.TabCandidate[]>((queue) =>
-  Effect.sync(() => {
+export const watchTabs = Stream.callback<BrowserExtension.TabCandidate[]>((queue) => {
+  return Effect.sync(() => {
     const onMessage = (event: MessageEvent) => {
       if (event.source !== window) return;
 
@@ -22,5 +22,5 @@ export const watchTabs = Stream.callback<BrowserExtension.TabCandidate[]>((queue
       Effect.sync(() => window.removeEventListener("message", onMessage)),
       Effect.andThen(Queue.end(queue)),
     );
-  }),
-);
+  });
+});

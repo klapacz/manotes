@@ -11,15 +11,13 @@ describe("menu search lifecycle", () => {
       Effect.gen(function* () {
         const calls: string[] = [];
 
-        const { registry, request, state } = yield* makeSearch(
-          (request) =>
-            Stream.sync(() => {
-              calls.push(request.text);
+        const { registry, request, state } = yield* makeSearch((request) => {
+          return Stream.sync(() => {
+            calls.push(request.text);
 
-              return [{ value: request.text, score: 1 }];
-            }),
-          "2026-10-09",
-        );
+            return [{ value: request.text, score: 1 }];
+          });
+        }, "2026-10-09");
 
         yield* TestClock.adjust(0);
         expect(calls).toEqual(["2026-10-09"]);
@@ -40,13 +38,13 @@ describe("menu search lifecycle", () => {
       Effect.gen(function* () {
         const calls: string[] = [];
 
-        const { registry, request, state } = yield* makeSearch((request) =>
-          Stream.sync(() => {
+        const { registry, request, state } = yield* makeSearch((request) => {
+          return Stream.sync(() => {
             calls.push(request.text);
 
             return [{ value: request.text, score: 1 }];
-          }),
-        );
+          });
+        });
 
         yield* TestClock.adjust(0);
         const previous = registry.get(state);
@@ -73,13 +71,13 @@ describe("menu search lifecycle", () => {
   it("replaces retained results after one second, then accepts the eventual result", async () => {
     await Effect.runPromise(
       Effect.gen(function* () {
-        const { registry, request, state } = yield* makeSearch((request) =>
-          Stream.fromEffect(
+        const { registry, request, state } = yield* makeSearch((request) => {
+          return Stream.fromEffect(
             Effect.succeed([{ value: request.text, score: 1 }]).pipe(
               Effect.delay(request.text ? "1500 millis" : 0),
             ),
-          ),
-        );
+          );
+        });
 
         yield* TestClock.adjust(0);
         const previous = registry.get(state);
@@ -106,14 +104,16 @@ describe("menu search lifecycle", () => {
         const values = yield* SubscriptionRef.make("Original");
         const updated = yield* Deferred.make<void>();
 
-        const { registry, state } = yield* makeSearch(() =>
-          SubscriptionRef.changes(values).pipe(
+        const { registry, state } = yield* makeSearch(() => {
+          return SubscriptionRef.changes(values).pipe(
             Stream.map((value) => [{ value, score: 1 }]),
-            Stream.tap((matches) =>
-              matches[0]?.value === "Updated" ? Deferred.succeed(updated, undefined) : Effect.void,
-            ),
-          ),
-        );
+            Stream.tap((matches) => {
+              return matches[0]?.value === "Updated"
+                ? Deferred.succeed(updated, undefined)
+                : Effect.void;
+            }),
+          );
+        });
 
         yield* TestClock.adjust(0);
         yield* TestClock.adjust("2 seconds");
@@ -136,19 +136,19 @@ describe("menu search lifecycle", () => {
       Effect.gen(function* () {
         const interrupted: string[] = [];
 
-        const { registry, request, state } = yield* makeSearch((request) =>
-          request.text
+        const { registry, request, state } = yield* makeSearch((request) => {
+          return request.text
             ? Stream.fromEffect(
                 Effect.never.pipe(
-                  Effect.onInterrupt(() =>
-                    Effect.sync(() => {
+                  Effect.onInterrupt(() => {
+                    return Effect.sync(() => {
                       interrupted.push(request.text);
-                    }),
-                  ),
+                    });
+                  }),
                 ),
               )
-            : Stream.succeed([]),
-        );
+            : Stream.succeed([]);
+        });
 
         yield* TestClock.adjust(0);
         registry.set(request, { text: "old" });
@@ -167,9 +167,9 @@ describe("menu search lifecycle", () => {
   it("preserves query failures instead of replacing them with a slow signal", async () => {
     await Effect.runPromise(
       Effect.gen(function* () {
-        const { registry, request, state } = yield* makeSearch((request) =>
-          request.text ? Stream.fail("unavailable") : Stream.succeed([]),
-        );
+        const { registry, request, state } = yield* makeSearch((request) => {
+          return request.text ? Stream.fail("unavailable") : Stream.succeed([]);
+        });
 
         yield* TestClock.adjust(0);
         registry.set(request, { text: "bad" });
@@ -187,11 +187,13 @@ function makeSearch<E>(query: QueryEngine.Query<string, E>, initialText?: string
     const clock = yield* Clock.clockWith(Effect.succeed);
     const request = Atom.make<QueryEngine.Request>({ text: initialText ?? "" });
 
-    const state = Atom.make((get) =>
-      MenuSearch.run({ request: get(request), query, debounce: Option.isSome(get.self()) }).pipe(
-        Stream.provideService(Clock.Clock, clock),
-      ),
-    );
+    const state = Atom.make((get) => {
+      return MenuSearch.run({
+        request: get(request),
+        query,
+        debounce: Option.isSome(get.self()),
+      }).pipe(Stream.provideService(Clock.Clock, clock));
+    });
 
     const registry = yield* Effect.acquireRelease(
       Effect.sync(() => {

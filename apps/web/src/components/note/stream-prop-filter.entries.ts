@@ -49,9 +49,7 @@ function appliedLabel(opts: {
   return opts.value.pipe(
     Option.map(PropQuery.valueLabel),
     Option.getOrElse(() => {
-      if (opts.modified) {
-        return "Any";
-      }
+      if (opts.modified) return "Any";
 
       return undefined;
     }),

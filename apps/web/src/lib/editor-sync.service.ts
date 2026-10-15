@@ -34,9 +34,7 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
       doc: Y.Doc,
       materializedYUpdate: typeof NoteSchema.MaterializedYUpdate.Type,
     ) {
-      if (materializedYUpdate === null) {
-        return;
-      }
+      if (materializedYUpdate === null) return;
 
       yield* Effect.sync(() => Y.applyUpdate(doc, materializedYUpdate, REMOTE_ORIGIN));
     });
@@ -69,9 +67,9 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
         const events = firstBatch.value;
         yield* Effect.logDebug("Received batch of events", events.length);
 
-        yield* Effect.forEach(events, (event) =>
-          Effect.sync(() => Y.applyUpdate(doc, event.payload, REMOTE_ORIGIN)),
-        );
+        yield* Effect.forEach(events, (event) => {
+          return Effect.sync(() => Y.applyUpdate(doc, event.payload, REMOTE_ORIGIN));
+        });
 
         lastKnownLocalSeq = Array.lastNonEmpty(events).localSeq;
       }
@@ -104,8 +102,8 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
       doc: Y.Doc,
       noteId: string,
     ) {
-      yield* Stream.callback<OutcomingUpdateCtx>((queue) =>
-        Effect.sync(() => {
+      yield* Stream.callback<OutcomingUpdateCtx>((queue) => {
+        return Effect.sync(() => {
           const listener: EditorUpdateListener = (update, origin) => {
             Queue.offerUnsafe(queue, new OutcomingUpdateCtx({ update, origin }));
           };
@@ -116,12 +114,12 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
             Effect.sync(() => doc.off("update", listener)),
             Effect.andThen(Queue.end(queue)),
           );
-        }),
-      ).pipe(
+        });
+      }).pipe(
         Stream.filter((updateCtx) => updateCtx.origin !== REMOTE_ORIGIN),
-        streamDebounceNoDrop("1 second", (remaining) =>
-          persistChunk(noteId, remaining).pipe(Effect.orDie),
-        ),
+        streamDebounceNoDrop("1 second", (remaining) => {
+          return persistChunk(noteId, remaining).pipe(Effect.orDie);
+        }),
         Stream.runForEach((chunk) => persistChunk(noteId, chunk)),
       );
     });

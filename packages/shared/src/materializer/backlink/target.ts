@@ -10,9 +10,7 @@ export function collectBacklinkTargetIds(node: UnknownNodeJSON): ReadonlyArray<s
 }
 
 function visit(node: UnknownNodeJSON, backlinks: Set<string>): void {
-  if (node.type === "backlink") {
-    backlinks.add(decodeBacklinkAttrs(node.attrs).id);
-  }
+  if (node.type === "backlink") backlinks.add(decodeBacklinkAttrs(node.attrs).id);
 
   for (const child of node.content ?? []) {
     visit(child, backlinks);

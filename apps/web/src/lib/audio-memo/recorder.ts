@@ -24,9 +24,9 @@ export async function start(
   onStopped: (blob: Blob, recording: RecordingMetadata) => void,
   onProgress: (durationMs: number) => void,
 ): Promise<Handle> {
-  const mimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((type) =>
-    MediaRecorder.isTypeSupported(type),
-  );
+  const mimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((type) => {
+    return MediaRecorder.isTypeSupported(type);
+  });
 
   if (!mimeType) throw new Error("Audio recording is not supported in this browser.");
 
@@ -58,13 +58,14 @@ export async function start(
     recorder.once("record-end", (blob) => {
       clearTimeout(timeout);
 
-      if (!cancelled)
+      if (!cancelled) {
         onStopped(blob, {
           path: AudioMemoFiles.newPath(blob.type),
           recordedAt,
           mimeType: blob.type,
           durationMs: Math.floor(recorder.getDuration()),
         });
+      }
     });
   });
 

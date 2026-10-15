@@ -37,8 +37,8 @@ export default class AccountsDurableObject extends Cloudflare.DurableObject<Acco
         ),
       );
 
-      yield* state.blockConcurrencyWhile(() =>
-        Effect.gen(function* () {
+      yield* state.blockConcurrencyWhile(() => {
+        return Effect.gen(function* () {
           yield* Repo.migrate;
 
           // One-way bootstrap: removing the setting does not deactivate an existing account.
@@ -46,8 +46,8 @@ export default class AccountsDurableObject extends Cloudflare.DurableObject<Acco
             const repo = yield* Repo.Service;
             yield* repo.activateByEmail({ email: bootstrapEmail.value });
           }
-        }).pipe(Effect.provide(layer), Effect.orDie),
-      );
+        }).pipe(Effect.provide(layer), Effect.orDie);
+      });
 
       return {
         ensureAccount: Effect.fn(function* (email: string) {
@@ -79,9 +79,7 @@ const ensureAccount = Effect.fn("AccountsDurableObject.ensureAccount")(function*
   const repo = yield* Repo.Service;
   const account = yield* repo.findOrCreate({ email, status: "ACTIVE" });
 
-  if (account.status !== "ACTIVE") {
-    return yield* Effect.fail(new AccountNotActiveError({ email }));
-  }
+  if (account.status !== "ACTIVE") return yield* Effect.fail(new AccountNotActiveError({ email }));
 
   return account;
 });

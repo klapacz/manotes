@@ -88,12 +88,15 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
                       when={error()}
                       fallback="Failed to upload graph."
                       cases={{
-                        "GraphAccess.LocalGraphNotFoundError": () =>
-                          "That graph is no longer available on this device.",
-                        "GraphAccess.LocalGraphAlreadySyncedError": () =>
-                          "That graph is already synced.",
-                        "GraphRegistry.DisplayNameTakenError": () =>
-                          "A synced graph with that name already exists.",
+                        "GraphAccess.LocalGraphNotFoundError": () => {
+                          return "That graph is no longer available on this device.";
+                        },
+                        "GraphAccess.LocalGraphAlreadySyncedError": () => {
+                          return "That graph is already synced.";
+                        },
+                        "GraphRegistry.DisplayNameTakenError": () => {
+                          return "A synced graph with that name already exists.";
+                        },
                       }}
                     />
                   </AlertDescription>

@@ -70,8 +70,9 @@ export function DeleteGraphDialog<T extends ValidComponent = typeof Button>(prop
                     when={error()}
                     fallback="Failed to delete graph."
                     cases={{
-                      "GraphAccessCommandsDelete.LockTimeout": () =>
-                        "Timed out waiting for another tab to close this graph.",
+                      "GraphAccessCommandsDelete.LockTimeout": () => {
+                        return "Timed out waiting for another tab to close this graph.";
+                      },
                     }}
                   />
                 </AlertDescription>

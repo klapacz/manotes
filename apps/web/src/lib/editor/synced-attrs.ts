@@ -15,9 +15,9 @@ export function watch(opts: { readonly id: NoteSchema.Id }) {
 
       const ready = yield* Deferred.make<void>();
 
-      const sync = yield* EditorSyncService.Service.use((service) =>
-        service.setupDoc(doc, { noteId: opts.id }, ready),
-      ).pipe(Effect.forkScoped);
+      const sync = yield* EditorSyncService.Service.use((service) => {
+        return service.setupDoc(doc, { noteId: opts.id }, ready);
+      }).pipe(Effect.forkScoped);
 
       // Surface a boot failure instead of waiting forever for the ready signal.
       yield* Deferred.await(ready).pipe(Effect.raceFirst(Fiber.join(sync)));

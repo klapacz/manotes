@@ -100,8 +100,8 @@ export default function Editor(props: Props): JSX.Element {
 
   const ready = Deferred.makeUnsafe<void>();
 
-  const editorBootStateAtom = bindRt((rt) =>
-    rt.subscriptionRef(
+  const editorBootStateAtom = bindRt((rt) => {
+    return rt.subscriptionRef(
       Effect.fn("Editor.bootState")(function* (get: Atom.AtomContext) {
         const { doc, noteId } = get(editorStateAtom);
         yield* Effect.addFinalizer(() => Effect.sync(() => doc.destroy()));
@@ -138,8 +138,8 @@ export default function Editor(props: Props): JSX.Element {
 
         return bootStateRef;
       }),
-    ),
-  );
+    );
+  });
 
   const bootStateResult = useAtomValue(editorBootStateAtom);
 
@@ -166,9 +166,7 @@ export default function Editor(props: Props): JSX.Element {
     doc: () => {
       const current = bootState();
 
-      if (!BootState.$is("Ready")(current)) {
-        return undefined;
-      }
+      if (!BootState.$is("Ready")(current)) return undefined;
 
       return current.doc;
     },

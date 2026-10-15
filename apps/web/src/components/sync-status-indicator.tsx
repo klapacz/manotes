@@ -8,14 +8,14 @@ import { cx } from "../lib/cva";
 
 const initialStatus = new SyncStatusLocal({ mode: "local" });
 
-const SyncStatus = bindRt((rt) =>
-  rt.atom(
+const SyncStatus = bindRt((rt) => {
+  return rt.atom(
     GraphWorkerClient.Service.useSync((svc) => svc.client.syncStatusStream({})).pipe(
       Stream.unwrap,
       sampleLatest("1 second"),
     ),
-  ),
-);
+  );
+});
 
 export function SyncStatusIndicator() {
   const status = createAtomStore(SyncStatus, initialStatus);

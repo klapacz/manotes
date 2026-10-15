@@ -5,9 +5,9 @@ import { QueryEngine } from "./query-engine";
 export type Action = Picker.Choice & { run: (childText?: string) => void };
 
 export function choices<T extends Picker.Choice>(values: () => readonly T[]): QueryEngine.Query<T> {
-  return (request) =>
-    Stream.sync(() =>
-      values().flatMap((value) => {
+  return (request) => {
+    return Stream.sync(() => {
+      return values().flatMap((value) => {
         const score = QueryEngine.score({
           text: request.text,
           label: value.label,
@@ -15,14 +15,15 @@ export function choices<T extends Picker.Choice>(values: () => readonly T[]): Qu
         });
 
         return score > 0 ? [{ value, score }] : [];
-      }),
-    );
+      });
+    });
+  };
 }
 
 export function actions(values: () => readonly Action[]): QueryEngine.Query<Action> {
-  return (request) =>
-    Stream.sync(() =>
-      values().flatMap((action) => {
+  return (request) => {
+    return Stream.sync(() => {
+      return values().flatMap((action) => {
         const childText = [action.label, ...(action.keywords ?? [])]
           .map((label) => prefixText({ label, text: request.text }))
           .find((text) => text !== undefined);
@@ -45,8 +46,9 @@ export function actions(values: () => readonly Action[]): QueryEngine.Query<Acti
             score,
           },
         ];
-      }),
-    );
+      });
+    });
+  };
 }
 
 export function nested<T extends Picker.Choice, E, R>(opts: {

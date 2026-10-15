@@ -15,14 +15,16 @@ export type Cursor = {
 
 export type Transform = (cursor: Cursor) => InputStack;
 
-export const pane = (cursor: Cursor): PaneSchema.Pane =>
-  cursor.stack[cursor.index] ?? cursor.stack[0];
+export const pane = (cursor: Cursor): PaneSchema.Pane => {
+  return cursor.stack[cursor.index] ?? cursor.stack[0];
+};
 
 /** Opens `next` after the current pane, closing panes to the right. */
-export const openNext =
-  (next: PaneSchema.PaneInput): Transform =>
-  (cursor) =>
-    Arr.append(throughCurrent(cursor), next);
+export const openNext = (next: PaneSchema.PaneInput): Transform => {
+  return (cursor) => {
+    return Arr.append(throughCurrent(cursor), next);
+  };
+};
 
 export const close: Transform = (cursor) => {
   if (cursor.index === 0) return [PaneMake.notes()];
@@ -36,31 +38,36 @@ export const focus: Transform = (cursor) => {
   return Arr.prepend(Arr.drop(cursor.stack, cursor.index + 1), current);
 };
 
-export const updateCurrent =
-  (update: (pane: PaneSchema.Pane) => PaneSchema.PaneInput): Transform =>
-  (cursor) =>
-    Option.getOrElse(
+export const updateCurrent = (
+  update: (pane: PaneSchema.Pane) => PaneSchema.PaneInput,
+): Transform => {
+  return (cursor) => {
+    return Option.getOrElse(
       Arr.replace(cursor.stack, cursor.index, update(pane(cursor))),
       () => cursor.stack,
     );
+  };
+};
 
-export const replaceCurrentAndCloseRest =
-  (next: PaneSchema.PaneInput): Transform =>
-  (cursor) =>
-    pipe(
+export const replaceCurrentAndCloseRest = (next: PaneSchema.PaneInput): Transform => {
+  return (cursor) => {
+    return pipe(
       Arr.modify(cursor.stack, cursor.index, () => next),
       Option.getOrElse(() => cursor.stack),
       Arr.splitAtNonEmpty(cursor.index + 1),
     )[0];
+  };
+};
 
-export const replaceAll =
-  (next: PaneSchema.PaneInput): Transform =>
-  () => [next];
+export const replaceAll = (next: PaneSchema.PaneInput): Transform => {
+  return () => [next];
+};
 
-export const inputMatches =
-  (input: PaneSchema.PaneInput) =>
-  (pane: PaneSchema.Pane): boolean =>
-    Equal.equals(normalizeToInput(input), normalizeToInput(pane));
+export const inputMatches = (input: PaneSchema.PaneInput) => {
+  return (pane: PaneSchema.Pane): boolean => {
+    return Equal.equals(normalizeToInput(input), normalizeToInput(pane));
+  };
+};
 
 type ComparablePane =
   | readonly [variant: "recordings"]
@@ -93,13 +100,14 @@ function normalizeToInput(value: PaneSchema.PaneInput | PaneSchema.Pane): Compar
     value.filter.date ?? null,
     value.filter.search?.trim() || null,
     value.sort ?? "date",
-    Record.toEntries(value.filter.props ?? StreamSettings.propFilters({})).toSorted(([a], [b]) =>
-      a.localeCompare(b),
-    ),
+    Record.toEntries(value.filter.props ?? StreamSettings.propFilters({})).toSorted(([a], [b]) => {
+      return a.localeCompare(b);
+    }),
   ];
 }
 
-const throughCurrent = (cursor: Cursor): InputStack =>
-  Arr.splitAtNonEmpty(cursor.stack, cursor.index + 1)[0];
+const throughCurrent = (cursor: Cursor): InputStack => {
+  return Arr.splitAtNonEmpty(cursor.stack, cursor.index + 1)[0];
+};
 
 export * as PaneCursor from "./pane.cursor";

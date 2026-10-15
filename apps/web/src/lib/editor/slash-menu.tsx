@@ -26,10 +26,9 @@ export function SlashMenu(): JSX.Element {
   const [isOpen, setOpen] = createSignal(false);
   useArrowKeyAliases(editor, isOpen);
 
-  const canInsert = useEditorDerivedValue<AppExtension, boolean>(
-    ({ state, commands }) =>
-      !findTable(state.selection.$from) && commands.insertTable.canExec({ row: 3, col: 3 }),
-  );
+  const canInsert = useEditorDerivedValue<AppExtension, boolean>(({ state, commands }) => {
+    return !findTable(state.selection.$from) && commands.insertTable.canExec({ row: 3, col: 3 });
+  });
 
   const insert = () => {
     // Autocomplete deletes its match after selection, before inserting the table.

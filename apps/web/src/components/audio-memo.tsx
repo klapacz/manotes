@@ -27,56 +27,56 @@ export type Draft = AudioMemoSession.Draft;
 const route = getRouteApi("/$graph/");
 
 // Navbar and pane share one subscription for the current graph.
-const recordingsAtom = bindRt((rt) =>
-  rt.atom(AudioMemoRepo.listReactive({ state: ["pending", "error"] }, "desc")),
-);
+const recordingsAtom = bindRt((rt) => {
+  return rt.atom(AudioMemoRepo.listReactive({ state: ["pending", "error"] }, "desc"));
+});
 
 const completionAtom = bindRt((rt) => {
   const recordings = recordingsAtom();
 
   return rt
-    .atom((get) =>
-      get.streamResult(recordings).pipe(
+    .atom((get) => {
+      return get.streamResult(recordings).pipe(
         Stream.zipWithPrevious,
         // The initial snapshot is only a baseline. Watch rows leaving the list,
         // outside their component scopes so unmounting can't cancel completion.
-        Stream.flatMap(([previous, current]) =>
-          Stream.fromIterable(
+        Stream.flatMap(([previous, current]) => {
+          return Stream.fromIterable(
             Array.differenceWith<AudioMemoRepo.Record>((a, b) => a.path === b.path)(
               Option.getOrElse(previous, () => []),
               current,
             ),
-          ),
-        ),
-        Stream.flatMap((recording) =>
-          Stream.fromEffect(AudioMemoRepo.get(recording.path)).pipe(
+          );
+        }),
+        Stream.flatMap((recording) => {
+          return Stream.fromEffect(AudioMemoRepo.get(recording.path)).pipe(
             Stream.filter((row) => row.state === "completed"),
             // Completion is committed before materialization. Wait until the
             // transcript exists so the notification's Open action can use it.
-            Stream.flatMap((row) =>
-              NoteCache.Service.use((cache) => cache.changes(row.noteId)).pipe(
+            Stream.flatMap((row) => {
+              return NoteCache.Service.use((cache) => cache.changes(row.noteId)).pipe(
                 Stream.unwrap,
                 Stream.filter(Option.isSome),
                 Stream.take(1),
                 Stream.map(() => NoteSchema.Id.make(row.noteId)),
-              ),
-            ),
+              );
+            }),
             // A manually removed recording has no row and no transcript to open.
             Stream.catchTag("DB.NotFoundError", () => Stream.empty),
-          ),
-        ),
-      ),
-    )
+          );
+        }),
+      );
+    })
     .pipe(Atom.setIdleTTL(0));
 });
 
-const activePathAtom = bindRt((rt) =>
-  rt.atom(
+const activePathAtom = bindRt((rt) => {
+  return rt.atom(
     GraphWorkerClient.Service.useSync(({ client }) => client.audioMemoStatusStream({})).pipe(
       Stream.unwrap,
     ),
-  ),
-);
+  );
+});
 
 export function RecordingsLink() {
   const recordings = useAtomValue(recordingsAtom);
@@ -169,14 +169,14 @@ export function useNotifyReady(): (noteId: NoteSchema.Id) => void {
 export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
   const atoms = bindRt((rt) => {
     const recording = rt
-      .fn((element: HTMLDivElement) =>
-        AudioMemoSession.make(element, props.draft).pipe(
-          Effect.map((session) =>
-            session.changes.pipe(Stream.map((state) => ({ session, state }))),
-          ),
+      .fn((element: HTMLDivElement) => {
+        return AudioMemoSession.make(element, props.draft).pipe(
+          Effect.map((session) => {
+            return session.changes.pipe(Stream.map((state) => ({ session, state })));
+          }),
           Stream.unwrap,
-        ),
-      )
+        );
+      })
       .pipe(Atom.setIdleTTL(0));
 
     const command = rt
@@ -208,8 +208,8 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
     return State.Starting();
   });
 
-  const failure = createMemo(() =>
-    EffectMatch.value(state()).pipe(
+  const failure = createMemo(() => {
+    return EffectMatch.value(state()).pipe(
       EffectMatch.tag("StartFailed", () => "Could not start recording. Check microphone access."),
       EffectMatch.tag("SaveFailed", () => "Could not save recording."),
       EffectMatch.tag(
@@ -218,11 +218,11 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
       ),
       EffectMatch.tag("RemoveFailed", () => "Could not remove recording."),
       EffectMatch.orElse(() => undefined),
-    ),
-  );
+    );
+  });
 
-  const discard = createMemo(() =>
-    EffectMatch.value(state()).pipe(
+  const discard = createMemo(() => {
+    return EffectMatch.value(state()).pipe(
       EffectMatch.tag(
         "Starting",
         "StartFailed",
@@ -232,18 +232,18 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
       ),
       EffectMatch.tag("TranscriptionFailed", "RemoveFailed", () => "remove" as const),
       EffectMatch.orElse(() => undefined),
-    ),
-  );
+    );
+  });
 
   const elapsed = createMemo(() => elapsedSeconds(state()));
 
-  const action = createMemo(() =>
-    EffectMatch.value(state()).pipe(
+  const action = createMemo(() => {
+    return EffectMatch.value(state()).pipe(
       EffectMatch.tag("Recording", () => "stop" as const),
       EffectMatch.tag("TranscriptionFailed", "RemoveFailed", () => "retry" as const),
       EffectMatch.orElse(() => undefined),
-    ),
-  );
+    );
+  });
 
   useAtomSubscribe(
     () => atoms.recording,
@@ -336,9 +336,9 @@ export function SavedRow(props: { recording: AudioMemoRepo.Record }) {
     const actions = rt
       .atom(
         AudioMemoSavedSession.make(props.recording.path).pipe(
-          Effect.map((session) =>
-            session.changes.pipe(Stream.map((action) => ({ session, action }))),
-          ),
+          Effect.map((session) => {
+            return session.changes.pipe(Stream.map((action) => ({ session, action })));
+          }),
           Stream.unwrap,
         ),
       )
@@ -358,11 +358,11 @@ export function SavedRow(props: { recording: AudioMemoRepo.Record }) {
           const current = yield* get.result(player);
 
           return yield* current.playPause.pipe(
-            Effect.catch(() =>
-              Effect.sync(() => {
+            Effect.catch(() => {
+              return Effect.sync(() => {
                 toast.error("Could not play the recording.");
-              }),
-            ),
+              });
+            }),
           );
         }),
       )
@@ -424,8 +424,9 @@ export function SavedRow(props: { recording: AudioMemoRepo.Record }) {
 
     if (AsyncResult.isFailure(player())) return "Could not load the recording audio.";
 
-    if (props.recording.state === "error")
+    if (props.recording.state === "error") {
       return "Transcription failed. Check the OpenAI key and retry.";
+    }
   });
 
   function mountPlayer(element: HTMLDivElement) {
@@ -531,9 +532,9 @@ function Failure(props: { message?: string }) {
 function elapsedSeconds(state: AudioMemoSession.State) {
   return EffectMatch.value(state).pipe(
     EffectMatch.tag("Recording", (state) => state.elapsedSeconds),
-    EffectMatch.tag("Saving", "SaveFailed", (state) =>
-      Math.floor(state.capture.recording.durationMs / 1000),
-    ),
+    EffectMatch.tag("Saving", "SaveFailed", (state) => {
+      return Math.floor(state.capture.recording.durationMs / 1000);
+    }),
     EffectMatch.tag(
       "Pending",
       "Retrying",

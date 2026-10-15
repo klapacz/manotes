@@ -142,11 +142,12 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
         Effect.gen(function* () {
           yield* Effect.forEach(
             targets,
-            (target) =>
-              materializeNoteUpTo({
+            (target) => {
+              return materializeNoteUpTo({
                 noteId: target.noteId,
                 upToLocalSeq: target.upToLocalSeq,
-              }),
+              });
+            },
             {
               concurrency: 1,
               discard: true,
@@ -211,9 +212,7 @@ const applyMaterializationUpdates = Effect.fn("MaterializerService.applyMaterial
   ) {
     const { doc: yDoc } = NoteDoc.make();
 
-    if (baseSnapshot !== null) {
-      yield* Effect.sync(() => Y.applyUpdate(yDoc, baseSnapshot));
-    }
+    if (baseSnapshot !== null) yield* Effect.sync(() => Y.applyUpdate(yDoc, baseSnapshot));
 
     yield* Effect.forEach(events, (event) => Effect.sync(() => Y.applyUpdate(yDoc, event.payload)));
 
@@ -279,15 +278,15 @@ function buildMaterializationTargets(
     Arr.groupBy((event) => event.noteId),
     // 2) For each note, keep only the event with the highest localSeq.
     //    Materializing up to that localSeq implicitly covers earlier events.
-    Record.map((noteEvents) =>
-      Arr.max(
+    Record.map((noteEvents) => {
+      return Arr.max(
         noteEvents,
         pipe(
           Order.Number,
           Order.mapInput((event: { noteId: string; localSeq: number }) => event.localSeq),
         ),
-      ),
-    ),
+      );
+    }),
     // 3) Convert the record back into explicit targets.
     Record.toEntries,
     Arr.map(([noteId, event]) => ({

@@ -12,13 +12,11 @@ export function zipLatestRecord<
   // Keep empty and populated records behind the same lazy adapter and type boundary.
   // SAFETY: Each output key carries only its input stream's values; errors and services pass through unchanged.
   return Stream.suspend(() => {
-    const entries = Record.collect(streams, (key, stream) =>
-      stream.pipe(Stream.map((value) => [key, value] as const)),
-    );
+    const entries = Record.collect(streams, (key, stream) => {
+      return stream.pipe(Stream.map((value) => [key, value] as const));
+    });
 
-    if (entries.length === 0) {
-      return Stream.succeed({});
-    }
+    if (entries.length === 0) return Stream.succeed({});
 
     return Stream.zipLatestAll(...entries).pipe(Stream.map(Record.fromEntries));
   }) as Stream.Stream<

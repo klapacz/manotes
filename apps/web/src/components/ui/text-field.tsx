@@ -103,9 +103,9 @@ export const TextFieldErrorMessage = <T extends ValidComponent = "div">(
   // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
   const [, rest] = splitProps(props as TextFieldErrorMessageProps, ["class", "errors", "children"]);
 
-  const uniqueErrors = () => [
-    ...new Map(props.errors?.map((error) => [error?.message, error])).values(),
-  ];
+  const uniqueErrors = () => {
+    return [...new Map(props.errors?.map((error) => [error?.message, error])).values()];
+  };
 
   return (
     <TextFieldPrimitive.ErrorMessage

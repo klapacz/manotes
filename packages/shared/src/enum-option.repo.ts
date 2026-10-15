@@ -22,8 +22,8 @@ export class Service extends Context.Service<Service>()("EnumOptionRepo.Service"
     const reactiveOptions = Effect.fn("EnumOptionRepo.reactiveOptions")(function* (opts: {
       readonly enum_parent: NoteSchema.Id;
     }) {
-      const stream = yield* db.reactiveQuery((db) =>
-        db
+      const stream = yield* db.reactiveQuery((db) => {
+        return db
           .select({ id: Tables.notes.id, title: Tables.notes.title, text: Tables.notes.text })
           .from(Tables.notes)
           .leftJoin(
@@ -47,8 +47,8 @@ export class Service extends Context.Service<Service>()("EnumOptionRepo.Service"
               END = 0`,
             ),
           )
-          .orderBy(asc(Tables.notes.title), asc(Tables.notes.id)),
-      );
+          .orderBy(asc(Tables.notes.title), asc(Tables.notes.id));
+      });
 
       return stream.pipe(Stream.mapEffect((rows) => decodeItems(rows)));
     });

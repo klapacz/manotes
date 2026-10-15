@@ -22,9 +22,9 @@ export class Service extends Context.Service<Service>()("PropRepo.Service", {
     const deleteForRecord = Effect.fn("PropRepo.deleteForRecord")(function* (opts: {
       readonly recordId: NoteSchema.Id;
     }) {
-      yield* db.execute((db) =>
-        db.delete(Tables.props).where(eq(Tables.props.recordId, opts.recordId)),
-      );
+      yield* db.execute((db) => {
+        return db.delete(Tables.props).where(eq(Tables.props.recordId, opts.recordId));
+      });
     });
 
     const insert = Effect.fn("PropRepo.insert")(function* (opts: {

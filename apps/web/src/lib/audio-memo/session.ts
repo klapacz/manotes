@@ -100,8 +100,8 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
 
       return AudioMemoRepo.listReactive({ path: recording.path }, "asc").pipe(
         Stream.mapEffect((rows) => update(rows[0])),
-        Stream.catch(() =>
-          Stream.fromEffect(
+        Stream.catch(() => {
+          return Stream.fromEffect(
             SubscriptionRef.update(
               ref,
               Match.type<State>().pipe(
@@ -109,8 +109,8 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
                 Match.orElse((state) => state),
               ),
             ),
-          ),
-        ),
+          );
+        }),
       );
     }),
     Stream.runDrain,
@@ -124,20 +124,21 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
       // Native callbacks enqueue events; this job consumes them in order without
       // spawning a fiber for every progress update or the final captured blob.
       const recorder = yield* Effect.acquireRelease(
-        Effect.tryPromise(() =>
-          AudioMemoRecorder.start(
+        Effect.tryPromise(() => {
+          return AudioMemoRecorder.start(
             element,
             (blob, recording) => {
               Queue.offerUnsafe(events, RecorderEvent.Stopped({ capture: { blob, recording } }));
               Queue.endUnsafe(events);
             },
-            (ms) =>
-              Queue.offerUnsafe(
+            (ms) => {
+              return Queue.offerUnsafe(
                 events,
                 RecorderEvent.Progress({ elapsedSeconds: Math.floor(ms / 1000) }),
-              ),
-          ),
-        ),
+              );
+            },
+          );
+        }),
         (recorder) => Effect.sync(() => recorder.cancel()),
       ).pipe(Scope.provide(recorderScope));
 
@@ -155,16 +156,17 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
         Stream.filterMapEffect(
           Match.type<RecorderEvent>().pipe(
             Match.tagsExhaustive({
-              Progress: ({ elapsedSeconds }) =>
-                SubscriptionRef.update(
+              Progress: ({ elapsedSeconds }) => {
+                return SubscriptionRef.update(
                   ref,
                   Match.type<State>().pipe(
-                    Match.tag("Recording", ({ recorder }) =>
-                      State.Recording({ recorder, elapsedSeconds }),
-                    ),
+                    Match.tag("Recording", ({ recorder }) => {
+                      return State.Recording({ recorder, elapsedSeconds });
+                    }),
                     Match.orElse((state) => state),
                   ),
-                ).pipe(Effect.as(Result.failVoid)),
+                ).pipe(Effect.as(Result.failVoid));
+              },
               Stopped: ({ capture }) => Effect.succeed(Result.succeed(capture)),
             }),
           ),
@@ -201,18 +203,19 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
         Effect.uninterruptible,
       );
     },
-    (effect) =>
-      effect.pipe(
-        Effect.catch(() =>
-          SubscriptionRef.update(
+    (effect) => {
+      return effect.pipe(
+        Effect.catch(() => {
+          return SubscriptionRef.update(
             ref,
             Match.type<State>().pipe(
               Match.tag("Starting", () => State.StartFailed()),
               Match.orElse((state) => state),
             ),
-          ),
-        ),
-      ),
+          );
+        }),
+      );
+    },
   );
 
   const stop = Effect.fn("AudioMemoSession.stop")(function* () {
@@ -229,9 +232,9 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
     const closed = yield* SubscriptionRef.modify(
       ref,
       Match.type<State>().pipe(
-        Match.tag("Starting", "StartFailed", "Recording", "SaveFailed", () =>
-          Step.go(State.Closed()),
-        ),
+        Match.tag("Starting", "StartFailed", "Recording", "SaveFailed", () => {
+          return Step.go(State.Closed());
+        }),
         Match.orElse(Step.stay),
       ),
     );
@@ -265,15 +268,15 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
 
     return yield* Match.value(state).pipe(
       Match.tag("RemoveFailed", () => remove()),
-      Match.tag("TranscriptionFailed", ({ recording }) =>
-        Effect.gen(function* () {
+      Match.tag("TranscriptionFailed", ({ recording }) => {
+        return Effect.gen(function* () {
           yield* SubscriptionRef.set(ref, State.Retrying({ recording }));
           yield* AudioMemoService.retry(recording.path);
           yield* SubscriptionRef.set(ref, State.Pending({ recording }));
         }).pipe(
           Effect.catch(() => SubscriptionRef.set(ref, State.TranscriptionFailed({ recording }))),
-        ),
-      ),
+        );
+      }),
       Match.orElse(() => Effect.void),
     );
   });
@@ -287,19 +290,21 @@ export const make = Effect.fn("AudioMemoSession.make")(function* (
 
   yield* run(record());
 
-  yield* Effect.addFinalizer(() =>
-    Effect.gen(function* () {
+  yield* Effect.addFinalizer(() => {
+    return Effect.gen(function* () {
       const state = yield* SubscriptionRef.get(ref);
 
       return yield* Match.value(state).pipe(
-        Match.tag("Recording", ({ recorder }) =>
-          Effect.sync(() => recorder.stop()).pipe(Effect.andThen(FiberHandle.awaitEmpty(handle))),
-        ),
+        Match.tag("Recording", ({ recorder }) => {
+          return Effect.sync(() => recorder.stop()).pipe(
+            Effect.andThen(FiberHandle.awaitEmpty(handle)),
+          );
+        }),
         Match.tag("Saving", () => FiberHandle.awaitEmpty(handle)),
         Match.orElse(() => Effect.void),
       );
-    }),
-  );
+    });
+  });
 
   return {
     changes: SubscriptionRef.changes(ref),

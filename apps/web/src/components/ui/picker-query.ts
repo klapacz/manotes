@@ -42,18 +42,18 @@ export function use<T extends { value: string }>(opts: Options<T>) {
 
   onMount(() => command?.querySelector("input")?.focus());
 
-  onCleanup(() =>
-    positions?.set(positionKey, {
+  onCleanup(() => {
+    return positions?.set(positionKey, {
       search: search(),
       highlighted: highlighted(),
       scrollTop: list()?.scrollTop ?? 0,
-    }),
-  );
+    });
+  });
 
   const requestAtom = createSyncedAtom(() => ({ text: search(), query: opts.query }));
 
-  const queryAtom = bindRt((rt) =>
-    rt.atom((get) => {
+  const queryAtom = bindRt((rt) => {
+    return rt.atom((get) => {
       const request = get(requestAtom);
 
       return MenuSearch.run({
@@ -61,19 +61,19 @@ export function use<T extends { value: string }>(opts: Options<T>) {
         query: request.query,
         debounce: Option.isSome(get.self()),
       });
-    }),
-  );
+    });
+  });
 
   const state = useAtomValue(queryAtom);
 
   // Keep the loaded result stable so typing never re-suspends the command.
   const loaded = AsyncResult.success(true);
 
-  const readinessAtom = createMemo(() =>
-    Atom.map(queryAtom(), (result) =>
-      AsyncResult.isInitial(result) ? AsyncResult.initial<boolean>() : loaded,
-    ),
-  );
+  const readinessAtom = createMemo(() => {
+    return Atom.map(queryAtom(), (result) => {
+      return AsyncResult.isInitial(result) ? AsyncResult.initial<boolean>() : loaded;
+    });
+  });
 
   const [ready] = useAtomResource(readinessAtom);
 
@@ -129,15 +129,15 @@ export function use<T extends { value: string }>(opts: Options<T>) {
   // Limit mounted command items: rendering every note stalls large graphs.
   const visible = createMemo(() => matches().slice(0, 50));
 
-  const status = createMemo(() =>
-    AsyncResult.isInitial(state())
+  const status = createMemo(() => {
+    return AsyncResult.isInitial(state())
       ? undefined
       : AsyncResult.isFailure(state())
         ? "Search unavailable"
         : snapshot()?._tag === "Slow"
           ? "Searching…"
-          : "No results",
-  );
+          : "No results";
+  });
 
   return {
     ready,

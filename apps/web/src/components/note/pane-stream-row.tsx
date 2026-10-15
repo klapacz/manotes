@@ -44,14 +44,14 @@ export function Root(props: { row: Row; onClearDraft: (id: NoteSchema.Id) => voi
           const noteIdAtom = createSyncedAtom(() => row().note.id);
 
           const live = createAtomStore(
-            bindRt((rt) =>
-              rt.atom((get) =>
-                NoteCache.Service.use((cache) => cache.changes(get(noteIdAtom))).pipe(
+            bindRt((rt) => {
+              return rt.atom((get) => {
+                return NoteCache.Service.use((cache) => cache.changes(get(noteIdAtom))).pipe(
                   Stream.unwrap,
                   Stream.map(Option.getOrNull),
-                ),
-              ),
-            ),
+                );
+              });
+            }),
             null,
           );
 
@@ -83,8 +83,9 @@ function RecordingContent(props: {
     focus: (element, options) => {
       Focus.focusBrowseTarget(element);
 
-      if (options?.reveal === "always" || (options?.reveal === "if-hidden" && !listRow.visible()))
+      if (options?.reveal === "always" || (options?.reveal === "if-hidden" && !listRow.visible())) {
         listRow.reveal();
+      }
     },
   }));
 
@@ -158,10 +159,13 @@ function NoteContent(props: { note: NoteSchema.Meta; groupKey: string; firstInGr
 
   // Snippets expand while editing: the (sticky) highlight sits on the editor
   // inside the note, or a request is about to enter it.
-  const clamped = () =>
-    pane().view === "snippets" &&
-    !(fnode.highlightWithin() && !fnode.highlighted()) &&
-    !Equal.equals(focus.pendingId(), fid.editor(props.note.id));
+  const clamped = () => {
+    return (
+      pane().view === "snippets" &&
+      !(fnode.highlightWithin() && !fnode.highlighted()) &&
+      !Equal.equals(focus.pendingId(), fid.editor(props.note.id))
+    );
+  };
 
   return (
     <Focus.NodeProvider node={fnode}>
@@ -199,9 +203,9 @@ function NoteClip(props: { clamped: boolean; content: HTMLElement }) {
 
     if (!element) return;
 
-    const observer = new ResizeObserver(() =>
-      setOverflowing(element.scrollHeight > element.clientHeight),
-    );
+    const observer = new ResizeObserver(() => {
+      return setOverflowing(element.scrollHeight > element.clientHeight);
+    });
 
     observer.observe(element);
     observer.observe(props.content);

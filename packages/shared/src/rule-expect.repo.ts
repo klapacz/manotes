@@ -24,9 +24,9 @@ export class Service extends Context.Service<Service>()("RuleExpectRepo.Service"
     const deleteForRule = Effect.fn("RuleExpectRepo.deleteForRule")(function* (opts: {
       readonly ruleId: NoteSchema.Id;
     }) {
-      yield* db.execute((db) =>
-        db.delete(Tables.ruleExpects).where(eq(Tables.ruleExpects.ruleId, opts.ruleId)),
-      );
+      yield* db.execute((db) => {
+        return db.delete(Tables.ruleExpects).where(eq(Tables.ruleExpects.ruleId, opts.ruleId));
+      });
     });
 
     const insert = Effect.fn("RuleExpectRepo.insert")(function* (opts: {
@@ -37,12 +37,12 @@ export class Service extends Context.Service<Service>()("RuleExpectRepo.Service"
     });
 
     const reactiveAll = Effect.fn("RuleExpectRepo.reactiveAll")(function* () {
-      const rows = yield* db.reactiveQuery((db) =>
-        db
+      const rows = yield* db.reactiveQuery((db) => {
+        return db
           .select()
           .from(Tables.ruleExpects)
-          .orderBy(asc(Tables.ruleExpects.ruleId), asc(Tables.ruleExpects.propId)),
-      );
+          .orderBy(asc(Tables.ruleExpects.ruleId), asc(Tables.ruleExpects.propId));
+      });
 
       return rows.pipe(Stream.mapEffect((rows) => decodeRows(rows)));
     });

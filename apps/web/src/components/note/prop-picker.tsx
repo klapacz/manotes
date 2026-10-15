@@ -60,22 +60,24 @@ export function Value(props: ValueProps) {
 }
 
 function RecordInput(props: ValueProps) {
-  const selected = () =>
-    Match.value(props.state).pipe(
+  const selected = () => {
+    return Match.value(props.state).pipe(
       Match.when(
         { _tag: Match.is("Valid", "Invalid"), value: { _tag: Match.is("link", "enum") } },
         ({ value }) => value.val,
       ),
       Match.orElse(() => undefined),
     );
+  };
 
-  const defaultValue = () =>
-    props.defaultValue.pipe(
+  const defaultValue = () => {
+    return props.defaultValue.pipe(
       Option.filter(
         (value) => AttrsSchema.PropVal.guards.link(value) || AttrsSchema.PropVal.guards.enum(value),
       ),
       Option.getOrUndefined,
     );
+  };
 
   return (
     <Picker.Query
@@ -91,8 +93,8 @@ function RecordInput(props: ValueProps) {
       disabled={props.disabled}
       onSelect={(choice) => props.onChange(choice.propVal)}
     >
-      {(items) =>
-        props.children(
+      {(items) => {
+        return props.children(
           <>
             {items}
             <Show when={defaultValue()}>
@@ -112,31 +114,33 @@ function RecordInput(props: ValueProps) {
               )}
             </Show>
           </>,
-        )
-      }
+        );
+      }}
     </Picker.Query>
   );
 }
 
 function NumberInput(props: ValueProps) {
-  const [text, setText] = createWritableMemo(
-    () =>
+  const [text, setText] = createWritableMemo(() => {
+    return (
       props.search ??
       Match.value(props.state).pipe(
-        Match.when({ _tag: "Valid", value: AttrsSchema.PropVal.guards.number }, ({ value }) =>
-          value.val.toString(),
-        ),
+        Match.when({ _tag: "Valid", value: AttrsSchema.PropVal.guards.number }, ({ value }) => {
+          return value.val.toString();
+        }),
         Match.orElse(() => ""),
-      ),
-  );
+      )
+    );
+  });
 
   const value = () => PropQuery.parseNumber(text());
 
-  const defaultValue = () =>
-    props.defaultValue.pipe(
+  const defaultValue = () => {
+    return props.defaultValue.pipe(
       Option.filter(AttrsSchema.PropVal.guards.number),
       Option.getOrUndefined,
     );
+  };
 
   return (
     <Command shouldFilter={false}>
@@ -151,9 +155,9 @@ function NumberInput(props: ValueProps) {
         <>
           <Picker.Apply
             disabled={props.disabled || Option.isNone(value())}
-            onSelect={() =>
-              value().pipe(Option.match({ onNone: () => {}, onSome: props.onChange }))
-            }
+            onSelect={() => {
+              return value().pipe(Option.match({ onNone: () => {}, onSome: props.onChange }));
+            }}
           />
           <Show when={defaultValue()}>
             {(value) => (
@@ -167,8 +171,8 @@ function NumberInput(props: ValueProps) {
 }
 
 function TextInput(props: ValueProps) {
-  const [text, setText] = createWritableMemo(
-    () =>
+  const [text, setText] = createWritableMemo(() => {
+    return (
       props.search ??
       Match.value(props.state).pipe(
         Match.when(
@@ -176,11 +180,16 @@ function TextInput(props: ValueProps) {
           ({ value }) => value.val,
         ),
         Match.orElse(() => ""),
-      ),
-  );
+      )
+    );
+  });
 
-  const defaultValue = () =>
-    props.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.text), Option.getOrUndefined);
+  const defaultValue = () => {
+    return props.defaultValue.pipe(
+      Option.filter(AttrsSchema.PropVal.guards.text),
+      Option.getOrUndefined,
+    );
+  };
 
   return (
     <Command shouldFilter={false}>

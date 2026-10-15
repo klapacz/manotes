@@ -72,14 +72,14 @@ function waitForReady(statusRef: SubscriptionRef.SubscriptionRef<SyncStatusCloud
 }
 
 function webSocketConstructorLayer(token: string) {
-  return Layer.succeed(
-    Socket.WebSocketConstructor,
-    (url, protocols) =>
+  return Layer.succeed(Socket.WebSocketConstructor, (url, protocols) => {
+    return (
       // eslint-disable-next-line anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- ws implements the WebSocket operations consumed by Effect's Node adapter.
       new NodeWS.WebSocket(url, protocols, {
         headers: { authorization: `Bearer ${token}` },
-      }) as unknown as globalThis.WebSocket,
-  );
+      }) as unknown as globalThis.WebSocket
+    );
+  });
 }
 
 export * as CliSync from "./cli.sync";

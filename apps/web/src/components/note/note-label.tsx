@@ -6,14 +6,16 @@ export function Root(props: { id: string }) {
   const idAtom = createSyncedAtom(() => props.id);
 
   const note = createAtomStore(
-    bindRt((rt) =>
-      rt.atom((get) =>
-        NoteRepo.Service.use((repo) => repo.reactiveFindPreviewById({ id: get(idAtom) })).pipe(
+    bindRt((rt) => {
+      return rt.atom((get) => {
+        return NoteRepo.Service.use((repo) => {
+          return repo.reactiveFindPreviewById({ id: get(idAtom) });
+        }).pipe(
           Stream.unwrap,
           Stream.map((value) => ({ note: Option.getOrNull(value) })),
-        ),
-      ),
-    ),
+        );
+      });
+    }),
     { note: null },
   );
 

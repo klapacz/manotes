@@ -34,8 +34,12 @@ export function defineStreamRefSpec() {
     parseDOM: [
       {
         tag: "span[data-stream-ref]",
-        getAttrs: (dom: HTMLElement) =>
-          Option.getOrElse(decodeJson(dom.getAttribute("data-stream-ref")), () => false as const),
+        getAttrs: (dom: HTMLElement) => {
+          return Option.getOrElse(
+            decodeJson(dom.getAttribute("data-stream-ref")),
+            () => false as const,
+          );
+        },
       },
     ],
     toDOM(node) {

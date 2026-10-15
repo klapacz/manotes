@@ -61,9 +61,9 @@ export const run = Effect.fn("Enter.run")(
     );
 
     yield* Effect.raceFirst(closed, Effect.raceFirst(unlock, open)).pipe(
-      Effect.catch((error) =>
-        page.isClosed() || !browser.isConnected() ? Effect.void : Effect.fail(error),
-      ),
+      Effect.catch((error) => {
+        return page.isClosed() || !browser.isConnected() ? Effect.void : Effect.fail(error);
+      }),
     );
   },
   Effect.mapError(

@@ -53,9 +53,9 @@ const transcribeFile = Effect.fn("AudioMemoService.transcribeFile")(
     const { localGraphId } = yield* DB.Config;
 
     const bytes = yield* AudioMemoFiles.read(localGraphId, path).pipe(
-      Effect.flatMap((file) =>
-        Effect.tryPromise(() => file.arrayBuffer().then((buffer) => new Uint8Array(buffer))),
-      ),
+      Effect.flatMap((file) => {
+        return Effect.tryPromise(() => file.arrayBuffer().then((buffer) => new Uint8Array(buffer)));
+      }),
     );
 
     const client = yield* OpenAITranscriber.make({ apiKey });

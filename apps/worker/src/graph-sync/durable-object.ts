@@ -25,15 +25,17 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObject<Gra
 
       yield* state.setHibernatableWebSocketEventTimeout(5_000);
 
-      yield* state.blockConcurrencyWhile(() =>
-        Repo.migrate.pipe(Effect.provide(layer), Effect.orDie),
-      );
+      yield* state.blockConcurrencyWhile(() => {
+        return Repo.migrate.pipe(Effect.provide(layer), Effect.orDie);
+      });
 
       const parseWebsocketMessage = Effect.fn(function* (message: string | ArrayBuffer) {
         return yield* Codec.decodeClientMessage(webSocketMessageToUint8Array(message)).pipe(
-          Effect.catchTag("SchemaError", () =>
-            Effect.fail(new Errors.ProtocolViolationError({ reason: "Malformed client message" })),
-          ),
+          Effect.catchTag("SchemaError", () => {
+            return Effect.fail(
+              new Errors.ProtocolViolationError({ reason: "Malformed client message" }),
+            );
+          }),
         );
       });
 
@@ -64,8 +66,11 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObject<Gra
 
         return yield* Boolean.match(plan.runSerialized, {
           onFalse: () => plan.effect.pipe(Effect.exit),
-          onTrue: () =>
-            state.blockConcurrencyWhile(() => plan.effect.pipe(Effect.provide(layer), Effect.exit)),
+          onTrue: () => {
+            return state.blockConcurrencyWhile(() => {
+              return plan.effect.pipe(Effect.provide(layer), Effect.exit);
+            });
+          },
         });
       });
 

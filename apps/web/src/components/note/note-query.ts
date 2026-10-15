@@ -36,10 +36,10 @@ function searchQuery(filter: StreamSettings.Filter | undefined) {
     return yield* repo.reactiveSearchPreview({ search: request.text, filter });
   });
 
-  return QueryEngine.share((request) =>
-    Stream.unwrap(search(request)).pipe(
-      Stream.map((notes) =>
-        notes.map((note) => ({
+  return QueryEngine.share((request) => {
+    return Stream.unwrap(search(request)).pipe(
+      Stream.map((notes) => {
+        return notes.map((note) => ({
           value: { value: note.id, label: label(note, request.text) },
           // Body-only hits rank below menu actions and matching page titles.
           score: !request.text.trim()
@@ -47,10 +47,10 @@ function searchQuery(filter: StreamSettings.Filter | undefined) {
             : note.title?.toLowerCase().includes(request.text.trim().toLowerCase())
               ? QueryEngine.score({ text: request.text, label: note.title })
               : 0.1,
-        })),
-      ),
-    ),
-  );
+        }));
+      }),
+    );
+  });
 }
 
 export * as NoteQuery from "./note-query";

@@ -112,9 +112,7 @@ const onDrag: DragEventHandler = ({ view, pos }): boolean => {
     if (node.type.name === "list") {
       const $pos = view.state.doc.resolve(pos);
 
-      if ($pos.parent.type.name === "list" && $pos.index() === 0) {
-        return false;
-      }
+      if ($pos.parent.type.name === "list" && $pos.index() === 0) return false;
     }
   }
 

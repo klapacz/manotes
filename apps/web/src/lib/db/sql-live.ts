@@ -9,13 +9,12 @@ export const SqlLive = Layer.unwrap(
     return SqliteClient.layer({
       worker: Effect.gen(function* () {
         const worker = yield* Effect.acquireRelease(
-          Effect.sync(
-            () =>
-              new Worker(new URL("./worker.ts", import.meta.url), {
-                type: "module",
-                name: `wa-sqlite-worker-${config.localGraphId}`,
-              }),
-          ),
+          Effect.sync(() => {
+            return new Worker(new URL("./worker.ts", import.meta.url), {
+              type: "module",
+              name: `wa-sqlite-worker-${config.localGraphId}`,
+            });
+          }),
           (worker) => Effect.sync(() => worker.terminate()),
         );
 

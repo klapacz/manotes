@@ -41,15 +41,13 @@ export class Service extends Context.Service<Service>()("GraphSyncService", {
             });
 
             yield* Effect.logWarning(`Graph sync ${syncState}`, cause);
-            yield* SubscriptionRef.update(
-              status,
-              (prev) =>
-                new SyncStatusCloud({
-                  mode: prev.mode,
-                  hasPending: prev.hasPending,
-                  syncState,
-                }),
-            );
+            yield* SubscriptionRef.update(status, (prev) => {
+              return new SyncStatusCloud({
+                mode: prev.mode,
+                hasPending: prev.hasPending,
+                syncState,
+              });
+            });
           }),
         ),
       );

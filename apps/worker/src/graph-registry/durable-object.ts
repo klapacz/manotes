@@ -79,9 +79,9 @@ export default class GraphRegistryDurableObject extends Cloudflare.DurableObject
         ),
       );
 
-      yield* state.blockConcurrencyWhile(() =>
-        Repo.migrate.pipe(Effect.provide(layer), Effect.orDie),
-      );
+      yield* state.blockConcurrencyWhile(() => {
+        return Repo.migrate.pipe(Effect.provide(layer), Effect.orDie);
+      });
 
       return {
         fetch: Effect.gen(function* () {

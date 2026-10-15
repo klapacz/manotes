@@ -13,34 +13,32 @@ export class Service extends Context.Service<Service>()("MaterializationCheckpoi
     const nowISOString = DateTime.now.pipe(Effect.map(DateTime.formatIso));
 
     const getOrInit = Effect.fn("MaterializationCheckpointRepo.getOrInit")(function* () {
-      const existing = yield* db.find((db) =>
-        db
+      const existing = yield* db.find((db) => {
+        return db
           .select()
           .from(Tables.materializationCheckpoint)
-          .where(eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID)),
-      );
+          .where(eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID));
+      });
 
-      if (Option.isSome(existing)) {
-        return existing.value;
-      }
+      if (Option.isSome(existing)) return existing.value;
 
       const updatedAt = yield* nowISOString;
 
       return yield* db
-        .find((db) =>
-          db
+        .find((db) => {
+          return db
             .insert(Tables.materializationCheckpoint)
             .values({
               id: CHECKPOINT_ROW_ID,
               lastAppliedLocalSeq: 0,
               updatedAt,
             })
-            .returning(),
-        )
+            .returning();
+        })
         .pipe(
-          EffectOption.getOrEffect(() =>
-            Effect.die(new Error("Failed to initialize materialization checkpoint row.")),
-          ),
+          EffectOption.getOrEffect(() => {
+            return Effect.die(new Error("Failed to initialize materialization checkpoint row."));
+          }),
         );
     });
 
@@ -59,16 +57,16 @@ export class Service extends Context.Service<Service>()("MaterializationCheckpoi
 
       const updatedAt = yield* nowISOString;
 
-      yield* db.query((db) =>
-        db
+      yield* db.query((db) => {
+        return db
           .update(Tables.materializationCheckpoint)
           .set({
             lastAppliedLocalSeq,
             updatedAt,
           })
           .where(eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID))
-          .returning(),
-      );
+          .returning();
+      });
     });
 
     const waitUntilAtLeast = Effect.fn("MaterializationCheckpointRepo.waitUntilAtLeast")(function* (
@@ -76,14 +74,14 @@ export class Service extends Context.Service<Service>()("MaterializationCheckpoi
     ) {
       yield* getOrInit();
 
-      const stream = yield* db.reactiveQuery((db) =>
-        db
+      const stream = yield* db.reactiveQuery((db) => {
+        return db
           .select({
             lastAppliedLocalSeq: Tables.materializationCheckpoint.lastAppliedLocalSeq,
           })
           .from(Tables.materializationCheckpoint)
-          .where(eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID)),
-      );
+          .where(eq(Tables.materializationCheckpoint.id, CHECKPOINT_ROW_ID));
+      });
 
       return yield* stream.pipe(
         Stream.map(Array.head),
@@ -91,9 +89,11 @@ export class Service extends Context.Service<Service>()("MaterializationCheckpoi
         Stream.map((row) => row.value.lastAppliedLocalSeq),
         Stream.filter((lastAppliedLocalSeq) => lastAppliedLocalSeq >= targetLocalSeq),
         Stream.runHead,
-        EffectOption.getOrEffect(() =>
-          Effect.die(new Error("Checkpoint stream ended before target event was materialized.")),
-        ),
+        EffectOption.getOrEffect(() => {
+          return Effect.die(
+            new Error("Checkpoint stream ended before target event was materialized."),
+          );
+        }),
         Effect.asVoid,
       );
     });

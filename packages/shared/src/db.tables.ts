@@ -34,10 +34,12 @@ export const notes = sqliteTable(
     updatedAt: text("updatedAt").notNull(),
     lastEventLocalSeq: integer("lastEventLocalSeq").notNull(),
   },
-  (table) => [
-    index("notes_tag_idx").on(table._tag),
-    index("notes_owned_parent_idx").on(table.owned_parent),
-  ],
+  (table) => {
+    return [
+      index("notes_tag_idx").on(table._tag),
+      index("notes_owned_parent_idx").on(table.owned_parent),
+    ];
+  },
 );
 
 // NULL preserves an unparseable assignment; an absent assignment has no row.
@@ -49,10 +51,12 @@ export const props = sqliteTable(
     propId: text("propId").notNull(),
     value: text("value"),
   },
-  (table) => [
-    primaryKey({ columns: [table.recordId, table.propId] }),
-    index("props_prop_id_idx").on(table.propId),
-  ],
+  (table) => {
+    return [
+      primaryKey({ columns: [table.recordId, table.propId] }),
+      index("props_prop_id_idx").on(table.propId),
+    ];
+  },
 );
 
 export const ruleExpects = sqliteTable(
@@ -62,10 +66,12 @@ export const ruleExpects = sqliteTable(
     propId: text("propId").notNull(),
     value: text("value"),
   },
-  (table) => [
-    primaryKey({ columns: [table.ruleId, table.propId] }),
-    index("rule_expects_prop_id_idx").on(table.propId),
-  ],
+  (table) => {
+    return [
+      primaryKey({ columns: [table.ruleId, table.propId] }),
+      index("rule_expects_prop_id_idx").on(table.propId),
+    ];
+  },
 );
 
 export const events = sqliteTable("events", {
@@ -94,10 +100,12 @@ export const backlinks = sqliteTable(
     sourceId: text("sourceId").notNull(),
     targetId: text("targetId").notNull(),
   },
-  (table) => [
-    primaryKey({ columns: [table.sourceId, table.targetId] }),
-    index("backlinks_target_id_idx").on(table.targetId),
-  ],
+  (table) => {
+    return [
+      primaryKey({ columns: [table.sourceId, table.targetId] }),
+      index("backlinks_target_id_idx").on(table.targetId),
+    ];
+  },
 );
 
 export * as Tables from "./db.tables";

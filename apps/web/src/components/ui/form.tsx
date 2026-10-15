@@ -159,8 +159,8 @@ const appFormHook = createFormHook({
   },
 });
 
-export const useAppForm: typeof appFormHook.useAppForm = (options) =>
-  appFormHook.useAppForm(() => {
+export const useAppForm: typeof appFormHook.useAppForm = (options) => {
+  return appFormHook.useAppForm(() => {
     const next = options();
 
     return {
@@ -168,6 +168,7 @@ export const useAppForm: typeof appFormHook.useAppForm = (options) =>
       validationLogic: next.validationLogic ?? appValidationLogic,
     };
   });
+};
 
 export const withFieldGroup = appFormHook.withFieldGroup;
 

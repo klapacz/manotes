@@ -24,20 +24,20 @@ export const save = Effect.fn("AudioMemoFiles.save")(function* (
   yield* OPFS.writeFileToOpfsRoot(`recordings/${graphId}/${path}`, blob);
 });
 
-export const read = Effect.fn("AudioMemoFiles.read")((graphId: string, path: string) =>
-  OPFS.readFileFromOpfsRoot(`recordings/${graphId}/${path}`),
-);
+export const read = Effect.fn("AudioMemoFiles.read")((graphId: string, path: string) => {
+  return OPFS.readFileFromOpfsRoot(`recordings/${graphId}/${path}`);
+});
 
-export const remove = Effect.fn("AudioMemoFiles.remove")((graphId: string, path: string) =>
-  OPFS.removeEntryFromOpfsRoot(`recordings/${graphId}/${path}`).pipe(
+export const remove = Effect.fn("AudioMemoFiles.remove")((graphId: string, path: string) => {
+  return OPFS.removeEntryFromOpfsRoot(`recordings/${graphId}/${path}`).pipe(
     Effect.catchTag("NotFoundError", () => Effect.void),
-  ),
-);
+  );
+});
 
-export const removeGraph = Effect.fn("AudioMemoFiles.removeGraph")((graphId: string) =>
-  OPFS.removeEntryFromOpfsRoot(`recordings/${graphId}`, { recursive: true }).pipe(
+export const removeGraph = Effect.fn("AudioMemoFiles.removeGraph")((graphId: string) => {
+  return OPFS.removeEntryFromOpfsRoot(`recordings/${graphId}`, { recursive: true }).pipe(
     Effect.catchTag("NotFoundError", () => Effect.void),
-  ),
-);
+  );
+});
 
 export * as AudioMemoFiles from "./files";

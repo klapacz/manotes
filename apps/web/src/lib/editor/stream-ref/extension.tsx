@@ -25,11 +25,12 @@ export function createStreamRefLabel(attrs: () => StreamRefAttrs) {
   const backlinksTo = createNoteLabel(() => attrs().filter.backlinksTo);
   const linksFrom = createNoteLabel(() => attrs().filter.linksFrom);
 
-  return () =>
-    streamRefLabel(
+  return () => {
+    return streamRefLabel(
       attrs(),
       (id) => (id === attrs().filter.backlinksTo ? backlinksTo() : linksFrom()) ?? id,
     );
+  };
 }
 
 function StreamRefView(props: SolidNodeViewProps) {
@@ -45,8 +46,15 @@ function StreamRefView(props: SolidNodeViewProps) {
       data-stream-ref={JSON.stringify(attrs())}
       contentEditable={false}
       onClick={(event) => {
-        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+        if (
+          event.button !== 0 ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        ) {
           return;
+        }
 
         if (scroll.scrollToPane(input()).found) event.preventDefault();
       }}
@@ -60,8 +68,8 @@ export function createNoteLabel(id: () => string | undefined) {
   const idAtom = createSyncedAtom(id);
 
   const label = createAtomStore(
-    bindRt((rt) =>
-      rt.atom((get) => {
+    bindRt((rt) => {
+      return rt.atom((get) => {
         const noteId = get(idAtom);
 
         if (!noteId) return Stream.succeed(undefined);
@@ -70,8 +78,8 @@ export function createNoteLabel(id: () => string | undefined) {
           Stream.unwrap,
           Stream.map((note) => Option.getOrUndefined(Option.map(note, NoteFormat.label))),
         );
-      }),
-    ),
+      });
+    }),
     undefined,
   );
 

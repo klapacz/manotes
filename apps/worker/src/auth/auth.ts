@@ -98,12 +98,14 @@ export class AuthService extends Context.Service<AuthService>()("Auth.AuthServic
       );
 
       return yield* session.resolve(token).pipe(
-        Effect.catchTag("Auth.SessionNotFoundError", (cause) =>
-          Effect.fail(new Errors.UnauthorizedError({ reason: "Invalid session", cause })),
-        ),
-        Effect.catchTag("SchemaError", (cause) =>
-          Effect.fail(new Errors.UnauthorizedError({ reason: "Invalid session payload", cause })),
-        ),
+        Effect.catchTag("Auth.SessionNotFoundError", (cause) => {
+          return Effect.fail(new Errors.UnauthorizedError({ reason: "Invalid session", cause }));
+        }),
+        Effect.catchTag("SchemaError", (cause) => {
+          return Effect.fail(
+            new Errors.UnauthorizedError({ reason: "Invalid session payload", cause }),
+          );
+        }),
       );
     });
 

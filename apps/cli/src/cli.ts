@@ -30,15 +30,14 @@ const init = Command.make(
         flow(
           Redacted.value,
           Schema.decodeEffect(CliConfig.GraphKey),
-          Effect.mapError(
-            () =>
-              new CliError.InvalidValue({
-                kind: "flag",
-                option: "graph-key",
-                value: "<redacted>",
-                expected: "a base64-encoded 32-byte graph key",
-              }),
-          ),
+          Effect.mapError(() => {
+            return new CliError.InvalidValue({
+              kind: "flag",
+              option: "graph-key",
+              value: "<redacted>",
+              expected: "a base64-encoded 32-byte graph key",
+            });
+          }),
         ),
       ),
       Flag.withDescription("Base64-encoded, unwrapped 32-byte graph key from the app."),
@@ -107,14 +106,14 @@ const execute = Command.make(
         yield* materializer.catchUp();
         yield* MaterializedFiles.writeAll();
       }).pipe(
-        Effect.tapCause(() =>
-          Effect.gen(function* () {
+        Effect.tapCause(() => {
+          return Effect.gen(function* () {
             yield* Console.error(
               "Execution failed. Earlier editNote calls may already be saved locally.",
             );
             yield* printPending();
-          }),
-        ),
+          });
+        }),
       );
 
       yield* Console.log("Local changes saved.");
@@ -158,14 +157,14 @@ const execute = Command.make(
   ]),
 );
 
-const status = Command.make("status", {}, () =>
-  printPending().pipe(
+const status = Command.make("status", {}, () => {
+  return printPending().pipe(
     Effect.andThen(Effect.void),
     Effect.provide(CliRuntime.layer),
     Effect.provide(CliConfig.layerFromFile),
     Effect.provide(CliPaths.layer),
-  ),
-).pipe(Command.withDescription("Show the number of local changes awaiting publication."));
+  );
+}).pipe(Command.withDescription("Show the number of local changes awaiting publication."));
 
 const url = Command.make(
   "url",
@@ -198,14 +197,14 @@ const syncAndWrite = Effect.fn("Cli.syncAndWrite")(function* () {
     yield* CliSync.run();
     yield* writeSyncedChanges();
   }).pipe(
-    Effect.tapCause(() =>
-      Effect.gen(function* () {
+    Effect.tapCause(() => {
+      return Effect.gen(function* () {
         // The original error still reaches runMain, which exits with failure.
         yield* Console.error("Sync failed.");
         yield* printPending();
         yield* Console.error("Retry with `manotes sync`.");
-      }),
-    ),
+      });
+    }),
   );
 });
 

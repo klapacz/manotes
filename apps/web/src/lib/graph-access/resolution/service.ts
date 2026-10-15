@@ -31,15 +31,16 @@ export const find = Effect.fn("GraphAccessResolution.find")(function* (localGrap
 
   return yield* Result.match(resolveWithoutKeyLookup(recordOption, sessionOpt), {
     onSuccess: Effect.succeed,
-    onFailure: (record) =>
-      keyStore.get(record.graphKeyEnvelope).pipe(
+    onFailure: (record) => {
+      return keyStore.get(record.graphKeyEnvelope).pipe(
         Effect.map(
           Option.match({
             onNone: () => Resolution.CloudLocked({ record }),
             onSome: (graphKey) => Resolution.CloudUnlocked({ record, graphKey }),
           }),
         ),
-      ),
+      );
+    },
   });
 });
 

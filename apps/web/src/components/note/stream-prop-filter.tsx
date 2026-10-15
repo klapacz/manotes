@@ -29,9 +29,9 @@ export function use(opts: {
 }) {
   const defs = useDefs();
 
-  const rawEntries = createMemo(() =>
-    StreamPropFilterEntries.make({ defs: defs(), filter: opts.filter() }),
-  );
+  const rawEntries = createMemo(() => {
+    return StreamPropFilterEntries.make({ defs: defs(), filter: opts.filter() });
+  });
 
   const validated = keyArray(
     rawEntries,
@@ -73,14 +73,14 @@ function useDefs() {
   const initial = { defs: Array.empty<Def>() };
 
   const state = createAtomStore(
-    bindRt((rt) =>
-      rt.atom(
+    bindRt((rt) => {
+      return rt.atom(
         PropDef.Service.use((repo) => repo.reactiveDefs()).pipe(
           Stream.unwrap,
           Stream.map((defs) => ({ defs: Array.filterMap(defs, PropQuery.editableDef) })),
         ),
-      ),
-    ),
+      );
+    }),
     initial,
   );
 
@@ -107,8 +107,8 @@ export function query(opts: {
 
   return QueryEngine.combine([
     MenuQuery.actions(() => actions),
-    ...opts.entries.map((entry) =>
-      MenuQuery.nested({
+    ...opts.entries.map((entry) => {
+      return MenuQuery.nested({
         label: entry.label,
         query: QueryEngine.map(
           PropQuery.values({
@@ -124,8 +124,8 @@ export function query(opts: {
             run: () => opts.onSet(entry.id, choice.propVal),
           }),
         ),
-      }),
-    ),
+      });
+    }),
   ]);
 }
 

@@ -10,8 +10,8 @@ import AccountsDurableObject from "../accounts/durable-object.ts";
 
 export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
   Layer.provideMerge(
-    HttpApiBuilder.group(SessionApi.SessionApi, "session", (handlers) =>
-      Effect.gen(function* () {
+    HttpApiBuilder.group(SessionApi.SessionApi, "session", (handlers) => {
+      return Effect.gen(function* () {
         const auth = yield* AuthService;
 
         const accountsNS = yield* AccountsDurableObject;
@@ -45,48 +45,48 @@ export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
 
         return handlers
           .handleRaw("getSession", () => withSession(getSessionValue()))
-          .handle("createApiKey", () =>
-            withSession(
+          .handle("createApiKey", () => {
+            return withSession(
               createApiKey().pipe(
-                Effect.catchTag("Auth.SessionStoreError", () =>
-                  Effect.fail(new HttpApiError.InternalServerError({})),
-                ),
+                Effect.catchTag("Auth.SessionStoreError", () => {
+                  return Effect.fail(new HttpApiError.InternalServerError({}));
+                }),
                 Effect.catch(() => Effect.fail(new HttpApiError.InternalServerError({}))),
               ),
-            ),
-          )
+            );
+          })
           .handle("checkWaitlist", ({ payload }) => checkWaitlistValue(payload.email))
-          .handle("requestOtp", ({ payload }) =>
-            auth.requestOtp(payload.email).pipe(
+          .handle("requestOtp", ({ payload }) => {
+            return auth.requestOtp(payload.email).pipe(
               Effect.map(() => undefined),
-              Effect.catchTag("Auth.OtpStoreError", () =>
-                Effect.fail(new HttpApiError.InternalServerError({})),
-              ),
-              Effect.catchTag("Auth.EmailSendError", () =>
-                Effect.fail(new HttpApiError.InternalServerError({})),
-              ),
+              Effect.catchTag("Auth.OtpStoreError", () => {
+                return Effect.fail(new HttpApiError.InternalServerError({}));
+              }),
+              Effect.catchTag("Auth.EmailSendError", () => {
+                return Effect.fail(new HttpApiError.InternalServerError({}));
+              }),
               Effect.catch(() => Effect.fail(new HttpApiError.InternalServerError({}))),
-            ),
-          )
-          .handle("verifyOtp", ({ payload }) =>
-            auth.login(payload.email, payload.otp).pipe(
+            );
+          })
+          .handle("verifyOtp", ({ payload }) => {
+            return auth.login(payload.email, payload.otp).pipe(
               // A later catch-all would turn the mapped Unauthorized into a 500 too.
               Effect.catchTag(
                 "Auth.OtpVerificationError",
                 () => Effect.fail(new HttpApiError.Unauthorized({})),
                 () => Effect.fail(new HttpApiError.InternalServerError({})),
               ),
-            ),
-          )
-          .handle("logout", () =>
-            auth.logout().pipe(
-              Effect.catchTag("Auth.SessionStoreError", () =>
-                Effect.fail(new HttpApiError.InternalServerError({})),
-              ),
+            );
+          })
+          .handle("logout", () => {
+            return auth.logout().pipe(
+              Effect.catchTag("Auth.SessionStoreError", () => {
+                return Effect.fail(new HttpApiError.InternalServerError({}));
+              }),
               Effect.catch(() => Effect.fail(new HttpApiError.InternalServerError({}))),
-            ),
-          );
-      }),
-    ),
+            );
+          });
+      });
+    }),
   ),
 );

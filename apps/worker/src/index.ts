@@ -31,16 +31,15 @@ const corsMiddleware = HttpMiddleware.cors({
 });
 
 const corsLayer = HttpRouter.middleware(
-  (httpApp) =>
-    Effect.gen(function* () {
+  (httpApp) => {
+    return Effect.gen(function* () {
       const request = yield* HttpServerRequest.HttpServerRequest;
 
-      if (request.headers.upgrade?.toLowerCase() === "websocket") {
-        return yield* httpApp;
-      }
+      if (request.headers.upgrade?.toLowerCase() === "websocket") return yield* httpApp;
 
       return yield* corsMiddleware(httpApp);
-    }),
+    });
+  },
   { global: true },
 );
 
@@ -54,11 +53,11 @@ export default class Api extends Cloudflare.Worker<Api>()(
       strictPort: true,
     },
     routes: Output.fromEffect(
-      Alchemy.Stage.useSync((stage) =>
-        stage === "prod"
+      Alchemy.Stage.useSync((stage) => {
+        return stage === "prod"
           ? [{ pattern: "sand.manotes.dev/api*", zoneName: "manotes.dev" }]
-          : undefined,
-      ),
+          : undefined;
+      }),
     ),
     // Disable public workers.dev and version-preview URLs; keep the custom route.
     workersDev: false,

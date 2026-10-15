@@ -91,21 +91,23 @@ export function StreamFilterEditor(props: {
     return fields.find((item) => item.value === field._tag)?.label;
   });
 
-  const open = (field: Field | undefined, search?: string) =>
-    props.onMenuChange({ open: true, field, search });
+  const open = (field: Field | undefined, search?: string) => {
+    return props.onMenuChange({ open: true, field, search });
+  };
 
   const changedFields = createMemo(() => StreamSettings.changedFilters(props.filter));
   const hasCondition = (field: StreamSettings.FilterField) => changedFields().includes(field);
 
   const changed = () => changedFields().length > 0 || propertyFilters.modified();
 
-  const clear = (field: StreamSettings.FilterField, close: () => void) =>
-    hasCondition(field)
+  const clear = (field: StreamSettings.FilterField, close: () => void) => {
+    return hasCondition(field)
       ? () => {
           props.onChange(StreamSettings.clearFilter(props.filter, field));
           close();
         }
       : undefined;
+  };
 
   const setSearch = (search: string) => {
     const value = search.trim() || undefined;
@@ -181,8 +183,9 @@ export function StreamFilterEditor(props: {
           const notePicker = createMemo(() => {
             const field = selectedField();
 
-            if (!field || !(Field.$is("backlinksTo")(field) || Field.$is("linksFrom")(field)))
+            if (!field || !(Field.$is("backlinksTo")(field) || Field.$is("linksFrom")(field))) {
               return;
+            }
 
             const key = field._tag;
 
@@ -193,29 +196,32 @@ export function StreamFilterEditor(props: {
             };
           });
 
-          const types = MenuQuery.choices<MenuQuery.Action>(() => [
-            ...typeChoices.map((choice) => ({
-              ...choice,
-              run: () => setType(choice.type, close),
-            })),
-            {
-              value: "enum_option",
-              label: StreamSettings.typeLabels.enum_option,
-              suffix: <Picker.Caret />,
-              run: () => open(Field.enumParent()),
-            },
-          ]);
+          const types = MenuQuery.choices<MenuQuery.Action>(() => {
+            return [
+              ...typeChoices.map((choice) => ({
+                ...choice,
+                run: () => setType(choice.type, close),
+              })),
+              {
+                value: "enum_option",
+                label: StreamSettings.typeLabels.enum_option,
+                suffix: <Picker.Caret />,
+                run: () => open(Field.enumParent()),
+              },
+            ];
+          });
 
           // Replace the query when definitions change so an open parent picker updates too.
           const enumParents = createMemo(() => {
             const choices = propertyFilters.enums().map((entry) => ({
               value: entry.id,
               label: entry.label,
-              run: () =>
-                setType(
+              run: () => {
+                return setType(
                   PaneSchema.StreamFilterType.cases.enum_option.make({ enum_parent: entry.id }),
                   close,
-                ),
+                );
+              },
             }));
 
             return MenuQuery.choices(() => choices);
@@ -227,8 +233,8 @@ export function StreamFilterEditor(props: {
             run: () => setDate(date.id, close),
           }));
 
-          const actions = createMemo((): readonly MenuQuery.Action[] =>
-            fields.map((field) => ({
+          const actions = createMemo((): readonly MenuQuery.Action[] => {
+            return fields.map((field) => ({
               ...field,
               keywords: field.value === "date" ? ["calendar"] : [],
               suffix: <Picker.Caret />,
@@ -238,8 +244,8 @@ export function StreamFilterEditor(props: {
                   ? () => <FilterValue field={field.value} filter={props.filter} />
                   : undefined,
               run: (search) => open(field.field, search),
-            })),
-          );
+            }));
+          });
 
           const query = createMemo(() => {
             const choices = actions();
@@ -261,10 +267,11 @@ export function StreamFilterEditor(props: {
               onSet: (propId, value) => propertyFilters.set({ propId, value, close }),
             });
 
-            return (request: QueryEngine.Request) =>
-              Stream.zipLatestAll(builtins(request), properties(request)).pipe(
+            return (request: QueryEngine.Request) => {
+              return Stream.zipLatestAll(builtins(request), properties(request)).pipe(
                 Stream.map(([builtins, properties]) => [...builtins, ...properties]),
               );
+            };
           });
 
           return (
@@ -312,14 +319,18 @@ export function StreamFilterEditor(props: {
                         <StreamPropFilter.Menu
                           entry={prop()}
                           search={props.menu.search}
-                          onChange={(value) =>
-                            propertyFilters.set({ propId: prop().id, value, close })
-                          }
+                          onChange={(value) => {
+                            return propertyFilters.set({ propId: prop().id, value, close });
+                          }}
                           onBack={() => open(undefined)}
                           onOpenNote={(id) => close(() => props.onOpenNote(id))}
-                          onClear={() =>
-                            propertyFilters.set({ propId: prop().id, value: undefined, close })
-                          }
+                          onClear={() => {
+                            return propertyFilters.set({
+                              propId: prop().id,
+                              value: undefined,
+                              close,
+                            });
+                          }}
                         />
                       )}
                     </Match>
@@ -481,19 +492,21 @@ export function StreamFilterEditor(props: {
     </>
   );
 
-  const hasFilters = () =>
-    changedFields().length > 0 || propertyFilters.entries().some((entry) => entry.showChip);
+  const hasFilters = () => {
+    return changedFields().length > 0 || propertyFilters.entries().some((entry) => entry.showChip);
+  };
 
   return props.children(trigger, filters, hasFilters);
 }
 
 function FilterValue(props: { field: StreamSettings.FilterField; filter: Filter }) {
   // Include the parent's live label to distinguish streams for different enums.
-  const enumParent = () =>
-    EffectMatch.value(props.filter.type).pipe(
+  const enumParent = () => {
+    return EffectMatch.value(props.filter.type).pipe(
       EffectMatch.tag("enum_option", ({ enum_parent }) => enum_parent),
       EffectMatch.orElse(() => undefined),
     );
+  };
 
   return (
     <Switch>

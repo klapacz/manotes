@@ -123,8 +123,9 @@ function findMatches(markdown: string, edit: Extract<Edit, { kind: "replace" }>)
     offset = markdown.indexOf(edit.text, offset + edit.text.length);
   }
 
-  if (matches.length === 0)
+  if (matches.length === 0) {
     throw new Error(`Expected a Markdown match, found 0 for ${JSON.stringify(edit.text)}`);
+  }
 
   if (edit.occurrence === "all") return matches;
 

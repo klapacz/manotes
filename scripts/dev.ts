@@ -78,6 +78,4 @@ const launch = Effect.fn("Dev.launch")(function* (
 
 export const main = Command.run(cli, { version: "0.0.0" });
 
-if (import.meta.main) {
-  NodeRuntime.runMain(main.pipe(Effect.provide(NodeServices.layer)));
-}
+if (import.meta.main) NodeRuntime.runMain(main.pipe(Effect.provide(NodeServices.layer)));

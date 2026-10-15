@@ -17,8 +17,9 @@ import { Effect } from "effect";
 import { classifySqliteError, SqlError } from "effect/unstable/sql/SqlError";
 import type { OpfsWorkerMessage } from "./internal/opfs-worker.js";
 
-const classifyError = (cause: unknown, message: string, operation: string) =>
-  classifySqliteError(cause, { message, operation });
+const classifyError = (cause: unknown, message: string, operation: string) => {
+  return classifySqliteError(cause, { message, operation });
+};
 
 /**
  * @category models
@@ -33,8 +34,8 @@ export interface OpfsWorkerConfig {
  * @category constructor
  * @since 1.0.0
  */
-export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> =>
-  Effect.gen(function* () {
+export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> => {
+  return Effect.gen(function* () {
     const factory = yield* Effect.promise(() => SQLiteESMFactory({ locateFile: () => wasmUrl }));
     const sqlite3 = WaSqlite.Factory(factory);
     const vfs = yield* Effect.promise(() => OPFSCoopSyncVFS.create("opfs", factory));
@@ -43,15 +44,17 @@ export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> =>
     const db = yield* Effect.acquireRelease(
       Effect.tryPromise({
         try: () => sqlite3.open_v2(options.dbName, undefined, "opfs"),
-        catch: (cause) =>
-          new SqlError({
+        catch: (cause) => {
+          return new SqlError({
             reason: classifyError(cause, "Failed to open database", "openDatabase"),
-          }),
+          });
+        },
       }),
-      (db) =>
-        Effect.promise(async () => {
+      (db) => {
+        return Effect.promise(async () => {
           await sqlite3.close(db);
-        }),
+        });
+      },
     );
 
     return yield* Effect.callback<void>((resume) => {
@@ -148,3 +151,4 @@ export const run = (options: OpfsWorkerConfig): Effect.Effect<void, SqlError> =>
       });
     });
   }).pipe(Effect.scoped);
+};

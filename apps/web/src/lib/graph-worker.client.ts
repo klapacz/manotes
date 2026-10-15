@@ -91,9 +91,9 @@ const createDedicatedWorker = Effect.fn("GraphWorkerClient.createDedicatedWorker
   const { InitialMessage } = Data.taggedEnum<RpcWorker.InitialMessage.Encoded>();
 
   // Send port1 to the dedicated worker via initial message.
-  yield* Effect.sync(() =>
-    worker.postMessage([0, InitialMessage({ value: initialMessage })], [...transferables]),
-  );
+  yield* Effect.sync(() => {
+    return worker.postMessage([0, InitialMessage({ value: initialMessage })], [...transferables]);
+  });
 
   yield* Effect.logInfo("Created dedicated worker");
 
@@ -120,13 +120,12 @@ const SharedRpcProtocol = Layer.unwrap(
     const config = yield* DB.Config;
 
     // Create SharedWorker layer
-    const sharedWorkerLayer = BrowserWorker.layer(
-      () =>
-        new SharedWorker(new URL("./graph.shared-worker.ts", import.meta.url), {
-          type: "module",
-          name: `graph-worker-${config.localGraphId}`,
-        }),
-    );
+    const sharedWorkerLayer = BrowserWorker.layer(() => {
+      return new SharedWorker(new URL("./graph.shared-worker.ts", import.meta.url), {
+        type: "module",
+        name: `graph-worker-${config.localGraphId}`,
+      });
+    });
 
     return RpcClient.layerProtocolWorker({
       size: 1,
@@ -209,9 +208,9 @@ const becomeLeader = Effect.fn("GraphWorkerClient.becomeLeader")(function* (
 
   // Retry worker creation - a transferred MessagePort can't be reused, so on failure we recreate everything.
   const retrySchedule = Schedule.exponential("50 millis").pipe(
-    Schedule.tap(({ output: delay }) =>
-      Effect.logWarning(`Retrying worker creation in ${Duration.toMillis(delay)}ms`),
-    ),
+    Schedule.tap(({ output: delay }) => {
+      return Effect.logWarning(`Retrying worker creation in ${Duration.toMillis(delay)}ms`);
+    }),
   );
 
   // Scope lifecycle for retry resilience:

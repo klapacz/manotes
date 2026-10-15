@@ -13,8 +13,8 @@ const DEFAULT_EMBED_URL = "https://studio.outerbase.com/embed/sqlite";
 // Run a single statement and grab write metadata in the same serialized
 // connection turn. wa-sqlite runs one statement per call, so changes() /
 // last_insert_rowid() observed right after refer to that statement.
-const RunQuery = bindRt((rt) =>
-  rt.fn(
+const RunQuery = bindRt((rt) => {
+  return rt.fn(
     Effect.fn("DevStudio.runQuery")(function* (statement: string) {
       const sql = yield* SqlClient.SqlClient;
       // eslint-disable-next-line anti-slop/no-unsafe-dictionary-type -- The SQL console accepts arbitrary queries and columns.
@@ -30,27 +30,29 @@ const RunQuery = bindRt((rt) =>
         rowsAffected: meta?.changes ?? 0,
       } satisfies ResultSet;
     }),
-  ),
-);
+  );
+});
 
-const RunTransaction = bindRt((rt) =>
-  rt.fn(
+const RunTransaction = bindRt((rt) => {
+  return rt.fn(
     Effect.fn("DevStudio.runTransaction")(function* (statements: ReadonlyArray<string>) {
       const sql = yield* SqlClient.SqlClient;
 
       return yield* sql
         .withTransaction(
-          Effect.forEach(statements, (statement) =>
-            // eslint-disable-next-line anti-slop/no-unsafe-dictionary-type -- The SQL console accepts arbitrary queries and columns.
-            Effect.map(sql.unsafe<Record<string, unknown>>(statement), (rows): ResultSet => ({
-              rows,
-            })),
-          ),
+          Effect.forEach(statements, (statement) => {
+            return (
+              // eslint-disable-next-line anti-slop/no-unsafe-dictionary-type -- The SQL console accepts arbitrary queries and columns.
+              Effect.map(sql.unsafe<Record<string, unknown>>(statement), (rows): ResultSet => ({
+                rows,
+              }))
+            );
+          }),
         )
         .pipe(Effect.orDie);
     }),
-  ),
-);
+  );
+});
 
 export interface SqliteStudioProps {
   /** Override the embed URL (e.g. a self-hosted Studio build). */

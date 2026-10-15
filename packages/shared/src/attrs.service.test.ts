@@ -93,8 +93,8 @@ describe("Attrs property editing", () => {
 
     try {
       Effect.runSync(
-        Attrs.Service.use((attrs) =>
-          Effect.gen(function* () {
+        Attrs.Service.use((attrs) => {
+          return Effect.gen(function* () {
             const original = Y.encodeStateAsUpdate(doc);
             expect(
               Result.isFailure(
@@ -124,8 +124,8 @@ describe("Attrs property editing", () => {
               ),
             ).toBe(true);
             expect(Y.encodeStateAsUpdate(doc)).toEqual(before);
-          }),
-        ).pipe(Effect.provide(Attrs.Service.layer)),
+          });
+        }).pipe(Effect.provide(Attrs.Service.layer)),
       );
     } finally {
       doc.destroy();
@@ -161,8 +161,8 @@ describe("Attrs property editing", () => {
 
     try {
       Effect.runSync(
-        Attrs.Service.use((attrs) =>
-          Effect.gen(function* () {
+        Attrs.Service.use((attrs) => {
+          return Effect.gen(function* () {
             yield* attrs.initializeProp({ doc, defaultValue: original });
             yield* attrs.setProp({
               doc,
@@ -196,8 +196,8 @@ describe("Attrs property editing", () => {
             yield* attrs.clearPropDefault({ doc });
             expect(map.has("prop_default")).toBe(false);
             expect(map.toJSON().props[propId]).toEqual(original);
-          }),
-        ).pipe(Effect.provide(Attrs.Service.layer)),
+          });
+        }).pipe(Effect.provide(Attrs.Service.layer)),
       );
     } finally {
       doc.destroy();
@@ -411,16 +411,16 @@ describe("Attrs property editing", () => {
       AttrsSchema.PropVal.cases.link.make({ val: AttrsSchema.NoteId.make("linked-note") }),
     ];
 
-    const defs = values.map((value) =>
-      Schema.decodeSync(PropRecordRepo.ValidDef)({
+    const defs = values.map((value) => {
+      return Schema.decodeSync(PropRecordRepo.ValidDef)({
         id: value._tag,
         title: value._tag,
 
         prop_type: value._tag,
         prop_default: JSON.stringify(value),
         prop_targets: null,
-      }),
-    );
+      });
+    });
 
     try {
       await Effect.runPromise(
@@ -471,14 +471,14 @@ describe("Attrs property editing", () => {
 
     try {
       const result = Effect.runSync(
-        Attrs.Service.use((attrs) =>
-          attrs.setProp({
+        Attrs.Service.use((attrs) => {
+          return attrs.setProp({
             doc,
             recordId: propId,
             propId,
             value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
-          }),
-        ).pipe(Effect.provide(Attrs.Service.layer), Effect.result),
+          });
+        }).pipe(Effect.provide(Attrs.Service.layer), Effect.result),
       );
 
       expect(Result.isFailure(result)).toBe(true);
@@ -494,8 +494,8 @@ describe("Attrs property editing", () => {
 
     try {
       Effect.runSync(
-        Attrs.Service.use((attrs) =>
-          Effect.gen(function* () {
+        Attrs.Service.use((attrs) => {
+          return Effect.gen(function* () {
             yield* attrs.clearProp({ doc, propId });
             expect(doc.getMap("attrs").toJSON()).toEqual({});
 
@@ -504,8 +504,8 @@ describe("Attrs property editing", () => {
             props.set(propId, "broken");
             yield* attrs.clearProp({ doc, propId });
             expect(props.has(propId)).toBe(false);
-          }),
-        ).pipe(Effect.provide(Attrs.Service.layer)),
+          });
+        }).pipe(Effect.provide(Attrs.Service.layer)),
       );
     } finally {
       doc.destroy();

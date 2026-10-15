@@ -76,8 +76,9 @@ export function Header(props: {
 
   const savedFilter = () => StreamFilter.fromAttrs(definition()?.targets);
 
-  const modified = () =>
-    !Equal.equals(StreamFilter.toAttrs(props.filter), StreamFilter.toAttrs(savedFilter()));
+  const modified = () => {
+    return !Equal.equals(StreamFilter.toAttrs(props.filter), StreamFilter.toAttrs(savedFilter()));
+  };
 
   const saveChanges = () => {
     const current = definition();
@@ -166,8 +167,8 @@ export function Header(props: {
   );
 }
 
-const Save = bindRt((rt) =>
-  rt.fn(
+const Save = bindRt((rt) => {
+  return rt.fn(
     Effect.fn("ComponentsNotePropScope.save")(function* (opts: {
       readonly doc: Y.Doc;
       readonly targets: AttrsSchema.TargetFilter | undefined;
@@ -175,7 +176,7 @@ const Save = bindRt((rt) =>
       const attrs = yield* Attrs.Service;
       yield* attrs.setPropTargets(opts);
     }),
-  ),
-);
+  );
+});
 
 export * as PropScope from "./prop-scope";

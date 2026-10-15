@@ -40,9 +40,9 @@ function RouteComponent() {
   const params = Route.useParams();
   const localGraphIdAtom = createSyncedAtom(() => params().graph);
 
-  const resolutionAtom = GraphAccessRuntime.atom.atom((get) =>
-    Resolution.findReactive(get(localGraphIdAtom)),
-  );
+  const resolutionAtom = GraphAccessRuntime.atom.atom((get) => {
+    return Resolution.findReactive(get(localGraphIdAtom));
+  });
 
   const resolution = useAtomValue(() => resolutionAtom);
 

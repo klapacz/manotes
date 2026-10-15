@@ -34,9 +34,7 @@ export function combineStyle(
     if (Predicate.isString(b)) return `${a};${b}`;
 
     a = stringStyleToObject(a);
-  } else if (Predicate.isString(b)) {
-    b = stringStyleToObject(b);
-  }
+  } else if (Predicate.isString(b)) b = stringStyleToObject(b);
 
   return { ...a, ...b };
 }

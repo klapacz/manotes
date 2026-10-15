@@ -26,15 +26,13 @@ export const run = Effect.fn("GraphSyncMachineRunner.run")(function* ({
         yield* Effect.logDebug("Received Message", { currentState, signal });
         const nextState = yield* step(currentState, signal);
 
-        yield* SubscriptionRef.update(
-          status,
-          (prev) =>
-            new SyncStatusCloud({
-              mode: prev.mode,
-              hasPending: prev.hasPending,
-              syncState: nextState._tag,
-            }),
-        );
+        yield* SubscriptionRef.update(status, (prev) => {
+          return new SyncStatusCloud({
+            mode: prev.mode,
+            hasPending: prev.hasPending,
+            syncState: nextState._tag,
+          });
+        });
 
         return nextState;
       }),

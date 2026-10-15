@@ -30,33 +30,33 @@ export function values(opts: {
   defaultValue: Option.Option<AttrsSchema.PropVal>;
 }): QueryEngine.Query<Choice, unknown, NoteRepo.Service | EnumOptionRepo.Service> {
   return Match.value(opts.type).pipe(
-    Match.when("bool", () =>
-      boolQuery({
+    Match.when("bool", () => {
+      return boolQuery({
         defaultValue: opts.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.bool)),
-      }),
-    ),
-    Match.when("number", () =>
-      numberQuery({
+      });
+    }),
+    Match.when("number", () => {
+      return numberQuery({
         defaultValue: opts.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.number)),
-      }),
-    ),
-    Match.when("text", () =>
-      textQuery({
+      });
+    }),
+    Match.when("text", () => {
+      return textQuery({
         defaultValue: opts.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.text)),
-      }),
-    ),
-    Match.when("link", () =>
-      linkQuery({
+      });
+    }),
+    Match.when("link", () => {
+      return linkQuery({
         targets: opts.targets,
         defaultValue: opts.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.link)),
-      }),
-    ),
-    Match.when("enum", () =>
-      enumQuery({
+      });
+    }),
+    Match.when("enum", () => {
+      return enumQuery({
         propId: opts.propId,
         defaultValue: opts.defaultValue.pipe(Option.filter(AttrsSchema.PropVal.guards.enum)),
-      }),
-    ),
+      });
+    }),
     Match.exhaustive,
   );
 }
@@ -71,12 +71,12 @@ export function enumQuery(opts: {
   propId: AttrsSchema.NoteId;
   defaultValue: Option.Option<Types.ExtractTag<AttrsSchema.PropVal, "enum">>;
 }): QueryEngine.Query<Choice, unknown, EnumOptionRepo.Service> {
-  return (request) =>
-    Stream.unwrap(
+  return (request) => {
+    return Stream.unwrap(
       EnumOptionRepo.Service.use((repo) => repo.reactiveOptions({ enum_parent: opts.propId })),
     ).pipe(
-      Stream.map((options) =>
-        options.flatMap((option) => {
+      Stream.map((options) => {
+        return options.flatMap((option) => {
           const label = NoteQuery.label(option, request.text);
           const score = QueryEngine.score({ text: request.text, label });
 
@@ -95,9 +95,10 @@ export function enumQuery(opts: {
               },
             },
           ];
-        }),
-      ),
+        });
+      }),
     );
+  };
 }
 
 export function linkQuery(opts: {
@@ -121,8 +122,8 @@ export function linkQuery(opts: {
 export function boolQuery(opts: {
   defaultValue: Option.Option<Types.ExtractTag<AttrsSchema.PropVal, "bool">>;
 }) {
-  return MenuQuery.choices(() =>
-    [true, false].map((val) => {
+  return MenuQuery.choices(() => {
+    return [true, false].map((val) => {
       const propVal = AttrsSchema.PropVal.cases.bool.make({ val });
       const label = valueLabel(propVal);
       const isDefault = opts.defaultValue.pipe(Option.contains(propVal));
@@ -133,16 +134,16 @@ export function boolQuery(opts: {
         propVal,
         detail: isDefault ? () => "Default" : undefined,
       };
-    }),
-  );
+    });
+  });
 }
 
 export function numberQuery(opts: {
   defaultValue: Option.Option<Types.ExtractTag<AttrsSchema.PropVal, "number">>;
 }): QueryEngine.Query<Choice> {
-  return (request) =>
-    Stream.sync(() =>
-      pipe(
+  return (request) => {
+    return Stream.sync(() => {
+      return pipe(
         request.text,
         String.trim,
         Option.liftPredicate(String.isNonEmpty),
@@ -164,16 +165,17 @@ export function numberQuery(opts: {
           ];
         }),
         Option.getOrElse(() => []),
-      ),
-    );
+      );
+    });
+  };
 }
 
 export function textQuery(opts: {
   defaultValue: Option.Option<Types.ExtractTag<AttrsSchema.PropVal, "text">>;
 }): QueryEngine.Query<Choice> {
-  return (request) =>
-    Stream.sync(() =>
-      pipe(
+  return (request) => {
+    return Stream.sync(() => {
+      return pipe(
         request.text,
         Option.liftPredicate(String.isNonEmpty),
         Option.match({
@@ -197,8 +199,9 @@ export function textQuery(opts: {
           ];
         }),
         Option.getOrElse(() => []),
-      ),
-    );
+      );
+    });
+  };
 }
 
 export function parseNumber(text: string) {
@@ -216,9 +219,7 @@ export function valueLabel(value: AttrsSchema.PropVal): string {
     Match.tag("bool", ({ val }) => (val ? "True" : "False")),
     Match.tag("number", ({ val }) => val.toString()),
     Match.tag("text", ({ val }) => {
-      if (String.isEmpty(val)) {
-        return '""';
-      }
+      if (String.isEmpty(val)) return '""';
 
       return val;
     }),
@@ -235,9 +236,7 @@ export function valueState(opts: {
 }): Attrs.ValueState<AttrsSchema.PropVal> {
   return opts.value.pipe(
     Option.map((value) => {
-      if (AttrsSchema.PropVal.guards[opts.type](value)) {
-        return Attrs.ValueState.Valid({ value });
-      }
+      if (AttrsSchema.PropVal.guards[opts.type](value)) return Attrs.ValueState.Valid({ value });
 
       return Attrs.ValueState.Invalid({ value });
     }),
@@ -249,13 +248,13 @@ export function stateLabel(state: Attrs.ValueState<AttrsSchema.PropVal>): string
   return Match.value(state).pipe(
     Match.tag("Unset", () => "Choose"),
     Match.tag("Valid", ({ value }) => valueLabel(value)),
-    Match.tag("Invalid", ({ value }) =>
-      Option.fromNullishOr(value).pipe(
+    Match.tag("Invalid", ({ value }) => {
+      return Option.fromNullishOr(value).pipe(
         Option.map(valueLabel),
         Option.map((label) => `Invalid: ${label}`),
         Option.getOrElse(() => "Invalid"),
-      ),
-    ),
+      );
+    }),
     Match.exhaustive,
   );
 }

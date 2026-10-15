@@ -32,12 +32,12 @@ export const prepare = Effect.fn("GraphAccessCommandsCliSetup.prepare")(function
   ].join(" ");
 });
 
-export const copy = Effect.fn("GraphAccessCommandsCliSetup.copy")((command: string) =>
-  Effect.tryPromise({
+export const copy = Effect.fn("GraphAccessCommandsCliSetup.copy")((command: string) => {
+  return Effect.tryPromise({
     try: () => navigator.clipboard.writeText(command),
     catch: () => new Error("Could not copy the init command."),
-  }),
-);
+  });
+});
 
 // POSIX quoting keeps every value a single literal argument, including apostrophes.
 function shellQuote(value: string): string {

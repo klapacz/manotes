@@ -26,8 +26,8 @@ export type SetupOpts = {
   sessionService: Effect.Success<typeof SessionService.Service>;
 };
 
-export const makeLayer = (opts: SetupOpts) =>
-  Layer.unwrap(
+export const makeLayer = (opts: SetupOpts) => {
+  return Layer.unwrap(
     Effect.gen(function* () {
       yield* Lock.acquireShared(opts.localGraphId);
 
@@ -62,5 +62,6 @@ export const makeLayer = (opts: SetupOpts) =>
       );
     }),
   );
+};
 
 export type AppLayer = ReturnType<typeof makeLayer>;

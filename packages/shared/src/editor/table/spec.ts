@@ -63,8 +63,9 @@ export function defineAppTableSpec() {
 export function defineAppTableExtension() {
   return union(
     defineCommands({
-      insertTable: (options: { row: number; col: number }) =>
-        insertTable({ ...options, header: true }),
+      insertTable: (options: { row: number; col: number }) => {
+        return insertTable({ ...options, header: true });
+      },
       exitTable: () => exitTable,
       selectTable,
       selectTableCell,
@@ -105,13 +106,17 @@ export function checkMarkdownTable(table: Node): void {
 
   if (!header || header.childCount === 0) throw new Error("Markdown table requires a header");
   table.forEach((row, _, rowIndex) => {
-    if (row.childCount !== header.childCount)
+    if (row.childCount !== header.childCount) {
       throw new Error("Markdown table rows must have equal widths");
+    }
+
     row.forEach((cell, _, column) => {
       const expected = rowIndex === 0 ? "tableHeaderCell" : "tableCell";
 
-      if (cell.type.name !== expected)
+      if (cell.type.name !== expected) {
         throw new Error("Markdown table requires one leading header row");
+      }
+
       const attrs = decodeTableCellAttrs(cell.attrs);
 
       if (attrs.align !== decodeTableCellAttrs(header.child(column).attrs).align) {
@@ -138,16 +143,17 @@ function defineTableAlign(type: "tableCell" | "tableHeaderCell") {
     default: null,
     validate: Schema.decodeUnknownSync(TableCellAttrs.fields.align),
     toDOM: (align) => (align === null ? null : ["style", `text-align: ${align}`]),
-    parseDOM: (dom) =>
-      Schema.decodeUnknownSync(TableCellAttrs.fields.align)(dom.style.textAlign || null),
+    parseDOM: (dom) => {
+      return Schema.decodeUnknownSync(TableCellAttrs.fields.align)(dom.style.textAlign || null);
+    },
   });
 }
 
 // Upstream row commands copy header cell types and omit our alignment attr.
 // Canonicalize their result before the guard sees the transaction.
 function markdownTableCommand(command: Command): Command {
-  return (state, dispatch, view) =>
-    command(
+  return (state, dispatch, view) => {
+    return command(
       state,
       dispatch &&
         ((tr) => {
@@ -156,6 +162,7 @@ function markdownTableCommand(command: Command): Command {
         }),
       view,
     );
+  };
 }
 
 function normalizeTableRows(tr: Transaction, state: EditorState): void {
@@ -182,12 +189,13 @@ function normalizeTableRows(tr: Transaction, state: EditorState): void {
       const normalized = row.copy(Fragment.fromArray(cells));
 
       // Changing one cell at a time would temporarily mix header and body cells.
-      if (!row.eq(normalized))
+      if (!row.eq(normalized)) {
         tr.replaceWith(
           tablePos + rowOffset + 1,
           tablePos + rowOffset + 1 + row.nodeSize,
           normalized,
         );
+      }
     });
 
     return false;

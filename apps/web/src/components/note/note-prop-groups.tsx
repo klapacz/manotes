@@ -62,12 +62,12 @@ function useGroups(props: { readonly recordId: NoteSchema.Id; readonly doc: Y.Do
   const input = createSyncedAtom(() => ({ recordId: props.recordId, doc: props.doc }));
 
   return createAtomResultStore(
-    bindRt((rt) =>
-      rt.atom((get) => {
+    bindRt((rt) => {
+      return rt.atom((get) => {
         // Changing the record or document replaces its subscriptions.
         return RuleProps.watch(get(input));
-      }),
-    ),
+      });
+    }),
   );
 }
 
@@ -142,11 +142,12 @@ type RowProps = {
 function Row(props: RowProps) {
   const builtin = () => BuiltinAttrs.isBuiltin(props.prop.propId);
 
-  const label = () =>
-    Option.match(props.prop.def, {
+  const label = () => {
+    return Option.match(props.prop.def, {
       onNone: () => <NoteLabel.Root id={props.prop.propId} />,
       onSome: (def) => def.title || "Untitled",
     });
+  };
 
   return (
     <DescriptionList.Row>
@@ -172,8 +173,9 @@ function ValueControl(props: RowProps) {
 
   const invalid = () => Attrs.ValueState.$is("Invalid")(props.prop.value);
 
-  const unexpected = () =>
-    RuleProps.EditorGroup.$is("Rule")(props.group) && RuleProps.isUnexpected(props.prop);
+  const unexpected = () => {
+    return RuleProps.EditorGroup.$is("Rule")(props.group) && RuleProps.isUnexpected(props.prop);
+  };
 
   return (
     <Picker.Root label={NotePropsEntries.label(props.prop)}>

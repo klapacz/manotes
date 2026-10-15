@@ -58,8 +58,8 @@ export function PaneStream(props: ComponentProps<"section">) {
   // The DB query owns filtering and sorting; the stream only layers the
   // refresh-gated pinned snapshot on top of the matching rows. Each successful
   // emission has already preloaded and booted the first editor slots.
-  const stateAtom = bindRt((rt) =>
-    rt.atom((get) => {
+  const stateAtom = bindRt((rt) => {
+    return rt.atom((get) => {
       const query = get(queryAtom);
       get(refreshTokenAtom);
 
@@ -74,9 +74,11 @@ export function PaneStream(props: ComponentProps<"section">) {
             // keep Success tied to real rows, after the first result is preloaded.
             Stream.drop(1),
             Stream.map((snapshot) => ({ ...snapshot, pool })),
-            Stream.mapEffect((state) =>
-              Effect.scoped(pool.preload(preloadNoteIds(state.items))).pipe(Effect.as(state)),
-            ),
+            Stream.mapEffect((state) => {
+              return Effect.scoped(pool.preload(preloadNoteIds(state.items))).pipe(
+                Effect.as(state),
+              );
+            }),
             // Draft changes rebuild the final list, without restarting SQL or
             // entering its pinned snapshot. Grouping runs once, after insertion.
             Stream.zipLatestWith(Atom.toStream(recording.draftAtom), (snapshot, draft) => ({
@@ -86,8 +88,8 @@ export function PaneStream(props: ComponentProps<"section">) {
           );
         }),
       );
-    }),
-  );
+    });
+  });
 
   // Reconciliation keys row nodes by ListItem.id, keeping row references
   // stable across emissions — virtua reuses rows by identity, so mounted
@@ -118,17 +120,20 @@ export function PaneStream(props: ComponentProps<"section">) {
   };
 
   // Rendering, keyboard order and retention all derive from these same rows.
-  const listOrder = createMemo(() =>
-    Predicate.isTagged(state, "Success") ? noteIdsFromRows(state.value.rows) : [],
-  );
+  const listOrder = createMemo(() => {
+    return Predicate.isTagged(state, "Success") ? noteIdsFromRows(state.value.rows) : [];
+  });
 
   const [lastFocused, setLastFocused] = createSignal<NoteSchema.Id>();
 
   const record = recording.createControls({
-    enabled: () =>
-      Predicate.isTagged(state, "Success") &&
-      (Predicate.isTagged(pane().filter.type, "notes") ||
-        Predicate.isTagged(pane().filter.type, "pages")),
+    enabled: () => {
+      return (
+        Predicate.isTagged(state, "Success") &&
+        (Predicate.isTagged(pane().filter.type, "notes") ||
+          Predicate.isTagged(pane().filter.type, "pages"))
+      );
+    },
     getFocusedRow() {
       if (!Predicate.isTagged(state, "Success")) return;
 
@@ -141,8 +146,9 @@ export function PaneStream(props: ComponentProps<"section">) {
 
   const pendingNote = () => Focus.noteIn(pane().paneId, focus.pendingId());
 
-  const retained = () =>
-    [lastFocused(), pendingNote(), recording.draftId()].filter((id) => id !== undefined);
+  const retained = () => {
+    return [lastFocused(), pendingNote(), recording.draftId()].filter((id) => id !== undefined);
+  };
 
   const jump = (index: number) => {
     const noteId = listOrder().at(index);

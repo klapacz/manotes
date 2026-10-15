@@ -34,9 +34,9 @@ describe("EditDocument.apply", () => {
 
   it("rejects no matches, even for all occurrences", () => {
     for (const occurrence of [undefined, "all"] as const) {
-      expect(() =>
-        edit("Hello", [{ kind: "replace", text: "missing", with: "x", occurrence }]),
-      ).toThrow(/found 0/);
+      expect(() => {
+        return edit("Hello", [{ kind: "replace", text: "missing", with: "x", occurrence }]);
+      }).toThrow(/found 0/);
     }
   });
 
@@ -55,9 +55,9 @@ describe("EditDocument.apply", () => {
     );
 
     for (const occurrence of [-1, 2, 0.5]) {
-      expect(() =>
-        edit("foo foo", [{ kind: "replace", text: "foo", with: "bar", occurrence }]),
-      ).toThrow(/occurrence/);
+      expect(() => {
+        return edit("foo foo", [{ kind: "replace", text: "foo", with: "bar", occurrence }]);
+      }).toThrow(/occurrence/);
     }
   });
 
@@ -123,12 +123,12 @@ describe("EditDocument.apply", () => {
 
   it("leaves input unchanged if a later edit fails", () => {
     const doc = MdParse.parse("original");
-    expect(() =>
-      EditDocument.apply(doc, [
+    expect(() => {
+      return EditDocument.apply(doc, [
         { kind: "replace", text: "original", with: "changed" },
         { kind: "replace", text: "missing", with: "x" },
-      ]),
-    ).toThrow();
+      ]);
+    }).toThrow();
     expect(doc.textContent).toBe("original");
   });
 
@@ -161,9 +161,9 @@ describe("EditDocument.apply", () => {
     expect(EditDocument.apply(doc, [{ kind: "replace", text: "missing", with: "missing" }])).toBe(
       doc,
     );
-    expect(() =>
-      EditDocument.apply(doc, [{ kind: "replace", text: "headerless", with: "changed" }]),
-    ).toThrow();
+    expect(() => {
+      return EditDocument.apply(doc, [{ kind: "replace", text: "headerless", with: "changed" }]);
+    }).toThrow();
     const appended = EditDocument.apply(doc, [{ kind: "append", markdown: "new" }]);
     expect(appended.child(0)).toBe(doc.child(0));
     expect(appended.child(1).textContent).toBe("new");

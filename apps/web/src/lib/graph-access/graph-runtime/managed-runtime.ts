@@ -29,8 +29,9 @@ export const createScoped = Effect.fn("GraphAccessGraphRuntimeManagedRuntime.cre
     const services = yield* Layer.buildWithMemoMap(layer, memoMap, scope);
     const atom = Atom.context({ memoMap })(layer);
 
-    const provide = <A, E>(effect: Effect.Effect<A, E, R>) =>
-      Effect.provideContext(effect, services);
+    const provide = <A, E>(effect: Effect.Effect<A, E, R>) => {
+      return Effect.provideContext(effect, services);
+    };
 
     const runtime: ManagedRuntime<R, ER> = {
       scope,

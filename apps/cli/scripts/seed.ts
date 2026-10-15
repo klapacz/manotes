@@ -45,9 +45,9 @@ const seed = Effect.gen(function* () {
 
   const graphPassword = Redacted.make(randomUUID());
 
-  const key = yield* Effect.tryPromise(() =>
-    GraphEncryption.createGraphKey(Redacted.value(graphPassword)),
-  );
+  const key = yield* Effect.tryPromise(() => {
+    return GraphEncryption.createGraphKey(Redacted.value(graphPassword));
+  });
 
   const protocol = RpcClient.layerProtocolHttp({
     url: `${origin}/api/rpc/graph-registry`,
@@ -102,9 +102,11 @@ NodeRuntime.runMain(
     Effect.scoped,
     Effect.tap((id) => Console.log(`Demo graph synced. Open a fresh browser: vp run enter ${id}`)),
     // RPC errors can contain authenticated requests. Keep credentials out of terminal output.
-    Effect.catchCause(() =>
-      Effect.fail(new Error("Demo seeding failed. Restart dev --seed-type demo to try again.")),
-    ),
+    Effect.catchCause(() => {
+      return Effect.fail(
+        new Error("Demo seeding failed. Restart dev --seed-type demo to try again."),
+      );
+    }),
     Effect.provide(NodeServices.layer),
     Effect.provide(Reactivity.layer),
     Effect.provide(FetchHttpClient.layer),

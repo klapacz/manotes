@@ -7,23 +7,26 @@ import type { GraphDestination } from "./destination";
 export const redirectLinkOptions = (
   state: Types.ExtractTag<State, "Locked" | "Missing">,
   returnTo?: GraphDestination.Destination,
-) =>
-  Match.value(state).pipe(
+) => {
+  return Match.value(state).pipe(
     Match.tagsExhaustive({
-      Missing: () =>
-        linkOptions({
+      Missing: () => {
+        return linkOptions({
           to: "/",
           replace: true,
-        }),
-      Locked: ({ record }) =>
-        linkOptions({
+        });
+      },
+      Locked: ({ record }) => {
+        return linkOptions({
           to: "/$graph/unlock",
           params: { graph: record.localGraphId },
           search: { returnTo },
           replace: true,
-        }),
+        });
+      },
     }),
   );
+};
 
 export const getReadyOrRedirect = async (localGraphId: string) => {
   const state = await GraphAccessRuntime.rt.runPromise(

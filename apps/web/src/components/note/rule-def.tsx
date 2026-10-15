@@ -73,21 +73,22 @@ export function Root(props: { recordId: AttrsSchema.NoteId; doc: Y.Doc; attrs: S
     Picker.Choice & { propId: AttrsSchema.NoteId },
     unknown,
     PropDef.Service
-  > = (request) =>
-    Stream.unwrap(PropDef.Service.use((defs) => defs.reactiveDefs())).pipe(
-      Stream.switchMap((defs) =>
-        MenuQuery.choices(() =>
-          defs
+  > = (request) => {
+    return Stream.unwrap(PropDef.Service.use((defs) => defs.reactiveDefs())).pipe(
+      Stream.switchMap((defs) => {
+        return MenuQuery.choices(() => {
+          return defs
             .filter((def) => !Record.has(expects(), def.id))
             .map((def) => ({
               value: def.id,
               propId: def.id,
               label: def.title || "Untitled",
               group: BuiltinAttrs.isBuiltin(def.id) ? "builtin" : "properties",
-            })),
-        )(request),
-      ),
+            }));
+        })(request);
+      }),
     );
+  };
 
   return (
     <div class="px-4 pb-4">
@@ -218,8 +219,8 @@ export function Root(props: { recordId: AttrsSchema.NoteId; doc: Y.Doc; attrs: S
   );
 }
 
-const Edit = bindRt((rt) =>
-  rt.fn(
+const Edit = bindRt((rt) => {
+  return rt.fn(
     Effect.fn("ComponentsNoteRuleDef.edit")(function* (opts: {
       readonly doc: Y.Doc;
       readonly change: Change;
@@ -228,14 +229,14 @@ const Edit = bindRt((rt) =>
 
       yield* Match.value(opts.change).pipe(
         Match.tag("Storage", ({ storage }) => attrs.setRuleStorage({ doc: opts.doc, storage })),
-        Match.tag("Set", ({ propId, value }) =>
-          attrs.setRuleExpectation({ doc: opts.doc, propId, value }),
-        ),
+        Match.tag("Set", ({ propId, value }) => {
+          return attrs.setRuleExpectation({ doc: opts.doc, propId, value });
+        }),
         Match.tag("Remove", ({ propId }) => attrs.clearRuleExpectation({ doc: opts.doc, propId })),
         Match.exhaustive,
       );
     }),
-  ),
-);
+  );
+});
 
 export * as RuleDef from "./rule-def";

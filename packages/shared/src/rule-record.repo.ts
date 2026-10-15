@@ -25,8 +25,8 @@ export class Service extends Context.Service<Service>()("RuleRecordRepo.Service"
     const db = yield* DB.Service;
 
     const reactiveRules = Effect.fn("RuleRecordRepo.reactiveRules")(function* () {
-      const rules = yield* db.reactiveQuery((db) =>
-        db
+      const rules = yield* db.reactiveQuery((db) => {
+        return db
           .select({
             id: Tables.notes.id,
             title: Tables.notes.title,
@@ -35,8 +35,8 @@ export class Service extends Context.Service<Service>()("RuleRecordRepo.Service"
           })
           .from(Tables.notes)
           .where(and(eq(Tables.notes._tag, "rule"), eq(Tables.notes.attrs_valid, 1)))
-          .orderBy(asc(Tables.notes.title), asc(Tables.notes.id)),
-      );
+          .orderBy(asc(Tables.notes.title), asc(Tables.notes.id));
+      });
 
       return rules.pipe(Stream.mapEffect((rows) => decodeRules(rows)));
     });

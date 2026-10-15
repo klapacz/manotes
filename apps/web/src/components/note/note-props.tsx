@@ -238,9 +238,7 @@ export const Edit = bindRt((rt) => {
           return attrs.setProp({ ...prop, recordId: opts.recordId, value: opts.value });
         },
         Rule: ({ ruleId }) => {
-          if (opts.value === undefined) {
-            return attrs.clearGroupProp({ ...prop, ruleId });
-          }
+          if (opts.value === undefined) return attrs.clearGroupProp({ ...prop, ruleId });
 
           return attrs.setGroupProp({
             ...prop,

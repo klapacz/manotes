@@ -30,20 +30,21 @@ export function PaneNote(props: ComponentProps<"section">) {
   const focus = Focus.use();
   const createNote = NoteCreate.useCreateNote();
 
-  const handleCreate = () =>
-    createNote({}, (note) => void navigate(NoteLink.getOptions({ id: note.id })));
+  const handleCreate = () => {
+    return createNote({}, (note) => void navigate(NoteLink.getOptions({ id: note.id })));
+  };
 
   const pane = PaneCtx.useNote();
   const noteIdAtom = createSyncedAtom(() => pane().id);
 
-  const notesAtom = bindRt((rt) =>
-    rt.atom((get) =>
-      NoteCache.Service.use((cache) => cache.changes(get(noteIdAtom))).pipe(
+  const notesAtom = bindRt((rt) => {
+    return rt.atom((get) => {
+      return NoteCache.Service.use((cache) => cache.changes(get(noteIdAtom))).pipe(
         Stream.unwrap,
         Stream.map(Option.getOrNull),
-      ),
-    ),
-  );
+      );
+    });
+  });
 
   const note = createAtomResultStore(notesAtom);
 
@@ -98,12 +99,13 @@ export function PaneNote(props: ComponentProps<"section">) {
 function PaneNoteInner(props: { note: NoteSchema.Meta }) {
   const [bootState, setBootState] = createSignal<BootState>(BootState.Loading());
 
-  const doc = () =>
-    BootState.$match(bootState(), {
+  const doc = () => {
+    return BootState.$match(bootState(), {
       Ready: ({ doc }) => doc,
       Loading: () => undefined,
       Error: () => undefined,
     });
+  };
 
   const fnode = Focus.createNoteNode(
     () => props.note.id,

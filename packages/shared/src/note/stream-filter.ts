@@ -8,21 +8,27 @@ const Comparison = Schema.TaggedStruct("cmp", { val: AttrsSchema.TargetFilterCmp
 export function toAttrs(filter: StreamSettings.Filter): AttrsSchema.TargetFilter {
   // Pane types group record constraints; attrs filters compare the stored fields separately.
   const expressions = Match.value(filter.type).pipe(
-    Match.tag("notes", () => [
-      Comparison.make({ val: ["_tag", "=", "note"] }),
-      Comparison.make({ val: ["title", "exists", false] }),
-    ]),
-    Match.tag("pages", () => [
-      Comparison.make({ val: ["_tag", "=", "note"] }),
-      Comparison.make({ val: ["title", "exists", true] }),
-    ]),
+    Match.tag("notes", () => {
+      return [
+        Comparison.make({ val: ["_tag", "=", "note"] }),
+        Comparison.make({ val: ["title", "exists", false] }),
+      ];
+    }),
+    Match.tag("pages", () => {
+      return [
+        Comparison.make({ val: ["_tag", "=", "note"] }),
+        Comparison.make({ val: ["title", "exists", true] }),
+      ];
+    }),
     Match.tag("prop", () => [Comparison.make({ val: ["_tag", "=", "prop"] })]),
     Match.tag("rule", () => [Comparison.make({ val: ["_tag", "=", "rule"] })]),
-    Match.tag("enum_option", ({ enum_parent }) => [
-      Comparison.make({ val: ["_tag", "=", "owned"] }),
-      Comparison.make({ val: ["owned_type", "=", "enum_option"] }),
-      Comparison.make({ val: ["owned_parent", "=", enum_parent] }),
-    ]),
+    Match.tag("enum_option", ({ enum_parent }) => {
+      return [
+        Comparison.make({ val: ["_tag", "=", "owned"] }),
+        Comparison.make({ val: ["owned_type", "=", "enum_option"] }),
+        Comparison.make({ val: ["owned_parent", "=", enum_parent] }),
+      ];
+    }),
     Match.exhaustive,
   );
 
@@ -77,25 +83,23 @@ export function fromAttrs(expressions: AttrsSchema.Filter | undefined): StreamSe
     tag?: AttrsSchema.RecordTag;
     owned_type?: "enum_option";
     owned_parent?: AttrsSchema.NoteId;
-  }>(
-    (fields, val) =>
-      Match.value(val).pipe(
-        Match.when(["_tag", "=", Schema.is(AttrsSchema.RecordTag)], ([, , tag]) => ({
-          ...fields,
-          tag,
-        })),
-        Match.when(["owned_type", "=", "enum_option"], () => ({
-          ...fields,
-          owned_type: "enum_option" as const,
-        })),
-        Match.when(["owned_parent", "=", Match.string], ([, , owned_parent]) => ({
-          ...fields,
-          owned_parent: AttrsSchema.NoteId.make(owned_parent),
-        })),
-        Match.orElse(() => fields),
-      ),
-    {},
-  );
+  }>((fields, val) => {
+    return Match.value(val).pipe(
+      Match.when(["_tag", "=", Schema.is(AttrsSchema.RecordTag)], ([, , tag]) => ({
+        ...fields,
+        tag,
+      })),
+      Match.when(["owned_type", "=", "enum_option"], () => ({
+        ...fields,
+        owned_type: "enum_option" as const,
+      })),
+      Match.when(["owned_parent", "=", Match.string], ([, , owned_parent]) => ({
+        ...fields,
+        owned_parent: AttrsSchema.NoteId.make(owned_parent),
+      })),
+      Match.orElse(() => fields),
+    );
+  }, {});
 
   // An enum-option pane type cannot be constructed without its required parent.
   if (
@@ -116,15 +120,15 @@ export function fromAttrs(expressions: AttrsSchema.Filter | undefined): StreamSe
 
 // Pane filters cannot represent OR groups; dropping them preserves the converter's existing behavior.
 function flattenComparisons(expressions: AttrsSchema.Filter): readonly AttrsSchema.FilterCmp[] {
-  return Array.flatMap(expressions, (expression) =>
-    Match.value(expression).pipe(
+  return Array.flatMap(expressions, (expression) => {
+    return Match.value(expression).pipe(
       Match.tag("cmp", ({ val }) => [val]),
-      Match.tag("and", "or", (group) =>
-        Predicate.isTagged(group, "and") ? flattenComparisons(group.val) : [],
-      ),
+      Match.tag("and", "or", (group) => {
+        return Predicate.isTagged(group, "and") ? flattenComparisons(group.val) : [];
+      }),
       Match.exhaustive,
-    ),
-  );
+    );
+  });
 }
 
 function applyComparison(
@@ -162,11 +166,12 @@ function applyComparison(
     })),
     Match.when(
       [["prop", Match.string], "=", Schema.is(AttrsSchema.PropVal)],
-      ([[, propId], , value]) =>
-        StreamSettings.changePropFilter(filter, {
+      ([[, propId], , value]) => {
+        return StreamSettings.changePropFilter(filter, {
           propId: AttrsSchema.NoteId.make(propId),
           value,
-        }),
+        });
+      },
     ),
     Match.orElse(() => filter),
   );

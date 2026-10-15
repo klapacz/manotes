@@ -40,25 +40,27 @@ export function Menu(props: {
     changeDisplay({ sort, view });
   };
 
-  const changeSort = (sort: StreamSettings.Display["sort"]) =>
-    changeDisplay({ sort, view: props.settings.view });
+  const changeSort = (sort: StreamSettings.Display["sort"]) => {
+    return changeDisplay({ sort, view: props.settings.view });
+  };
 
-  const changeView = (view: StreamSettings.Display["view"]) =>
-    changeDisplay({ sort: props.settings.sort, view });
+  const changeView = (view: StreamSettings.Display["view"]) => {
+    return changeDisplay({ sort: props.settings.sort, view });
+  };
 
-  const sorts = MenuQuery.choices(() =>
-    sortChoices.map((choice): MenuQuery.Action => ({
+  const sorts = MenuQuery.choices(() => {
+    return sortChoices.map((choice): MenuQuery.Action => ({
       ...choice,
       run: () => changeSort(choice.value),
-    })),
-  );
+    }));
+  });
 
-  const views = MenuQuery.choices(() =>
-    viewChoices.map((choice): MenuQuery.Action => ({
+  const views = MenuQuery.choices(() => {
+    return viewChoices.map((choice): MenuQuery.Action => ({
       ...choice,
       run: () => changeView(choice.value),
-    })),
-  );
+    }));
+  });
 
   const query = createMemo(() => {
     const settings = props.settings;

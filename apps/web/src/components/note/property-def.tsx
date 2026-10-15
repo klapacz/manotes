@@ -68,24 +68,26 @@ export function Root(props: {
   const editableType = () => PropQuery.editableTypes.find((type) => type === props.attrs.prop_type);
 
   const validation = PropState.use({
-    state: () =>
-      PropQuery.valueState({
+    state: () => {
+      return PropQuery.valueState({
         type: props.attrs.prop_type,
         value: Option.fromNullishOr(props.attrs.prop_default),
-      }),
+      });
+    },
     targets: () => props.attrs.prop_targets,
   });
 
   const defaultState = validation.state;
 
-  const defaultLink = () =>
-    Match.value(defaultState()).pipe(
+  const defaultLink = () => {
+    return Match.value(defaultState()).pipe(
       Match.when(
         { _tag: Match.is("Valid", "Invalid"), value: { _tag: Match.is("link", "enum") } },
         ({ value }) => value.val,
       ),
       Match.orElse(() => undefined),
     );
+  };
 
   const openNote = (id: AttrsSchema.NoteId) => {
     const input = PaneMake.note(id);
@@ -232,8 +234,8 @@ export function Root(props: {
   );
 }
 
-const Edit = bindRt((rt) =>
-  rt.fn(
+const Edit = bindRt((rt) => {
+  return rt.fn(
     Effect.fn("ComponentsNotePropertyDef.edit")(function* (opts: {
       readonly doc: Y.Doc;
       readonly change: Change;
@@ -242,18 +244,18 @@ const Edit = bindRt((rt) =>
 
       yield* Match.value(opts.change).pipe(
         Match.tag("Type", ({ type }) => attrs.setPropType({ doc: opts.doc, type })),
-        Match.tag("Default", ({ value }) =>
-          value.pipe(
+        Match.tag("Default", ({ value }) => {
+          return value.pipe(
             Option.match({
               onNone: () => attrs.clearPropDefault({ doc: opts.doc }),
               onSome: (value) => attrs.setPropDefault({ doc: opts.doc, value }),
             }),
-          ),
-        ),
+          );
+        }),
         Match.exhaustive,
       );
     }),
-  ),
-);
+  );
+});
 
 export * as PropertyDef from "./property-def";

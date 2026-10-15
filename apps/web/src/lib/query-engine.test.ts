@@ -15,16 +15,16 @@ describe("menu queries", () => {
   it("shares a lookup across concurrent branches and keeps separate requests separate", async () => {
     let calls = 0;
 
-    const notes = QueryEngine.share(() =>
-      Stream.fromEffect(
+    const notes = QueryEngine.share(() => {
+      return Stream.fromEffect(
         Effect.gen(function* () {
           calls++;
           yield* Effect.sleep("10 millis");
 
           return [{ value: "Sleep log", score: 1 }];
         }),
-      ),
-    );
+      );
+    });
 
     const query = QueryEngine.combine([
       QueryEngine.map(notes, (note) => `Links to: ${note}`),
@@ -46,16 +46,18 @@ describe("menu queries", () => {
   it("interleaves tied results from children without overriding higher scores", async () => {
     const results = await read(
       QueryEngine.combine([
-        () =>
-          Stream.succeed([
+        () => {
+          return Stream.succeed([
             { value: "to A", score: 0.1 },
             { value: "to B", score: 0.1 },
-          ]),
-        () =>
-          Stream.succeed([
+          ]);
+        },
+        () => {
+          return Stream.succeed([
             { value: "from A", score: 0.1 },
             { value: "from B", score: 0.1 },
-          ]),
+          ]);
+        },
         () => Stream.succeed([{ value: "Date", score: 1 }]),
       ])({ text: "A" }),
     );
@@ -75,21 +77,21 @@ describe("menu queries", () => {
         const started = yield* Deferred.make<void>();
         let interrupted = 0;
 
-        const notes = QueryEngine.share(() =>
-          Stream.fromEffect(
+        const notes = QueryEngine.share(() => {
+          return Stream.fromEffect(
             Effect.gen(function* () {
               yield* Deferred.succeed(started, undefined);
 
               return yield* Effect.never;
             }).pipe(
-              Effect.onInterrupt(() =>
-                Effect.sync(() => {
+              Effect.onInterrupt(() => {
+                return Effect.sync(() => {
                   interrupted++;
-                }),
-              ),
+                });
+              }),
             ),
-          ),
-        );
+          );
+        });
 
         const query = QueryEngine.combine([notes, notes]);
 
@@ -114,31 +116,32 @@ describe("menu queries", () => {
         let subscriptions = 0;
         let releases = 0;
 
-        const notes = QueryEngine.share(() =>
-          Stream.unwrap(
+        const notes = QueryEngine.share(() => {
+          return Stream.unwrap(
             Effect.gen(function* () {
               yield* Effect.acquireRelease(
                 Effect.sync(() => {
                   subscriptions++;
                 }),
-                () =>
-                  Effect.sync(() => {
+                () => {
+                  return Effect.sync(() => {
                     releases++;
-                  }),
+                  });
+                },
               );
 
               return SubscriptionRef.changes(source).pipe(
                 Stream.map((value) => [{ value, score: 1 }]),
               );
             }),
-          ),
-        );
+          );
+        });
 
         const query = QueryEngine.combine([
           () => Stream.succeed([{ value: "Action", score: 1 }]),
-          ...["To", "From", "Open"].map((label) =>
-            QueryEngine.map(notes, (note) => `${label}: ${note}`),
-          ),
+          ...["To", "From", "Open"].map((label) => {
+            return QueryEngine.map(notes, (note) => `${label}: ${note}`);
+          }),
         ]);
 
         const fiber = yield* query({ text: "note" }).pipe(
@@ -150,8 +153,9 @@ describe("menu queries", () => {
               values.includes("To: Updated") &&
               values.includes("From: Updated") &&
               values.includes("Open: Updated")
-            )
+            ) {
               return Deferred.succeed(updated, undefined);
+            }
 
             return Deferred.succeed(initial, undefined);
           }),
@@ -177,9 +181,9 @@ describe("menu queries", () => {
         const initial = yield* Deferred.make<void>();
         const updated = yield* Deferred.make<void>();
 
-        const notes = QueryEngine.share(() =>
-          SubscriptionRef.changes(source).pipe(Stream.map((value) => [{ value, score: 1 }])),
-        );
+        const notes = QueryEngine.share(() => {
+          return SubscriptionRef.changes(source).pipe(Stream.map((value) => [{ value, score: 1 }]));
+        });
 
         const query = QueryEngine.combine([
           (request) => notes(request).pipe(Stream.take(1)),
@@ -188,11 +192,11 @@ describe("menu queries", () => {
 
         const fiber = yield* query({ text: "note" }).pipe(
           Stream.scoped,
-          Stream.runForEach((matches) =>
-            matches.some((match) => match.value === "Updated")
+          Stream.runForEach((matches) => {
+            return matches.some((match) => match.value === "Updated")
               ? Deferred.succeed(updated, undefined)
-              : Deferred.succeed(initial, undefined),
-          ),
+              : Deferred.succeed(initial, undefined);
+          }),
           Effect.forkChild,
         );
 

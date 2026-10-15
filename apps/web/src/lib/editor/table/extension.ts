@@ -23,8 +23,9 @@ export function defineTableExtension() {
 const deleteSelectedTable: Command = (state, dispatch) => {
   const { selection } = state;
 
-  if (!isCellSelection(selection) || !selection.isRowSelection() || !selection.isColSelection())
+  if (!isCellSelection(selection) || !selection.isRowSelection() || !selection.isColSelection()) {
     return false;
+  }
 
   return deleteTable(state, dispatch);
 };

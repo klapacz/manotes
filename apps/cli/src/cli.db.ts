@@ -48,11 +48,11 @@ const migrateNode = Effect.fn("CliDB.migrateNode")(function* () {
 
   const journal = yield* decodeMigrationJournal(JSON.parse(journalText));
 
-  const migrations = yield* Effect.forEach(journal.entries, ({ tag }) =>
-    fs
+  const migrations = yield* Effect.forEach(journal.entries, ({ tag }) => {
+    return fs
       .readFileString(fileURLToPath(new URL(`../drizzle/${tag}.sql`, import.meta.url)))
-      .pipe(Effect.map((sql) => ({ tag, sql }))),
-  );
+      .pipe(Effect.map((sql) => ({ tag, sql })));
+  });
 
   yield* Migrator.migrate(migrations);
 });

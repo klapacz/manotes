@@ -33,15 +33,18 @@ describe("StreamFilter conversion", () => {
       ),
     ).toEqual(filter);
     const encoded = Schema.encodeSync(PaneSchema.StreamFilterType)(type);
-    expect(() =>
-      Schema.decodeUnknownSync(PaneSchema.StreamFilterType)({ ...encoded, enum_parent: undefined }),
-    ).toThrow();
-    expect(() =>
-      Schema.decodeUnknownSync(PaneSchema.StreamFilterType)({
+    expect(() => {
+      return Schema.decodeUnknownSync(PaneSchema.StreamFilterType)({
+        ...encoded,
+        enum_parent: undefined,
+      });
+    }).toThrow();
+    expect(() => {
+      return Schema.decodeUnknownSync(PaneSchema.StreamFilterType)({
         ...encoded,
         enum_parent: "",
-      }),
-    ).toThrow();
+      });
+    }).toThrow();
   });
 
   it("does not mark a decoded default type as modified", () => {

@@ -28,9 +28,7 @@ export class OtpService extends Context.Service<OtpService>()("Auth.OtpService",
         .get(email)
         .pipe(Effect.mapError((cause) => new OtpStoreError({ operation: "read", cause })));
 
-      if (stored === null || stored !== otp) {
-        return yield* Effect.fail(new OtpVerificationError());
-      }
+      if (stored === null || stored !== otp) return yield* Effect.fail(new OtpVerificationError());
 
       yield* kv
         .delete(email)

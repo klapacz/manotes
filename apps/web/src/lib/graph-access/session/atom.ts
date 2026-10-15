@@ -31,8 +31,9 @@ export const find = Atom.map(get, (result) => {
       onFailure: (failure) => {
         const result = Cause.findError(failure.cause);
 
-        if (Result.isFailure(result) || !Predicate.isTagged(result.success, "Unauthorized"))
+        if (Result.isFailure(result) || !Predicate.isTagged(result.success, "Unauthorized")) {
           return failure;
+        }
 
         return AsyncResult.success(Option.none());
       },

@@ -28,9 +28,7 @@ export const Route = createFileRoute("/open/$graphId")({
       }),
     );
 
-    if (Option.isNone(graph)) {
-      throw redirect({ to: "/", replace: true });
-    }
+    if (Option.isNone(graph)) throw redirect({ to: "/", replace: true });
 
     throw redirect(
       GraphDestination.linkOptions(

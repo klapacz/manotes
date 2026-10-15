@@ -79,9 +79,9 @@ export function changedFilters(filter: Filter): FilterField[] {
   const fields = ["type", "search", "date", "backlinksTo", "linksFrom"] as const;
   const initial = defaults(PaneSchema.StreamFilterType.cases.notes.make({})).filter;
 
-  return fields.filter((field) =>
-    field === "type" ? !Equal.equals(filter.type, initial.type) : Boolean(filter[field]),
-  );
+  return fields.filter((field) => {
+    return field === "type" ? !Equal.equals(filter.type, initial.type) : Boolean(filter[field]);
+  });
 }
 
 export function changedDisplay(settings: Settings): (keyof Display)[] {

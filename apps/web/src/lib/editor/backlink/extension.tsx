@@ -35,22 +35,23 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
     const noteIdAtom = createSyncedAtom(noteId);
 
     const state = createAtomStore(
-      bindRt((rt) =>
-        rt.atom((get) => {
+      bindRt((rt) => {
+        return rt.atom((get) => {
           const noteId = get(noteIdAtom);
 
           return NoteCache.Service.use((cache) => cache.changes(noteId)).pipe(
             Stream.unwrap,
             Stream.map(
               Option.match({
-                onSome: (note): BacklinkLabelEntry =>
-                  BacklinkLabelEntry.Resolved({ title: NoteFormat.label(note) }),
+                onSome: (note): BacklinkLabelEntry => {
+                  return BacklinkLabelEntry.Resolved({ title: NoteFormat.label(note) });
+                },
                 onNone: BacklinkLabelEntry.Missing,
               }),
             ),
           );
-        }),
-      ),
+        });
+      }),
       BacklinkLabelEntry.Loading(),
     );
 
@@ -109,38 +110,39 @@ export function defineBacklinkRuntime() {
 
   return union(
     defineClipboardSerializer({
-      nodesFromSchemaWrapper: (nodesFromSchema) => (schema) => {
-        const nodes = nodesFromSchema(schema);
+      nodesFromSchemaWrapper: (nodesFromSchema) => {
+        return (schema) => {
+          const nodes = nodesFromSchema(schema);
 
-        return {
-          ...nodes,
-          backlink: (node) => {
-            const { id } = decodeBacklinkAttrs(node.attrs);
+          return {
+            ...nodes,
+            backlink: (node) => {
+              const { id } = decodeBacklinkAttrs(node.attrs);
 
-            return [
-              "span",
-              {
-                "data-backlink": "",
-                "data-backlink-id": id,
-              },
-              labelSnapshot.get(id) ?? id,
-            ];
-          },
+              return [
+                "span",
+                {
+                  "data-backlink": "",
+                  "data-backlink-id": id,
+                },
+                labelSnapshot.get(id) ?? id,
+              ];
+            },
+          };
         };
       },
     }),
-    definePlugin(
-      () =>
-        new Plugin({
-          props: {
-            clipboardTextSerializer(slice) {
-              return slice.content.textBetween(0, slice.content.size, "\n\n", (node) =>
-                clipboardLeafText(node, labelSnapshot),
-              );
-            },
+    definePlugin(() => {
+      return new Plugin({
+        props: {
+          clipboardTextSerializer(slice) {
+            return slice.content.textBetween(0, slice.content.size, "\n\n", (node) => {
+              return clipboardLeafText(node, labelSnapshot);
+            });
           },
-        }),
-    ),
+        },
+      });
+    }),
     defineSolidNodeView({
       name: "backlink",
       component: BacklinkView,

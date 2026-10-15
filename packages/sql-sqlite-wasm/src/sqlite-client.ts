@@ -28,8 +28,9 @@ import type { OpfsWorkerMessage } from "./internal/opfs-worker";
 
 const ATTR_DB_SYSTEM_NAME = "db.system.name";
 
-const classifyError = (cause: unknown, message: string, operation: string) =>
-  classifySqliteError(cause, { message, operation });
+const classifyError = (cause: unknown, message: string, operation: string) => {
+  return classifySqliteError(cause, { message, operation });
+};
 
 /**
  * @category type ids
@@ -90,8 +91,8 @@ interface SqliteConnection extends Connection {
  */
 export const make = (
   options: SqliteClientConfig,
-): Effect.Effect<SqliteClient, SqlError, Scope.Scope | Reactivity.Reactivity> =>
-  Effect.gen(function* () {
+): Effect.Effect<SqliteClient, SqlError, Scope.Scope | Reactivity.Reactivity> => {
+  return Effect.gen(function* () {
     const reactivity = yield* Reactivity.Reactivity;
     const compiler = Statement.makeCompilerSqlite(options.transformQueryNames);
 
@@ -109,8 +110,9 @@ export const make = (
       const worker = yield* options.worker;
       const port = "port" in worker ? worker.port : worker;
 
-      const postMessage = (message: OpfsWorkerMessage, transferables?: ReadonlyArray<any>) =>
-        port.postMessage(message, transferables as any);
+      const postMessage = (message: OpfsWorkerMessage, transferables?: ReadonlyArray<any>) => {
+        return port.postMessage(message, transferables as any);
+      };
 
       yield* Scope.addFinalizer(
         scope,
@@ -154,9 +156,7 @@ export const make = (
         Effect.runFork(ScopedRef.set(connectionRef, makeConnection));
       }
 
-      if ("onerror" in worker) {
-        worker.addEventListener("error", onError);
-      }
+      if ("onerror" in worker) worker.addEventListener("error", onError);
 
       yield* Scope.addFinalizer(
         scope,
@@ -166,21 +166,18 @@ export const make = (
         }),
       );
 
-      if (options.initMessage !== undefined) {
-        port.postMessage(options.initMessage);
-      }
+      if (options.initMessage !== undefined) port.postMessage(options.initMessage);
 
       yield* Deferred.await(readyDeferred);
 
-      if (options.installReactivityHooks) {
-        postMessage(["update_hook"]);
-      }
+      if (options.installReactivityHooks) postMessage(["update_hook"]);
 
-      const send = (id: number, message: OpfsWorkerMessage, transferables?: ReadonlyArray<any>) =>
-        Effect.callback<any, SqlError>((resume) => {
+      const send = (id: number, message: OpfsWorkerMessage, transferables?: ReadonlyArray<any>) => {
+        return Effect.callback<any, SqlError>((resume) => {
           pending.set(id, resume);
           postMessage(message, transferables);
         });
+      };
 
       const run = (
         sql: string,
@@ -269,6 +266,7 @@ export const make = (
       },
     );
   });
+};
 
 function rowToObject(columns: Array<string>, row: Array<any>) {
   const obj: Record<string, any> = {};
@@ -280,8 +278,9 @@ function rowToObject(columns: Array<string>, row: Array<any>) {
   return obj;
 }
 
-const extractObject = (rows: [Array<string>, Array<any>]) =>
-  rows[1].map((row) => rowToObject(rows[0], row));
+const extractObject = (rows: [Array<string>, Array<any>]) => {
+  return rows[1].map((row) => rowToObject(rows[0], row));
+};
 
 const extractRows = (rows: [Array<string>, Array<any>]) => rows[1];
 
@@ -298,10 +297,11 @@ export const Transferables = Context.Reference<ReadonlyArray<Transferable>>(
  * @category tranferables
  * @since 1.0.0
  */
-export const withTransferables =
-  (transferables: ReadonlyArray<Transferable>) =>
-  <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
-    Effect.provideService(effect, Transferables, transferables);
+export const withTransferables = (transferables: ReadonlyArray<Transferable>) => {
+  return <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> => {
+    return Effect.provideService(effect, Transferables, transferables);
+  };
+};
 
 /**
  * @category layers
@@ -309,9 +309,10 @@ export const withTransferables =
  */
 export const layer = (
   config: SqliteClientConfig,
-): Layer.Layer<SqliteClient | Client.SqlClient, SqlError> =>
-  Layer.effectContext(
-    Effect.map(make(config), (client) =>
-      Context.make(SqliteClient, client).pipe(Context.add(Client.SqlClient, client)),
-    ),
+): Layer.Layer<SqliteClient | Client.SqlClient, SqlError> => {
+  return Layer.effectContext(
+    Effect.map(make(config), (client) => {
+      return Context.make(SqliteClient, client).pipe(Context.add(Client.SqlClient, client));
+    }),
   ).pipe(Layer.provide(Reactivity.layer));
+};

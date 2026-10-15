@@ -46,8 +46,8 @@ const EMPTY_TAB_CANDIDATES: BrowserExtension.TabCandidate[] = [];
 
 const popupClass = cx(commandSurfaceClass, commandListClass, "block w-56 border p-1 shadow-md");
 
-const CreateTabNote = bindRt((rt) =>
-  rt.fn(
+const CreateTabNote = bindRt((rt) => {
+  return rt.fn(
     Effect.fn("LibEditorBacklinkMenu.createTabNote")(function* (
       tab: BrowserExtension.TabCandidate,
     ) {
@@ -55,8 +55,8 @@ const CreateTabNote = bindRt((rt) =>
 
       return yield* service.createFromTab(tab);
     }),
-  ),
-);
+  );
+});
 
 export default function BacklinkMenu(props: { currentNoteId: string }) {
   const editor = useEditor<AppExtension>();
@@ -69,12 +69,13 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
 
   const createNote = NoteCreate.useCreateNote();
 
-  const onCreatePage = (title: string) =>
-    createNote({ payload: NoteCreate.pagePayload(title) }, (note) => onSelect(note.id));
+  const onCreatePage = (title: string) => {
+    return createNote({ payload: NoteCreate.pagePayload(title) }, (note) => onSelect(note.id));
+  };
 
   const notes = createAtomStore(
-    bindRt((rt) =>
-      rt.atom((get) => {
+    bindRt((rt) => {
+      return rt.atom((get) => {
         const query = get(rawQueryAtom);
         const currentNoteId = get(currentNoteIdAtom);
 
@@ -93,8 +94,8 @@ export default function BacklinkMenu(props: { currentNoteId: string }) {
             ),
           ),
         );
-      }),
-    ),
+      });
+    }),
     EMPTY_BACKLINK_NOTES,
   );
 
@@ -157,15 +158,15 @@ export function TabMenu() {
   useArrowKeyAliases(editor, isOpen);
 
   const tabs = createAtomStore(
-    bindRt((rt) =>
-      rt.atom((get) => {
+    bindRt((rt) => {
+      return rt.atom((get) => {
         const query = get(rawQueryAtom);
 
         if (!get(openAtom)) return Stream.succeed(EMPTY_TAB_CANDIDATES);
 
         return BrowserExtensionClient.watchTabs.pipe(Stream.map(filterTabs(query)));
-      }),
-    ),
+      });
+    }),
     EMPTY_TAB_CANDIDATES,
   );
 
@@ -222,9 +223,9 @@ export function StreamRefMenu() {
   const [isOpen, setOpen] = createSignal(false);
   useArrowKeyAliases(editor, isOpen);
 
-  const panes = createMemo(() =>
-    isOpen() ? ctx.stack().filter((pane) => !PaneSchema.Pane.guards.recordings(pane)) : [],
-  );
+  const panes = createMemo(() => {
+    return isOpen() ? ctx.stack().filter((pane) => !PaneSchema.Pane.guards.recordings(pane)) : [];
+  });
 
   const onSelect = (pane: PaneSchema.PaneNote | PaneSchema.PaneStream) => {
     if (PaneSchema.Pane.guards.note(pane)) {
@@ -327,9 +328,8 @@ function rawQuery(match: RegExpExecArray) {
   return (match[1] ?? "").trim();
 }
 
-const filterTabs =
-  (query: string) =>
-  (tabs: readonly BrowserExtension.TabCandidate[]): BrowserExtension.TabCandidate[] => {
+const filterTabs = (query: string) => {
+  return (tabs: readonly BrowserExtension.TabCandidate[]): BrowserExtension.TabCandidate[] => {
     const needle = query.trim().toLowerCase();
 
     if (needle === "") return [...tabs];
@@ -338,3 +338,4 @@ const filterTabs =
       (tab) => tab.title.toLowerCase().includes(needle) || tab.url.toLowerCase().includes(needle),
     );
   };
+};

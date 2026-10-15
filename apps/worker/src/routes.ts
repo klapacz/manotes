@@ -69,20 +69,20 @@ export const protectedRoutesLayer = HttpRouter.addAll(
     );
 
     return [
-      HttpRouter.route("POST", "/api/rpc/graph-registry", () =>
-        withSession(proxyToGraphRegistry()),
-      ),
-      HttpRouter.route("*", "/api/sync/:graphId", () =>
-        withSession(
+      HttpRouter.route("POST", "/api/rpc/graph-registry", () => {
+        return withSession(proxyToGraphRegistry());
+      }),
+      HttpRouter.route("*", "/api/sync/:graphId", () => {
+        return withSession(
           pipe(
             pathParam,
             Effect.flatMap((params) => proxyToGraphSync({ params })),
           ),
-        ),
-      ),
-      HttpRouter.route("*", "/api/*", () =>
-        withSession(HttpServerResponse.json({ error: "Not found" }, { status: 404 })),
-      ),
+        );
+      }),
+      HttpRouter.route("*", "/api/*", () => {
+        return withSession(HttpServerResponse.json({ error: "Not found" }, { status: 404 }));
+      }),
     ] as const;
   }),
 );

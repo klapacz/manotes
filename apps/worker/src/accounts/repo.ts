@@ -20,12 +20,14 @@ export class Service extends Context.Service<Service>()("AccountsRepo.Service", 
     const getAccountByEmail = SqlSchema.findOneOption({
       Request: S.Struct({ email: S.String }),
       Result: Schema.Account,
-      execute: ({ email }) => sql`
+      execute: ({ email }) => {
+        return sql`
         SELECT ${sql.literal(ACCOUNT_COLUMNS)}
         FROM accounts
         WHERE email = ${email}
         LIMIT 1
-      `,
+      `;
+      },
     });
 
     const createAccount = SqlSchema.findOne({

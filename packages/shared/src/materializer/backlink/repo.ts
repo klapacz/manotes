@@ -11,17 +11,17 @@ export class Service extends Context.Service<Service>()("Materializer.BacklinkRe
       sourceId: string,
       targetIds: ReadonlyArray<string>,
     ) {
-      yield* db.query((db) =>
-        db
+      yield* db.query((db) => {
+        return db
           .delete(Tables.backlinks)
           .where(eq(Tables.backlinks.sourceId, sourceId))
-          .returning({ sourceId: Tables.backlinks.sourceId }),
-      );
+          .returning({ sourceId: Tables.backlinks.sourceId });
+      });
 
       if (targetIds.length === 0) return;
 
-      yield* db.query((db) =>
-        db
+      yield* db.query((db) => {
+        return db
           .insert(Tables.backlinks)
           .values(
             targetIds.map((targetId) => ({
@@ -29,8 +29,8 @@ export class Service extends Context.Service<Service>()("Materializer.BacklinkRe
               targetId,
             })),
           )
-          .returning({ sourceId: Tables.backlinks.sourceId }),
-      );
+          .returning({ sourceId: Tables.backlinks.sourceId });
+      });
     });
 
     return {

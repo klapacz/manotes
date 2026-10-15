@@ -18,15 +18,15 @@ export function use(opts: {
   const inputAtom = createSyncedAtom(input);
 
   const result = useAtomValue(
-    bindRt((rt) =>
-      rt.atom((get) => {
+    bindRt((rt) => {
+      return rt.atom((get) => {
         const current = get(inputAtom);
 
         return PropValidation.watch(current).pipe(
           Stream.map((state) => ({ input: current, state })),
         );
-      }),
-    ),
+      });
+    }),
   );
 
   const state = () => {

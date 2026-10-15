@@ -48,8 +48,6 @@ export function findParentNode(
   for (let depth = $pos.depth; depth >= 0; depth -= 1) {
     const node = $pos.node(depth);
 
-    if (predicate(node)) {
-      return { node, pos: depth === 0 ? 0 : $pos.before(depth) };
-    }
+    if (predicate(node)) return { node, pos: depth === 0 ? 0 : $pos.before(depth) };
   }
 }

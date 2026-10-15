@@ -47,8 +47,8 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       const id = encoded.id ?? nanoid();
 
       return yield* db
-        .find((db) =>
-          db
+        .find((db) => {
+          return db
             .insert(Tables.notes)
             .values({
               id,
@@ -61,8 +61,8 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
               updatedAt: encoded.updatedAt,
               lastEventLocalSeq: encoded.lastEventLocalSeq ?? 0,
             })
-            .returning(),
-        )
+            .returning();
+        })
         .pipe(EffectOption.traverseOrElse(decodeRecord, () => new DB.NotFoundError()));
     });
 
@@ -73,9 +73,9 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       const encoded = yield* pipe(updates, Schema.encodeEffect(NoteSchema.Update));
 
       return yield* db
-        .find((db) =>
-          db.update(Tables.notes).set(encoded).where(eq(Tables.notes.id, id)).returning(),
-        )
+        .find((db) => {
+          return db.update(Tables.notes).set(encoded).where(eq(Tables.notes.id, id)).returning();
+        })
         .pipe(EffectOption.traverseOrElse(decodeRecord, () => new DB.NotFoundError()));
     });
 
@@ -84,9 +84,9 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
       readonly columns: AttrsColumns;
     }) {
       const columns = yield* encodeAttrsColumns(opts.columns);
-      yield* db.execute((db) =>
-        db.update(Tables.notes).set(columns).where(eq(Tables.notes.id, opts.id)),
-      );
+      yield* db.execute((db) => {
+        return db.update(Tables.notes).set(columns).where(eq(Tables.notes.id, opts.id));
+      });
     });
 
     const findById = Effect.fn("NoteRepo.findById")(function* (id: string) {
@@ -96,14 +96,14 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
     });
 
     const findIdByTitle = Effect.fn("NoteRepo.findIdByTitle")(function* (title: string) {
-      return yield* db.find((db) =>
-        db
+      return yield* db.find((db) => {
+        return db
           .select({ id: Tables.notes.id })
           .from(Tables.notes)
           .where(eq(Tables.notes.title, title))
           .orderBy(asc(Tables.notes.createdAt), asc(Tables.notes.id))
-          .limit(1),
-      );
+          .limit(1);
+      });
     });
 
     const getById = Effect.fn("NoteRepo.getById")(function* (id: string) {
@@ -115,8 +115,8 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
     const findOutgoingBacklinkPreviews = Effect.fn("NoteRepo.findOutgoingBacklinkPreviews")(
       function* (id: string) {
         return yield* db
-          .query((db) =>
-            db
+          .query((db) => {
+            return db
               .select({
                 id: Tables.notes.id,
                 title: Tables.notes.title,
@@ -127,8 +127,8 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
               })
               .from(Tables.backlinks)
               .innerJoin(Tables.notes, eq(Tables.notes.id, Tables.backlinks.targetId))
-              .where(eq(Tables.backlinks.sourceId, id)),
-          )
+              .where(eq(Tables.backlinks.sourceId, id));
+          })
           .pipe(
             Effect.flatMap(decodePreviewArray),
             Effect.orElseSucceed(() => []),
@@ -154,15 +154,15 @@ export class Service extends Context.Service<Service>()("NoteRepo.Service", {
     const findBootById = Effect.fn("NoteRepo.findBootById")(function* (id: string) {
       return yield* Effect.zipWith(
         db
-          .find((db) =>
-            db
+          .find((db) => {
+            return db
               .select({
                 materializedYUpdate: Tables.notes.materializedYUpdate,
                 lastEventLocalSeq: Tables.notes.lastEventLocalSeq,
               })
               .from(Tables.notes)
-              .where(eq(Tables.notes.id, id)),
-          )
+              .where(eq(Tables.notes.id, id));
+          })
           .pipe(EffectOption.traverse(decodeBootRecord)),
         findOutgoingBacklinkPreviews(id),
         (record, backlinks) => {
@@ -447,11 +447,13 @@ function filterStatement<T extends SQLiteSelect>(
 
 function streamFilterConditions(query: StreamListQuery): Array<SQL> {
   const conditions = Match.value(query.type).pipe(
-    Match.tag("enum_option", ({ enum_parent }) => [
-      eq(Tables.notes._tag, "owned"),
-      eq(Tables.notes.owned_type, "enum_option"),
-      eq(Tables.notes.owned_parent, enum_parent),
-    ]),
+    Match.tag("enum_option", ({ enum_parent }) => {
+      return [
+        eq(Tables.notes._tag, "owned"),
+        eq(Tables.notes.owned_type, "enum_option"),
+        eq(Tables.notes.owned_parent, enum_parent),
+      ];
+    }),
     Match.tag("prop", () => [eq(Tables.notes._tag, "prop")]),
     Match.tag("rule", () => [eq(Tables.notes._tag, "rule")]),
     Match.orElse(() => [eq(Tables.notes._tag, "note")]),
@@ -478,13 +480,9 @@ function streamFilterConditions(query: StreamListQuery): Array<SQL> {
 }
 
 function propSqlValue(value: AttrsSchema.PropVal | null) {
-  if (value === null) {
-    return null;
-  }
+  if (value === null) return null;
 
-  if (Predicate.isTagged(value, "bool")) {
-    return value.val ? 1 : 0;
-  }
+  if (Predicate.isTagged(value, "bool")) return value.val ? 1 : 0;
 
   return value.val;
 }

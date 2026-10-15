@@ -88,8 +88,9 @@ export function RenameGraphDialog<T extends ValidComponent = typeof Button>(prop
                       when={error()}
                       fallback="Failed to rename graph."
                       cases={{
-                        "LocalRegistry.DisplayNameTakenError": () =>
-                          "A graph with that name already exists.",
+                        "LocalRegistry.DisplayNameTakenError": () => {
+                          return "A graph with that name already exists.";
+                        },
                       }}
                     />
                   </AlertDescription>

@@ -410,13 +410,13 @@ export function Input(props: Omit<CommandInputProps, "ref">) {
   return (
     <CommandInput
       {...props}
-      ref={(input) =>
-        requestAnimationFrame(() => {
+      ref={(input) => {
+        return requestAnimationFrame(() => {
           if (!input.isConnected) return;
           input.focus();
           input.select();
-        })
-      }
+        });
+      }}
     />
   );
 }

@@ -80,9 +80,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Sy
         return yield* Effect.fail(new GraphAccessErrors.LocalGraphNotFoundError({ localGraphId }));
       }
 
-      if (originalGraph.value.mode === "local") {
-        return originalGraph.value;
-      }
+      if (originalGraph.value.mode === "local") return originalGraph.value;
 
       // Flip the record back to local before removing the key from the store.
       // That keeps reactive resolution from observing a transient `CloudLocked`

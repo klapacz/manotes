@@ -94,12 +94,13 @@ describe("Archived builtin", () => {
 
           const type = PaneSchema.StreamFilterType.cases.enum_option.make({ enum_parent: parent });
 
-          const list = (props: NonNullable<NoteRepo.StreamListQuery["props"]>) =>
-            notes.reactiveStreamList({ type, props, sort: "updated" }).pipe(
+          const list = (props: NonNullable<NoteRepo.StreamListQuery["props"]>) => {
+            return notes.reactiveStreamList({ type, props, sort: "updated" }).pipe(
               Effect.flatMap(Stream.runHead),
               Effect.map(Option.getOrThrow),
               Effect.map((rows) => rows.map(({ id }) => id).toSorted()),
             );
+          };
 
           expect(yield* list(StreamSettings.propFilters({}))).toEqual(["high", "untitled"]);
           expect(yield* list({})).toEqual(["high", "old", "untitled"]);
@@ -178,14 +179,15 @@ describe("Archived builtin", () => {
           const notes = yield* NoteRepo.Service;
           const definitions = yield* PropRecordRepo.Service;
 
-          const makeDoc = () =>
-            Effect.acquireRelease(
+          const makeDoc = () => {
+            return Effect.acquireRelease(
               Effect.sync(() => NoteDoc.make()),
               ({ doc }) => Effect.sync(() => doc.destroy()),
             );
+          };
 
-          const save = (id: AttrsSchema.NoteId, doc: Y.Doc) =>
-            events
+          const save = (id: AttrsSchema.NoteId, doc: Y.Doc) => {
+            return events
               .create({
                 noteId: id,
                 type: "update",
@@ -193,6 +195,7 @@ describe("Archived builtin", () => {
                 payload: Y.encodeStateAsUpdate(doc),
               })
               .pipe(Effect.andThen(materializer.catchUp()));
+          };
 
           const propId = AttrsSchema.NoteId.make("hours");
           const prop = yield* makeDoc();
@@ -243,8 +246,8 @@ describe("Archived builtin", () => {
 
           expect(properties.map(({ id }) => id)).toContain(propId);
 
-          const ids = (val: number) =>
-            Effect.gen(function* () {
+          const ids = (val: number) => {
+            return Effect.gen(function* () {
               const rows = Option.getOrThrow(
                 yield* (yield* notes.reactiveStreamList({
                   type: PaneSchema.StreamFilterType.cases.notes.make({}),
@@ -255,6 +258,7 @@ describe("Archived builtin", () => {
 
               return rows.map(({ id }) => id).toSorted();
             });
+          };
 
           expect(yield* ids(0)).toEqual(["number", "old-value", "unset"]);
           expect(yield* ids(7.5)).toEqual(["number", "old-value", "unset"]);
@@ -308,14 +312,15 @@ describe("Archived builtin", () => {
           const materializer = yield* Materializer.Service;
           const notes = yield* NoteRepo.Service;
 
-          const makeDoc = () =>
-            Effect.acquireRelease(
+          const makeDoc = () => {
+            return Effect.acquireRelease(
               Effect.sync(() => NoteDoc.make()),
               ({ doc }) => Effect.sync(() => doc.destroy()),
             );
+          };
 
-          const save = (id: AttrsSchema.NoteId, doc: Y.Doc) =>
-            events
+          const save = (id: AttrsSchema.NoteId, doc: Y.Doc) => {
+            return events
               .create({
                 noteId: id,
                 type: "update",
@@ -323,6 +328,7 @@ describe("Archived builtin", () => {
                 payload: Y.encodeStateAsUpdate(doc),
               })
               .pipe(Effect.andThen(materializer.catchUp()));
+          };
 
           const flagId = AttrsSchema.NoteId.make("flag");
           const flag = yield* makeDoc();
@@ -357,8 +363,8 @@ describe("Archived builtin", () => {
             PaneSchema.StreamFilterType.cases.notes.make({}),
           ).filter;
 
-          const ids = (props: NonNullable<NoteRepo.StreamListQuery["props"]>) =>
-            Effect.gen(function* () {
+          const ids = (props: NonNullable<NoteRepo.StreamListQuery["props"]>) => {
+            return Effect.gen(function* () {
               const rows = Option.getOrThrow(
                 yield* (yield* notes.reactiveStreamList({
                   type: PaneSchema.StreamFilterType.cases.notes.make({}),
@@ -369,6 +375,7 @@ describe("Archived builtin", () => {
 
               return rows.map(({ id }) => id).toSorted();
             });
+          };
 
           const defaultProps = StreamSettings.propFilters(defaults);
           expect(yield* ids(defaultProps)).toEqual(["false", "unset"]);
@@ -492,8 +499,8 @@ describe("Archived builtin", () => {
             ({ doc }) => Effect.sync(() => doc.destroy()),
           );
 
-          const save = () =>
-            events
+          const save = () => {
+            return events
               .create({
                 noteId: recordId,
                 type: "update",
@@ -501,6 +508,7 @@ describe("Archived builtin", () => {
                 payload: Y.encodeStateAsUpdate(doc),
               })
               .pipe(Effect.andThen(materializer.catchUp()));
+          };
 
           yield* attrs.setProp({
             doc,
@@ -688,13 +696,13 @@ describe("Archived builtin", () => {
           ).toEqual(["ordinary"]);
           expect(yield* events.listAllForBackup()).toHaveLength(1);
           expect(
-            yield* db.query((db) =>
-              db
+            yield* db.query((db) => {
+              return db
                 .select({
                   lastAppliedLocalSeq: Tables.materializationCheckpoint.lastAppliedLocalSeq,
                 })
-                .from(Tables.materializationCheckpoint),
-            ),
+                .from(Tables.materializationCheckpoint);
+            }),
           ).toEqual([{ lastAppliedLocalSeq: yield* events.getMaxLocalSeq() }]);
           expect(yield* notes.findById(BuiltinAttrs.archivedId)).toEqual(Option.none());
           expect(yield* notes.findById("ordinary")).not.toEqual(Option.none());

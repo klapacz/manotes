@@ -23,26 +23,22 @@ class ExecutionPlan<E, R> extends Data.TaggedClass("ExecutionPlan")<{
 // opaque encrypted event payloads keyed by stable stream references.
 export function getExecutionPlan(message: Messages.ClientMessage) {
   return Match.value(message).pipe(
-    Match.tag(
-      "Commit",
-      (message) =>
-        new ExecutionPlan({
-          effect: handleCommit(message),
-          // Serialize commits at the Durable Object boundary. The underlying
-          // SQLite work is local, but the commit pipeline runs through Effect
-          // and may gain async boundaries over time. This keeps ordering
-          // explicit without introducing a custom in-memory queue yet.
-          runSerialized: true,
-        }),
-    ),
-    Match.tag(
-      "Connect",
-      (message) =>
-        new ExecutionPlan({
-          effect: handleConnect(message),
-          runSerialized: false,
-        }),
-    ),
+    Match.tag("Commit", (message) => {
+      return new ExecutionPlan({
+        effect: handleCommit(message),
+        // Serialize commits at the Durable Object boundary. The underlying
+        // SQLite work is local, but the commit pipeline runs through Effect
+        // and may gain async boundaries over time. This keeps ordering
+        // explicit without introducing a custom in-memory queue yet.
+        runSerialized: true,
+      });
+    }),
+    Match.tag("Connect", (message) => {
+      return new ExecutionPlan({
+        effect: handleConnect(message),
+        runSerialized: false,
+      });
+    }),
     Match.exhaustive,
   );
 }

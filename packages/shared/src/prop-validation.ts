@@ -16,17 +16,17 @@ export function watch<V extends AttrsSchema.PropVal>(opts: {
 
   const value = state.value;
 
-  return NoteRepo.Service.use((repo) =>
-    repo.reactiveFindPreviewById({
+  return NoteRepo.Service.use((repo) => {
+    return repo.reactiveFindPreviewById({
       id: value.val,
       filter: StreamFilter.fromAttrs(opts.targets),
-    }),
-  ).pipe(
+    });
+  }).pipe(
     Stream.unwrap,
     // Keep the assignment unchanged; only its displayed validity follows the scope.
-    Stream.map((note): Attrs.ValueState<V, AttrsSchema.PropVal> =>
-      Option.isSome(note) ? state : Attrs.ValueState.Invalid({ value }),
-    ),
+    Stream.map((note): Attrs.ValueState<V, AttrsSchema.PropVal> => {
+      return Option.isSome(note) ? state : Attrs.ValueState.Invalid({ value });
+    }),
   );
 }
 
@@ -36,16 +36,16 @@ export function watchEntries(opts: {
   if (opts.entries.length === 0) return Stream.succeed([]);
 
   return Stream.zipLatestAll(
-    ...opts.entries.map((entry) =>
-      Match.value(entry).pipe(
-        Match.when({ def: { prop_type: "link" } }, ({ def, value }) =>
-          watch({ state: value, targets: def.prop_targets ?? undefined }).pipe(
+    ...opts.entries.map((entry) => {
+      return Match.value(entry).pipe(
+        Match.when({ def: { prop_type: "link" } }, ({ def, value }) => {
+          return watch({ state: value, targets: def.prop_targets ?? undefined }).pipe(
             Stream.map((value) => ({ def, value }) satisfies Attrs.Entry<"link">),
-          ),
-        ),
+          );
+        }),
         Match.orElse((entry) => Stream.succeed(entry)),
-      ),
-    ),
+      );
+    }),
   );
 }
 

@@ -53,19 +53,21 @@ export const make = Effect.fn("EditorPool.make")(function* (
   // (graph runtime, atom registry, NoteLinkScope, router).
   const slots = yield* RcMap.make({
     idleTimeToLive: SLOT_IDLE_TTL,
-    lookup: (noteId: NoteSchema.Id) =>
-      Effect.acquireRelease(
+    lookup: (noteId: NoteSchema.Id) => {
+      return Effect.acquireRelease(
         Effect.sync(() => {
           if (!owner) throw new Error("EditorPool requires a Solid owner");
 
           return runWithOwner(owner, () => createSlot(noteId, filter))!;
         }),
         (slot) => Effect.sync(() => slot.dispose()),
-      ),
+      );
+    },
   });
 
-  const get = (noteId: NoteSchema.Id): Effect.Effect<Slot, never, Scope.Scope> =>
-    RcMap.get(slots, noteId);
+  const get = (noteId: NoteSchema.Id): Effect.Effect<Slot, never, Scope.Scope> => {
+    return RcMap.get(slots, noteId);
+  };
 
   const preload = Effect.fn("EditorPool.preload")(function* (
     noteIds: ReadonlyArray<NoteSchema.Id>,
@@ -112,8 +114,9 @@ function createSlot(
       BootState.$match(state, {
         Loading: () => undefined,
         Ready: () => Effect.runSync(Deferred.succeed(ready, undefined)),
-        Error: ({ message }) =>
-          Effect.runSync(Deferred.fail(ready, new EditorBootError({ noteId, message }))),
+        Error: ({ message }) => {
+          return Effect.runSync(Deferred.fail(ready, new EditorBootError({ noteId, message })));
+        },
       });
     };
 

@@ -13,8 +13,10 @@ const isValidPlainDateString = (s: string): boolean => {
 
 export const PlainDateString = Schema.String.pipe(
   Schema.check(
-    Schema.makeFilter((value) =>
-      isValidPlainDateString(value) ? undefined : "Expected a valid ISO date string (YYYY-MM-DD)",
-    ),
+    Schema.makeFilter((value) => {
+      return isValidPlainDateString(value)
+        ? undefined
+        : "Expected a valid ISO date string (YYYY-MM-DD)";
+    }),
   ),
 );

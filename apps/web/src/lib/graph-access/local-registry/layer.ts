@@ -8,13 +8,12 @@ const REGISTRY_DATABASE_PATH = "local-registry.sqlite3";
 const BaseLayer = SqliteClient.layer({
   worker: Effect.gen(function* () {
     const worker = yield* Effect.acquireRelease(
-      Effect.sync(
-        () =>
-          new Worker(new URL("../../db/worker.ts", import.meta.url), {
-            type: "module",
-            name: "wa-sqlite-worker-local-registry",
-          }),
-      ),
+      Effect.sync(() => {
+        return new Worker(new URL("../../db/worker.ts", import.meta.url), {
+          type: "module",
+          name: "wa-sqlite-worker-local-registry",
+        });
+      }),
       (worker) => Effect.sync(() => worker.terminate()),
     );
 

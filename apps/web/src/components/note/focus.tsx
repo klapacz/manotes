@@ -91,8 +91,9 @@ export function Provider(props: ParentProps) {
     return element && scopes.get(element)?.id() ? element : previous;
   }, null);
 
-  const isTarget = (target: EventTarget | null) =>
-    target instanceof HTMLElement && !!scopes.get(target)?.id();
+  const isTarget = (target: EventTarget | null) => {
+    return target instanceof HTMLElement && !!scopes.get(target)?.id();
+  };
 
   const ancestry = (element: Element | null) => {
     const nodes: Scope[] = [];
@@ -106,10 +107,11 @@ export function Provider(props: ParentProps) {
     return nodes;
   };
 
-  const parentId = () =>
-    ancestry(dom.activeElement()?.parentElement ?? null)
+  const parentId = () => {
+    return ancestry(dom.activeElement()?.parentElement ?? null)
       .find((node) => node.id())
       ?.id();
+  };
 
   const value: ContextState = {
     dom,

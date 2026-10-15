@@ -31,9 +31,7 @@ const createGraphAtom = GraphAccessRuntime.atom.fn(
   }) {
     const provision = yield* GraphAccessCommandsProvision.Service;
 
-    if (mode === "local") {
-      return yield* provision.createLocal({ displayName });
-    }
+    if (mode === "local") return yield* provision.createLocal({ displayName });
 
     return yield* provision.createSynced({ displayName, password });
   }),
@@ -73,10 +71,12 @@ export function FullCreateForm() {
                 when={error()}
                 fallback="Failed to create graph."
                 cases={{
-                  "LocalRegistry.DisplayNameTakenError": () =>
-                    "A graph with that name already exists.",
-                  "GraphRegistry.DisplayNameTakenError": () =>
-                    "A synced graph with that name already exists.",
+                  "LocalRegistry.DisplayNameTakenError": () => {
+                    return "A graph with that name already exists.";
+                  },
+                  "GraphRegistry.DisplayNameTakenError": () => {
+                    return "A synced graph with that name already exists.";
+                  },
                 }}
               />
             </AlertDescription>

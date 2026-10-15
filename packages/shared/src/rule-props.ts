@@ -74,29 +74,29 @@ export function watch(opts: { readonly recordId: NoteSchema.Id; readonly doc: Y.
 
       const saved = attrs.watchGroups({ doc: opts.doc, defs });
 
-      return Stream.zipLatestWith(expectations, saved, (expectations, { saved, defs }) =>
-        reconcileGroups({ expectations, saved, defs }),
-      );
+      return Stream.zipLatestWith(expectations, saved, (expectations, { saved, defs }) => {
+        return reconcileGroups({ expectations, saved, defs });
+      });
     }),
   );
 }
 
 export function collectExpectations(rules: Readonly<Record<NoteSchema.Id, RuleMatches.Rule>>) {
-  const [unmatched, matching] = Record.partition(rules, (rule) =>
-    Match.value(rule.status).pipe(
+  const [unmatched, matching] = Record.partition(rules, (rule) => {
+    return Match.value(rule.status).pipe(
       Match.tag("Matching", () => Result.succeed(rule)),
       Match.tag("Unmatched", () => Result.fail(rule)),
       Match.exhaustive,
-    ),
-  );
+    );
+  });
 
-  const [topRules, groupRules] = Record.partition(matching, (rule) =>
-    Match.value(rule.rule_storage).pipe(
+  const [topRules, groupRules] = Record.partition(matching, (rule) => {
+    return Match.value(rule.rule_storage).pipe(
       Match.tag("top", () => Result.fail(rule)),
       Match.tag("group", () => Result.succeed(rule)),
       Match.exhaustive,
-    ),
-  );
+    );
+  });
 
   const top = pipe(
     topRules,
@@ -130,27 +130,27 @@ export function reconcileGroups(opts: {
   readonly defs: Attrs.Defs;
 }): EditorGroups {
   // Enrich each saved group with its owning rule and current status.
-  const existing = Record.map(opts.saved.groups, (saved, ruleId) =>
-    reconcileRuleGroup({
+  const existing = Record.map(opts.saved.groups, (saved, ruleId) => {
+    return reconcileRuleGroup({
       ruleId,
       saved,
       defs: opts.defs,
       expectation: Record.get(opts.expectations.groups, ruleId),
-    }),
-  );
+    });
+  });
 
   const additional = pipe(
     opts.expectations.groups,
     // Matching groups also appear before any of their values have been saved.
     Record.filter((group) => GroupStatus.$is("Matching")(group.status)),
-    Record.map((group, ruleId) =>
-      reconcileRuleGroup({
+    Record.map((group, ruleId) => {
+      return reconcileRuleGroup({
         ruleId,
         saved: {},
         defs: opts.defs,
         expectation: Option.some(group),
-      }),
-    ),
+      });
+    }),
   );
 
   return {

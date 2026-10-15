@@ -233,14 +233,15 @@ export class YSchemaError extends Data.TaggedError("YSchemaError")<{
 export const make = <S extends Schema.ConstraintCodec<object, unknown, never, never>>(opts: {
   readonly schema: S;
   readonly map: Y.Map<unknown>;
-}): Cursor<S["Type"], S> =>
-  cursor<S["Type"], S>({
+}): Cursor<S["Type"], S> => {
+  return cursor<S["Type"], S>({
     map: opts.map,
     schema: Schema.make<Schema.Codec<S["Type"], unknown>>(opts.schema.ast),
     members: objectMembers(opts.schema.ast),
     guards: [],
     keyName: keyNameOf(opts.schema.ast),
   });
+};
 
 export const find: {
   <A extends object, S extends Schema.Constraint, const K extends Keys<A>>(
@@ -265,8 +266,9 @@ export const find: {
 
         return { ...readField(bound, key), key };
       },
-      catch: (cause) =>
-        new YSchemaError({ operation: "find", key: keyLabel(bound, argument), cause }),
+      catch: (cause) => {
+        return new YSchemaError({ operation: "find", key: keyLabel(bound, argument), cause });
+      },
     });
 
     if (Option.isNone(stored)) return Option.none();
@@ -306,14 +308,15 @@ export const upsert: {
       bound: Cursor<A, S>,
       argument: KeyArg<S, K>,
       value: V,
-    ) =>
-      transact(bound, "upsert", argument, (key) => {
+    ) => {
+      return transact(bound, "upsert", argument, (key) => {
         const existing = readSync(bound, key);
 
         if (Option.isSome(existing)) return existing.value;
 
         return writeSync<A, K, Field<A, K>, S>(bound, key, value);
-      }),
+      });
+    },
   ),
 );
 
@@ -362,17 +365,17 @@ export const clear: {
     <A extends object, S extends Schema.Constraint, K extends string>(
       bound: Cursor<A, S>,
       argument: KeyArg<S, K>,
-    ) =>
-      transact(bound, "clear", argument, (key) => {
+    ) => {
+      return transact(bound, "clear", argument, (key) => {
         assertContext(bound);
         fieldAsts(bound, key);
 
         if (
-          bound[TypeId].members.some((member) =>
-            member.propertySignatures.some(
+          bound[TypeId].members.some((member) => {
+            return member.propertySignatures.some(
               (field) => field.name === key && !field.type.context?.isOptional,
-            ),
-          )
+            );
+          })
         ) {
           throw new globalThis.Error(`Cannot clear required field ${key}`);
         }
@@ -380,7 +383,8 @@ export const clear: {
         bound[TypeId].map.delete(key);
 
         return bound;
-      }),
+      });
+    },
   ),
 );
 
@@ -398,12 +402,14 @@ export const findMap: {
     <A extends object, S extends Schema.Constraint, K extends MapKeys<A, S>>(
       bound: Cursor<A, S>,
       argument: KeyArg<S, K>,
-    ) =>
-      Effect.try({
+    ) => {
+      return Effect.try({
         try: () => readMap(bound, resolveKey(bound, argument)),
-        catch: (cause) =>
-          new YSchemaError({ operation: "findMap", key: keyLabel(bound, argument), cause }),
-      }),
+        catch: (cause) => {
+          return new YSchemaError({ operation: "findMap", key: keyLabel(bound, argument), cause });
+        },
+      });
+    },
   ),
 );
 
@@ -421,8 +427,8 @@ export const upsertMap: {
     <A extends object, S extends Schema.Constraint, K extends MapKeys<A, S> & CommonKeys<A>>(
       bound: Cursor<A, S>,
       argument: KeyArg<S, K>,
-    ) =>
-      transact(bound, "upsertMap", argument, (key) => {
+    ) => {
+      return transact(bound, "upsertMap", argument, (key) => {
         const existing = readMap(bound, key);
 
         if (Option.isSome(existing)) return existing.value;
@@ -433,24 +439,24 @@ export const upsertMap: {
         bound[TypeId].map.set(key, child);
 
         return focus;
-      }),
+      });
+    },
   ),
 );
 
 // A detached raw snapshot, deliberately separate from validation for DB materialization.
-export const toJSON = Effect.fn("YSchema.toJSON")(
-  <A extends object, S extends Schema.Constraint>(
-    bound: Cursor<A, S>,
-  ): Effect.Effect<object, YSchemaError> =>
-    Effect.try({
-      try: () => {
-        assertContext(bound);
+export const toJSON = Effect.fn("YSchema.toJSON")(<A extends object, S extends Schema.Constraint>(
+  bound: Cursor<A, S>,
+): Effect.Effect<object, YSchemaError> => {
+  return Effect.try({
+    try: () => {
+      assertContext(bound);
 
-        return structuredClone(bound[TypeId].map.toJSON());
-      },
-      catch: (cause) => new YSchemaError({ operation: "toJSON", key: "", cause }),
-    }),
-);
+      return structuredClone(bound[TypeId].map.toJSON());
+    },
+    catch: (cause) => new YSchemaError({ operation: "toJSON", key: "", cause }),
+  });
+});
 
 // Invalid fields are omitted; valid fields from any record variant survive.
 export const exportLoose = Effect.fn("YSchema.exportLoose")(function* <
@@ -587,23 +593,22 @@ function looseAst(ast: SchemaAST.AST): SchemaAST.Objects {
   }
 
   return new SchemaAST.Objects(
-    [...fields].map(
-      ([name, variants]) =>
-        new SchemaAST.PropertySignature(name, Schema.optionalKey(looseField(variants)).ast),
-    ),
-    members.flatMap((member) =>
-      member.indexSignatures.map(
+    [...fields].map(([name, variants]) => {
+      return new SchemaAST.PropertySignature(name, Schema.optionalKey(looseField(variants)).ast);
+    }),
+    members.flatMap((member) => {
+      return member.indexSignatures.map(
         (field) => new SchemaAST.IndexSignature(field.parameter, looseField([field.type]).ast),
-      ),
-    ),
+      );
+    }),
   );
 }
 
 function looseField(variants: readonly SchemaAST.AST[]) {
   const ast = unionAst(
-    variants.map((field) =>
-      field.annotations?.[MapAnnotation] === true ? looseAst(field) : field,
-    ),
+    variants.map((field) => {
+      return field.annotations?.[MapAnnotation] === true ? looseAst(field) : field;
+    }),
   );
 
   return Schema.make<Schema.Codec<unknown>>(ast).pipe(
@@ -616,9 +621,9 @@ function propertyAst(member: SchemaAST.Objects, key: string): SchemaAST.AST | un
 
   if (property !== undefined) return property.type;
 
-  return member.indexSignatures.find((field) =>
-    Schema.is(Schema.make<Schema.Codec<unknown>>(field.parameter))(key),
-  )?.type;
+  return member.indexSignatures.find((field) => {
+    return Schema.is(Schema.make<Schema.Codec<unknown>>(field.parameter))(key);
+  })?.type;
 }
 
 function fieldAsts<A extends object, S extends Schema.Constraint>(
@@ -706,9 +711,9 @@ function readField<A extends object, K extends string, S extends Schema.Constrai
 
   return {
     schema,
-    stored: Option.map(stored, (value) =>
-      value instanceof Y.AbstractType ? value.toJSON() : value,
-    ),
+    stored: Option.map(stored, (value) => {
+      return value instanceof Y.AbstractType ? value.toJSON() : value;
+    }),
   };
 }
 
@@ -856,11 +861,9 @@ function mountField<Encoded>(
 
   if (!Predicate.isObject(encoded)) throw new globalThis.Error("YSchema.Map must encode an object");
 
-  const members = fields
-    .flatMap(objectMembers)
-    .filter((member) =>
-      Schema.is(Schema.toEncoded(Schema.make<Schema.Codec<unknown>>(member)))(encoded),
-    );
+  const members = fields.flatMap(objectMembers).filter((member) => {
+    return Schema.is(Schema.toEncoded(Schema.make<Schema.Codec<unknown>>(member)))(encoded);
+  });
 
   const map = new Y.Map<unknown>();
 

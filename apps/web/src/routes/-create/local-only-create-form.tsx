@@ -44,8 +44,9 @@ export function LocalOnlyCreateForm() {
                 when={error()}
                 fallback="Failed to create graph."
                 cases={{
-                  "LocalRegistry.DisplayNameTakenError": () =>
-                    "A graph with that name already exists.",
+                  "LocalRegistry.DisplayNameTakenError": () => {
+                    return "A graph with that name already exists.";
+                  },
                 }}
               />
             </AlertDescription>

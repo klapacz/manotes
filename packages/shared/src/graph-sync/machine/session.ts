@@ -27,8 +27,8 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
 
   yield* hasPendingStream.pipe(
     Stream.changes,
-    Stream.runForEach((hasPending) =>
-      Effect.gen(function* () {
+    Stream.runForEach((hasPending) => {
+      return Effect.gen(function* () {
         yield* SubscriptionRef.update(
           statusRef,
           (prev) => new SyncStatusCloud({ mode: prev.mode, syncState: prev.syncState, hasPending }),
@@ -36,11 +36,9 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
 
         // Pending notifications are wake-up hints only; the machine re-reads the
         // actual pending rows before sending a commit.
-        if (hasPending) {
-          yield* Queue.offer(inputQueue, Model.Input.PendingEvents());
-        }
-      }),
-    ),
+        if (hasPending) yield* Queue.offer(inputQueue, Model.Input.PendingEvents());
+      });
+    }),
     Effect.forkScoped,
   );
 

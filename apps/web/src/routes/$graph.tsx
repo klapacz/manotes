@@ -17,11 +17,11 @@ function RouteComponent() {
   const returnTo = GraphDestination.useCurrent();
   const localGraphIdAtom = createSyncedAtom(() => params().graph);
 
-  const stateAtom = GraphAccessRuntime.atom.atom((get) =>
-    GraphRuntime.Manager.Service.use((manager) => manager.findReactive(get(localGraphIdAtom))).pipe(
-      Stream.unwrap,
-    ),
-  );
+  const stateAtom = GraphAccessRuntime.atom.atom((get) => {
+    return GraphRuntime.Manager.Service.use((manager) => {
+      return manager.findReactive(get(localGraphIdAtom));
+    }).pipe(Stream.unwrap);
+  });
 
   const state = useAtomValue(() => stateAtom);
 

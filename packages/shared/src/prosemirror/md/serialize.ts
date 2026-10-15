@@ -139,9 +139,9 @@ function createSerializer(options: Options): MarkdownSerializer {
         const task = kind === "task" ? `[${checked ? "x" : " "}] ` : "";
         // Only the first line gets the marker and checkbox. Continuation lines
         // indent by the list marker width, not by the checkbox text's width.
-        state.wrapBlock(" ".repeat(marker.length), marker + task, node, () =>
-          state.renderContent(node),
-        );
+        state.wrapBlock(" ".repeat(marker.length), marker + task, node, () => {
+          return state.renderContent(node);
+        });
       },
       streamRef(state, node) {
         const attrs = decodeStreamRefAttrs(node.attrs);

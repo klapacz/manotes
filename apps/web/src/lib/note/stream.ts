@@ -55,9 +55,8 @@ export const initialState: State = { dirty: false, items: [] };
 //
 // `sort` is fixed for a stream instance; changing the query/sort recreates the
 // pane atom and starts from an empty state.
-export const retain =
-  (sort: StreamSort) =>
-  (prev: State, live: ReadonlyArray<NoteSchema.Meta>): State => {
+export const retain = (sort: StreamSort) => {
+  return (prev: State, live: ReadonlyArray<NoteSchema.Meta>): State => {
     const liveById = new Map(Array.map(live, (note) => [note.id, note] as const));
     const prevIds = new Set(Array.map(prev.items, ({ note }) => note.id));
 
@@ -114,6 +113,7 @@ export const retain =
       items,
     };
   };
+};
 
 /** Inserts the local draft, then marks each group's first row in the final order. */
 export function list(options: {

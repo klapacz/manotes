@@ -110,8 +110,8 @@ const RpcHandler = GraphSharedWorkerRpc.toLayer(
             ),
           ).pipe(
             Effect.as(true),
-            Effect.catchCause((cause) =>
-              Effect.gen(function* () {
+            Effect.catchCause((cause) => {
+              return Effect.gen(function* () {
                 yield* dedicatedWorkerHealth.setStatus(
                   "down",
                   `Failed to create dedicated worker client: ${Cause.pretty(cause)}`,
@@ -119,8 +119,8 @@ const RpcHandler = GraphSharedWorkerRpc.toLayer(
                 yield* Effect.logError("Failed to create dedicated worker client", cause);
 
                 return false;
-              }),
-            ),
+              });
+            }),
           );
 
           if (!connected) return; // Keep previous health state updates and fail soft for this RPC call.
@@ -204,15 +204,13 @@ const createDedicatedWorkerHealth = Effect.gen(function* () {
     ),
 
     setStatus: Effect.fn(function* (status: "degraded" | "down", message: string) {
-      yield* SubscriptionRef.update(
-        ref,
-        (previous) =>
-          new DedicatedWorkerHealth({
-            status,
-            consecutiveFailures: previous.consecutiveFailures + 1,
-            lastFailure: message,
-          }),
-      );
+      yield* SubscriptionRef.update(ref, (previous) => {
+        return new DedicatedWorkerHealth({
+          status,
+          consecutiveFailures: previous.consecutiveFailures + 1,
+          lastFailure: message,
+        });
+      });
     }),
   };
 });
@@ -225,9 +223,9 @@ const RpcWorkerServer = RpcServer.layer(GraphSharedWorkerRpc).pipe(
 );
 
 BrowserRuntime.runMain(
-  Effect.tapCause(Layer.launch(RpcWorkerServer), (error) =>
-    Effect.logError("SharedWorker fatal error", error),
-  ),
+  Effect.tapCause(Layer.launch(RpcWorkerServer), (error) => {
+    return Effect.logError("SharedWorker fatal error", error);
+  }),
 );
 
 const acquireDedicatedConnection = Effect.fn("SharedWorker.acquireDedicatedConnection")(function* (
@@ -240,9 +238,11 @@ const acquireDedicatedConnection = Effect.fn("SharedWorker.acquireDedicatedConne
   yield* Effect.addFinalizer(() => Effect.sync(() => port.close()));
 
   // Reset sync status when this connection is released (failover, failure, etc.)
-  yield* Effect.addFinalizer(() =>
-    SubscriptionRef.update(syncStatusRef, (current) => getDisconnectedSyncStatus(current.mode)),
-  );
+  yield* Effect.addFinalizer(() => {
+    return SubscriptionRef.update(syncStatusRef, (current) => {
+      return getDisconnectedSyncStatus(current.mode);
+    });
+  });
   yield* Effect.addFinalizer(() => SubscriptionRef.set(audioMemoStatusRef, null));
 
   const layer = Layer.mergeAll(
@@ -260,25 +260,25 @@ const acquireDedicatedConnection = Effect.fn("SharedWorker.acquireDedicatedConne
   // Subscribe to the dedicated worker's sync status and pipe to the local ref.
   yield* client.syncStatusStream({}).pipe(
     Stream.runForEach((status) => SubscriptionRef.set(syncStatusRef, status)),
-    Effect.catchCause((cause) =>
-      Effect.gen(function* () {
+    Effect.catchCause((cause) => {
+      return Effect.gen(function* () {
         yield* Effect.logWarning("syncStatusStream from dedicated worker failed", cause);
-        yield* SubscriptionRef.update(syncStatusRef, (current) =>
-          getDisconnectedSyncStatus(current.mode),
-        );
-      }),
-    ),
+        yield* SubscriptionRef.update(syncStatusRef, (current) => {
+          return getDisconnectedSyncStatus(current.mode);
+        });
+      });
+    }),
     Effect.forkScoped,
   );
 
   yield* client.audioMemoStatusStream({}).pipe(
     Stream.runForEach((path) => SubscriptionRef.set(audioMemoStatusRef, path)),
-    Effect.catchCause((cause) =>
-      Effect.gen(function* () {
+    Effect.catchCause((cause) => {
+      return Effect.gen(function* () {
         yield* Effect.logWarning("audioMemoStatusStream from dedicated worker failed", cause);
         yield* SubscriptionRef.set(audioMemoStatusRef, null);
-      }),
-    ),
+      });
+    }),
     Effect.forkScoped,
   );
 
@@ -286,15 +286,13 @@ const acquireDedicatedConnection = Effect.fn("SharedWorker.acquireDedicatedConne
 });
 
 const getDisconnectedSyncStatus = Match.type<SyncStatus["mode"]>().pipe(
-  Match.when(
-    "cloud",
-    () =>
-      new SyncStatusCloud({
-        mode: "cloud",
-        syncState: "Disconnected",
-        hasPending: false,
-      }),
-  ),
+  Match.when("cloud", () => {
+    return new SyncStatusCloud({
+      mode: "cloud",
+      syncState: "Disconnected",
+      hasPending: false,
+    });
+  }),
   Match.when("local", () => new SyncStatusLocal({ mode: "local" })),
   Match.exhaustive,
 );

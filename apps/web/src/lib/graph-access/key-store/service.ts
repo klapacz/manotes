@@ -10,8 +10,9 @@ type UnwrappedGraphKey = Uint8Array<ArrayBuffer>;
 
 const encodeWrappedGraphKey = Schema.encodeEffect(Schema.Uint8ArrayFromBase64);
 
-const toGraphKeyId = (envelope: GraphEncryption.GraphKeyEnvelope) =>
-  encodeWrappedGraphKey(envelope.wrappedGraphKey);
+const toGraphKeyId = (envelope: GraphEncryption.GraphKeyEnvelope) => {
+  return encodeWrappedGraphKey(envelope.wrappedGraphKey);
+};
 
 export class Service extends Context.Service<Service>()("GraphAccess.KeyStore.Service", {
   make: Effect.gen(function* () {

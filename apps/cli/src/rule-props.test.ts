@@ -44,9 +44,9 @@ describe("reactive rule props pipeline", () => {
 
     await runIntegration(
       Effect.gen(function* () {
-        const doc = yield* Effect.acquireRelease(Effect.succeed(root), (doc) =>
-          Effect.sync(() => doc.destroy()),
-        );
+        const doc = yield* Effect.acquireRelease(Effect.succeed(root), (doc) => {
+          return Effect.sync(() => doc.destroy());
+        });
 
         const attrs = yield* Attrs.Service;
         const definition = yield* makeDoc();
@@ -79,12 +79,12 @@ describe("reactive rule props pipeline", () => {
         const before = Y.encodeStateAsUpdate(doc);
         const latest = yield* startWatching(doc);
 
-        const initial = yield* waitFor(
-          latest,
-          (groups) =>
+        const initial = yield* waitFor(latest, (groups) => {
+          return (
             hasGroupStatus(groups, task, "Matching") &&
-            hasPropValueState(groups, task, priority, "Valid"),
-        );
+            hasPropValueState(groups, task, priority, "Valid")
+          );
+        });
 
         expect(Record.keys(initial.groups)).toEqual([task]);
         expect(initial.top.props[AttrsSchema.NoteId.make("prop_id:custom")]).toMatchObject({
@@ -113,9 +113,7 @@ describe("reactive rule props pipeline", () => {
         yield* waitFor(latest, (groups) => {
           const prop = groups.groups[task]?.props[priority];
 
-          if (!prop) {
-            return false;
-          }
+          if (!prop) return false;
 
           return (
             hasGroupStatus(groups, task, "Unmatched") &&
@@ -127,12 +125,12 @@ describe("reactive rule props pipeline", () => {
         yield* attrs.setRuleTargets({ doc: rule, targets: notesFilter() });
         yield* attrs.setRuleExpectation({ doc: rule, propId: cycle, value: required });
         yield* save(rule, task);
-        yield* waitFor(
-          latest,
-          (groups) =>
+        yield* waitFor(latest, (groups) => {
+          return (
             hasGroupStatus(groups, task, "Matching") &&
-            hasPropValueState(groups, task, cycle, "Unset"),
-        );
+            hasPropValueState(groups, task, cycle, "Unset")
+          );
+        });
         expect(values.has(cycle)).toBe(false);
 
         // Removing the available rule projection leaves a visible saved group.
@@ -170,9 +168,9 @@ describe("reactive rule props pipeline", () => {
         });
         yield* save(doc, recordId);
         const latest = yield* startWatching(doc);
-        yield* waitFor(latest, (groups) =>
-          hasPropValueState(groups, undefined, assignee, "Invalid"),
-        );
+        yield* waitFor(latest, (groups) => {
+          return hasPropValueState(groups, undefined, assignee, "Invalid");
+        });
 
         const definition = yield* makeDoc();
         yield* attrs.initializeProp({ doc: definition });
@@ -184,9 +182,9 @@ describe("reactive rule props pipeline", () => {
         const notes = yield* NoteRepo.Service;
         yield* notes.updateById(person, { title: "Person" });
         yield* Reactivity.invalidate(["notes"]);
-        yield* waitFor(latest, (groups) =>
-          hasPropValueState(groups, undefined, assignee, "Invalid"),
-        );
+        yield* waitFor(latest, (groups) => {
+          return hasPropValueState(groups, undefined, assignee, "Invalid");
+        });
 
         yield* notes.updateById(person, { title: null });
         yield* Reactivity.invalidate(["notes"]);

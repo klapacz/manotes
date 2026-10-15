@@ -20,8 +20,9 @@ export default defineConfig({
     jsPlugins: [
       { name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" },
       { name: "anti-slop-effect", specifier: "./tools/oxlint/anti-slop/effect/index.ts" },
+      { name: "manotes", specifier: "./tools/oxlint/readable-bodies.ts" },
     ],
-    rules: antiSlopRules,
+    rules: { ...antiSlopRules, "manotes/readable-bodies": "error" },
   },
   test: {
     exclude: ["**/node_modules/**", ".reference/**", ".opencode/**", ".direnv", ".workspace/**"],

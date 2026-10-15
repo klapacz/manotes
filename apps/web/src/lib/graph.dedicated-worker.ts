@@ -143,8 +143,11 @@ function makeRpcHandler(localGraphId: string, graphSyncConfig: GraphSyncConfig.G
         placeholder: Effect.fn("DedicatedWorker.placeholder")(function* () {
           yield* Effect.logInfo("Placeholder RPC invoked");
         }),
-        syncStatusStream: () =>
-          Stream.make(new SyncStatusLocal({ mode: "local" })).pipe(Stream.concat(Stream.never)),
+        syncStatusStream: () => {
+          return Stream.make(new SyncStatusLocal({ mode: "local" })).pipe(
+            Stream.concat(Stream.never),
+          );
+        },
       } satisfies Handlers;
     }).pipe(Effect.annotateLogs({ worker: "dedicated", localGraphId })),
   );

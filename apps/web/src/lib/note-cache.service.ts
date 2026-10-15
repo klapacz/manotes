@@ -31,8 +31,8 @@ export class Service extends Context.Service<Service>()("NoteCache.Service", {
 
     const entries = yield* RcMap.make({
       idleTimeToLive: ENTRY_IDLE_TTL,
-      lookup: (id: string) =>
-        Effect.gen(function* () {
+      lookup: (id: string) => {
+        return Effect.gen(function* () {
           const source = yield* noteRepo.reactiveFindPreviewById({ id });
           const seed = yield* takeSeed(id);
 
@@ -48,7 +48,8 @@ export class Service extends Context.Service<Service>()("NoteCache.Service", {
               idleTimeToLive: ENTRY_IDLE_TTL,
             }),
           );
-        }),
+        });
+      },
     });
 
     const prime = Effect.fn("NoteCache.prime")(function* (previews: ReadonlyArray<NotePreview>) {

@@ -71,8 +71,9 @@ export function DetachGraphDialog<T extends ValidComponent = typeof Button>(prop
                     when={error()}
                     fallback="Failed to detach graph."
                     cases={{
-                      "GraphAccess.LocalGraphNotFoundError": () =>
-                        "That graph is no longer available on this device.",
+                      "GraphAccess.LocalGraphNotFoundError": () => {
+                        return "That graph is no longer available on this device.";
+                      },
                     }}
                   />
                 </AlertDescription>

@@ -9,14 +9,16 @@ export function Link(props: { propId: NoteSchema.Id; onOpen: () => void }) {
   const id = createSyncedAtom(() => props.propId);
 
   const state = createAtomResultStore(
-    bindRt((rt) =>
-      rt.atom((get) =>
-        EnumOptionRepo.Service.use((repo) => repo.reactiveOptions({ enum_parent: get(id) })).pipe(
+    bindRt((rt) => {
+      return rt.atom((get) => {
+        return EnumOptionRepo.Service.use((repo) => {
+          return repo.reactiveOptions({ enum_parent: get(id) });
+        }).pipe(
           Stream.unwrap,
           Stream.map((options) => options.length),
-        ),
-      ),
-    ),
+        );
+      });
+    }),
   );
 
   return (

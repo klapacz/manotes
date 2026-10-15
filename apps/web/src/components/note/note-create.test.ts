@@ -15,10 +15,11 @@ import { prefilledPayload, useCreateNote, type CreateInput } from "./note-create
 
 vi.mock("../../lib", () => ({
   MaterializedEventService,
-  bindRt:
-    <T>(creator: (rt: { fn: <A>(value: A) => A }) => T) =>
-    () =>
-      creator({ fn: (value) => value }),
+  bindRt: <T>(creator: (rt: { fn: <A>(value: A) => A }) => T) => {
+    return () => {
+      return creator({ fn: (value) => value });
+    };
+  },
 }));
 
 vi.mock("@effect/atom-solid", () => ({
@@ -26,36 +27,40 @@ vi.mock("@effect/atom-solid", () => ({
     bound: () => (
       input: CreateInput,
     ) => Effect.Effect<NoteSchema.Record, unknown, MaterializedEventService.Service>,
-  ) => [
-    undefined,
-    (input: CreateInput) =>
-      Effect.runPromise(
-        bound()(input).pipe(
-          Effect.provideService(
-            MaterializedEventService.Service,
-            MaterializedEventService.Service.of({
-              create: (input) =>
-                Effect.sync(() => {
-                  expectBlankPayload(input.payload);
+  ) => {
+    return [
+      undefined,
+      (input: CreateInput) => {
+        return Effect.runPromise(
+          bound()(input).pipe(
+            Effect.provideService(
+              MaterializedEventService.Service,
+              MaterializedEventService.Service.of({
+                create: (input) => {
+                  return Effect.sync(() => {
+                    expectBlankPayload(input.payload);
 
-                  return {
-                    id: NoteSchema.Id.make(input.noteId),
-                    title: null,
-                    content: { type: "doc", content: [{ type: "paragraph" }] },
-                    text: "",
-                    date: "2026-10-08",
-                    materializedYUpdate: input.payload,
-                    createdAt: input.createdAt,
-                    updatedAt: input.createdAt,
-                    lastEventLocalSeq: 1,
-                  };
-                }),
-              setDate: () => Effect.die("Unexpected date edit"),
-            }),
+                    return {
+                      id: NoteSchema.Id.make(input.noteId),
+                      title: null,
+                      content: { type: "doc", content: [{ type: "paragraph" }] },
+                      text: "",
+                      date: "2026-10-08",
+                      materializedYUpdate: input.payload,
+                      createdAt: input.createdAt,
+                      updatedAt: input.createdAt,
+                      lastEventLocalSeq: 1,
+                    };
+                  });
+                },
+                setDate: () => Effect.die("Unexpected date edit"),
+              }),
+            ),
           ),
-        ),
-      ),
-  ],
+        );
+      },
+    ];
+  },
 }));
 
 vi.mock("somoto", () => ({ toast: { promise: <T>(promise: Promise<T>) => promise } }));

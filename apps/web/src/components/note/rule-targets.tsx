@@ -66,8 +66,8 @@ export function Header(props: {
 
   const [mutation, save] = useAtom(Save);
 
-  const rule = createMemo(() =>
-    Match.value(state).pipe(
+  const rule = createMemo(() => {
+    return Match.value(state).pipe(
       Match.when(
         { _tag: "Success", value: { attrs: { _tag: Match.is("rule") } } },
         ({ value }) => ({
@@ -76,14 +76,15 @@ export function Header(props: {
         }),
       ),
       Match.orElse(() => undefined),
-    ),
-  );
+    );
+  });
 
   const savedFilter = () => StreamFilter.fromAttrs(rule()?.targets);
 
   // Compare persisted expressions so omitted/default pane fields do not mark edits.
-  const modified = () =>
-    !Equal.equals(StreamFilter.toAttrs(props.filter), StreamFilter.toAttrs(savedFilter()));
+  const modified = () => {
+    return !Equal.equals(StreamFilter.toAttrs(props.filter), StreamFilter.toAttrs(savedFilter()));
+  };
 
   const saveChanges = () => {
     const current = rule();
@@ -146,8 +147,8 @@ export function Header(props: {
   );
 }
 
-const Save = bindRt((rt) =>
-  rt.fn(
+const Save = bindRt((rt) => {
+  return rt.fn(
     Effect.fn("ComponentsNoteRuleTargets.save")(function* (opts: {
       readonly doc: Y.Doc;
       readonly targets: AttrsSchema.TargetFilter;
@@ -155,7 +156,7 @@ const Save = bindRt((rt) =>
       const attrs = yield* Attrs.Service;
       yield* attrs.setRuleTargets(opts);
     }),
-  ),
-);
+  );
+});
 
 export * as RuleTargets from "./rule-targets";

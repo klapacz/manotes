@@ -206,8 +206,12 @@ const createInitialUpdate = Effect.fn("ExecuteApi.createInitialUpdate")(function
 ) {
   // Creation must persist the empty paragraph too; a date event alone has no body.
   const doc = yield* Effect.try({
-    try: () =>
-      EditDocument.apply(NOTE_SCHEMA.node("doc", null, [NOTE_SCHEMA.node("paragraph")]), edits),
+    try: () => {
+      return EditDocument.apply(
+        NOTE_SCHEMA.node("doc", null, [NOTE_SCHEMA.node("paragraph")]),
+        edits,
+      );
+    },
     catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
   });
 

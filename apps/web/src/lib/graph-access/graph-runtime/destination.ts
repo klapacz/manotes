@@ -22,12 +22,12 @@ export function useCurrent() {
     select: ({ matches, location }): Destination | undefined => {
       for (const match of matches.toReversed()) {
         const destination = Match.value(match).pipe(
-          Match.when({ routeId: "/$graph/studio" }, () =>
-            Destination.cases.studio.make({ hash: location.hash }),
-          ),
-          Match.when({ routeId: "/$graph/" }, (match) =>
-            Destination.cases.notes.make({ panes: match.search.panes, hash: location.hash }),
-          ),
+          Match.when({ routeId: "/$graph/studio" }, () => {
+            return Destination.cases.studio.make({ hash: location.hash });
+          }),
+          Match.when({ routeId: "/$graph/" }, (match) => {
+            return Destination.cases.notes.make({ panes: match.search.panes, hash: location.hash });
+          }),
           Match.orElse(() => undefined),
         );
 
@@ -40,28 +40,26 @@ export function useCurrent() {
 }
 
 export function linkOptions(graph: string, destination?: Destination) {
-  if (!destination) {
-    return routerLinkOptions({ to: "/$graph", params: { graph }, replace: true });
-  }
+  if (!destination) return routerLinkOptions({ to: "/$graph", params: { graph }, replace: true });
 
   return Match.value(destination).pipe(
-    Match.tag("notes", (destination) =>
-      routerLinkOptions({
+    Match.tag("notes", (destination) => {
+      return routerLinkOptions({
         to: "/$graph",
         params: { graph },
         search: { panes: destination.panes },
         hash: destination.hash,
         replace: true,
-      }),
-    ),
-    Match.tag("studio", (destination) =>
-      routerLinkOptions({
+      });
+    }),
+    Match.tag("studio", (destination) => {
+      return routerLinkOptions({
         to: "/$graph/studio",
         params: { graph },
         hash: destination.hash,
         replace: true,
-      }),
-    ),
+      });
+    }),
     Match.exhaustive,
   );
 }

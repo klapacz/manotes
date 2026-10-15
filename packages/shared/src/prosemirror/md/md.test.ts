@@ -341,8 +341,13 @@ describe("app Markdown conversion", () => {
   });
 
   it("round-trips an editor-created aligned table with a stream ref and records its block span", () => {
-    const cell = (type: string, content: ReturnType<typeof NOTE_SCHEMA.text>[]) =>
-      NOTE_SCHEMA.node(type, { align: "center" }, NOTE_SCHEMA.node("paragraph", null, content));
+    const cell = (type: string, content: ReturnType<typeof NOTE_SCHEMA.text>[]) => {
+      return NOTE_SCHEMA.node(
+        type,
+        { align: "center" },
+        NOTE_SCHEMA.node("paragraph", null, content),
+      );
+    };
 
     const table = NOTE_SCHEMA.node("table", null, [
       NOTE_SCHEMA.node("tableRow", null, cell("tableHeaderCell", [NOTE_SCHEMA.text("Header")])),
@@ -449,20 +454,26 @@ describe("app Markdown conversion", () => {
     const header = NOTE_SCHEMA.node("tableHeaderCell", null, paragraph);
     const row = (cells: (typeof cell)[]) => NOTE_SCHEMA.node("tableRow", null, cells);
 
-    const exportRows = (rows: ReturnType<typeof row>[]) =>
-      MdSerialize.serialize(NOTE_SCHEMA.node("doc", null, NOTE_SCHEMA.node("table", null, rows)));
+    const exportRows = (rows: ReturnType<typeof row>[]) => {
+      return MdSerialize.serialize(
+        NOTE_SCHEMA.node("doc", null, NOTE_SCHEMA.node("table", null, rows)),
+      );
+    };
 
     expect(() => exportRows([row([cell])])).toThrow(/header/);
     expect(() => exportRows([row([header, header]), row([cell])])).toThrow(/width/);
-    expect(() =>
-      exportRows([row([header]), row([NOTE_SCHEMA.node("tableCell", { colspan: 2 }, paragraph)])]),
-    ).toThrow();
-    expect(() =>
-      exportRows([
+    expect(() => {
+      return exportRows([
+        row([header]),
+        row([NOTE_SCHEMA.node("tableCell", { colspan: 2 }, paragraph)]),
+      ]);
+    }).toThrow();
+    expect(() => {
+      return exportRows([
         row([header]),
         row([NOTE_SCHEMA.node("tableCell", null, [paragraph, paragraph])]),
-      ]),
-    ).toThrow();
+      ]);
+    }).toThrow();
 
     const broken = NOTE_SCHEMA.node(
       "tableCell",
@@ -490,9 +501,9 @@ describe("app Markdown conversion", () => {
   });
 
   it("rejects an unsupported internal list kind at schema validation", () => {
-    expect(() =>
-      NOTE_SCHEMA.node("list", { kind: "bullet" }, NOTE_SCHEMA.node("paragraph")),
-    ).toThrow();
+    expect(() => {
+      return NOTE_SCHEMA.node("list", { kind: "bullet" }, NOTE_SCHEMA.node("paragraph"));
+    }).toThrow();
   });
 
   it("numbers imported ordered items by position and resets each list run", () => {

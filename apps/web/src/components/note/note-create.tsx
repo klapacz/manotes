@@ -23,8 +23,8 @@ export type CreateInput = {
   pool?: EditorPool.Pool;
 };
 
-const CreateNote = bindRt((rt) =>
-  rt.fn(
+const CreateNote = bindRt((rt) => {
+  return rt.fn(
     Effect.fn("ComponentsNoteCreate.createNote")(function* (input: CreateInput) {
       const service = yield* MaterializedEventService.Service;
       const payload = yield* resolvePayload(input);
@@ -40,19 +40,15 @@ const CreateNote = bindRt((rt) =>
 
       return note;
     }),
-  ),
-);
+  );
+});
 
 const resolvePayload = Effect.fn("ComponentsNoteNoteCreate.resolvePayload")(function* (
   input: CreateInput,
 ) {
-  if (input.payload !== undefined) {
-    return input.payload;
-  }
+  if (input.payload !== undefined) return input.payload;
 
-  if (input.pane !== undefined) {
-    return yield* prefilledPayload(input.pane);
-  }
+  if (input.pane !== undefined) return yield* prefilledPayload(input.pane);
 
   return ProsemirrorEncode.encodeDocument([{ type: "paragraph" }]);
 });
@@ -61,8 +57,8 @@ const resolvePayload = Effect.fn("ComponentsNoteNoteCreate.resolvePayload")(func
 export function useCreateNote() {
   const [, createNote] = useAtom(CreateNote, { mode: "promise" });
 
-  return (input: CreateInput, onCreated?: (note: NoteSchema.Record) => void) =>
-    toast.promise(
+  return (input: CreateInput, onCreated?: (note: NoteSchema.Record) => void) => {
+    return toast.promise(
       createNote(input).then((note) => {
         onCreated?.(note);
 
@@ -74,6 +70,7 @@ export function useCreateNote() {
         error: "Error while creating note",
       },
     );
+  };
 }
 
 /** The keybinding that triggers note creation on a pane's focus node. */

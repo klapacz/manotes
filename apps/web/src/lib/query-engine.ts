@@ -9,12 +9,13 @@ export type Query<T, E = never, R = never> = (
 ) => Stream.Stream<readonly Match<T>[], E, R | Scope.Scope>;
 
 export function map<A, B, E, R>(query: Query<A, E, R>, transform: (value: A) => B): Query<B, E, R> {
-  return (request) =>
-    query(request).pipe(
-      Stream.map((matches) =>
-        matches.map((match) => ({ ...match, value: transform(match.value) })),
-      ),
+  return (request) => {
+    return query(request).pipe(
+      Stream.map((matches) => {
+        return matches.map((match) => ({ ...match, value: transform(match.value) }));
+      }),
     );
+  };
 }
 
 export function combine<T, E, R>(queries: readonly Query<T, E, R>[]): Query<T, E, R> {

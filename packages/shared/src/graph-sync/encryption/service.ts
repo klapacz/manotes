@@ -21,8 +21,8 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
     const graphKey = castArray(context.graphKey);
 
     const streamRefKey = yield* Effect.tryPromise({
-      try: () =>
-        crypto.subtle.importKey(
+      try: () => {
+        return crypto.subtle.importKey(
           "raw",
           graphKey,
           {
@@ -31,7 +31,8 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
           },
           false,
           ["sign"],
-        ),
+        );
+      },
       catch: (cause) => new StreamRefDerivationError({ cause }),
     });
 
@@ -88,8 +89,8 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
       const iv = crypto.getRandomValues(new Uint8Array(EVENT_IV_LENGTH));
 
       const ciphertext = yield* Effect.tryPromise({
-        try: () =>
-          crypto.subtle.encrypt(
+        try: () => {
+          return crypto.subtle.encrypt(
             {
               name: "AES-GCM",
               iv,
@@ -97,7 +98,8 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
             },
             eventEncryptionKey,
             castArray(body),
-          ),
+          );
+        },
         catch: (cause) => new EventEncryptionError({ cause }),
       });
 
@@ -130,8 +132,8 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
       );
 
       const decrypted = yield* Effect.tryPromise({
-        try: () =>
-          crypto.subtle.decrypt(
+        try: () => {
+          return crypto.subtle.decrypt(
             {
               name: "AES-GCM",
               iv: castArray(envelope.iv),
@@ -139,7 +141,8 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
             },
             eventEncryptionKey,
             castArray(envelope.ciphertext),
-          ),
+          );
+        },
         catch: (cause) => new InvalidEncryptedEventError({ cause }),
       });
 

@@ -180,9 +180,7 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
   const [page, setPage] = createSignal<MenuPage>(MenuPage.Actions());
 
   const changeMenuOpen = (open: boolean) => {
-    if (open) {
-      setPage(MenuPage.Actions());
-    }
+    if (open) setPage(MenuPage.Actions());
 
     setMenuOpen(open);
   };
@@ -323,13 +321,13 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
               },
             ];
 
-            const query = createMemo(() =>
-              QueryEngine.combine([
+            const query = createMemo(() => {
+              return QueryEngine.combine([
                 MenuQuery.choices(() => actions),
                 MenuQuery.nested({ label: "Change date", query: dates }),
                 NoteProps.query({ recordId: props.note.id, doc: props.doc }),
-              ]),
-            );
+              ]);
+            });
 
             return (
               <MatchTag
@@ -340,8 +338,8 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
                       <Picker.Query
                         label="Note actions"
                         query={query()}
-                        onSelect={(choice) =>
-                          NoteMenuAction.$match(choice, {
+                        onSelect={(choice) => {
+                          return NoteMenuAction.$match(choice, {
                             Navigate: ({ run }) => close(run),
                             OpenDatePicker: () => setPage(MenuPage.ChangeDate()),
                             SetDate: ({ date }) => void changeDate(date),
@@ -349,8 +347,8 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
                               if (props.doc) setPage(MenuPage.Property({ selection }));
                             },
                             SetProperty: (action) => void setProperty(action),
-                          })
-                        }
+                          });
+                        }}
                       />
 
                       <Show when={AsyncResult.isFailure(propertyMutation())}>

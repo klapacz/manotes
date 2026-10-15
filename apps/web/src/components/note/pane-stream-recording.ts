@@ -19,8 +19,8 @@ export function use() {
   const [draft, setDraft, draftAtom] = createAtomState<AudioMemo.Draft | undefined>(undefined);
   const draftId = () => draft()?.id;
 
-  const completionAtom = bindRt((rt) =>
-    rt.atom((get) => {
+  const completionAtom = bindRt((rt) => {
+    return rt.atom((get) => {
       const id = get(draftAtom)?.id;
 
       // Stream.empty preserves and re-emits the atom's previous success, which
@@ -37,8 +37,8 @@ export function use() {
         Stream.mapEffect(() => Effect.as(Effect.sleep("1 second"), id)),
         Stream.filter((noteId) => get.once(draftAtom)?.id === noteId),
       );
-    }),
-  );
+    });
+  });
 
   useAtomSubscribe(
     completionAtom,

@@ -12,14 +12,14 @@ const initialHealth = new DedicatedWorkerHealth({
   lastFailure: "",
 });
 
-const WorkerHealth = bindRt((rt) =>
-  rt.atom(
+const WorkerHealth = bindRt((rt) => {
+  return rt.atom(
     GraphWorkerClient.Service.useSync((svc) => svc.client.healthStream({})).pipe(
       Stream.unwrap,
       sampleLatest("1 second"),
     ),
-  ),
-);
+  );
+});
 
 export function WorkerHealthBanner() {
   const health = createAtomStore(WorkerHealth, initialHealth);

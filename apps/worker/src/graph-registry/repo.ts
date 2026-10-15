@@ -52,9 +52,9 @@ export class Service extends Context.Service<Service>()("GraphRegistryRepo.Servi
         INSERT INTO graphs ${sql.insert(values)}
         RETURNING graphId, displayName, createdAt, graphKeyEnvelope
       `.pipe(
-        Effect.catchTag("SqlError", (error) =>
-          Effect.fail(remapDisplayNameSqlError(error, displayName)),
-        ),
+        Effect.catchTag("SqlError", (error) => {
+          return Effect.fail(remapDisplayNameSqlError(error, displayName));
+        }),
         Effect.flatMap(Schema.decodeArray),
         Effect.map(Array.head),
         EffectOption.getOrEffect(() => Effect.die(new Error("Graph insert returned no rows"))),
@@ -74,9 +74,9 @@ export class Service extends Context.Service<Service>()("GraphRegistryRepo.Servi
         WHERE graphId = ${graphId}
         RETURNING graphId, displayName, createdAt, graphKeyEnvelope
       `.pipe(
-        Effect.catchTag("SqlError", (error) =>
-          Effect.fail(remapDisplayNameSqlError(error, displayName)),
-        ),
+        Effect.catchTag("SqlError", (error) => {
+          return Effect.fail(remapDisplayNameSqlError(error, displayName));
+        }),
         Effect.map(Array.head),
         EffectOption.traverse(Schema.decodeRecord),
       );

@@ -177,8 +177,9 @@ function CloudGraphsSection() {
                 when={error()}
                 fallback="Failed to open graph."
                 cases={{
-                  "LocalRegistry.DisplayNameTakenError": () =>
-                    "A graph with that name already exists on this device.",
+                  "LocalRegistry.DisplayNameTakenError": () => {
+                    return "A graph with that name already exists on this device.";
+                  },
                 }}
               />
             </AlertDescription>

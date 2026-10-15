@@ -12,15 +12,15 @@ export const RouterMiddleware = Effect.gen(function* () {
     httpEffect: Effect.Effect<A, E, R | SessionAuth.Current>,
   ) {
     return yield* resolveCurrentSession(auth).pipe(
-      Effect.flatMap((current) =>
-        httpEffect.pipe(Effect.provideService(SessionAuth.Current, current)),
-      ),
-      Effect.catchTag("Auth.UnauthorizedError", () =>
-        Effect.succeed(HttpServerResponse.empty({ status: 401 })),
-      ),
-      Effect.catchTag("Auth.SessionStoreError", () =>
-        Effect.succeed(HttpServerResponse.empty({ status: 500 })),
-      ),
+      Effect.flatMap((current) => {
+        return httpEffect.pipe(Effect.provideService(SessionAuth.Current, current));
+      }),
+      Effect.catchTag("Auth.UnauthorizedError", () => {
+        return Effect.succeed(HttpServerResponse.empty({ status: 401 }));
+      }),
+      Effect.catchTag("Auth.SessionStoreError", () => {
+        return Effect.succeed(HttpServerResponse.empty({ status: 500 }));
+      }),
     );
   });
 });
@@ -42,13 +42,13 @@ const resolveCurrentSession = Effect.fn("AuthSession.resolveCurrentSession")(fun
         }),
       );
     }),
-    Effect.tapErrorTag("Auth.SessionStoreError", (error) =>
-      Effect.logError("Session KV failure").pipe(
+    Effect.tapErrorTag("Auth.SessionStoreError", (error) => {
+      return Effect.logError("Session KV failure").pipe(
         Effect.annotateLogs({
           operation: error.operation,
           cause: error.cause instanceof Error ? error.cause.message : String(error.cause),
         }),
-      ),
-    ),
+      );
+    }),
   );
 });

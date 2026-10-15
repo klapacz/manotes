@@ -12,8 +12,8 @@ function fixture() {
   return { doc, map, attrs };
 }
 
-const example = (doc: Y.Doc, targets: AttrsSchema.TargetFilter | undefined) =>
-  Effect.gen(function* () {
+const example = (doc: Y.Doc, targets: AttrsSchema.TargetFilter | undefined) => {
+  return Effect.gen(function* () {
     const { attrs } = NoteDoc.fromDoc({ doc });
 
     const prop = yield* attrs.pipe(
@@ -31,6 +31,7 @@ const example = (doc: Y.Doc, targets: AttrsSchema.TargetFilter | undefined) =>
 
     return link;
   });
+};
 
 describe("YSchema bound selections", () => {
   it("initializes a discriminator in a single-variant schema", () => {

@@ -14,21 +14,23 @@ describe("prefixed menu queries", () => {
 
     const query = MenuQuery.nested({
       label: "Choose",
-      query: MenuQuery.choices(() => [
-        Choice.Link({ value: "sleep", label: "Sleep Log", noteId: "sleep-note" }),
-        Choice.Date({ value: "tomorrow", label: "Tomorrow", date: "2026-10-10" }),
-      ]),
+      query: MenuQuery.choices(() => {
+        return [
+          Choice.Link({ value: "sleep", label: "Sleep Log", noteId: "sleep-note" }),
+          Choice.Date({ value: "tomorrow", label: "Tomorrow", date: "2026-10-10" }),
+        ];
+      }),
     });
 
     const results = await read(query({ text: "Choose " }));
     expect(results.map(({ value }) => value.value)).toEqual(["Choose:sleep", "Choose:tomorrow"]);
     expect(
-      results.map(({ value }) =>
-        Choice.$match(value, {
+      results.map(({ value }) => {
+        return Choice.$match(value, {
           Link: ({ noteId }) => noteId,
           Date: ({ date }) => date,
-        }),
-      ),
+        });
+      }),
     ).toEqual(["sleep-note", "2026-10-10"]);
   });
 
@@ -37,12 +39,13 @@ describe("prefixed menu queries", () => {
 
     const query = MenuQuery.nested({
       label: "Links to",
-      query: (request) =>
-        Stream.sync(() => {
+      query: (request) => {
+        return Stream.sync(() => {
           requests.push(request);
 
           return [{ value: { value: "note", label: request.text }, score: 1 }];
-        }),
+        });
+      },
     });
 
     const results = await read(query({ text: "  LINKS TO   Sleep Log  " }));
@@ -68,26 +71,30 @@ describe("prefixed menu queries", () => {
     let applied: string | undefined;
 
     const query = QueryEngine.combine([
-      MenuQuery.actions(() => [
-        {
-          value: "links",
-          label: "Links to",
-          run: (text) => {
-            opened.push(text);
-          },
-        },
-      ]),
-      MenuQuery.nested({
-        label: "Links to",
-        query: MenuQuery.choices(() => [
+      MenuQuery.actions(() => {
+        return [
           {
-            value: "sleep",
-            label: "Sleep Log",
-            run: () => {
-              applied = "sleep";
+            value: "links",
+            label: "Links to",
+            run: (text) => {
+              opened.push(text);
             },
           },
-        ]),
+        ];
+      }),
+      MenuQuery.nested({
+        label: "Links to",
+        query: MenuQuery.choices(() => {
+          return [
+            {
+              value: "sleep",
+              label: "Sleep Log",
+              run: () => {
+                applied = "sleep";
+              },
+            },
+          ];
+        }),
       }),
     ]);
 
@@ -107,16 +114,18 @@ describe("prefixed menu queries", () => {
   it("binds the parent action to its own search and supports aliases", async () => {
     const opened: (string | undefined)[] = [];
 
-    const query = MenuQuery.actions(() => [
-      {
-        value: "date",
-        label: "Change date…",
-        keywords: ["calendar"],
-        run: (text) => {
-          opened.push(text);
+    const query = MenuQuery.actions(() => {
+      return [
+        {
+          value: "date",
+          label: "Change date…",
+          keywords: ["calendar"],
+          run: (text) => {
+            opened.push(text);
+          },
         },
-      },
-    ]);
+      ];
+    });
 
     const previous = await read(query({ text: "Change date yesterday" }));
     const current = await read(query({ text: "CALENDAR tomorrow" }));
@@ -128,18 +137,18 @@ describe("prefixed menu queries", () => {
   it("shares an unprefixed lookup across sibling branches", async () => {
     let calls = 0;
 
-    const notes = QueryEngine.share(() =>
-      Stream.sync(() => {
+    const notes = QueryEngine.share(() => {
+      return Stream.sync(() => {
         calls++;
 
         return [{ value: { value: "sleep", label: "Sleep Log" }, score: 1 }];
-      }),
-    );
+      });
+    });
 
     const query = QueryEngine.combine(
-      ["Links to", "Links from", "Open note"].map((label) =>
-        MenuQuery.nested({ label, query: notes }),
-      ),
+      ["Links to", "Links from", "Open note"].map((label) => {
+        return MenuQuery.nested({ label, query: notes });
+      }),
     );
 
     const results = await read(query({ text: "Sleep" }));

@@ -57,8 +57,9 @@ export function Root(props: {
 }
 
 function DateCalendar(props: { value: string | undefined; onChange: (date: string) => void }) {
-  const selectedDate = () =>
-    props.value ? plainDateToJSDate(Temporal.PlainDate.from(props.value)) : new Date();
+  const selectedDate = () => {
+    return props.value ? plainDateToJSDate(Temporal.PlainDate.from(props.value)) : new Date();
+  };
 
   return (
     <div

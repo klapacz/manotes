@@ -37,8 +37,8 @@ export const layerFromFile = Layer.unwrap(
   }),
 );
 
-export const makeLayer = (config: Config) =>
-  Layer.unwrap(
+export const makeLayer = (config: Config) => {
+  return Layer.unwrap(
     Effect.gen(function* () {
       const paths = yield* CliPaths.Service;
 
@@ -51,6 +51,7 @@ export const makeLayer = (config: Config) =>
       );
     }),
   );
+};
 
 export const write = Effect.fn("CliConfig.write")(function* () {
   const paths = yield* CliPaths.Service;

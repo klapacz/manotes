@@ -31,8 +31,8 @@ export function useChangeDate(props: { noteId: string; onChanged: () => void }) 
   };
 }
 
-const SetDate = bindRt((rt) =>
-  rt.fn(
+const SetDate = bindRt((rt) => {
+  return rt.fn(
     Effect.fn("ComponentsNoteDatePicker.setDate")(function* (input: {
       readonly noteId: string;
       readonly date: string;
@@ -45,7 +45,7 @@ const SetDate = bindRt((rt) =>
         createdAt: yield* DateTime.now,
       });
     }),
-  ),
-);
+  );
+});
 
 export * as NoteDatePicker from "./date-picker";

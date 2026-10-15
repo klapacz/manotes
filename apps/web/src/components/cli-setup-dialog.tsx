@@ -44,11 +44,11 @@ export function CliSetupDialog<T extends ValidComponent = typeof Button>(props: 
 
 function CliSetupContent(props: { readonly graph: LocalRegistry.CloudRecord }) {
   // Each opening owns fresh mutation state; creating the atom does not issue a token.
-  const prepareAtom = GraphAccessRuntime.atom.fn((graph: LocalRegistry.CloudRecord) =>
-    CliSetup.prepare({ graph, origin: window.location.origin }).pipe(
+  const prepareAtom = GraphAccessRuntime.atom.fn((graph: LocalRegistry.CloudRecord) => {
+    return CliSetup.prepare({ graph, origin: window.location.origin }).pipe(
       Effect.provide(FetchHttpClient.layer),
-    ),
-  );
+    );
+  });
 
   const [prepared, prepare] = useAtom(() => prepareAtom);
   const copyAtom = Atom.fn(CliSetup.copy);

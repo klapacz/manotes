@@ -224,10 +224,11 @@ describe("main", () => {
       vi.stubEnv(DevEnv.names.extensionPort, "invalid inherited port");
       vi.stubEnv(DevEnv.names.stage, "prod");
 
-      spawner.exitCode.mockImplementation((command) =>
-        Effect.sync(() => {
-          if (!ChildProcess.isStandardCommand(command))
+      spawner.exitCode.mockImplementation((command) => {
+        return Effect.sync(() => {
+          if (!ChildProcess.isStandardCommand(command)) {
             throw new Error("Expected a single command");
+          }
 
           if (command.command === "vp") return ChildProcessSpawner.ExitCode(0);
 
@@ -255,8 +256,8 @@ describe("main", () => {
           expect(new Set([webPort, apiPort, extensionPort]).size).toBe(3);
 
           return ChildProcessSpawner.ExitCode(0);
-        }),
-      );
+        });
+      });
 
       await Effect.runPromise(
         run(extension ? ["--extension"] : []).pipe(
@@ -276,9 +277,9 @@ describe("main", () => {
       const spawner = makeSpawner();
       const before = store.loadRoutes();
       let calls = 0;
-      spawner.exitCode.mockImplementation(() =>
-        Effect.sync(() => ChildProcessSpawner.ExitCode(++calls === failedCommand ? 17 : 0)),
-      );
+      spawner.exitCode.mockImplementation(() => {
+        return Effect.sync(() => ChildProcessSpawner.ExitCode(++calls === failedCommand ? 17 : 0));
+      });
 
       const error = await Effect.runPromise(
         run([]).pipe(
@@ -299,9 +300,9 @@ function makeSpawner(workspace = "01") {
   return {
     ...ChildProcessSpawner.make(() => Effect.die("Unexpected process spawn")),
     string: vi.fn(() => Effect.succeed(`${workspace}\n`)),
-    exitCode: vi.fn((_command: ChildProcess.Command) =>
-      Effect.succeed(ChildProcessSpawner.ExitCode(0)),
-    ),
+    exitCode: vi.fn((_command: ChildProcess.Command) => {
+      return Effect.succeed(ChildProcessSpawner.ExitCode(0));
+    }),
   };
 }
 

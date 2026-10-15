@@ -91,8 +91,8 @@ export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntim
     ) {
       const fingerprint = yield* Fingerprint.create(resolution);
 
-      const next = yield* SynchronizedRef.modifyEffect(ref, (entries) =>
-        Effect.gen(function* () {
+      const next = yield* SynchronizedRef.modifyEffect(ref, (entries) => {
+        return Effect.gen(function* () {
           const existing = HashMap.get(entries, resolution.record.localGraphId);
 
           // Matches existing runtime with fingerprint
@@ -125,8 +125,8 @@ export class Service extends Context.Service<Service>()("GraphAccess.GraphRuntim
             { runtime, previous: existing },
             HashMap.set(entries, resolution.record.localGraphId, { fingerprint, runtime }),
           ] as const;
-        }),
-      );
+        });
+      });
 
       if (Option.isSome(next.previous)) yield* next.previous.value.runtime.dispose;
 

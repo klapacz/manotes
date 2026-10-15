@@ -30,8 +30,8 @@ import { CliSetupDialog } from "./cli-setup-dialog";
 // Source: .reference/shadcn-solid/apps/docs/src/registry/blocks/sidebar-01/components/nav-user.tsx
 // Why: the current-graph control should own graph identity and graph actions.
 // Modifications: removed avatar visuals, replaced user identity with graph identity, and wired the export backup action with Manotes backup services and toast feedback.
-const ExportBackup = bindRt((rt) =>
-  rt.fn(
+const ExportBackup = bindRt((rt) => {
+  return rt.fn(
     Effect.fn("ComponentsGraphMenu.exportBackup")(function* (sourceGraphDisplayName: string) {
       const backup = yield* GraphBackupService.exportBackup({
         sourceGraphDisplayName,
@@ -39,8 +39,8 @@ const ExportBackup = bindRt((rt) =>
 
       yield* GraphBackupFile.downloadBackupFile(backup);
     }),
-  ),
-);
+  );
+});
 
 const LockGraph = GraphAccessRuntime.atom.fn(
   Effect.fn("ComponentsGraphMenu.lockGraph")(function* (
@@ -88,9 +88,7 @@ export const GraphMenu = () => {
   async function handleLockGraph(envelope: GraphEncryption.GraphKeyEnvelope) {
     const exit = await lockGraph(envelope);
 
-    if (Exit.isFailure(exit)) {
-      toast.error("Failed to lock graph");
-    }
+    if (Exit.isFailure(exit)) toast.error("Failed to lock graph");
   }
 
   return (

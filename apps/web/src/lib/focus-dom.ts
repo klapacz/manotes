@@ -16,11 +16,9 @@ export function create<Id, Options = never>() {
   const activeElement = browserFocus(document);
 
   // Both lookups derive from registration. There is no second mutable index.
-  const elements = Atom.map(
-    targets,
-    (registered) =>
-      new Map<Element, Id>(Array.from(registered, ([id, target]) => [target.element, id])),
-  );
+  const elements = Atom.map(targets, (registered) => {
+    return new Map<Element, Id>(Array.from(registered, ([id, target]) => [target.element, id]));
+  });
 
   const activeId = Atom.make((get) => closest(get(activeElement), get(elements)));
 
@@ -45,9 +43,9 @@ export function create<Id, Options = never>() {
     return Stream.concat(Stream.succeed(id), Stream.fromEffectDrain(focus));
   }).pipe(Atom.setIdleTTL(0));
 
-  const pendingId = Atom.map(navigation, (result) =>
-    AsyncResult.isSuccess(result) && result.waiting ? result.value : null,
-  );
+  const pendingId = Atom.map(navigation, (result) => {
+    return AsyncResult.isSuccess(result) && result.waiting ? result.value : null;
+  });
 
   const setTargets = useAtomSet(() => targets);
   const setNavigation = useAtomSet(() => navigation);

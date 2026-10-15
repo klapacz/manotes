@@ -66,9 +66,7 @@ export const sendPendingCommit = Effect.fn("GraphSyncMachineCommands.sendPending
     const eventLog = yield* GraphSyncEventLog.Service;
     const pendingCommit = yield* eventLog.getPendingCommit();
 
-    if (Option.isNone(pendingCommit)) {
-      return { didSendCommit: false };
-    }
+    if (Option.isNone(pendingCommit)) return { didSendCommit: false };
 
     yield* context.write(
       new Messages.Commit({

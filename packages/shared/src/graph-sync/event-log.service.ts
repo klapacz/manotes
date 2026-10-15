@@ -56,8 +56,8 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
         yield* db.transaction(
           Effect.forEach(
             unappliedEvents,
-            (event) =>
-              Effect.gen(function* () {
+            (event) => {
+              return Effect.gen(function* () {
                 const lastCommitSeq = yield* getLastCommitSeq();
 
                 if (event.commitSeq <= lastCommitSeq) return;
@@ -114,7 +114,8 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
                     });
                   }),
                 });
-              }),
+              });
+            },
             { discard: true },
           ),
         );

@@ -41,8 +41,8 @@ export function defaultSuggestions(): DateSuggestion[] {
   return relativeDates.flatMap((query) => suggestDates(query));
 }
 
-export const query: QueryEngine.Query<DateSuggestion> = (request) =>
-  Stream.sync(() => {
+export const query: QueryEngine.Query<DateSuggestion> = (request) => {
+  return Stream.sync(() => {
     const matches = defaultSuggestions().flatMap((value) => {
       const score = QueryEngine.score({ text: request.text, label: value.title });
 
@@ -51,13 +51,15 @@ export const query: QueryEngine.Query<DateSuggestion> = (request) =>
 
     if (request.text.trim()) {
       for (const value of suggestDates(request.text)) {
-        if (!matches.some((match) => match.value.id === value.id))
+        if (!matches.some((match) => match.value.id === value.id)) {
           matches.push({ value, score: 1 });
+        }
       }
     }
 
     return matches.sort((a, b) => b.score - a.score);
   });
+};
 
 export function suggestDates(
   query: string,
@@ -69,9 +71,7 @@ export function suggestDates(
 
   const exact = parseDate(normalizedQuery);
 
-  if (exact) {
-    return [{ id: exact.toString(), title: formatDate(exact.toString()) }];
-  }
+  if (exact) return [{ id: exact.toString(), title: formatDate(exact.toString()) }];
 
   const reference = TemporalUtils.plainDateToJSDate(referenceDate);
 

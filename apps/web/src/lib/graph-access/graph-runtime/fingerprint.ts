@@ -21,20 +21,22 @@ export const create = Effect.fn("GraphRuntimeFingerprint.create")(function* (
 ) {
   const result: Fingerprint = yield* Match.value(resolution).pipe(
     Match.tagsExhaustive({
-      Local: ({ record }) =>
-        Effect.succeed(
+      Local: ({ record }) => {
+        return Effect.succeed(
           Fingerprint.Local({
             localGraphId: record.localGraphId,
           }),
-        ),
-      CloudUnlocked: ({ record }) =>
-        Effect.gen(function* () {
+        );
+      },
+      CloudUnlocked: ({ record }) => {
+        return Effect.gen(function* () {
           return Fingerprint.Cloud({
             localGraphId: record.localGraphId,
             graphId: record.graphId,
             wrappedGraphKeyId: yield* encodeGraphKeyId(record.graphKeyEnvelope.wrappedGraphKey),
           });
-        }),
+        });
+      },
     }),
   );
 

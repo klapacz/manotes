@@ -12,8 +12,8 @@ export class Service extends Context.Service<Service>()("NoteStreamCache.Service
 
     const entries = yield* RcMap.make({
       idleTimeToLive: ENTRY_IDLE_TTL,
-      lookup: (query: NoteRepo.StreamListQuery) =>
-        Effect.gen(function* () {
+      lookup: (query: NoteRepo.StreamListQuery) => {
+        return Effect.gen(function* () {
           const source = yield* noteRepo.reactiveStreamList(query);
 
           return yield* source.pipe(
@@ -23,7 +23,8 @@ export class Service extends Context.Service<Service>()("NoteStreamCache.Service
               idleTimeToLive: ENTRY_IDLE_TTL,
             }),
           );
-        }),
+        });
+      },
     });
 
     const changes = Effect.fn("NoteStreamCache.changes")(function* (

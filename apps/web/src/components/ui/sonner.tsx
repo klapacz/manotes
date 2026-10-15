@@ -6,8 +6,9 @@ import { Toaster as Sonner, type ToasterProps as SonnerProps } from "somoto";
 // Source: .reference/shadcn-solid/apps/docs/src/registry/ui/sonner.tsx
 // Why: this repo was missing the shared shadcn-solid toast/toaster wrapper.
 // Modifications: replaced Kobalte color-mode usage with the app's existing data-kb-theme tracking, enabled richColors by default, and remapped Sonner CSS variables to Manotes design tokens.
-const readTheme = (): "light" | "dark" =>
-  document.documentElement.dataset.kbTheme === "dark" ? "dark" : "light";
+const readTheme = (): "light" | "dark" => {
+  return document.documentElement.dataset.kbTheme === "dark" ? "dark" : "light";
+};
 
 export const Toaster = (props: SonnerProps) => {
   const [local, rest] = splitProps(props, ["style", "theme"]);

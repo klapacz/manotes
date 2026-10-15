@@ -30,9 +30,7 @@ function App() {
 
 const rootElement = document.getElementById("app");
 
-if (rootElement) {
-  render(() => <App />, rootElement);
-}
+if (rootElement) render(() => <App />, rootElement);
 
 // Register the service worker after render so it doesn't block initial paint.
 // registerSW handles the full lifecycle: registration, update detection,

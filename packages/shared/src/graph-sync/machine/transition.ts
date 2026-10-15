@@ -14,18 +14,20 @@ export function bufferCommitted(
 ) {
   return Match.value(state).pipe(
     Match.tagsExhaustive({
-      Bootstrapping: ({ bufferedCommitted }) =>
-        Effect.succeed(
+      Bootstrapping: ({ bufferedCommitted }) => {
+        return Effect.succeed(
           Model.State.Bootstrapping({
             bufferedCommitted: [...bufferedCommitted, committed],
           }),
-        ),
-      Committing: ({ bufferedCommitted }) =>
-        Effect.succeed(
+        );
+      },
+      Committing: ({ bufferedCommitted }) => {
+        return Effect.succeed(
           Model.State.Committing({
             bufferedCommitted: [...bufferedCommitted, committed],
           }),
-        ),
+        );
+      },
     }),
   );
 }

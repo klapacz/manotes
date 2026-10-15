@@ -19,12 +19,12 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
     const countPending = Effect.fn("EventRepo.countPending")(function* () {
       // Acknowledgements update these rows in place; no separate status is stored.
       return yield* db
-        .find((db) =>
-          db
+        .find((db) => {
+          return db
             .select({ count: count().as("count") })
             .from(Tables.events)
-            .where(isNull(Tables.events.commitSeq)),
-        )
+            .where(isNull(Tables.events.commitSeq));
+        })
         .pipe(Effect.map(Option.match({ onNone: () => 0, onSome: (row) => row.count })));
     });
 
@@ -32,8 +32,8 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       const encoded = yield* pipe(event, Schema.encodeEffect(EventSchema.Create));
 
       return yield* db
-        .find((db) =>
-          db
+        .find((db) => {
+          return db
             .insert(Tables.events)
             .values({
               type: encoded.type,
@@ -43,16 +43,16 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
               id: encoded.id ?? nanoid(),
               commitSeq: encoded.commitSeq ?? null,
             })
-            .returning(),
-        )
+            .returning();
+        })
         .pipe(EffectOption.traverseOrElse(decodeRecord, () => new DB.NotFoundError()));
     });
 
     const deleteByLocalSeq = Effect.fn("EventRepo.delete")(function* (localSeq: number) {
       return yield* db
-        .find((db) =>
-          db.delete(Tables.events).where(eq(Tables.events.localSeq, localSeq)).returning(),
-        )
+        .find((db) => {
+          return db.delete(Tables.events).where(eq(Tables.events.localSeq, localSeq)).returning();
+        })
         .pipe(EffectOption.traverseOrElse(decodeRecord, () => new DB.NotFoundError()));
     });
 
@@ -63,22 +63,22 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
     });
 
     const findPending = Effect.fn("EventRepo.findPending")(function* (limit: number) {
-      const events = yield* db.query((db) =>
-        db
+      const events = yield* db.query((db) => {
+        return db
           .select()
           .from(Tables.events)
           .where(isNull(Tables.events.commitSeq))
           .orderBy(asc(Tables.events.localSeq))
-          .limit(limit),
-      );
+          .limit(limit);
+      });
 
       return yield* pipe(events, decodeAll);
     });
 
     const listAllForBackup = Effect.fn("EventRepo.listAllForBackup")(function* () {
-      const events = yield* db.query((db) =>
-        db.select().from(Tables.events).orderBy(asc(Tables.events.localSeq)),
-      );
+      const events = yield* db.query((db) => {
+        return db.select().from(Tables.events).orderBy(asc(Tables.events.localSeq));
+      });
 
       return yield* pipe(events, decodeAll);
     });
@@ -98,9 +98,9 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
           // Large backups can exceed SQLite's bound-variable limit if we try to
           // insert every row in a single VALUES statement.
           Array.chunksOf(encodedEvents, IMPORT_BACKUP_BATCH_SIZE),
-          (chunk) =>
-            db.query((db) =>
-              db
+          (chunk) => {
+            return db.query((db) => {
+              return db
                 .insert(Tables.events)
                 .values(
                   chunk.map((event) => ({
@@ -111,8 +111,9 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
                     id: event.id ?? nanoid(),
                   })),
                 )
-                .returning(),
-            ),
+                .returning();
+            });
+          },
           {
             concurrency: 1,
             discard: true,
@@ -122,9 +123,11 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
     });
 
     const getLastCommitSeq = Effect.fn("EventRepo.getLastCommitSeq")(function* () {
-      const result = yield* db.find((db) =>
-        db.select({ commitSeq: max(Tables.events.commitSeq).as("commitSeq") }).from(Tables.events),
-      );
+      const result = yield* db.find((db) => {
+        return db
+          .select({ commitSeq: max(Tables.events.commitSeq).as("commitSeq") })
+          .from(Tables.events);
+      });
 
       return pipe(
         result,
@@ -135,22 +138,24 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
 
     const getMaxLocalSeq = Effect.fn("EventRepo.getMaxLocalSeq")(function* () {
       return yield* db
-        .find((db) =>
-          db.select({ localSeq: max(Tables.events.localSeq).as("localSeq") }).from(Tables.events),
-        )
+        .find((db) => {
+          return db
+            .select({ localSeq: max(Tables.events.localSeq).as("localSeq") })
+            .from(Tables.events);
+        })
         .pipe(Effect.map(Option.match({ onNone: () => 0, onSome: (row) => row.localSeq ?? 0 })));
     });
 
     const findUpdatesForNote = Effect.fn("EventRepo.findUpdatesForNote")(function* (
       noteId: string,
     ) {
-      const events = yield* db.query((db) =>
-        db
+      const events = yield* db.query((db) => {
+        return db
           .select()
           .from(Tables.events)
           .where(and(eq(Tables.events.noteId, noteId), eq(Tables.events.type, "update")))
-          .orderBy(asc(Tables.events.localSeq)),
-      );
+          .orderBy(asc(Tables.events.localSeq));
+      });
 
       return yield* pipe(events, decodeAll);
     });
@@ -164,8 +169,8 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       afterLocalSeq: number;
       upToLocalSeq: number;
     }) {
-      const events = yield* db.query((db) =>
-        db
+      const events = yield* db.query((db) => {
+        return db
           .select()
           .from(Tables.events)
           .where(
@@ -175,21 +180,21 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
               lte(Tables.events.localSeq, upToLocalSeq),
             ),
           )
-          .orderBy(asc(Tables.events.localSeq)),
-      );
+          .orderBy(asc(Tables.events.localSeq));
+      });
 
       return yield* pipe(events, decodeAll);
     });
 
     const streamHasPending = Effect.fn("EventRepo.streamHasPending")(function* () {
-      const stream = yield* db.reactiveQuery((db) =>
-        db
+      const stream = yield* db.reactiveQuery((db) => {
+        return db
           .select({ localSeq: Tables.events.localSeq })
           .from(Tables.events)
           .where(isNull(Tables.events.commitSeq))
           .orderBy(asc(Tables.events.localSeq))
-          .limit(1),
-      );
+          .limit(1);
+      });
 
       return stream.pipe(Stream.map((events) => events.length > 0));
     });
@@ -201,8 +206,8 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       noteId: string;
       afterLocalSeq: number;
     }) {
-      const stream = yield* db.reactiveQuery((db) =>
-        db
+      const stream = yield* db.reactiveQuery((db) => {
+        return db
           .select()
           .from(Tables.events)
           .where(
@@ -212,8 +217,8 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
               gt(Tables.events.localSeq, afterLocalSeq),
             ),
           )
-          .orderBy(asc(Tables.events.localSeq)),
-      );
+          .orderBy(asc(Tables.events.localSeq));
+      });
 
       return stream.pipe(Stream.mapEffect((events) => decodeAll(events)));
     });
@@ -222,14 +227,14 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       afterLocalSeq: number,
       limit: number,
     ) {
-      const stream = yield* db.reactiveQuery((db) =>
-        db
+      const stream = yield* db.reactiveQuery((db) => {
+        return db
           .select()
           .from(Tables.events)
           .where(gt(Tables.events.localSeq, afterLocalSeq))
           .orderBy(asc(Tables.events.localSeq))
-          .limit(limit),
-      );
+          .limit(limit);
+      });
 
       return stream.pipe(Stream.mapEffect((events) => decodeAll(events)));
     });
@@ -242,15 +247,15 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       commitSeq: number;
     }) {
       return yield* db
-        .find((db) =>
-          db
+        .find((db) => {
+          return db
             .update(Tables.events)
             .set({
               commitSeq,
             })
             .where(eq(Tables.events.id, eventId))
-            .returning(),
-        )
+            .returning();
+        })
         .pipe(EffectOption.traverseOrElse(decodeRecord, () => new DB.NotFoundError()));
     });
 

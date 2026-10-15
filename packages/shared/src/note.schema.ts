@@ -8,9 +8,9 @@ export type Id = typeof Id.Type;
 
 export const CreateId = Schema.NonEmptyString.pipe(
   Schema.check(
-    Schema.makeFilter((id) =>
-      id.startsWith("builtin:") ? "Record IDs cannot start with builtin:" : undefined,
-    ),
+    Schema.makeFilter((id) => {
+      return id.startsWith("builtin:") ? "Record IDs cannot start with builtin:" : undefined;
+    }),
   ),
 );
 

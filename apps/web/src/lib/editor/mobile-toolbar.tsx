@@ -40,11 +40,11 @@ export function MobileToolbar(props: { linkEdit: LinkEdit; onDismiss: () => void
 
   // Not `setFocused` itself: a truthy return marks the event handled, so
   // ProseMirror would skip its own focus tracking.
-  useExtension(() =>
-    defineFocusChangeHandler((value) => {
+  useExtension(() => {
+    return defineFocusChangeHandler((value) => {
       setFocused(value);
-    }),
-  );
+    });
+  });
 
   return (
     <Show when={touch() && focused()}>
@@ -89,13 +89,18 @@ function Toolbar(props: { view: EditorView; linkEdit: LinkEdit; onDismiss: () =>
     root.removeProperty("--editor-toolbar-height");
   });
 
-  const run = (command: Command) => () =>
-    command(props.view.state, props.view.dispatch, props.view);
+  const run = (command: Command) => {
+    return () => {
+      return command(props.view.state, props.view.dispatch, props.view);
+    };
+  };
 
-  const mark = (name: string) => () => {
-    const type = props.view.state.schema.marks[name];
+  const mark = (name: string) => {
+    return () => {
+      const type = props.view.state.schema.marks[name];
 
-    if (type) run(toggleMark(type))();
+      if (type) run(toggleMark(type))();
+    };
   };
 
   return (

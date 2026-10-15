@@ -23,10 +23,10 @@ export function watch(opts: { readonly recordId: NoteSchema.Id }) {
 
       return rules.pipe(
         // Target edits replace the lookups and release the previous subscriptions.
-        Stream.switchMap((rules) =>
-          EffectStream.zipLatestRecord(
-            Record.map(rules, (rule) =>
-              Stream.unwrap(
+        Stream.switchMap((rules) => {
+          return EffectStream.zipLatestRecord(
+            Record.map(rules, (rule) => {
+              return Stream.unwrap(
                 notes.reactiveFindPreviewById({
                   id: opts.recordId,
                   filter: StreamFilter.fromAttrs(rule.rule_targets),
@@ -39,10 +39,10 @@ export function watch(opts: { readonly recordId: NoteSchema.Id }) {
                     onSome: () => MatchStatus.Matching(),
                   }),
                 })),
-              ),
-            ),
-          ),
-        ),
+              );
+            }),
+          );
+        }),
       );
     }),
   );

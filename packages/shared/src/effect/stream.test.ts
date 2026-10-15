@@ -28,8 +28,8 @@ describe("zipLatestRecord", () => {
   it("releases every input subscription when the combined stream stops", async () => {
     const released: string[] = [];
 
-    const watch = (key: string) =>
-      Stream.succeed(key).pipe(
+    const watch = (key: string) => {
+      return Stream.succeed(key).pipe(
         Stream.concat(Stream.never),
         Stream.ensuring(
           Effect.sync(() => {
@@ -37,6 +37,7 @@ describe("zipLatestRecord", () => {
           }),
         ),
       );
+    };
 
     await Effect.runPromise(
       EffectStream.zipLatestRecord({ left: watch("left"), right: watch("right") }).pipe(
