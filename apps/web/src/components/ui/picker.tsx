@@ -251,6 +251,7 @@ export function Query<Option extends Choice>(
     selected?: string | readonly string[];
     onSelect: (choice: Option) => void;
     disabled?: boolean;
+    placeholder?: string;
     children?: (items: JSX.Element, search: () => string) => JSX.Element;
   },
 ) {
@@ -363,7 +364,7 @@ export function Query<Option extends Choice>(
       >
         <CommandInput
           aria-label={props.label}
-          placeholder={props.label + "…"}
+          placeholder={props.placeholder ?? props.label + "…"}
           value={query.search()}
           onValueChange={query.changeSearch}
         />

@@ -586,13 +586,11 @@ function DateFilterPicker(
     <DateCommand.Root
       label="Filter by date"
       value={props.value}
-      initialText={props.value ? DateSuggestions.formatDate(props.value) : ""}
       initialSearch={props.search}
       onChange={props.onChange}
       onBack={props.onBack}
-    >
-      <Picker.Clear onSelect={props.onClear} />
-    </DateCommand.Root>
+      onClear={props.onClear}
+    />
   );
 }
 

@@ -12,9 +12,9 @@ export function Menu(props: {
     <DateCommand.Root
       label="Change date"
       value={props.date}
-      initialText=""
       onChange={props.onChange}
       onBack={props.onBack}
+      onClear={undefined}
     />
   );
 }
