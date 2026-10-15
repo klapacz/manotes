@@ -14,6 +14,7 @@ export const CreateId = Schema.NonEmptyString.pipe(
   ),
 );
 
+// eslint-disable-next-line manotes/no-type-predicates -- This opaque ProseMirror schema preserves the editor-owned JSON contract; it deliberately performs no validation.
 const ContentValue = Schema.declare<UnknownNodeJSON>((_x): _x is UnknownNodeJSON => true);
 
 export const Content = Schema.String.pipe(

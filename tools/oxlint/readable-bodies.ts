@@ -113,7 +113,27 @@ const readableBodies = defineRule({
   },
 });
 
+const noTypePredicates = defineRule({
+  meta: {
+    type: "problem",
+    docs: {
+      description: "Use inferred narrowing or schema guards instead of explicit type predicates.",
+    },
+    schema: [],
+    messages: {
+      unsafe: "Explicit type predicates are unchecked. Use inferred narrowing or a schema guard.",
+    },
+  },
+  create(context) {
+    return {
+      TSTypePredicate(node) {
+        context.report({ node, messageId: "unsafe" });
+      },
+    };
+  },
+});
+
 export default eslintCompatPlugin({
   meta: { name: "manotes" },
-  rules: { "readable-bodies": readableBodies },
+  rules: { "readable-bodies": readableBodies, "no-type-predicates": noTypePredicates },
 });

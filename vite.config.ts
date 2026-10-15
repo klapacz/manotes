@@ -22,7 +22,11 @@ export default defineConfig({
       { name: "anti-slop-effect", specifier: "./tools/oxlint/anti-slop/effect/index.ts" },
       { name: "manotes", specifier: "./tools/oxlint/readable-bodies.ts" },
     ],
-    rules: { ...antiSlopRules, "manotes/readable-bodies": "error" },
+    rules: {
+      ...antiSlopRules,
+      "manotes/readable-bodies": "error",
+      "manotes/no-type-predicates": "error",
+    },
   },
   test: {
     exclude: ["**/node_modules/**", ".reference/**", ".opencode/**", ".direnv", ".workspace/**"],
