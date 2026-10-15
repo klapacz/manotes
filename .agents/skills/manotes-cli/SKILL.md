@@ -62,7 +62,8 @@ zk list --format '{{path}}\t{{created}}' \
 ## Create and edit notes
 
 - Body edits exclude frontmatter. Use a `date` action to change the assigned date.
-- Default-export an async function receiving this API:
+- Write plain JavaScript with top-level `await`; the sandbox provides `api` with this interface:
+- Scripts cannot import modules or access the filesystem, network, or Node globals.
 
 ```ts
 type Edit =
@@ -87,24 +88,22 @@ type Api = {
 
 ```sh
 manotes execute <<'JS'
-export default async (api) => {
-  await api.createNote(undefined, [
-    { kind: "append", markdown: "First paragraph." },
-    { kind: "date", date: "2026-09-12" },
-  ]);
+await api.createNote(undefined, [
+  { kind: "append", markdown: "First paragraph." },
+  { kind: "date", date: "2026-09-12" },
+]);
 
-  await api.editNote("note-id", [
-    { kind: "replace", text: "# Draft", with: "# Plan" },
-    { kind: "replace", text: "TODO", with: "Done", occurrence: 0 },
-    { kind: "replace", text: "(obsolete)", with: "", occurrence: "all" },
-    { kind: "append", markdown: "\n## Next steps\n\n- Review the plan." },
-    { kind: "date", date: "2026-09-12" },
-  ]);
-};
+await api.editNote("note-id", [
+  { kind: "replace", text: "# Draft", with: "# Plan" },
+  { kind: "replace", text: "TODO", with: "Done", occurrence: 0 },
+  { kind: "replace", text: "(obsolete)", with: "", occurrence: "all" },
+  { kind: "append", markdown: "\n## Next steps\n\n- Review the plan." },
+  { kind: "date", date: "2026-09-12" },
+]);
 JS
 ```
 
-Saved script: `manotes execute edit.ts`.
+Saved script: `manotes execute edit.js`.
 
 ## Sync
 

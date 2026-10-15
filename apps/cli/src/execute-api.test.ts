@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { NodeServices } from "@effect/platform-node";
 import dedent from "dedent";
-import { DateTime, Effect, Layer, Result } from "effect";
+import { DateTime, Effect, type FileSystem, Layer, Result } from "effect";
 import * as Reactivity from "effect/unstable/reactivity/Reactivity";
 import { describe, expect, it } from "vite-plus/test";
 import { initProseMirrorDoc, prosemirrorJSONToYDoc, updateYFragment } from "y-prosemirror";
@@ -34,7 +34,12 @@ const INITIAL_MARKDOWN = dedent`
   Alpha.
 `;
 
-type RuntimeServices = DB.Service | EventRepo.Service | Materializer.Service | NoteRepo.Service;
+type RuntimeServices =
+  | DB.Service
+  | EventRepo.Service
+  | Materializer.Service
+  | NoteRepo.Service
+  | FileSystem.FileSystem;
 
 describe("ExecuteApi.editNote", () => {
   it("saves a date event without changing content, and skips unchanged or cancelling dates", async () => {
@@ -46,9 +51,7 @@ describe("ExecuteApi.editNote", () => {
         const before = yield* noteRepo.getById(NOTE_ID);
 
         yield* runTestScript(dedent`
-          export default async function (api) {
-            await api.editNote("${NOTE_ID}", [{ kind: "date", date: "2024-02-29" }]);
-          }
+          await api.editNote("${NOTE_ID}", [{ kind: "date", date: "2024-02-29" }]);
         `);
 
         const after = yield* noteRepo.getById(NOTE_ID);
@@ -68,13 +71,11 @@ describe("ExecuteApi.editNote", () => {
         expect(after.updatedAt).toEqual(event.createdAt);
 
         yield* runTestScript(dedent`
-          export default async function (api) {
-            await api.editNote("${NOTE_ID}", [{ kind: "date", date: "2024-02-29" }]);
-            await api.editNote("${NOTE_ID}", [
-              { kind: "date", date: "2025-01-01" },
-              { kind: "date", date: "2024-02-29" },
-            ]);
-          }
+          await api.editNote("${NOTE_ID}", [{ kind: "date", date: "2024-02-29" }]);
+          await api.editNote("${NOTE_ID}", [
+            { kind: "date", date: "2025-01-01" },
+            { kind: "date", date: "2024-02-29" },
+          ]);
         `);
         expect(yield* eventRepo.countPending()).toBe(1);
         expect(yield* noteRepo.getById(NOTE_ID)).toEqual(after);
@@ -87,13 +88,11 @@ describe("ExecuteApi.editNote", () => {
       Effect.gen(function* () {
         yield* seedNote(NOTE_ID, INITIAL_MARKDOWN);
         yield* runTestScript(dedent`
-          export default async function (api) {
-            await api.editNote("${NOTE_ID}", [
-              { kind: "date", date: "2025-02-29" },
-              { kind: "replace", text: "Alpha", with: "Beta" },
-              { kind: "date", date: "2024-02-29" },
-            ]);
-          }
+          await api.editNote("${NOTE_ID}", [
+            { kind: "date", date: "2025-02-29" },
+            { kind: "replace", text: "Alpha", with: "Beta" },
+            { kind: "date", date: "2024-02-29" },
+          ]);
         `);
         const noteRepo = yield* NoteRepo.Service;
         const eventRepo = yield* EventRepo.Service;
@@ -128,9 +127,7 @@ describe("ExecuteApi.editNote", () => {
           ],
         ]) {
           const result = yield* runTestScript(dedent`
-            export default async function (api) {
-              await api.editNote("${NOTE_ID}", ${JSON.stringify(edits)});
-            }
+            await api.editNote("${NOTE_ID}", ${JSON.stringify(edits)});
           `).pipe(Effect.result);
 
           expect(Result.isFailure(result)).toBe(true);
@@ -161,13 +158,11 @@ describe("ExecuteApi.editNote", () => {
         expect(exported).toBe("Sync [Manotes](./linked-note.md) and [missing](./missing.md).\n");
 
         yield* runTestScript(dedent`
-          export default async function (api) {
-            await api.editNote("${NOTE_ID}", [{
-              kind: "replace",
-              text: ${JSON.stringify(exported.trimEnd())},
-              with: ${JSON.stringify(`- [ ] ${exported.trimEnd()}`)},
-            }]);
-          }
+          await api.editNote("${NOTE_ID}", [{
+            kind: "replace",
+            text: ${JSON.stringify(exported.trimEnd())},
+            with: ${JSON.stringify(`- [ ] ${exported.trimEnd()}`)},
+          }]);
         `);
 
         const updated = yield* noteRepo.getById(NOTE_ID);
@@ -188,14 +183,12 @@ describe("ExecuteApi.editNote", () => {
         expect(yield* eventRepo.countPending()).toBe(0);
 
         yield* runTestScript(dedent`
-          export default async function (api) {
-            if (Object.keys(api).sort().join(",") !== "createNote,editNote") throw new Error("unexpected API");
-            await api.editNote("${NOTE_ID}", [
-              { kind: "replace", text: "Alpha", with: "Beta" },
-              { kind: "append", markdown: "Beta follows." },
-              { kind: "replace", text: "Beta", with: "Done", occurrence: "all" },
-            ]);
-          }
+          if (Object.keys(api).sort().join(",") !== "createNote,editNote") throw new Error("unexpected API");
+          await api.editNote("${NOTE_ID}", [
+            { kind: "replace", text: "Alpha", with: "Beta" },
+            { kind: "append", markdown: "Beta follows." },
+            { kind: "replace", text: "Beta", with: "Done", occurrence: "all" },
+          ]);
         `);
 
         const events = yield* eventRepo.findUpdatesForNote(NOTE_ID);
@@ -230,10 +223,8 @@ describe("ExecuteApi.editNote", () => {
         const noteRepo = yield* NoteRepo.Service;
 
         yield* runTestScript(dedent`
-          export default async function (api) {
-            await api.editNote("${NOTE_ID}", [{ kind: "replace", text: "Alpha", with: "Beta" }]);
-            await api.editNote("${NOTE_ID}", [{ kind: "replace", text: "Beta", with: "Gamma" }]);
-          }
+          await api.editNote("${NOTE_ID}", [{ kind: "replace", text: "Alpha", with: "Beta" }]);
+          await api.editNote("${NOTE_ID}", [{ kind: "replace", text: "Beta", with: "Gamma" }]);
         `);
 
         const events = yield* eventRepo.findUpdatesForNote(NOTE_ID);
@@ -259,12 +250,10 @@ describe("ExecuteApi.editNote", () => {
         const noteRepo = yield* NoteRepo.Service;
 
         yield* runTestScript(dedent`
-          export default async function (api) {
-            await Promise.all([
-              api.editNote("${NOTE_ID}", [{ kind: "append", markdown: "First concurrent append." }]),
-              api.editNote("${NOTE_ID}", [{ kind: "append", markdown: "Second concurrent append." }]),
-            ]);
-          }
+          await Promise.all([
+            api.editNote("${NOTE_ID}", [{ kind: "append", markdown: "First concurrent append." }]),
+            api.editNote("${NOTE_ID}", [{ kind: "append", markdown: "Second concurrent append." }]),
+          ]);
         `);
 
         const events = yield* eventRepo.findUpdatesForNote(NOTE_ID);
@@ -285,13 +274,11 @@ describe("ExecuteApi.editNote", () => {
         const noteRepo = yield* NoteRepo.Service;
 
         yield* runTestScript(dedent`
-          export default async function (api) {
-            await api.editNote("${NOTE_ID}", [{ kind: "replace", text: "Alpha", with: "Alpha" }]);
-            await api.editNote("${NOTE_ID}", [
-              { kind: "replace", text: "Alpha", with: "Beta" },
-              { kind: "replace", text: "Beta", with: "Alpha" },
-            ]);
-          }
+          await api.editNote("${NOTE_ID}", [{ kind: "replace", text: "Alpha", with: "Alpha" }]);
+          await api.editNote("${NOTE_ID}", [
+            { kind: "replace", text: "Alpha", with: "Beta" },
+            { kind: "replace", text: "Beta", with: "Alpha" },
+          ]);
         `);
 
         expect(yield* eventRepo.findUpdatesForNote(NOTE_ID)).toHaveLength(1);
@@ -310,12 +297,10 @@ describe("ExecuteApi.editNote", () => {
         const noteRepo = yield* NoteRepo.Service;
 
         const result = yield* runTestScript(dedent`
-          export default async function (api) {
-            await api.editNote("${NOTE_ID}", [
-              { kind: "replace", text: "Alpha", with: "Beta" },
-              { kind: "replace", text: "missing", with: "never saved" },
-            ]);
-          }
+          await api.editNote("${NOTE_ID}", [
+            { kind: "replace", text: "Alpha", with: "Beta" },
+            { kind: "replace", text: "missing", with: "never saved" },
+          ]);
         `).pipe(Effect.result);
 
         expect(Result.isFailure(result)).toBe(true);
@@ -353,11 +338,9 @@ describe("ExecuteApi.editNote", () => {
         expect((yield* noteRepo.getById(NOTE_ID)).lastEventLocalSeq).toBe(seeded.localSeq);
 
         yield* runTestScript(dedent`
-          export default async function (api) {
-            await api.editNote("${NOTE_ID}", [
-              { kind: "replace", text: "Remote pending", with: "Caught up" },
-            ]);
-          }
+          await api.editNote("${NOTE_ID}", [
+            { kind: "replace", text: "Remote pending", with: "Caught up" },
+          ]);
         `);
 
         const events = yield* eventRepo.findUpdatesForNote(NOTE_ID);
@@ -382,16 +365,14 @@ describe("ExecuteApi.createNote", () => {
     await runIntegration(
       Effect.gen(function* () {
         yield* runTestScript(dedent`
-          export default async function (api) {
-            const id = await api.createNote("created-note", [
-              { kind: "date", date: "invalid but superseded" },
-              { kind: "append", markdown: "# Created" },
-              { kind: "append", markdown: "See [Target](./target.md)." },
-              { kind: "date", date: "2024-02-29" },
-            ]);
-            if (id !== "created-note") throw new Error("unexpected ID");
-            await api.editNote(id, [{ kind: "append", markdown: "Next." }]);
-          }
+          const id = await api.createNote("created-note", [
+            { kind: "date", date: "invalid but superseded" },
+            { kind: "append", markdown: "# Created" },
+            { kind: "append", markdown: "See [Target](./target.md)." },
+            { kind: "date", date: "2024-02-29" },
+          ]);
+          if (id !== "created-note") throw new Error("unexpected ID");
+          await api.editNote(id, [{ kind: "append", markdown: "Next." }]);
         `);
         const noteRepo = yield* NoteRepo.Service;
         const eventRepo = yield* EventRepo.Service;
@@ -415,12 +396,10 @@ describe("ExecuteApi.createNote", () => {
     await runIntegration(
       Effect.gen(function* () {
         yield* runTestScript(dedent`
-          export default async function (api) {
-            const first = await api.createNote(undefined, []);
-            const second = await api.createNote(undefined, [{ kind: "date", date: "2024-02-29" }]);
-            if (!first || !second || first === second) throw new Error("invalid generated IDs");
-            await api.editNote(first, [{ kind: "append", markdown: "Generated." }]);
-          }
+          const first = await api.createNote(undefined, []);
+          const second = await api.createNote(undefined, [{ kind: "date", date: "2024-02-29" }]);
+          if (!first || !second || first === second) throw new Error("invalid generated IDs");
+          await api.editNote(first, [{ kind: "append", markdown: "Generated." }]);
         `);
         const noteRepo = yield* NoteRepo.Service;
         const notes = yield* noteRepo.findAllRecords();
@@ -443,9 +422,7 @@ describe("ExecuteApi.createNote", () => {
           'api.createNote("invalid", [{ kind: "replace", text: "", with: "no" }])',
           'api.createNote("invalid", [{ kind: "append", markdown: "Not saved" }, { kind: "date", date: "2025-02-29" }])',
         ]) {
-          const result = yield* runTestScript(
-            `export default async (api) => { await ${call}; };`,
-          ).pipe(Effect.result);
+          const result = yield* runTestScript(`await ${call};`).pipe(Effect.result);
 
           expect(Result.isFailure(result)).toBe(true);
         }
@@ -474,9 +451,7 @@ describe("ExecuteApi.createNote", () => {
 
         for (const id of [NOTE_ID, "unmaterialized"]) {
           const result = yield* runTestScript(dedent`
-            export default async function (api) {
-              await api.createNote("${id}", [{ kind: "append", markdown: "Never saved." }]);
-            }
+            await api.createNote("${id}", [{ kind: "append", markdown: "Never saved." }]);
           `).pipe(Effect.result);
 
           expect(Result.isFailure(result)).toBe(true);
@@ -497,14 +472,12 @@ describe("ExecuteApi.createNote", () => {
     await runIntegration(
       Effect.gen(function* () {
         yield* runTestScript(dedent`
-          export default async function (api) {
-            const results = await Promise.allSettled([
-              api.createNote("same-id", [{ kind: "append", markdown: "First." }]),
-              api.createNote("same-id", [{ kind: "append", markdown: "Second." }]),
-            ]);
-            if (results.filter((result) => result.status === "fulfilled").length !== 1) {
-              throw new Error("Expected one successful creation");
-            }
+          const results = await Promise.allSettled([
+            api.createNote("same-id", [{ kind: "append", markdown: "First." }]),
+            api.createNote("same-id", [{ kind: "append", markdown: "Second." }]),
+          ]);
+          if (results.filter((result) => result.status === "fulfilled").length !== 1) {
+            throw new Error("Expected one successful creation");
           }
         `);
         const noteRepo = yield* NoteRepo.Service;
@@ -517,9 +490,9 @@ describe("ExecuteApi.createNote", () => {
 });
 
 describe("ExecuteApi.runScript", () => {
-  it("requires a default function", async () => {
+  it("rejects module exports instead of executing them on the host", async () => {
     await expect(runIntegration(runTestScript("export const edit = true;\n"))).rejects.toThrow(
-      /must export a default function/,
+      /unsupported keyword: export/i,
     );
   });
 });
@@ -532,7 +505,7 @@ function runTestScript(source: string) {
         (workspace) => Effect.promise(() => rm(workspace, { recursive: true, force: true })),
       );
 
-      const scriptPath = path.join(workspace, "edit.ts");
+      const scriptPath = path.join(workspace, "edit.js");
       yield* Effect.promise(() => writeFile(scriptPath, source));
       yield* ExecuteApi.runScript(scriptPath);
     }),

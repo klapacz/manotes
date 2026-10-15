@@ -49,7 +49,7 @@ stdenv.mkDerivation (finalAttrs: {
     inherit (finalAttrs) pname version src pnpmWorkspaces;
     inherit pnpm;
     fetcherVersion = 3;
-    hash = "sha256-jL4cVkSyaO9qXAV47FmbfYLj+EHZjRrrAFb23K5bIgM=";
+    hash = "sha256-d3pujeyBV1i79CJduaCh9kyhrCX0P4LSN6SEHQXsMKE=";
   };
 
   nativeBuildInputs = [
@@ -74,7 +74,7 @@ stdenv.mkDerivation (finalAttrs: {
   installPhase = ''
     runHook preInstall
 
-    # Keep migration assets beside the built CLI and support tsx script loading.
+    # Keep migration assets and the sandbox's worker and WASM dependencies beside the built CLI.
     # Enable lockfile-based deployment for this command without changing workspace linking in development.
     pnpm --filter @manotes/cli --offline --config.inject-workspace-packages=true \
       deploy --prod --ignore-scripts "$out/lib/manotes"

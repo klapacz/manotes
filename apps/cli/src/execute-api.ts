@@ -1,8 +1,6 @@
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { Array, DateTime, Effect, FileSystem, flow, Option, Schema, Stdio, Stream } from "effect";
 import { nanoid } from "nanoid";
-import { tsImport } from "tsx/esm/api";
 import * as Y from "yjs";
 import { initProseMirrorDoc, updateYFragment } from "y-prosemirror";
 import * as DB from "@manotes/shared/db.service";
@@ -17,36 +15,26 @@ import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
 import { CliPaths } from "./cli.paths";
 import { EditDocument } from "./edit-document";
 import { BacklinkLabels } from "./backlink-labels";
+import * as ExecuteScript from "./execute-script";
 
 export type Edit = EditDocument.Edit | { readonly kind: "date"; readonly date: string };
 
 export type CreateEdit = Extract<Edit, { readonly kind: "append" | "date" }>;
 
 export type Api = {
-  readonly editNote: (id: string, edits: readonly Edit[]) => Promise<void>;
-  readonly createNote: (id: string | undefined, edits: readonly CreateEdit[]) => Promise<string>;
+  readonly editNote: (id: string, edits: readonly Edit[], signal?: AbortSignal) => Promise<void>;
+  readonly createNote: (
+    id: string | undefined,
+    edits: readonly CreateEdit[],
+    signal?: AbortSignal,
+  ) => Promise<string>;
 };
 
 export const runScript = Effect.fn("ExecuteApi.runScript")(function* (scriptPath: string) {
+  const fs = yield* FileSystem.FileSystem;
+  const source = yield* fs.readFileString(scriptPath);
   const api = yield* makeApi();
-  yield* Effect.tryPromise({
-    try: async () => {
-      const module = await tsImport(pathToFileURL(scriptPath).href, { parentURL: import.meta.url });
-
-      // Outside a type:module package, tsx may wrap a TypeScript default export in
-      // CommonJS exports. Accept that wrapper as well as a native ESM default.
-      /* eslint-disable anti-slop/no-runtime-typeof -- Trusted scripts only need a callable default export. */
-      const run = typeof module.default === "function" ? module.default : module.default?.default;
-
-      if (typeof run !== "function") {
-        throw new Error("Execute script must export a default function receiving the Manotes API");
-      }
-
-      /* eslint-enable anti-slop/no-runtime-typeof */
-      await run(api);
-    },
-    catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
-  });
+  yield* ExecuteScript.run(source, scriptPath, api);
 });
 
 export const acquireStdinScript = Effect.fn("ExecuteApi.acquireStdinScript")(function* () {
@@ -56,7 +44,7 @@ export const acquireStdinScript = Effect.fn("ExecuteApi.acquireStdinScript")(fun
       const fs = yield* FileSystem.FileSystem;
       const stdio = yield* Stdio.Stdio;
       const script = yield* stdio.stdin.pipe(Stream.decodeText(), Stream.mkString);
-      const scriptPath = path.join(paths.manotesDir, `execute-${process.pid}-${Date.now()}.ts`);
+      const scriptPath = path.join(paths.manotesDir, `execute-${process.pid}-${Date.now()}.js`);
 
       yield* fs.writeFileString(scriptPath, script, { mode: 0o600 });
 
@@ -182,8 +170,8 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
   });
 
   return {
-    editNote: (id, edits) => Effect.runPromise(editNote(id, edits)),
-    createNote: (id, edits) => Effect.runPromise(createNote(id, edits)),
+    editNote: (id, edits, signal) => Effect.runPromise(editNote(id, edits), { signal }),
+    createNote: (id, edits, signal) => Effect.runPromise(createNote(id, edits), { signal }),
   } satisfies Api;
 });
 

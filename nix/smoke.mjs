@@ -39,7 +39,7 @@ try {
   assert.match(run(["status"]), /Pending publication: 0 changes/);
   run(
     ["execute"],
-    'export default async (api) => { await api.createNote("smoke", [{ kind: "append", markdown: "# Packaged CLI\\n\\nCreated outside the checkout." }]); };',
+    'await api.createNote("smoke", [{ kind: "append", markdown: "# Packaged CLI\\n\\nCreated outside the checkout." }]);',
   );
   assert.match(
     readFileSync(path.join(directory, "smoke.md"), "utf8"),
@@ -47,17 +47,17 @@ try {
   );
 
   writeFileSync(
-    path.join(directory, "edit.ts"),
-    'export default async (api: { editNote: Function }) => { await api.editNote("smoke", [{ kind: "replace", text: "Created outside the checkout.", with: "Updated by the installed CLI." }]); };',
+    path.join(directory, "edit.js"),
+    'await api.editNote("smoke", [{ kind: "replace", text: "Created outside the checkout.", with: "Updated by the installed CLI." }]);',
   );
-  run(["execute", path.join(directory, "edit.ts")]);
+  run(["execute", path.join(directory, "edit.js")]);
   assert.match(
     readFileSync(path.join(directory, "smoke.md"), "utf8"),
     /Updated by the installed CLI/,
   );
   assert.match(run(["status"]), /Pending publication: [1-9]\d* changes/);
   console.log(
-    "Installed CLI passed help, SQLite migrations, stdin creation, and TypeScript editing.",
+    "Installed CLI passed help, SQLite migrations, sandboxed stdin creation, and JavaScript editing.",
   );
 } finally {
   rmSync(directory, { recursive: true, force: true });

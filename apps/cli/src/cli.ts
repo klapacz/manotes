@@ -90,7 +90,7 @@ const execute = Command.make(
   {
     script: Argument.file("script", { mustExist: true }).pipe(
       Argument.optional,
-      Argument.withDescription("TypeScript/JavaScript script to run. Reads stdin when omitted."),
+      Argument.withDescription("JavaScript script to run in a sandbox. Reads stdin when omitted."),
     ),
   },
   Effect.fn("Cli.execute")(
@@ -148,11 +148,11 @@ const execute = Command.make(
     ),
   ),
 ).pipe(
-  Command.withDescription("Run a trusted local script and save changes."),
+  Command.withDescription("Run sandboxed JavaScript and save changes."),
   Command.withExamples([
     {
-      command: "cat edit.ts | manotes execute",
-      description: "Read a script from stdin; its default export receives the Manotes API.",
+      command: "cat edit.js | manotes execute",
+      description: "Read JavaScript from stdin; api provides createNote and editNote.",
     },
   ]),
 );

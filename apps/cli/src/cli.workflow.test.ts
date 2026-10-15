@@ -194,7 +194,7 @@ describe("CLI local workflow", () => {
       try {
         const manotesDir = path.join(workspace, ".manotes");
         const databasePath = path.join(manotesDir, "db.sqlite");
-        const fileScript = path.join(workspace, "file-edit.ts");
+        const fileScript = path.join(workspace, "file-edit.js");
         await mkdir(manotesDir);
         await writeFile(
           path.join(manotesDir, "config"),
@@ -208,11 +208,7 @@ describe("CLI local workflow", () => {
         );
         const note = await seedWorkspace(databasePath);
 
-        const exportResult = await runCli(
-          workspace,
-          ["execute"],
-          "export default async function () {}\n",
-        );
+        const exportResult = await runCli(workspace, ["execute"], "");
 
         expect(exportResult.code, exportResult.stdout + exportResult.stderr).toBe(0);
         expect(exportResult.stderr).not.toContain("Automatic sync failed.");
@@ -232,22 +228,16 @@ describe("CLI local workflow", () => {
         `}\n`,
         );
 
-        const reexportResult = await runCli(
-          workspace,
-          ["execute"],
-          "export default async function () {}\n",
-        );
+        const reexportResult = await runCli(workspace, ["execute"], "");
 
         expect(reexportResult.code, reexportResult.stdout + reexportResult.stderr).toBe(0);
         expect(await readFile(path.join(workspace, `${NOTE_ID}.md`), "utf8")).toBe(initialFile);
         await writeFile(
           fileScript,
           dedent`
-            export default async function (api) {
-              await api.editNote("${NOTE_ID}", [
-                { kind: "append", markdown: "From file." },
-              ]);
-            }
+            await api.editNote("${NOTE_ID}", [
+              { kind: "append", markdown: "From file." },
+            ]);
           `,
         );
 
@@ -273,11 +263,9 @@ describe("CLI local workflow", () => {
           workspace,
           ["execute"],
           dedent`
-            export default async function (api) {
-              await api.editNote("${NOTE_ID}", [
-                { kind: "append", markdown: "From stdin." },
-              ]);
-            }
+            await api.editNote("${NOTE_ID}", [
+              { kind: "append", markdown: "From stdin." },
+            ]);
           `,
         );
 
@@ -288,10 +276,8 @@ describe("CLI local workflow", () => {
         const failedStdinResult = await runCli(
           workspace,
           ["execute"],
-          `export default async function (api) {
-            await api.editNote("${NOTE_ID}", [{ kind: "append", markdown: "Before failure." }]);
-            throw new Error("stdin failure");
-          }\n`,
+          `await api.editNote("${NOTE_ID}", [{ kind: "append", markdown: "Before failure." }]);
+            throw new Error("stdin failure");\n`,
         );
 
         expect(failedStdinResult.code).not.toBe(0);
