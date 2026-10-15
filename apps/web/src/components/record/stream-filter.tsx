@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 // Adapted from bazza/ui filter-selector.tsx at fe486a6a2ee1779482c0696b5a7008de6039983b.
 // Source: https://github.com/bazzalabs/ui/tree/fe486a6a2ee1779482c0696b5a7008de6039983b/apps/web/registry/data-table-filter/components
 // Why: searchable filter menus and segmented pills. Ported to Solid/Kobalte with
@@ -59,7 +60,7 @@ export function StreamFilterEditor(props: {
   menu: StreamFilterMenu;
   onMenuChange: (menu: StreamFilterMenu) => void;
   onClose: () => void;
-  onOpenRecord: (id: string) => void;
+  onOpenRecord: (id: RecordSchema.Id) => void;
   children: (trigger: JSX.Element, filters: JSX.Element, hasFilters: () => boolean) => JSX.Element;
 }) {
   const selectedField = () => props.menu.field;

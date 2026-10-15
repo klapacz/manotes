@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { Cache, Context, Effect, Layer, Option, RcMap, Stream } from "effect";
 import * as RecordRepo from "@manotes/shared/record.repo";
 
@@ -15,13 +16,13 @@ export class Service extends Context.Service<Service>()("RecordCache.Service", {
     // labels at editor boot); the reactive query takes over right after.
     // Consumed at most once per id; expiry mirrors the entry TTL so a seed
     // skipped because its entry was already live can't resurface stale.
-    const seeds = yield* Cache.make<string, RecordPreview>({
+    const seeds = yield* Cache.make<RecordSchema.Id, RecordPreview>({
       capacity: SEED_CACHE_CAPACITY,
       timeToLive: ENTRY_IDLE_TTL,
       lookup: (id) => Effect.die(`Missing record preview seed: ${id}`),
     });
 
-    const takeSeed = Effect.fn("RecordCache.takeSeed")(function* (id: string) {
+    const takeSeed = Effect.fn("RecordCache.takeSeed")(function* (id: RecordSchema.Id) {
       const seed = yield* Cache.getOption(seeds, id);
       yield* Cache.invalidate(seeds, id);
 
@@ -30,7 +31,7 @@ export class Service extends Context.Service<Service>()("RecordCache.Service", {
 
     const entries = yield* RcMap.make({
       idleTimeToLive: ENTRY_IDLE_TTL,
-      lookup: (id: string) => {
+      lookup: (id: RecordSchema.Id) => {
         return Effect.gen(function* () {
           const source = yield* recordRepo.reactiveFindPreviewById({ id });
           const seed = yield* takeSeed(id);
@@ -59,7 +60,7 @@ export class Service extends Context.Service<Service>()("RecordCache.Service", {
       });
     });
 
-    const changes = Effect.fn("RecordCache.changes")(function* (id: string) {
+    const changes = Effect.fn("RecordCache.changes")(function* (id: RecordSchema.Id) {
       return yield* RcMap.get(entries, id);
     });
 

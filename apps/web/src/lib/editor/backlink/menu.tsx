@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { Effect, Exit, flow, Stream, Array, Struct } from "effect";
 import { useEditor } from "prosekit/solid";
 import {
@@ -36,7 +37,7 @@ const TAB_REGEX = /\[@([^\]\n]*)$/u;
 const STREAM_REF_REGEX = /\[!([^\]\n]*)$/u;
 
 type BacklinkRecord = {
-  id: string;
+  id: RecordSchema.Id;
   title: string;
 };
 
@@ -58,7 +59,7 @@ const CreateTabRecord = bindRt((rt) => {
   );
 });
 
-export default function BacklinkMenu(props: { currentRecordId: string }) {
+export default function BacklinkMenu(props: { currentRecordId: RecordSchema.Id }) {
   const editor = useEditor<AppExtension>();
   const onSelect = createBacklinkInsertion(editor);
 
@@ -306,7 +307,7 @@ function StreamRefMenuItem(props: {
 type AppEditor = ReturnType<typeof useEditor<AppExtension>>;
 
 function createBacklinkInsertion(editor: AppEditor) {
-  const insertBacklink = (id: string) => {
+  const insertBacklink = (id: RecordSchema.Id) => {
     editor().view.focus();
 
     const inserted = editor().commands.insertBacklink({ id });
@@ -322,7 +323,7 @@ function createBacklinkInsertion(editor: AppEditor) {
 
   // Autocomplete emits valueChange and also runs its internal submit handler.
   // Deferring insertion avoids the submit deletion step removing the node.
-  return (id: string) => queueMicrotask(() => insertBacklink(id));
+  return (id: RecordSchema.Id) => queueMicrotask(() => insertBacklink(id));
 }
 
 // The default builder lowercases and strips punctuation; keep what was typed.

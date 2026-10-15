@@ -139,7 +139,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
     });
 
     const findUpdatesForRecord = Effect.fn("EventRepo.findUpdatesForRecord")(function* (
-      recordId: string,
+      recordId: RecordSchema.Id,
     ) {
       const events = yield* db.query(
         eventSelect.pipe(
@@ -162,7 +162,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       afterLocalSeq,
       upToLocalSeq,
     }: {
-      recordId: string;
+      recordId: RecordSchema.Id;
       afterLocalSeq: number;
       upToLocalSeq: number;
     }) {
@@ -200,7 +200,7 @@ export class Service extends Context.Service<Service>()("EventRepo.Service", {
       recordId,
       afterLocalSeq,
     }: {
-      recordId: string;
+      recordId: RecordSchema.Id;
       afterLocalSeq: number;
     }) {
       const stream = yield* db.reactiveQuery(

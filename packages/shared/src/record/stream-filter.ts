@@ -43,7 +43,7 @@ export function toAttrs(filter: StreamSettings.Filter): AttrsSchema.TargetFilter
   if (filter.backlinksTo !== undefined) {
     expressions.push(
       Comparison.make({
-        val: [["link", "->", AttrsSchema.RecordId.make(filter.backlinksTo)], "exists", true],
+        val: [["link", "->", filter.backlinksTo], "exists", true],
       }),
     );
   }
@@ -51,7 +51,7 @@ export function toAttrs(filter: StreamSettings.Filter): AttrsSchema.TargetFilter
   if (filter.linksFrom !== undefined) {
     expressions.push(
       Comparison.make({
-        val: [["link", "<-", AttrsSchema.RecordId.make(filter.linksFrom)], "exists", true],
+        val: [["link", "<-", filter.linksFrom], "exists", true],
       }),
     );
   }
@@ -93,9 +93,9 @@ export function fromAttrs(expressions: AttrsSchema.Filter | undefined): StreamSe
         ...fields,
         owned_type: "enum_option" as const,
       })),
-      Match.when(["owned_parent", "=", Match.string], ([, , owned_parent]) => ({
+      Match.when(["owned_parent", "=", Schema.is(AttrsSchema.RecordId)], ([, , owned_parent]) => ({
         ...fields,
-        owned_parent: AttrsSchema.RecordId.make(owned_parent),
+        owned_parent,
       })),
       Match.orElse(() => fields),
     );
@@ -165,10 +165,10 @@ function applyComparison(
       linksFrom,
     })),
     Match.when(
-      [["prop", Match.string], "=", Schema.is(AttrsSchema.PropVal)],
+      [["prop", Schema.is(AttrsSchema.RecordId)], "=", Schema.is(AttrsSchema.PropVal)],
       ([[, propId], , value]) => {
         return StreamSettings.changePropFilter(filter, {
-          propId: AttrsSchema.RecordId.make(propId),
+          propId,
           value,
         });
       },

@@ -49,7 +49,7 @@ export type Pool = {
 
 export const make = Effect.fn("EditorPool.make")(function* (
   owner: Owner | null,
-  filter: Accessor<{ search?: string; backlinksTo?: string }>,
+  filter: Accessor<{ search?: string; backlinksTo?: RecordSchema.Id }>,
 ) {
   // Slots are created under the pane's owner so pooled editors keep its contexts
   // (graph runtime, atom registry, RecordLinkScope, router).
@@ -107,7 +107,7 @@ type PooledSlot = Slot & {
 
 function createSlot(
   recordId: RecordSchema.Id,
-  filter: Accessor<{ search?: string; backlinksTo?: string }>,
+  filter: Accessor<{ search?: string; backlinksTo?: RecordSchema.Id }>,
 ): PooledSlot {
   const ready = Deferred.makeUnsafe<void, EditorBootError>();
 

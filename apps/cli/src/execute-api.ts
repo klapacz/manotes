@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import path from "node:path";
 import { Array, DateTime, Effect, FileSystem, flow, Option, Schema, Stdio, Stream } from "effect";
 import { nanoid } from "nanoid";
@@ -22,12 +23,16 @@ export type Edit = EditDocument.Edit | { readonly kind: "date"; readonly date: s
 export type CreateEdit = Extract<Edit, { readonly kind: "append" | "date" }>;
 
 export type Api = {
-  readonly editRecord: (id: string, edits: readonly Edit[], signal?: AbortSignal) => Promise<void>;
+  readonly editRecord: (
+    id: RecordSchema.Id,
+    edits: readonly Edit[],
+    signal?: AbortSignal,
+  ) => Promise<void>;
   readonly createRecord: (
-    id: string | undefined,
+    id: RecordSchema.Id | undefined,
     edits: readonly CreateEdit[],
     signal?: AbortSignal,
-  ) => Promise<string>;
+  ) => Promise<RecordSchema.Id>;
 };
 
 export const runScript = Effect.fn("ExecuteApi.runScript")(function* (scriptPath: string) {
@@ -64,7 +69,7 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
   const materializer = yield* Materializer.Service;
 
   const editRecord = Effect.fn("ExecuteApi.editRecord")(function* (
-    id: string,
+    id: RecordSchema.Id,
     edits: readonly Edit[],
   ) {
     // Read, edit, and save in one SQLite transaction. A concurrent writer cannot
@@ -128,10 +133,10 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
   });
 
   const createRecord = Effect.fn("ExecuteApi.createRecord")(function* (
-    requestedId: string | undefined,
+    requestedId: RecordSchema.Id | undefined,
     edits: readonly CreateEdit[],
   ) {
-    const id = yield* Schema.decodeUnknownEffect(Schema.NonEmptyString)(requestedId ?? nanoid());
+    const id = yield* Schema.decodeUnknownEffect(RecordSchema.CreateId)(requestedId ?? nanoid());
 
     // Scripts can be plain JavaScript, so enforce the narrower creation API at runtime too.
     if (edits.some((edit) => edit.kind !== "append" && edit.kind !== "date")) {
@@ -221,7 +226,7 @@ const createInitialUpdate = Effect.fn("ExecuteApi.createInitialUpdate")(function
 const createBodyUpdate = Effect.fn("ExecuteApi.createBodyUpdate")(function* (
   snapshot: Uint8Array<ArrayBufferLike> | null,
   edits: readonly EditDocument.Edit[],
-  labels: ReadonlyMap<string, string>,
+  labels: ReadonlyMap<RecordSchema.Id, string>,
 ) {
   if (edits.length === 0) return null;
 

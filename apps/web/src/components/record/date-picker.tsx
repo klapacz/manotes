@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { useAtom } from "@effect/atom-solid";
 import { DateTime, Effect, Exit } from "effect";
 import { MaterializedEventService, bindRt } from "../../lib";
@@ -19,7 +20,7 @@ export function Menu(props: {
   );
 }
 
-export function useChangeDate(props: { recordId: string; onChanged: () => void }) {
+export function useChangeDate(props: { recordId: RecordSchema.Id; onChanged: () => void }) {
   const [, setDate] = useAtom(SetDate, { mode: "promiseExit" });
 
   return async (date: string) => {
@@ -34,7 +35,7 @@ export function useChangeDate(props: { recordId: string; onChanged: () => void }
 const SetDate = bindRt((rt) => {
   return rt.fn(
     Effect.fn("ComponentsRecordDatePicker.setDate")(function* (input: {
-      readonly recordId: string;
+      readonly recordId: RecordSchema.Id;
       readonly date: string;
     }) {
       const service = yield* MaterializedEventService.Service;

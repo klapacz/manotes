@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { Data, Effect, Option, Scope, Stream } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { MenuQuery } from "./menu-query";
@@ -7,7 +8,7 @@ describe("prefixed menu queries", () => {
   it("preserves action tags and payloads when nesting choices", async () => {
     const Choice = Data.taggedEnum<
       Data.TaggedEnum<{
-        Link: { value: string; label: string; recordId: string };
+        Link: { value: string; label: string; recordId: RecordSchema.Id };
         Date: { value: string; label: string; date: string };
       }>
     >();
@@ -16,7 +17,11 @@ describe("prefixed menu queries", () => {
       label: "Choose",
       query: MenuQuery.choices(() => {
         return [
-          Choice.Link({ value: "sleep", label: "Sleep Log", recordId: "sleep-record" }),
+          Choice.Link({
+            value: "sleep",
+            label: "Sleep Log",
+            recordId: RecordSchema.Id.make("sleep-record"),
+          }),
           Choice.Date({ value: "tomorrow", label: "Tomorrow", date: "2026-10-10" }),
         ];
       }),

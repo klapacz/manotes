@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import path from "node:path";
 import { Console, Effect, Option, Redacted, Result, Schema, flow } from "effect";
 import * as Reactivity from "effect/reactivity/Reactivity";
@@ -170,6 +171,7 @@ const url = Command.make(
   "url",
   {
     id: Argument.String("id").pipe(
+      Argument.withSchema(RecordSchema.Id),
       Argument.optional,
       Argument.withDescription("Record ID to open. Omit to show the graph root URL."),
     ),

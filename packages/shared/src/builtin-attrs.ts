@@ -14,11 +14,11 @@ export const archived = {
 
 export const defs: readonly PropRecordRepo.Def[] = [archived];
 
-export function find(id: string) {
+export function find(id: RecordSchema.Id) {
   return Array.findFirst(defs, (def) => def.id === id);
 }
 
-export function isBuiltin(id: string) {
+export function isBuiltin(id: RecordSchema.Id) {
   return Option.isSome(find(id));
 }
 

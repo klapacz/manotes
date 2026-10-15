@@ -1,3 +1,4 @@
+import { RecordSchema } from "../record.schema";
 import { Match, Predicate, Record, Schema, Struct } from "effect";
 import { Cast, Fragment, Json, Query, Scalar, Table, Type } from "effect-qb";
 import { Tables } from "../db.tables";
@@ -24,7 +25,7 @@ export function filterPredicate(query: StreamListQuery): RecordPredicate {
     date: (date) => (date ? [Query.eq(Tables.records.date, date)] : []),
     search: (search) => (search?.trim() ? [searchPredicate(search.trim())] : []),
     props: (props) => {
-      return Object.entries(props ?? {}).map(([id, value]) => propertyPredicate(id, value));
+      return Record.toEntries(props ?? {}).map(([id, value]) => propertyPredicate(id, value));
     },
     backlinksTo: (id) => (id === undefined ? [] : [linkPredicate("incoming", id)]),
     linksFrom: (id) => (id === undefined ? [] : [linkPredicate("outgoing", id)]),
@@ -37,7 +38,10 @@ export function filterPredicate(query: StreamListQuery): RecordPredicate {
   );
 }
 
-export function propertyPredicate(propId: string, value: AttrsSchema.PropVal): RecordPredicate {
+export function propertyPredicate(
+  propId: RecordSchema.Id,
+  value: AttrsSchema.PropVal,
+): RecordPredicate {
   // Any assignment blocks the default, including null or wrongly tagged values.
   const assignment = Query.select({ id: Tables.props.recordId }).pipe(
     Query.from(Tables.props),
@@ -148,7 +152,7 @@ function searchPredicate(search: string) {
   })`(${Tables.records.title} LIKE ${pattern} ESCAPE '!' OR ${Tables.records.text} LIKE ${pattern} ESCAPE '!')`;
 }
 
-function linkPredicate(direction: "incoming" | "outgoing", id: string) {
+function linkPredicate(direction: "incoming" | "outgoing", id: RecordSchema.Id) {
   return Query.exists(
     Query.select({ id: Tables.backlinks.sourceId }).pipe(
       Query.from(Tables.backlinks),

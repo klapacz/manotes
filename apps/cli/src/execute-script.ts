@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { CodemodeSandbox, type CodemodeTool } from "@earendil-works/pi-codemode";
 import { Console, Data, Effect, Schema } from "effect";
 import type { Api } from "./execute-api";
@@ -109,9 +110,9 @@ const CreateEdit = Schema.Union([AppendEdit, DateEdit]);
 const Edit = Schema.Union([CreateEdit, ReplaceEdit]);
 
 const decodeEditRecordArgs = Schema.decodeUnknownSync(
-  Schema.Tuple([Schema.NonEmptyString, Schema.Array(Edit)]),
+  Schema.Tuple([RecordSchema.Id, Schema.Array(Edit)]),
 );
 
 const decodeCreateRecordArgs = Schema.decodeUnknownSync(
-  Schema.Tuple([Schema.NullOr(Schema.NonEmptyString), Schema.Array(CreateEdit)]),
+  Schema.Tuple([Schema.NullOr(RecordSchema.Id), Schema.Array(CreateEdit)]),
 );

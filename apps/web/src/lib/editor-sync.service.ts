@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { Chunk, Data, Deferred, Effect, Layer, pipe, Queue, Context, Stream } from "effect";
 import * as Y from "yjs";
 import { ySyncPluginKey } from "y-prosemirror";
@@ -21,7 +22,7 @@ class OutcomingUpdateCtx extends Data.Class<{
   origin: EditorUpdateOrigin;
 }> {}
 
-export type SetupInput = { recordId: string };
+export type SetupInput = { recordId: RecordSchema.Id };
 
 export class Service extends Context.Service<Service>()("EditorSyncService.Service", {
   make: Effect.gen(function* () {
@@ -40,7 +41,7 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
 
     const applyIncomingUpdates = Effect.fn("applyIncomingUpdates")(function* (
       doc: Y.Doc,
-      recordId: string,
+      recordId: RecordSchema.Id,
       initialLastKnownLocalSeq: number,
     ) {
       let lastKnownLocalSeq = initialLastKnownLocalSeq;
@@ -75,7 +76,7 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
     });
 
     const persistChunk = Effect.fn("persistChunk")(function* (
-      recordId: string,
+      recordId: RecordSchema.Id,
       chunk: Chunk.NonEmptyChunk<OutcomingUpdateCtx>,
     ) {
       const allUpdateCtxs = Chunk.toArray(chunk);
@@ -99,7 +100,7 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
 
     const saveOutcomingUpdates = Effect.fn("saveOutcomingUpdates")(function* (
       doc: Y.Doc,
-      recordId: string,
+      recordId: RecordSchema.Id,
     ) {
       yield* Stream.callback<OutcomingUpdateCtx>((queue) => {
         return Effect.sync(() => {

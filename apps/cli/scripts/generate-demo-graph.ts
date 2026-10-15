@@ -4,6 +4,7 @@
  *
  * Usage: tsx scripts/generate-demo-graph.ts <output-path>
  */
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { writeFileSync } from "node:fs";
 import { DateTime, Effect, Predicate, Record } from "effect";
 import { nanoid } from "nanoid";
@@ -17,7 +18,7 @@ import { toLocalDateString } from "@manotes/shared/temporal/utils";
 import { ENTRIES, PAGES, SOURCE_GRAPH_DISPLAY_NAME } from "./demo-content";
 import type { Block, Inline } from "./demo-content";
 
-const pageIds = Record.map(PAGES, () => nanoid());
+const pageIds = Record.map(PAGES, () => RecordSchema.Id.make(nanoid()));
 
 function inlineToJSON(inline: Inline) {
   if (Predicate.isString(inline)) return { type: "text", text: inline };
@@ -44,7 +45,7 @@ function buildPayload(blocks: Array<Block>): Uint8Array<ArrayBufferLike> {
 }
 
 function event(
-  recordId: string,
+  recordId: RecordSchema.Id,
   type: "update" | "date",
   payload: Uint8Array<ArrayBufferLike>,
   createdAt: DateTime.Utc,
@@ -64,7 +65,7 @@ for (const [index, [key, page]] of Record.toEntries(PAGES).entries()) {
 
 // Journal entries: an `update` event plus a `date` event pinning the day.
 for (const entry of ENTRIES) {
-  const recordId = nanoid();
+  const recordId = RecordSchema.Id.make(nanoid());
   const createdAt = DateTime.subtract(now, { days: entry.daysAgo });
   const date = toLocalDateString(createdAt);
   const datePayload = Effect.runSync(EventSchema.encodeDatePayload({ date }));

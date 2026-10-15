@@ -65,7 +65,7 @@ export type RuleExpect = Table.SelectOf<typeof ruleExpects>;
 export const events = Table.make("events", {
   // SQLite allocates a monotonic row ID when omitted.
   localSeq: Column.int().pipe(Column.primaryKey, Sqlite.Column.autoIncrement),
-  recordId: Column.text().pipe(Column.schema(Schema.NonEmptyString)),
+  recordId: Column.text().pipe(Column.schema(RecordSchema.Id)),
   type: Column.custom(EventSchema.Type, Type.text()),
   payload: Column.blob(),
   createdAt: Column.text().pipe(Column.schema(Schema.DateTimeUtcFromString)),
@@ -84,8 +84,8 @@ export const materializationCheckpoint = Table.make("materialization_checkpoint"
 export type MaterializationCheckpoint = Table.SelectOf<typeof materializationCheckpoint>;
 
 export const backlinks = Table.make("backlinks", {
-  sourceId: Column.text(),
-  targetId: Column.text(),
+  sourceId: Column.text().pipe(Column.schema(RecordSchema.Id)),
+  targetId: Column.text().pipe(Column.schema(RecordSchema.Id)),
 })
   .pipe(PrimaryKey.make((table) => [table.sourceId, table.targetId]))
   .pipe(Index.make((table) => [table.targetId]).pipe(Index.named("backlinks_target_id_idx")));

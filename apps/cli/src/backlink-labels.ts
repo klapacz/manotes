@@ -1,10 +1,11 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import type { RecordRepo } from "@manotes/shared/record.repo";
 import { RecordFormat } from "@manotes/shared/record/format";
 
 /** File output and literal edit matching must use the same backlink labels. */
 export function buildCache(
   records: ReadonlyArray<Pick<RecordRepo.Record, "id" | "title" | "text">>,
-): ReadonlyMap<string, string> {
+): ReadonlyMap<RecordSchema.Id, string> {
   return new Map(records.map((record) => [record.id, RecordFormat.label(record)]));
 }
 

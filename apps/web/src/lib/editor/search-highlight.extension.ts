@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { definePlugin, type PlainExtension } from "prosekit/core";
 import { Schema } from "effect";
 import type { Node } from "prosekit/pm/model";
@@ -5,13 +6,13 @@ import { Plugin, PluginKey } from "prosekit/pm/state";
 import { Decoration, DecorationSet, type EditorView } from "prosekit/pm/view";
 import { decodeBacklinkAttrs } from "@manotes/shared/editor/backlink/spec";
 
-type State = { query: string; backlinksTo?: string; decorations: DecorationSet };
+type State = { query: string; backlinksTo?: RecordSchema.Id; decorations: DecorationSet };
 
 const key = new PluginKey<State>("manotes-search-highlight");
 
 const decodeFilter = Schema.decodeUnknownSync(
   Schema.UndefinedOr(
-    Schema.Struct({ query: Schema.String, backlinksTo: Schema.optional(Schema.String) }),
+    Schema.Struct({ query: Schema.String, backlinksTo: Schema.optional(RecordSchema.Id) }),
   ),
 );
 
@@ -46,7 +47,11 @@ export function defineSearchHighlight(): PlainExtension {
   );
 }
 
-export function setSearchHighlight(view: EditorView, search: string, backlinksTo?: string): void {
+export function setSearchHighlight(
+  view: EditorView,
+  search: string,
+  backlinksTo?: RecordSchema.Id,
+): void {
   const query = foldCase(search.trim());
   const previous = key.getState(view.state);
 
@@ -55,7 +60,7 @@ export function setSearchHighlight(view: EditorView, search: string, backlinksTo
   view.dispatch(view.state.tr.setMeta(key, { query, backlinksTo }).setMeta("addToHistory", false));
 }
 
-function highlight(doc: Node, query: string, backlinksTo?: string): DecorationSet {
+function highlight(doc: Node, query: string, backlinksTo?: RecordSchema.Id): DecorationSet {
   if (!query && !backlinksTo) return DecorationSet.empty;
 
   const decorations: Decoration[] = [];

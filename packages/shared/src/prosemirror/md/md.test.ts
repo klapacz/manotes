@@ -1,3 +1,4 @@
+import { RecordSchema } from "../../record.schema";
 import { PaneSchema } from "../../record/pane.schema";
 import dedent from "dedent";
 import { createEditor, union } from "prosekit/core";
@@ -149,8 +150,8 @@ describe("app Markdown conversion", () => {
       filter: {
         type: PaneSchema.StreamFilterType.cases.pages.make({}),
         search: "a & b [x] (é)!",
-        backlinksTo: "project",
-        linksFrom: "article",
+        backlinksTo: RecordSchema.Id.make("project"),
+        linksFrom: RecordSchema.Id.make("article"),
         date: "2026-10-04",
       },
       sort: "updated",

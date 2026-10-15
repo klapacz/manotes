@@ -1,3 +1,4 @@
+import { RecordSchema } from "../../record.schema";
 import { Query } from "effect-qb";
 import { Array, Effect, Layer, Context } from "effect";
 import * as DB from "../../db.service";
@@ -8,8 +9,8 @@ export class Service extends Context.Service<Service>()("Materializer.BacklinkRe
     const db = yield* DB.Service;
 
     const replaceForSource = Effect.fn("Materializer.BacklinkRepo.replaceForSource")(function* (
-      sourceId: string,
-      targetIds: ReadonlyArray<string>,
+      sourceId: RecordSchema.Id,
+      targetIds: ReadonlyArray<RecordSchema.Id>,
     ) {
       yield* db.query(
         Query.delete(Tables.backlinks).pipe(

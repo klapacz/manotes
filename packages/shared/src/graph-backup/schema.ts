@@ -1,8 +1,9 @@
+import { RecordSchema } from "../record.schema";
 import { Schema } from "effect";
 import * as EventSchema from "../event.schema";
 
 export const Record = Schema.Struct({
-  recordId: Schema.NonEmptyString,
+  recordId: RecordSchema.Id,
   type: EventSchema.Type,
   payload: Schema.Uint8ArrayFromBase64,
   createdAt: Schema.DateTimeUtcFromString,

@@ -1,3 +1,4 @@
+import { RecordSchema } from "../../record.schema";
 import { Effect, Layer, Context } from "effect";
 import type { UnknownNodeJSON } from "../../node-json";
 import { collectBacklinkTargetIds } from "./target";
@@ -8,7 +9,7 @@ export class Service extends Context.Service<Service>()("Materializer.Backlink.S
     const repo = yield* Repo.Service;
 
     const replaceForSourceRecord = Effect.fn("Materializer.Backlink.replaceForSourceRecord")(
-      function* (options: { sourceId: string; content: UnknownNodeJSON }) {
+      function* (options: { sourceId: RecordSchema.Id; content: UnknownNodeJSON }) {
         yield* repo.replaceForSource(options.sourceId, collectBacklinkTargetIds(options.content));
       },
     );

@@ -1,3 +1,4 @@
+import { RecordSchema } from "../../record.schema";
 import { Msgpack } from "../../msgpack";
 import { Schema } from "effect";
 import * as EventSchema from "../../event.schema";
@@ -17,7 +18,7 @@ export const decodeEnvelope = Schema.decodeEffect(EnvelopeMsgPack);
 export const encodeEnvelope = Schema.encodeEffect(EnvelopeMsgPack);
 
 export const BodySchema = Schema.Struct({
-  recordId: Schema.NonEmptyString,
+  recordId: RecordSchema.Id,
   type: EventSchema.Type,
   payload: Schema.Uint8Array,
 });

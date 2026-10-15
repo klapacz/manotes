@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { describe, expect, it } from "vite-plus/test";
 import { Effect, Schema } from "effect";
 import * as BackupSchema from "@manotes/shared/graph-backup/schema";
@@ -17,7 +18,7 @@ describe("graph backup service", () => {
       events: [
         {
           localSeq: 4,
-          recordId: "record-a",
+          recordId: RecordSchema.Id.make("record-a"),
           type: "update",
           payload: new Uint8Array([0, 1, 2, 255]),
           createdAt: firstCreatedAt,
@@ -26,7 +27,7 @@ describe("graph backup service", () => {
         },
         {
           localSeq: 5,
-          recordId: "record-b",
+          recordId: RecordSchema.Id.make("record-b"),
           type: "update",
           payload: new Uint8Array([9, 8, 7]),
           createdAt: secondCreatedAt,

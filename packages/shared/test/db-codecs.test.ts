@@ -21,7 +21,7 @@ describe("application column codecs", () => {
             Query.from(
               DB.values(Tables.events, {
                 id: "single",
-                recordId: "note",
+                recordId: RecordSchema.Id.make("note"),
                 type: "update",
                 payload: new Uint8Array([1, 2]),
                 createdAt,
@@ -169,7 +169,7 @@ describe("application column codecs", () => {
 
       const rows = ["one", "two"].map((id) => ({
         id,
-        recordId: "note",
+        recordId: RecordSchema.Id.make("note"),
         type: Schema.Literal("update").make("update"),
         payload,
         createdAt,
@@ -333,7 +333,7 @@ void checkValueTypes;
 function eventInput() {
   return {
     id: "event",
-    recordId: "note",
+    recordId: RecordSchema.Id.make("note"),
     type: Schema.Literal("update").make("update"),
     payload: new Uint8Array([1, 2]),
     createdAt: DateTime.makeUnsafe("2026-10-15T12:00:00.000Z"),

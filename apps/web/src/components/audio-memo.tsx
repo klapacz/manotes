@@ -58,7 +58,7 @@ const completionAtom = bindRt((rt) => {
                 Stream.unwrap,
                 Stream.filter(Option.isSome),
                 Stream.take(1),
-                Stream.map(() => RecordSchema.Id.make(row.recordId)),
+                Stream.map(() => row.recordId),
               );
             }),
             // A manually removed recording has no row and no transcript to open.

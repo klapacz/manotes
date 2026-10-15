@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { spawn } from "node:child_process";
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -23,7 +24,7 @@ const APP_DIR = fileURLToPath(new URL("..", import.meta.url));
 
 const CLI_ENTRY = fileURLToPath(new URL("./cli.ts", import.meta.url));
 
-const RECORD_ID = "workflow-record";
+const RECORD_ID = RecordSchema.Id.make("workflow-record");
 
 describe("CLI local workflow", () => {
   it.each(["missing", "nonzero", "success", "print-only"])(

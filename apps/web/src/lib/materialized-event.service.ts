@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { Effect, Layer, Context, DateTime } from "effect";
 import * as EventRepo from "@manotes/shared/event.repo";
 import * as EventSchema from "@manotes/shared/event.schema";
@@ -6,14 +7,14 @@ import * as RecordRepo from "@manotes/shared/record.repo";
 import * as DB from "@manotes/shared/db.service";
 
 type CreateInput = {
-  recordId: string;
+  recordId: RecordSchema.Id;
   date?: string;
   createdAt: DateTime.Utc;
   payload: Uint8Array<ArrayBufferLike>;
 };
 
 type SetDateInput = {
-  recordId: string;
+  recordId: RecordSchema.Id;
   date: string;
   createdAt: DateTime.Utc;
 };

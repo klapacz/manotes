@@ -1,3 +1,4 @@
+import { RecordSchema } from "../../record.schema";
 import { Option, Schema } from "effect";
 import { defineCommands, defineNodeSpec, insertNode } from "prosekit/core";
 import { PaneSchema } from "../../record/pane.schema";
@@ -58,7 +59,7 @@ export function defineStreamRefCommands() {
 
 export function streamRefLabel(
   { filter, sort, view }: StreamRefAttrs,
-  recordLabel: (id: string) => string = (id) => id,
+  recordLabel: (id: RecordSchema.Id) => string = (id) => id,
 ): string {
   return [
     StreamSettings.typeLabels[filter.type._tag],

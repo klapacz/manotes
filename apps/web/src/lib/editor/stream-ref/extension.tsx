@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { Link } from "@tanstack/solid-router";
 import { Data, Option, Stream } from "effect";
 import { defineSolidNodeView, type SolidNodeViewProps } from "prosekit/solid";
@@ -64,7 +65,7 @@ function StreamRefView(props: SolidNodeViewProps) {
   );
 }
 
-export function createRecordLabel(id: () => string | undefined) {
+export function createRecordLabel(id: () => RecordSchema.Id | undefined) {
   const idAtom = createSyncedAtom(id);
 
   const label = createAtomStore(

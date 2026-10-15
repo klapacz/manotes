@@ -1,3 +1,4 @@
+import { RecordSchema } from "../record.schema";
 import { Schema } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 import { AttrsSchema } from "../attrs.schema";
@@ -87,8 +88,8 @@ describe("StreamFilter conversion", () => {
       type: PaneSchema.StreamFilterType.cases[type].make({}),
       search: "sleep log",
       date: "2026-10-09",
-      backlinksTo: "sleep-log",
-      linksFrom: "daily-log",
+      backlinksTo: RecordSchema.Id.make("sleep-log"),
+      linksFrom: RecordSchema.Id.make("daily-log"),
       props: {},
     };
 

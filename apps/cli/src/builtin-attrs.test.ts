@@ -88,7 +88,7 @@ describe("Archived builtin", () => {
             }
 
             yield* events.create({
-              recordId: input.id,
+              recordId: RecordSchema.Id.make(input.id),
               type: "update",
               createdAt,
               payload: Y.encodeStateAsUpdate(doc),
@@ -146,14 +146,14 @@ describe("Archived builtin", () => {
           });
           ProsemirrorEncode.initializeDocument({ doc, content: [{ type: "paragraph" }] });
           yield* events.create({
-            recordId: "untitled-prop",
+            recordId: RecordSchema.Id.make("untitled-prop"),
             type: "update",
             createdAt,
             payload: Y.encodeStateAsUpdate(doc),
           });
           yield* materializer.catchUp();
 
-          expect((yield* records.getById("untitled-prop")).title).toBeNull();
+          expect((yield* records.getById(RecordSchema.Id.make("untitled-prop"))).title).toBeNull();
 
           const properties = Option.getOrThrow(
             yield* (yield* records.reactiveStreamList({
@@ -472,7 +472,10 @@ describe("Archived builtin", () => {
             ]);
 
             const record = yield* makeDoc();
-            const snapshot = Option.getOrThrow(yield* records.findById("false"));
+
+            const snapshot = Option.getOrThrow(
+              yield* records.findById(RecordSchema.Id.make("false")),
+            );
 
             if (snapshot.materializedYUpdate === null) throw new Error("Missing snapshot");
             Y.applyUpdate(record.doc, snapshot.materializedYUpdate);
@@ -520,7 +523,7 @@ describe("Archived builtin", () => {
             );
           };
 
-          const save = (id: string, doc: Y.Doc) => {
+          const save = (id: RecordSchema.Id, doc: Y.Doc) => {
             return events.create({
               recordId: id,
               type: "update",
@@ -532,7 +535,7 @@ describe("Archived builtin", () => {
           for (const value of definitions) {
             const definition = yield* createDoc();
             yield* attrs.initializeProp({ doc: definition.doc, defaultValue: value });
-            yield* save(`prop:${value._tag}`, definition.doc);
+            yield* save(RecordSchema.Id.make(`prop:${value._tag}`), definition.doc);
           }
 
           for (const id of ["unset", "grouped", "repeated", "wrong-kind", "different"]) {
@@ -585,7 +588,7 @@ describe("Archived builtin", () => {
               }
             }
 
-            yield* save(id, doc);
+            yield* save(recordId, doc);
           }
 
           yield* materializer.catchUp();
@@ -621,7 +624,7 @@ describe("Archived builtin", () => {
             ).toEqual(["grouped", "repeated", "unset"]);
 
             const found = yield* (yield* records.reactiveFindPreviewById({
-              id: "grouped",
+              id: RecordSchema.Id.make("grouped"),
               filter,
             })).pipe(Stream.runHead);
 
@@ -816,7 +819,11 @@ describe("Archived builtin", () => {
           const materializer = yield* Materializer.Service;
           const db = yield* DB.Service;
 
-          for (const recordId of [BuiltinAttrs.archivedId, "builtin:anything", "builtin:"]) {
+          for (const recordId of [
+            BuiltinAttrs.archivedId,
+            RecordSchema.Id.make("builtin:anything"),
+            RecordSchema.Id.make("builtin:"),
+          ]) {
             const event = {
               recordId,
               type: "update" as const,
@@ -828,7 +835,7 @@ describe("Archived builtin", () => {
             expect(createError._tag).toBe("SchemaError");
 
             const importError = yield* events
-              .importBackupEvents([{ ...event, recordId: "ordinary" }, event])
+              .importBackupEvents([{ ...event, recordId: RecordSchema.Id.make("ordinary") }, event])
               .pipe(Effect.flip);
 
             expect(importError._tag).toBe("SchemaError");
@@ -838,7 +845,7 @@ describe("Archived builtin", () => {
           expect(yield* records.findAllNotes()).toEqual([]);
 
           yield* events.create({
-            recordId: "ordinary",
+            recordId: RecordSchema.Id.make("ordinary"),
             type: "update",
             createdAt,
             payload: new Uint8Array([0, 0]),
@@ -859,7 +866,9 @@ describe("Archived builtin", () => {
             ),
           ).toEqual([{ lastAppliedLocalSeq: yield* events.getMaxLocalSeq() }]);
           expect(yield* records.findById(BuiltinAttrs.archivedId)).toEqual(Option.none());
-          expect(yield* records.findById("ordinary")).not.toEqual(Option.none());
+          expect(yield* records.findById(RecordSchema.Id.make("ordinary"))).not.toEqual(
+            Option.none(),
+          );
         }).pipe(Effect.provideContext(device));
       }),
     );

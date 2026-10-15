@@ -15,8 +15,12 @@ describe("PaneCursor.inputMatches", () => {
       id: RecordSchema.Id.make("record-a"),
     });
 
-    expect(PaneCursor.inputMatches(PaneMake.record("record-a"))(pane)).toBe(true);
-    expect(PaneCursor.inputMatches(PaneMake.record("record-b"))(pane)).toBe(false);
+    expect(PaneCursor.inputMatches(PaneMake.record(RecordSchema.Id.make("record-a")))(pane)).toBe(
+      true,
+    );
+    expect(PaneCursor.inputMatches(PaneMake.record(RecordSchema.Id.make("record-b")))(pane)).toBe(
+      false,
+    );
   });
 
   it("matches stream inputs with omitted defaults or explicit undefined fields", () => {
@@ -49,19 +53,31 @@ describe("PaneCursor.inputMatches", () => {
   it("distinguishes stream filters and sort order", () => {
     const pane = PaneSchema.Pane.cases.stream.make({
       paneId: PaneSchema.Id.make("pane-a"),
-      filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}), backlinksTo: "record-a" },
+      filter: {
+        type: PaneSchema.StreamFilterType.cases.notes.make({}),
+        backlinksTo: RecordSchema.Id.make("record-a"),
+      },
       sort: "date",
     });
 
     const differentSort = PaneSchema.Pane.cases.stream.make({
       paneId: PaneSchema.Id.make("pane-b"),
-      filter: { type: PaneSchema.StreamFilterType.cases.notes.make({}), backlinksTo: "record-a" },
+      filter: {
+        type: PaneSchema.StreamFilterType.cases.notes.make({}),
+        backlinksTo: RecordSchema.Id.make("record-a"),
+      },
       sort: "updated",
     });
 
-    expect(PaneCursor.inputMatches(PaneMake.backlink("record-a"))(pane)).toBe(true);
-    expect(PaneCursor.inputMatches(PaneMake.backlink("record-b"))(pane)).toBe(false);
-    expect(PaneCursor.inputMatches(PaneMake.backlink("record-a"))(differentSort)).toBe(false);
+    expect(PaneCursor.inputMatches(PaneMake.backlink(RecordSchema.Id.make("record-a")))(pane)).toBe(
+      true,
+    );
+    expect(PaneCursor.inputMatches(PaneMake.backlink(RecordSchema.Id.make("record-b")))(pane)).toBe(
+      false,
+    );
+    expect(
+      PaneCursor.inputMatches(PaneMake.backlink(RecordSchema.Id.make("record-a")))(differentSort),
+    ).toBe(false);
   });
 
   it("distinguishes cleared property filters and ignores their insertion order", () => {
@@ -102,9 +118,9 @@ describe("PaneCursor.inputMatches", () => {
 describe("PaneMake", () => {
   const inputs: ReadonlyArray<{ readonly name: string; readonly input: PaneSchema.PaneInput }> = [
     { name: "notes", input: PaneMake.notes() },
-    { name: "record", input: PaneMake.record("record-a") },
-    { name: "backlink", input: PaneMake.backlink("record-a") },
-    { name: "outgoing", input: PaneMake.outgoing("record-a") },
+    { name: "record", input: PaneMake.record(RecordSchema.Id.make("record-a")) },
+    { name: "backlink", input: PaneMake.backlink(RecordSchema.Id.make("record-a")) },
+    { name: "outgoing", input: PaneMake.outgoing(RecordSchema.Id.make("record-a")) },
     { name: "date", input: PaneMake.date("2026-09-12") },
   ];
 

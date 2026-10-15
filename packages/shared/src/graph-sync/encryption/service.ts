@@ -1,3 +1,4 @@
+import { RecordSchema } from "../../record.schema";
 import { Data, Effect, Layer, Context } from "effect";
 import { castArray } from "../../graph-encryption";
 import * as GraphSyncContext from "../context";
@@ -42,7 +43,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
     });
 
     const deriveRecordStreamRef = Effect.fn("GraphSyncEncryptionService.deriveRecordStreamRef")(
-      function* (recordId: string) {
+      function* (recordId: RecordSchema.Id) {
         const signature = yield* Effect.tryPromise({
           try: () => crypto.subtle.sign("HMAC", streamRefKey, encodeStreamRefInput(recordId)),
           catch: (cause) => new StreamRefDerivationError({ cause }),
@@ -63,7 +64,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
       id: string;
       streamRef: Uint8Array<ArrayBufferLike>;
       createdAt: EncryptionSchema.CreatedAt;
-      recordId: string;
+      recordId: RecordSchema.Id;
       type: EncryptionSchema.Body["type"];
       payload: Uint8Array<ArrayBufferLike>;
     }) {
@@ -172,7 +173,7 @@ const EVENT_IV_LENGTH = 12;
 // format later.
 const STREAM_REF_CONTEXT = "manotes/graph-sync/stream-ref/v0";
 
-function encodeStreamRefInput(recordId: string) {
+function encodeStreamRefInput(recordId: RecordSchema.Id) {
   return textEncoder.encode(`${STREAM_REF_CONTEXT}:${recordId}`);
 }
 

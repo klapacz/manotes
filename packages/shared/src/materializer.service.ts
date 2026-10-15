@@ -1,3 +1,4 @@
+import { RecordSchema } from "./record.schema";
 import { Array as Arr, Effect, Layer, Option, Order, pipe, Record, Context, Stream } from "effect";
 import * as Y from "yjs";
 import * as DB from "./db.service";
@@ -23,7 +24,7 @@ export class Service extends Context.Service<Service>()("Materializer.Service", 
     const checkpointRepo = yield* MaterializationCheckpointRepo.Service;
 
     const materializeRecordUpTo = Effect.fn("MaterializerService.materializeRecordUpTo")(
-      function* ({ recordId, upToLocalSeq }: { recordId: string; upToLocalSeq: number }) {
+      function* ({ recordId, upToLocalSeq }: { recordId: RecordSchema.Id; upToLocalSeq: number }) {
         const recordOption = yield* recordRepo.findById(recordId);
 
         if (Option.isSome(recordOption)) {
@@ -261,12 +262,12 @@ const getLatestDate = Effect.fn("MaterializerService.getLatestDate")(function* (
 });
 
 type MaterializationTarget = {
-  recordId: string;
+  recordId: RecordSchema.Id;
   upToLocalSeq: number;
 };
 
 function buildMaterializationTargets(
-  events: ReadonlyArray<{ recordId: string; localSeq: number }>,
+  events: ReadonlyArray<{ recordId: RecordSchema.Id; localSeq: number }>,
 ): ReadonlyArray<MaterializationTarget> {
   return pipe(
     events,
@@ -279,7 +280,9 @@ function buildMaterializationTargets(
         recordEvents,
         pipe(
           Order.Number,
-          Order.mapInput((event: { recordId: string; localSeq: number }) => event.localSeq),
+          Order.mapInput(
+            (event: { recordId: RecordSchema.Id; localSeq: number }) => event.localSeq,
+          ),
         ),
       );
     }),

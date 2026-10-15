@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { Column, Table, Type } from "effect-qb";
 import { Schema } from "effect";
 
@@ -22,7 +23,7 @@ export const recordings = Table.make("recordings", {
   mimeType: Column.text(),
   durationMs: Column.int().pipe(Column.nullable),
   state: Column.custom(Schema.Literals(["pending", "completed", "error"]), Type.text()),
-  recordId: Column.text(),
+  recordId: Column.text().pipe(Column.schema(RecordSchema.Id)),
   intent: Column.text(),
 });
 

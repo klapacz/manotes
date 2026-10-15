@@ -1,8 +1,9 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import type { Types } from "effect";
 import { createContext, useContext, type JSX, type ParentProps } from "solid-js";
 
 export type RecordLinkTarget = {
-  id: string;
+  id: RecordSchema.Id;
 };
 
 export type RecordLinkProps = Types.MergeRight<

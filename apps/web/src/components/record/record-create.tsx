@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import type { RecordRepo } from "@manotes/shared/record.repo";
 import { useAtom } from "@effect/atom-solid";
 import { DateTime, Effect, Predicate } from "effect";
@@ -31,7 +32,7 @@ const CreateRecord = bindRt((rt) => {
       const payload = yield* resolvePayload(input);
 
       const record = yield* service.create({
-        recordId: nanoid(),
+        recordId: RecordSchema.Id.make(nanoid()),
         payload,
         createdAt: yield* DateTime.now,
         date: input.date,

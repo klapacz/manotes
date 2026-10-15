@@ -36,7 +36,7 @@ type Props = {
   recordId: RecordSchema.Id;
   attached?: boolean;
   search?: string;
-  backlinksTo?: string;
+  backlinksTo?: RecordSchema.Id;
   style?: JSX.CSSProperties;
 };
 

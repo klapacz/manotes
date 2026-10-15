@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { Data, Stream, Option } from "effect";
 import { defineClipboardSerializer, definePlugin, union } from "prosekit/core";
 import type { ProseMirrorNode } from "prosekit/pm/model";
@@ -28,7 +29,7 @@ type BacklinkLabelEntry = Data.TaggedEnum<{
 
 const BacklinkLabelEntry = Data.taggedEnum<BacklinkLabelEntry>();
 
-function createBacklinkView(labelSnapshot: Map<string, string>) {
+function createBacklinkView(labelSnapshot: Map<RecordSchema.Id, string>) {
   return function BacklinkView(props: SolidNodeViewProps): JSX.Element {
     const attrs = createMemo(() => decodeBacklinkAttrs(props.node.attrs));
     const recordId = () => attrs().id;
@@ -89,7 +90,7 @@ function createBacklinkView(labelSnapshot: Map<string, string>) {
 
 function clipboardLeafText(
   node: ProseMirrorNode,
-  labelSnapshot: ReadonlyMap<string, string>,
+  labelSnapshot: ReadonlyMap<RecordSchema.Id, string>,
 ): string {
   if (node.type.name === "backlink") {
     const { id } = decodeBacklinkAttrs(node.attrs);
@@ -105,7 +106,7 @@ function clipboardLeafText(
 // ---------------------------------------------------------------------------
 
 export function defineBacklinkRuntime() {
-  const labelSnapshot = new Map<string, string>();
+  const labelSnapshot = new Map<RecordSchema.Id, string>();
   const BacklinkView = createBacklinkView(labelSnapshot);
 
   return union(

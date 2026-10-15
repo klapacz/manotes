@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { Console, Effect, Exit, Result } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 import type { Api } from "./execute-api";
@@ -185,6 +186,8 @@ describe("ExecuteScript.run", () => {
 function makeApi() {
   return {
     editRecord: vi.fn<Api["editRecord"]>(async () => undefined),
-    createRecord: vi.fn<Api["createRecord"]>(async (id) => id ?? "generated-id"),
+    createRecord: vi.fn<Api["createRecord"]>(
+      async (id) => id ?? RecordSchema.Id.make("generated-id"),
+    ),
   };
 }

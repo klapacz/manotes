@@ -1,3 +1,4 @@
+import { RecordSchema } from "../../record.schema";
 import { checkMarkdownTable, decodeTableCellAttrs } from "../../editor/table/spec";
 import { Schema } from "effect";
 import { defaultMarkdownSerializer, MarkdownSerializer } from "prosemirror-markdown";
@@ -8,7 +9,7 @@ import { decodeStreamRefAttrs, streamRefLabel } from "../../editor/stream-ref/sp
 import { decodeResolvedAppListAttrs } from "../../editor/list/spec";
 
 export type Options = {
-  readonly backlinkLabel?: (id: string) => string | undefined;
+  readonly backlinkLabel?: (id: RecordSchema.Id) => string | undefined;
 };
 
 export type BlockSpan = { readonly mdFrom: number; readonly mdTo: number };

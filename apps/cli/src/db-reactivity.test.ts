@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { NodeServices } from "@effect/platform-node";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
@@ -39,7 +40,7 @@ describe("automatic reactive query dependencies", () => {
                 props: {
                   [BuiltinAttrs.archivedId]: AttrsSchema.PropVal.cases.bool.make({ val: false }),
                 },
-                backlinksTo: "project",
+                backlinksTo: RecordSchema.Id.make("project"),
               }),
             ),
           ),

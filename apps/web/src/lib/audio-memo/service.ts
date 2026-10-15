@@ -11,7 +11,7 @@ import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 import { AudioMemoFiles } from "./files";
 import { AudioMemoRepo } from "./repo";
 import type { AudioMemoIntent } from "./intent";
-import type { RecordSchema } from "@manotes/shared/record.schema";
+import { RecordSchema } from "@manotes/shared/record.schema";
 
 export const register = Effect.fn("AudioMemoService.register")(function* (
   recording: Pick<AudioMemoRepo.Record, "path" | "recordedAt" | "mimeType" | "durationMs"> & {
@@ -120,7 +120,7 @@ const getCategoryRecordId = Effect.fn("AudioMemoService.getCategoryRecordId")(fu
   const records = yield* RecordRepo.Service;
 
   const category = yield* records.findIdByTitle(CATEGORY_TITLE);
-  const categoryId = Option.getOrElse(category, () => ({ id: nanoid() })).id;
+  const categoryId = Option.getOrElse(category, () => ({ id: RecordSchema.Id.make(nanoid()) })).id;
 
   const createdAt = yield* DateTime.now;
 
@@ -147,9 +147,9 @@ function transcriptPayload({
   transcript,
   backlink,
 }: {
-  categoryId: string;
+  categoryId: RecordSchema.Id;
   transcript: string;
-  backlink: string | null;
+  backlink: RecordSchema.Id | null;
 }) {
   return ProsemirrorEncode.encodeDocument(
     transcript

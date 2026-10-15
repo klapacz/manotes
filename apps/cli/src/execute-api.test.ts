@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -26,7 +27,7 @@ import { CliRuntime } from "./cli.runtime";
 import { ExecuteApi } from "./execute-api";
 import { BacklinkLabels } from "./backlink-labels";
 
-const RECORD_ID = "record-1";
+const RECORD_ID = RecordSchema.Id.make("record-1");
 
 const INITIAL_MARKDOWN = dedent`
   # Plan
@@ -141,7 +142,7 @@ describe("ExecuteApi.editRecord", () => {
   it("matches exported backlink labels and preserves their destination IDs", async () => {
     await runIntegration(
       Effect.gen(function* () {
-        yield* seedRecord("linked-record", "# Manotes");
+        yield* seedRecord(RecordSchema.Id.make("linked-record"), "# Manotes");
         yield* seedRecord(
           RECORD_ID,
           "Sync [Manotes](./linked-record.md) and [missing](./missing.md).",
@@ -376,7 +377,7 @@ describe("ExecuteApi.createRecord", () => {
         `);
         const recordRepo = yield* RecordRepo.Service;
         const eventRepo = yield* EventRepo.Service;
-        const record = yield* recordRepo.getById("created-record");
+        const record = yield* recordRepo.getById(RecordSchema.Id.make("created-record"));
         expect(record.title).toBe("Created");
         expect(record.date).toBe("2024-02-29");
         const markdown = "# Created\n\nSee [target](./target.md).\n\nNext.\n";
@@ -443,7 +444,7 @@ describe("ExecuteApi.createRecord", () => {
         const eventRepo = yield* EventRepo.Service;
         const before = yield* recordRepo.getById(RECORD_ID);
         yield* eventRepo.create({
-          recordId: "unmaterialized",
+          recordId: RecordSchema.Id.make("unmaterialized"),
           type: "update",
           payload: fullUpdateFromMarkdown("Existing."),
           createdAt: yield* DateTime.now,
@@ -463,7 +464,9 @@ describe("ExecuteApi.createRecord", () => {
 
         expect(yield* recordRepo.getById(RECORD_ID)).toEqual(before);
         expect(yield* eventRepo.countPending()).toBe(1);
-        expect(yield* eventRepo.findUpdatesForRecord("unmaterialized")).toHaveLength(1);
+        expect(
+          yield* eventRepo.findUpdatesForRecord(RecordSchema.Id.make("unmaterialized")),
+        ).toHaveLength(1);
       }),
     );
   });
@@ -512,7 +515,7 @@ function runTestScript(source: string) {
   );
 }
 
-function seedRecord(recordId: string, markdown: string, commitSeq = 1) {
+function seedRecord(recordId: RecordSchema.Id, markdown: string, commitSeq = 1) {
   const update = fullUpdateFromMarkdown(markdown);
 
   return Effect.gen(function* () {

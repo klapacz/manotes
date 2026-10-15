@@ -74,7 +74,7 @@ export function use() {
         createdAt: now,
         intent: {
           date: row?.record.date ?? pane().filter.date ?? toLocalDateString(now),
-          backlink: backlink === undefined ? null : RecordSchema.Id.make(backlink),
+          backlink: backlink === undefined ? null : backlink,
         },
       };
 

@@ -1,8 +1,9 @@
+import { RecordSchema } from "../../record.schema";
 import { Schema } from "effect";
 import { defineCommands, defineNodeSpec, insertNode } from "prosekit/core";
 
 export const BacklinkAttrs = Schema.Struct({
-  id: Schema.NonEmptyString.annotate({ expected: "a nonempty string backlink id" }),
+  id: RecordSchema.Id.annotate({ expected: "a nonempty string backlink id" }),
 });
 
 export type BacklinkAttrs = typeof BacklinkAttrs.Type;

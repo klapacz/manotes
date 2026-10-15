@@ -1,3 +1,4 @@
+import { RecordSchema } from "./record.schema";
 import { Query, Table } from "effect-qb";
 import { describe, expect, it } from "vite-plus/test";
 import { Tables } from "./db.tables";
@@ -32,8 +33,8 @@ describe("query table dependencies", () => {
             }),
           },
           search: "50%_!",
-          backlinksTo: "project",
-          linksFrom: "source",
+          backlinksTo: RecordSchema.Id.make("project"),
+          linksFrom: RecordSchema.Id.make("source"),
         }),
       ),
     );

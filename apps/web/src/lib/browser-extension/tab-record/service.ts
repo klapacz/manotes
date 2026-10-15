@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
 import { DateTime, Effect, Layer, Context } from "effect";
 import { nanoid } from "nanoid";
@@ -13,7 +14,7 @@ export class Service extends Context.Service<Service>()(
       const createFromTab = Effect.fn("BrowserExtensionTabRecordService.createFromTab")(function* (
         tab: BrowserExtension.TabCandidate,
       ) {
-        const recordId = nanoid();
+        const recordId = RecordSchema.Id.make(nanoid());
 
         const payload = ProsemirrorEncode.encodeDocument([
           {

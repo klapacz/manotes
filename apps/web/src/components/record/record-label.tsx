@@ -1,8 +1,9 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { Match, Option, Stream } from "effect";
 import { RecordCache, bindRt, createAtomResultStore, createSyncedAtom } from "../../lib";
 import { RecordQuery } from "./record-query";
 
-export function Root(props: { id: string }) {
+export function Root(props: { id: RecordSchema.Id }) {
   const idAtom = createSyncedAtom(() => props.id);
 
   const record = createAtomResultStore(

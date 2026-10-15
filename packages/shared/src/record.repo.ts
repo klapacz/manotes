@@ -46,7 +46,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
     });
 
     const updateById = Effect.fn("RecordRepo.updateById")(function* (
-      id: string,
+      id: RecordSchema.Id,
       values: Update,
     ): Effect.fn.Return<Record, QueryError | Schema.SchemaError | DB.NotFoundError> {
       return yield* db
@@ -71,7 +71,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
     });
 
     const findById = Effect.fn("RecordRepo.findById")(function* (
-      id: string,
+      id: RecordSchema.Id,
     ): Effect.fn.Return<Option.Option<Record>, QueryError> {
       return yield* db.find(
         recordSelect.pipe(Query.from(Tables.records), Query.where(Query.eq(Tables.records.id, id))),
@@ -90,14 +90,14 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
       );
     });
 
-    const getById = Effect.fn("RecordRepo.getById")(function* (id: string) {
+    const getById = Effect.fn("RecordRepo.getById")(function* (id: RecordSchema.Id) {
       return yield* findById(id).pipe(EffectOption.getOrEffect(() => new DB.NotFoundError()));
     });
 
     // Previews of outgoing [[link]] targets prime the record cache. They are optional:
     // a failed preview query must not prevent loading the record itself.
     const findOutgoingBacklinkPreviews = Effect.fn("RecordRepo.findOutgoingBacklinkPreviews")(
-      function* (id: string) {
+      function* (id: RecordSchema.Id) {
         return yield* db
           .query(
             previewSelect.pipe(
@@ -114,7 +114,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
     );
 
     const findByIdWithBacklinks = Effect.fn("RecordRepo.findByIdWithBacklinks")(function* (
-      id: string,
+      id: RecordSchema.Id,
     ) {
       return yield* Effect.zipWith(
         findById(id),
@@ -128,7 +128,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
       );
     });
 
-    const findBootById = Effect.fn("RecordRepo.findBootById")(function* (id: string) {
+    const findBootById = Effect.fn("RecordRepo.findBootById")(function* (id: RecordSchema.Id) {
       return yield* Effect.zipWith(
         db.find(
           bootSelect.pipe(Query.from(Tables.records), Query.where(Query.eq(Tables.records.id, id))),
@@ -188,7 +188,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
     });
 
     const reactiveFindPreviewById = Effect.fn("RecordRepo.reactiveFindPreviewById")(
-      function* (opts: { readonly id: string; readonly filter?: StreamSettings.Filter }) {
+      function* (opts: { readonly id: RecordSchema.Id; readonly filter?: StreamSettings.Filter }) {
         const plan = previewSelect.pipe(
           Query.from(Tables.records),
           Query.where(Query.eq(Tables.records.id, opts.id)),
@@ -280,7 +280,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
 export type Create = Types.MergeRight<
   Record,
   {
-    readonly id?: string;
+    readonly id?: RecordSchema.Id;
     readonly materializedYUpdate?: MaterializedYUpdate;
     readonly lastEventLocalSeq?: Record["lastEventLocalSeq"];
   }
@@ -329,8 +329,8 @@ export type SearchPreviewQuery = {
 export type StreamListQuery = {
   readonly type?: PaneSchema.StreamFilterType;
   readonly date?: string;
-  readonly backlinksTo?: string;
-  readonly linksFrom?: string;
+  readonly backlinksTo?: RecordSchema.Id;
+  readonly linksFrom?: RecordSchema.Id;
   readonly search?: string;
   readonly props?: ReadonlyRecord<RecordSchema.Id, AttrsSchema.PropVal>;
   readonly sort: "date" | "updated";

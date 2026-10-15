@@ -1,8 +1,9 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { linkOptions, type LinkOptions } from "@tanstack/solid-router";
 import { PaneMake } from "@manotes/shared/record/pane.make";
 
 export interface GetOptonsOpts {
-  id: string;
+  id: RecordSchema.Id;
 }
 
 export function getOptions(opts: GetOptonsOpts): LinkOptions {

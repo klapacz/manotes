@@ -5,7 +5,7 @@ export const Id = Schema.NonEmptyString.pipe(Schema.brand("RecordId"));
 
 export type Id = typeof Id.Type;
 
-export const CreateId = Schema.NonEmptyString.pipe(
+export const CreateId = Id.pipe(
   Schema.check(
     Schema.makeFilter((id) => {
       return id.startsWith("builtin:") ? "Record IDs cannot start with builtin:" : undefined;

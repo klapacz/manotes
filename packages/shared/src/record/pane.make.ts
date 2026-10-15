@@ -13,7 +13,7 @@ export function notes() {
   return make.stream(StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({})));
 }
 
-export function record(id: string) {
+export function record(id: RecordSchema.Id) {
   return make.record({ id });
 }
 
@@ -46,14 +46,14 @@ export function ruleTargets(opts: {
 }
 
 // Incoming backlinks: records that link to `targetId`.
-export function backlink(targetId: string) {
+export function backlink(targetId: RecordSchema.Id) {
   const settings = StreamSettings.defaults(PaneSchema.StreamFilterType.cases.notes.make({}));
 
   return make.stream({ ...settings, filter: { ...settings.filter, backlinksTo: targetId } });
 }
 
 // Outgoing links: records that `sourceId` links to.
-export function outgoing(sourceId: string) {
+export function outgoing(sourceId: RecordSchema.Id) {
   const settings = StreamSettings.defaults(PaneSchema.StreamFilterType.cases.pages.make({}));
 
   return make.stream({ ...settings, filter: { ...settings.filter, linksFrom: sourceId } });

@@ -1,3 +1,4 @@
+import { RecordSchema } from "@manotes/shared/record.schema";
 import { Effect, Match } from "effect";
 import { CliError } from "effect/cli";
 import { ChildProcess } from "effect/process";
@@ -5,7 +6,10 @@ import type { RecordSearch } from "@manotes/shared/record/search";
 import { PaneMake } from "@manotes/shared/record/pane.make";
 import type { CliConfig } from "./cli.config";
 
-export function make(config: Pick<CliConfig.Config, "origin" | "graphId">, id?: string): string {
+export function make(
+  config: Pick<CliConfig.Config, "origin" | "graphId">,
+  id?: RecordSchema.Id,
+): string {
   const url = new URL(`/open/${encodeURIComponent(config.graphId)}`, config.origin);
 
   if (id === undefined) return url.href;

@@ -20,8 +20,8 @@ const StreamFilter = Schema.Struct({
   type: StreamFilterType.pipe(
     Schema.withDecodingDefault(Effect.sync(() => StreamFilterType.cases.notes.make({}))),
   ),
-  backlinksTo: Schema.optional(Schema.String),
-  linksFrom: Schema.optional(Schema.String),
+  backlinksTo: Schema.optional(RecordSchema.Id),
+  linksFrom: Schema.optional(RecordSchema.Id),
   date: Schema.optional(TemporalSchema.PlainDateString),
   search: Schema.optional(Schema.String),
   props: Schema.optional(Schema.Record(RecordSchema.Id, AttrsSchema.PropVal)),
