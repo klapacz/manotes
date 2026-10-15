@@ -1,12 +1,11 @@
 import { useAtom } from "@effect/atom-solid";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
-import { PropValidation } from "@manotes/shared/prop-validation";
-import { PropDef } from "@manotes/shared/prop-def.service";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
-import type { NoteRepo } from "@manotes/shared/note.repo";
-import type { EnumOptionRepo } from "@manotes/shared/enum-option.repo";
-import { Array, Data, Effect, Match, Option, Predicate, Stream } from "effect";
+import type { NoteSchema } from "@manotes/shared/note.schema";
+import { RuleProps } from "@manotes/shared/rule-props";
+import { Array, Data, Effect, Exit, Option, Record } from "effect";
+import { Stream } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { Show } from "solid-js";
 import type * as Y from "yjs";
@@ -15,138 +14,61 @@ import { QueryEngine } from "../../lib/query-engine";
 import { MenuQuery } from "../../lib/menu-query";
 import { CommandList, CommandScroll } from "../ui/command";
 import { Picker } from "../ui/picker";
+import { NoteLabel } from "./note-label";
+import { NotePropsEntries } from "./note-props.entries";
 import { PropPicker } from "./prop-picker";
 import { PropQuery } from "./prop-query";
 
 export type Action = Data.TaggedEnum<{
-  OpenProperty: { propId: AttrsSchema.NoteId };
-  SetProperty: { propId: AttrsSchema.NoteId; propVal: AttrsSchema.PropVal };
+  OpenProperty: { readonly selection: NotePropsEntries.Selection };
+  SetProperty: {
+    readonly selection: NotePropsEntries.Selection;
+    readonly propVal: AttrsSchema.PropVal;
+  };
 }>;
 
 export const Action = Data.taggedEnum<Action>();
 
-export type Choice = Picker.Choice & Action & { builtin: boolean };
+export type Choice = Picker.Choice & Action;
 
-export function query(opts: {
-  readonly recordId: AttrsSchema.NoteId;
-  readonly doc: Y.Doc | undefined;
-}): QueryEngine.Query<
-  Choice,
-  unknown,
-  Attrs.Service | PropDef.Service | NoteRepo.Service | EnumOptionRepo.Service
-> {
+export function query(opts: { readonly recordId: NoteSchema.Id; readonly doc: Y.Doc | undefined }) {
   return (request: QueryEngine.Request) => {
-    if (!opts.doc) return Stream.succeed([]);
     const doc = opts.doc;
 
-    return Stream.unwrap(
-      Effect.gen(function* () {
-        const attrs = yield* Attrs.Service;
-        const defs = yield* PropDef.Service.use((repo) => repo.reactiveDefs());
+    if (!doc) return Stream.succeed([]);
 
-        return attrs.watchProps({ doc, defs }).pipe(
-          Stream.switchMap((entries) => PropValidation.watchEntries({ entries })),
-          Stream.switchMap((entries) => {
-            const editable = Array.filterMap(entries, editableEntry).filter(
-              ({ def }) => def.id !== opts.recordId,
-            );
-
-            const properties = MenuQuery.choices<Choice>(() =>
-              editable.map(({ def, value }) => ({
-                ...Action.OpenProperty({ propId: def.id }),
-                value: def.id,
-                label: def.title || "Untitled",
-                group: "properties",
-                builtin: BuiltinAttrs.isBuiltin(def.id),
-                suffix: <Picker.Caret />,
-                detail: () =>
-                  Match.value(value).pipe(
-                    Match.tag("Unset", () => undefined),
-                    Match.orElse((state) => <PropPicker.StateLabel state={state} />),
-                  ),
-              })),
-            );
-
-            const values = editable.map(({ def }) =>
-              MenuQuery.nested({
-                label: def.title || "Untitled",
-                query: QueryEngine.map(
-                  PropQuery.values({
-                    propId: def.id,
-                    type: def.prop_type,
-                    targets: PropQuery.targets(def),
-                    defaultValue: Option.fromNullishOr(def.prop_default),
-                  }),
-                  (choice): Choice => ({
-                    ...choice,
-                    ...Action.SetProperty({ propId: def.id, propVal: choice.propVal }),
-                    value: `prop:${def.id}:${choice.value}`,
-                    group: "properties",
-                    builtin: BuiltinAttrs.isBuiltin(def.id),
-                  }),
-                ),
-              }),
-            );
-
-            return QueryEngine.combine([properties, ...values])(request).pipe(
-              // Browse actions first; searches rank property names and values normally.
-              Stream.map((matches) => {
-                if (request.text.trim()) return matches;
-
-                return matches.map((match) => ({ ...match, score: 0.5 }));
-              }),
-            );
-          }),
-        );
-      }),
+    return NotePropsEntries.watch({ recordId: opts.recordId, doc }).pipe(
+      Stream.switchMap((groups) => makeQuery(groups)(request)),
     );
   };
 }
 
-const editableEntry = Match.type<Attrs.Entry>().pipe(
-  Match.when({ def: { prop_type: Match.is(...PropQuery.editableTypes) } }, (entry) => entry),
-  Match.result,
-);
-
 export function Menu(props: {
-  noteId: AttrsSchema.NoteId;
-  doc: Y.Doc;
-  propId: AttrsSchema.NoteId;
-  onBack: () => void;
-  onOpenNote: (id: AttrsSchema.NoteId) => void;
+  readonly noteId: NoteSchema.Id;
+  readonly doc: Y.Doc;
+  readonly selection: NotePropsEntries.Selection;
+  readonly onBack: () => void;
+  readonly onOpenNote: (id: NoteSchema.Id) => void;
 }) {
-  const input = createSyncedAtom(() => ({ doc: props.doc, propId: props.propId }));
+  const input = createSyncedAtom(() => ({
+    recordId: props.noteId,
+    doc: props.doc,
+    selection: props.selection,
+  }));
 
   const state = createAtomResultStore(
-    bindRt((rt) =>
-      rt.atom((get) => {
-        const { doc, propId } = get(input);
+    bindRt((rt) => {
+      return rt.atom((get) => {
+        const { recordId, doc, selection } = get(input);
 
-        return Stream.unwrap(
-          Effect.gen(function* () {
-            const attrs = yield* Attrs.Service;
-            const defs = yield* PropDef.Service.use((repo) => repo.reactiveDefs());
-
-            return attrs
-              .watchProps({
-                doc,
-                defs: defs.pipe(Stream.map((rows) => rows.filter((row) => row.id === propId))),
-              })
-              .pipe(
-                Stream.switchMap((entries) => PropValidation.watchEntries({ entries })),
-                Stream.map((entries) => Array.filterMap(entries, editableEntry)[0]),
-              );
+        return NotePropsEntries.watch({ recordId, doc }).pipe(
+          Stream.map((groups) => {
+            return NotePropsEntries.find({ groups, selection });
           }),
         );
-      }),
-    ),
+      });
+    }),
   );
-
-  const [mutation, edit] = useAtom(Edit);
-
-  const change = (value: AttrsSchema.PropVal | undefined) => {
-    edit({ doc: props.doc, recordId: props.noteId, propId: props.propId, value });
-  };
 
   return (
     <MatchTag
@@ -154,78 +76,319 @@ export function Menu(props: {
       cases={{
         Loading: () => <p class="px-3 py-2 text-sm text-fg-subtle">Loading property…</p>,
         Error: () => <p class="px-3 py-2 text-sm text-error-fg">Unable to load property.</p>,
-        Success: (state) => (
-          <Show
-            when={state().value}
-            fallback={
-              <PropPicker.Unavailable>
-                <Picker.Footer>
-                  <Picker.Back onSelect={props.onBack} />
-                </Picker.Footer>
-              </PropPicker.Unavailable>
-            }
-          >
-            {(entry) => (
-              <PropPicker.Value
-                propId={entry().def.id}
-                label={entry().def.title || "Untitled"}
-                type={entry().def.prop_type}
-                targets={PropQuery.targets(entry().def)}
-                defaultValue={Option.fromNullishOr(entry().def.prop_default)}
-                state={entry().value}
-                disabled={mutation().waiting}
-                onChange={(value) => change(value)}
-                onOpenNote={props.onOpenNote}
-              >
-                {(items) => (
-                  <CommandList>
-                    <CommandScroll>{items}</CommandScroll>
-                    <PropPicker.Invalid state={entry().value} />
-                    <Show when={AsyncResult.isFailure(mutation())}>
-                      <p role="alert" class="px-3 py-2 text-sm text-error-fg">
-                        Unable to update property.
-                      </p>
-                    </Show>
-                    <Picker.Footer>
-                      <Picker.Back onSelect={props.onBack} />
-                      <Picker.Clear
-                        disabled={Predicate.isTagged(entry().value, "Unset") || mutation().waiting}
-                        onSelect={() => change(undefined)}
-                      />
-                    </Picker.Footer>
-                  </CommandList>
-                )}
-              </PropPicker.Value>
-            )}
-          </Show>
-        ),
+        Success: (result) => {
+          return (
+            <Show
+              when={Option.getOrUndefined(result().value)}
+              fallback={
+                <PropPicker.Unavailable>
+                  <Picker.Footer>
+                    <Picker.Back onSelect={props.onBack} />
+                  </Picker.Footer>
+                </PropPicker.Unavailable>
+              }
+            >
+              {(entry) => {
+                return (
+                  <ValueMenu
+                    entry={entry()}
+                    recordId={props.noteId}
+                    doc={props.doc}
+                    onBack={props.onBack}
+                    onOpenNote={props.onOpenNote}
+                    onChanged={(value) => {
+                      if (value === undefined) props.onBack();
+                    }}
+                  />
+                );
+              }}
+            </Show>
+          );
+        },
       }}
     />
   );
 }
 
-export const Edit = bindRt((rt) =>
-  rt.fn(
+export function EntryValue(props: { readonly entry: NotePropsEntries.Entry }) {
+  const required = () => RuleProps.isRequired(props.entry);
+  const invalid = () => Attrs.ValueState.$is("Invalid")(props.entry.value);
+
+  const unexpected = () => {
+    return (
+      RuleProps.EditorGroup.$is("Rule")(props.entry.group) && RuleProps.isUnexpected(props.entry)
+    );
+  };
+
+  return (
+    <span
+      classList={{
+        "text-error-fg": invalid() || required(),
+        "text-warning-fg": unexpected() && !invalid() && !required(),
+      }}
+    >
+      <Show when={unexpected()}>Unexpected: </Show>
+      <Show when={required()} fallback={<PropPicker.StateLabel state={props.entry.value} />}>
+        Required
+      </Show>
+    </span>
+  );
+}
+
+export function ValueMenu(props: {
+  readonly entry: NotePropsEntries.Entry;
+  readonly recordId: NoteSchema.Id;
+  readonly doc: Y.Doc;
+  readonly onBack: () => void;
+  readonly onOpenNote: (id: NoteSchema.Id) => void;
+  readonly onChanged: (value: AttrsSchema.PropVal | undefined) => void;
+}) {
+  const [mutation, edit] = useAtom(Edit, { mode: "promiseExit" });
+
+  const change = async (value: AttrsSchema.PropVal | undefined) => {
+    const exit = await edit({
+      doc: props.doc,
+      recordId: props.recordId,
+      selection: NotePropsEntries.selection(props.entry),
+      value,
+    });
+
+    if (Exit.isFailure(exit)) return;
+
+    props.onChanged(value);
+  };
+
+  return (
+    <Show
+      when={Option.getOrUndefined(props.entry.def)}
+      fallback={
+        <PropPicker.Unavailable>
+          <Show when={AsyncResult.isFailure(mutation())}>
+            <p role="alert" class="px-3 py-2 text-sm text-error-fg">
+              Unable to update property.
+            </p>
+          </Show>
+          <Picker.Footer>
+            <Picker.Back onSelect={props.onBack} />
+            <Picker.Clear
+              disabled={Attrs.ValueState.$is("Unset")(props.entry.value) || mutation().waiting}
+              onSelect={() => void change(undefined)}
+            />
+          </Picker.Footer>
+        </PropPicker.Unavailable>
+      }
+    >
+      {(def) => {
+        return (
+          <PropPicker.Value
+            propId={props.entry.propId}
+            label={NotePropsEntries.label(props.entry)}
+            type={def().prop_type}
+            targets={PropQuery.targets(def())}
+            defaultValue={Option.fromNullishOr(def().prop_default)}
+            state={props.entry.value}
+            disabled={mutation().waiting}
+            onChange={(value) => void change(value)}
+            onOpenNote={props.onOpenNote}
+          >
+            {(items) => {
+              return (
+                <CommandList>
+                  <CommandScroll>{items}</CommandScroll>
+                  <PropPicker.Invalid state={props.entry.value} />
+                  <Show when={AsyncResult.isFailure(mutation())}>
+                    <p role="alert" class="px-3 py-2 text-sm text-error-fg">
+                      Unable to update property.
+                    </p>
+                  </Show>
+                  <Picker.Footer>
+                    <Picker.Back onSelect={props.onBack} />
+                    <Picker.Clear
+                      disabled={
+                        Attrs.ValueState.$is("Unset")(props.entry.value) || mutation().waiting
+                      }
+                      onSelect={() => void change(undefined)}
+                    />
+                  </Picker.Footer>
+                </CommandList>
+              );
+            }}
+          </PropPicker.Value>
+        );
+      }}
+    </Show>
+  );
+}
+
+export const Edit = bindRt((rt) => {
+  return rt.fn(
     Effect.fn("ComponentsNoteNoteProps.edit")(function* (opts: {
       readonly doc: Y.Doc;
-      readonly recordId: AttrsSchema.NoteId;
-      readonly propId: AttrsSchema.NoteId;
+      readonly recordId: NoteSchema.Id;
+      readonly selection: NotePropsEntries.Selection;
       readonly value: AttrsSchema.PropVal | undefined;
     }) {
       const attrs = yield* Attrs.Service;
+      const prop = { doc: opts.doc, propId: opts.selection.propId };
 
-      if (opts.value === undefined) {
-        return yield* attrs.clearProp({ doc: opts.doc, propId: opts.propId });
-      }
+      yield* NotePropsEntries.Selection.$match(opts.selection, {
+        Top: () => {
+          if (opts.value === undefined) return attrs.clearProp(prop);
 
-      yield* attrs.setProp({
-        doc: opts.doc,
-        recordId: opts.recordId,
-        propId: opts.propId,
-        value: opts.value,
+          return attrs.setProp({ ...prop, recordId: opts.recordId, value: opts.value });
+        },
+        Rule: ({ ruleId }) => {
+          if (opts.value === undefined) {
+            return attrs.clearGroupProp({ ...prop, ruleId });
+          }
+
+          return attrs.setGroupProp({
+            ...prop,
+            recordId: opts.recordId,
+            ruleId,
+            value: opts.value,
+          });
+        },
       });
     }),
-  ),
-);
+  );
+});
+
+function makeQuery(groups: RuleProps.EditorGroups) {
+  // Keep each group's props together, with top-level props first.
+  const entries = Array.flatMap(
+    [groups.top, ...Record.values(groups.groups)],
+    NotePropsEntries.entries,
+  );
+
+  const combined = QueryEngine.combine([
+    // Match prop names and offer their value pickers.
+    MenuQuery.choices(() => Array.map(entries, openChoice)),
+    // Also search values, such as Task → Priority → High.
+    ...Array.map(entries, valueQuery),
+  ]);
+
+  return (request: QueryEngine.Request) => {
+    return combined(request).pipe(
+      Stream.map((matches) => {
+        if (request.text.trim()) return matches;
+
+        // Browsing uses headings for context and places props below note actions.
+        return Array.map(matches, (match) => {
+          return { ...match, score: 0.5, value: { ...match.value, path: [] } };
+        });
+      }),
+    );
+  };
+}
+
+function openChoice(entry: NotePropsEntries.Entry): Choice {
+  const selection = NotePropsEntries.selection(entry);
+  const section = groupKey(entry.group);
+  const label = NotePropsEntries.label(entry);
+
+  const path = RuleProps.EditorGroup.$match(entry.group, {
+    Top: () => [],
+    Rule: ({ status }) => [NotePropsEntries.ruleLabel(status)],
+  });
+
+  return {
+    ...Action.OpenProperty({ selection }),
+    value: `${section}:${entry.propId}`,
+    group: section,
+    groupLabel: () => <GroupLabel group={entry.group} />,
+    label,
+    path,
+    keywords: [[...path, label].join(" ")],
+    labelSuffix: <PropPicker.BuiltinBadge builtin={BuiltinAttrs.isBuiltin(entry.propId)} />,
+    detail: () => <EntryValue entry={entry} />,
+    suffix: <Picker.Caret />,
+  };
+}
+
+function groupKey(group: RuleProps.EditorGroup) {
+  return RuleProps.EditorGroup.$match(group, {
+    Top: () => "props",
+    Rule: ({ ruleId }) => `rule:${ruleId}`,
+  });
+}
+
+function GroupLabel(props: { readonly group: RuleProps.EditorGroup }) {
+  return (
+    <MatchTag
+      when={props.group}
+      cases={{
+        Top: () => <>Properties</>,
+        Rule: (group) => {
+          return (
+            <span class="flex items-center gap-2">
+              <MatchTag
+                when={group().status}
+                cases={{
+                  Matching: (status) => <>{NotePropsEntries.ruleLabel(status())}</>,
+                  Unmatched: (status) => <>{NotePropsEntries.ruleLabel(status())}</>,
+                  Unavailable: () => <NoteLabel.Root id={group().ruleId} />,
+                }}
+              />
+              <MatchTag
+                when={group().status}
+                cases={{
+                  Unmatched: () => <span class="text-warning-fg">No longer applies</span>,
+                  Unavailable: () => <span class="text-error-fg">Rule unavailable</span>,
+                }}
+              />
+            </span>
+          );
+        },
+      }}
+    />
+  );
+}
+
+function valueQuery(entry: NotePropsEntries.Entry) {
+  // Available definitions supply the type, defaults, and reference scope.
+  if (Option.isNone(entry.def)) return () => Stream.succeed([]);
+
+  const def = entry.def.value;
+  const selection = NotePropsEntries.selection(entry);
+
+  const query = MenuQuery.nested({
+    label: NotePropsEntries.label(entry),
+    query: QueryEngine.map(
+      PropQuery.values({
+        propId: entry.propId,
+        type: def.prop_type,
+        targets: PropQuery.targets(def),
+        defaultValue: Option.fromNullishOr(def.prop_default),
+      }),
+      (choice): Choice => {
+        return {
+          ...choice,
+          ...Action.SetProperty({ selection, propVal: choice.propVal }),
+          value: `${groupKey(entry.group)}:${entry.propId}:${choice.value}`,
+          group: groupKey(entry.group),
+          labelSuffix: <PropPicker.BuiltinBadge builtin={BuiltinAttrs.isBuiltin(entry.propId)} />,
+        };
+      },
+    ),
+  });
+
+  return withGroupPath({ group: entry.group, query });
+}
+
+function withGroupPath<E, R>(opts: {
+  readonly group: RuleProps.EditorGroup;
+  readonly query: QueryEngine.Query<Choice, E, R>;
+}) {
+  return RuleProps.EditorGroup.$match(opts.group, {
+    Top: () => opts.query,
+    Rule: (group) => {
+      return MenuQuery.nested({
+        label: NotePropsEntries.ruleLabel(group.status),
+        query: opts.query,
+      });
+    },
+  });
+}
 
 export * as NoteProps from "./note-props";

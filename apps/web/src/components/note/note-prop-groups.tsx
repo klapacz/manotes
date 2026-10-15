@@ -1,13 +1,10 @@
-import { useAtom } from "@effect/atom-solid";
-import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
 import { PaneMake } from "@manotes/shared/note/pane.make";
 import type { NoteSchema } from "@manotes/shared/note.schema";
 import { RuleProps } from "@manotes/shared/rule-props";
 import { getRouteApi } from "@tanstack/solid-router";
-import { Effect, Exit, Match, Option, Record, type Types } from "effect";
-import { AsyncResult } from "effect/unstable/reactivity";
+import { Option, Record, type Types } from "effect";
 import { For, Show } from "solid-js";
 import type * as Y from "yjs";
 import { bindRt, createAtomResultStore, createSyncedAtom, MatchTag } from "../../lib";
@@ -15,14 +12,14 @@ import { NoteLink } from "../../lib/note/link-component";
 import { PaneCtx } from "../../lib/note/pane.ctx";
 import { PaneCursor } from "../../lib/note/pane.cursor";
 import { PaneScroll } from "../../lib/note/pane.scroll";
-import { CommandList, CommandScroll } from "../ui/command";
 import { DescriptionList } from "../ui/description-list";
 import { Picker } from "../ui/picker";
 import { Surface } from "../ui/surface";
 import { Focus } from "./focus";
 import { NoteLabel } from "./note-label";
 import { PropPicker } from "./prop-picker";
-import { PropQuery } from "./prop-query";
+import { NoteProps } from "./note-props";
+import { NotePropsEntries } from "./note-props.entries";
 
 const route = getRouteApi("/$graph/");
 
@@ -98,8 +95,8 @@ function RuleHeading(props: { readonly group: Types.ExtractTag<RuleProps.EditorG
         <MatchTag
           when={props.group.status}
           cases={{
-            Matching: (status) => <>{status().rule.title || "Untitled"}</>,
-            Unmatched: (status) => <>{status().rule.title || "Untitled"}</>,
+            Matching: (status) => <>{NotePropsEntries.ruleLabel(status())}</>,
+            Unmatched: (status) => <>{NotePropsEntries.ruleLabel(status())}</>,
             Unavailable: () => <NoteLabel.Root id={props.group.ruleId} />,
           }}
         />
@@ -171,15 +168,7 @@ function Row(props: RowProps) {
 }
 
 function ValueControl(props: RowProps) {
-  const label = () =>
-    Option.match(props.prop.def, {
-      onNone: () => "Unavailable property",
-      onSome: (def) => def.title || "Untitled",
-    });
-
-  const required = () =>
-    Attrs.ValueState.$is("Unset")(props.prop.value) &&
-    Option.exists(props.prop.expectation, AttrsSchema.RuleExpectation.guards.required);
+  const required = () => RuleProps.isRequired(props.prop);
 
   const invalid = () => Attrs.ValueState.$is("Invalid")(props.prop.value);
 
@@ -187,17 +176,14 @@ function ValueControl(props: RowProps) {
     RuleProps.EditorGroup.$is("Rule")(props.group) && RuleProps.isUnexpected(props.prop);
 
   return (
-    <Picker.Root label={label()}>
+    <Picker.Root label={NotePropsEntries.label(props.prop)}>
       <Picker.Trigger
         variant="ghost"
         size="xs"
         aria-invalid={invalid() || required()}
         intent={invalid() || required() ? "error" : unexpected() ? "warning" : undefined}
       >
-        <Show when={unexpected()}>Unexpected: </Show>
-        <Show when={required()} fallback={<PropPicker.StateLabel state={props.prop.value} />}>
-          Required
-        </Show>
+        <NoteProps.EntryValue entry={{ ...props.prop, group: props.group }} />
       </Picker.Trigger>
       <Picker.Content>{(close) => <ValueMenu {...props} close={close} />}</Picker.Content>
     </Picker.Root>
@@ -208,21 +194,6 @@ function ValueMenu(props: RowProps & { readonly close: (action?: () => void) => 
   const ctx = PaneCtx.use();
   const scroll = PaneScroll.use();
   const navigate = route.useNavigate();
-  const [mutation, edit] = useAtom(Edit, { mode: "promiseExit" });
-
-  const change = async (value: AttrsSchema.PropVal | undefined) => {
-    const exit = await edit({
-      doc: props.doc,
-      recordId: props.recordId,
-      group: props.group,
-      propId: props.prop.propId,
-      value,
-    });
-
-    if (Exit.isFailure(exit)) return;
-
-    props.close();
-  };
 
   const openNote = (id: NoteSchema.Id) => {
     props.close(() => {
@@ -235,93 +206,15 @@ function ValueMenu(props: RowProps & { readonly close: (action?: () => void) => 
   };
 
   return (
-    <Show
-      when={Option.getOrUndefined(props.prop.def)}
-      fallback={
-        <PropPicker.Unavailable>
-          <Show when={AsyncResult.isFailure(mutation())}>
-            <p role="alert" class="px-3 py-2 text-sm text-error-fg">
-              Unable to update prop.
-            </p>
-          </Show>
-          <Picker.Footer>
-            <Picker.Back onSelect={() => props.close()} />
-            <Picker.Clear
-              disabled={Attrs.ValueState.$is("Unset")(props.prop.value) || mutation().waiting}
-              onSelect={() => void change(undefined)}
-            />
-          </Picker.Footer>
-        </PropPicker.Unavailable>
-      }
-    >
-      {(def) => (
-        <PropPicker.Value
-          propId={props.prop.propId}
-          label={def().title || "Untitled"}
-          type={def().prop_type}
-          targets={PropQuery.targets(def())}
-          defaultValue={Option.fromNullishOr(def().prop_default)}
-          state={props.prop.value}
-          disabled={mutation().waiting}
-          onChange={(value) => void change(value)}
-          onOpenNote={openNote}
-        >
-          {(items) => (
-            <CommandList>
-              <CommandScroll>{items}</CommandScroll>
-              <PropPicker.Invalid state={props.prop.value} />
-              <Show when={AsyncResult.isFailure(mutation())}>
-                <p role="alert" class="px-3 py-2 text-sm text-error-fg">
-                  Unable to update prop.
-                </p>
-              </Show>
-              <Picker.Footer>
-                <Picker.Back onSelect={() => props.close()} />
-                <Picker.Clear
-                  disabled={Attrs.ValueState.$is("Unset")(props.prop.value) || mutation().waiting}
-                  onSelect={() => void change(undefined)}
-                />
-              </Picker.Footer>
-            </CommandList>
-          )}
-        </PropPicker.Value>
-      )}
-    </Show>
+    <NoteProps.ValueMenu
+      entry={{ ...props.prop, group: props.group }}
+      recordId={props.recordId}
+      doc={props.doc}
+      onBack={props.close}
+      onOpenNote={openNote}
+      onChanged={() => props.close()}
+    />
   );
 }
-
-const Edit = bindRt((rt) =>
-  rt.fn(
-    Effect.fn("ComponentsNoteNotePropGroups.edit")(function* (opts: {
-      readonly doc: Y.Doc;
-      readonly recordId: NoteSchema.Id;
-      readonly group: RuleProps.EditorGroup;
-      readonly propId: NoteSchema.Id;
-      readonly value: AttrsSchema.PropVal | undefined;
-    }) {
-      const attrs = yield* Attrs.Service;
-      const prop = { doc: opts.doc, propId: opts.propId };
-
-      yield* Match.value(opts.group).pipe(
-        Match.tag("Top", () => {
-          if (opts.value === undefined) return attrs.clearProp(prop);
-
-          return attrs.setProp({ ...prop, recordId: opts.recordId, value: opts.value });
-        }),
-        Match.tag("Rule", ({ ruleId }) => {
-          if (opts.value === undefined) return attrs.clearGroupProp({ ...prop, ruleId });
-
-          return attrs.setGroupProp({
-            ...prop,
-            recordId: opts.recordId,
-            ruleId,
-            value: opts.value,
-          });
-        }),
-        Match.exhaustive,
-      );
-    }),
-  ),
-);
 
 export * as NotePropGroups from "./note-prop-groups";

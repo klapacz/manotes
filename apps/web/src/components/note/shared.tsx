@@ -1,5 +1,5 @@
 import { getRouteApi } from "@tanstack/solid-router";
-import { Data, Exit } from "effect";
+import { Data, Exit, type Types } from "effect";
 import { useAtom } from "@effect/atom-solid";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { Show, createMemo, createSignal } from "solid-js";
@@ -34,7 +34,7 @@ import { splitProps, type ComponentProps, type ParentProps } from "solid-js";
 import { MatchTag, type NoteSchema } from "../../lib";
 import { Focus } from "./focus";
 import { NoteProps } from "./note-props";
-import { PropPicker } from "./prop-picker";
+import type { NotePropsEntries } from "./note-props.entries";
 import type * as Y from "yjs";
 
 const route = getRouteApi("/$graph/");
@@ -255,19 +255,21 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
               mode: "promiseExit",
             });
 
-            const setProperty = async (action: NoteProps.Action & { _tag: "SetProperty" }) => {
+            const setProperty = async (
+              action: Types.ExtractTag<NoteProps.Action, "SetProperty">,
+            ) => {
               if (!props.doc) return;
 
               const exit = await editProperty({
                 doc: props.doc,
                 recordId: props.note.id,
-                propId: action.propId,
+                selection: action.selection,
                 value: action.propVal,
               });
 
               if (Exit.isFailure(exit)) return;
 
-              setPage(MenuPage.Property({ propId: action.propId }));
+              setPage(MenuPage.Property({ selection: action.selection }));
             };
 
             const dates = QueryEngine.map(DateSuggestions.query, (date): NoteMenuChoice => ({
@@ -325,15 +327,7 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
               QueryEngine.combine([
                 MenuQuery.choices(() => actions),
                 MenuQuery.nested({ label: "Change date", query: dates }),
-                QueryEngine.map(
-                  NoteProps.query({ recordId: props.note.id, doc: props.doc }),
-                  (choice): NoteMenuChoice => ({
-                    ...choice,
-                    get labelSuffix() {
-                      return <PropPicker.BuiltinBadge builtin={choice.builtin} />;
-                    },
-                  }),
-                ),
+                NoteProps.query({ recordId: props.note.id, doc: props.doc }),
               ]),
             );
 
@@ -351,8 +345,8 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
                             Navigate: ({ run }) => close(run),
                             OpenDatePicker: () => setPage(MenuPage.ChangeDate()),
                             SetDate: ({ date }) => void changeDate(date),
-                            OpenProperty: ({ propId }) => {
-                              if (props.doc) setPage(MenuPage.Property({ propId }));
+                            OpenProperty: ({ selection }) => {
+                              if (props.doc) setPage(MenuPage.Property({ selection }));
                             },
                             SetProperty: (action) => void setProperty(action),
                           })
@@ -384,7 +378,7 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
                         <NoteProps.Menu
                           noteId={props.note.id}
                           doc={doc()}
-                          propId={page().propId}
+                          selection={page().selection}
                           onBack={() => setPage(MenuPage.Actions())}
                           onOpenNote={(id) => close(() => openNext(PaneMake.note(id)))}
                         />
@@ -411,7 +405,7 @@ export function NoteActions(props: { note: NoteSchema.Meta; doc: Y.Doc | undefin
 type MenuPage = Data.TaggedEnum<{
   Actions: {};
   ChangeDate: {};
-  Property: { propId: NoteSchema.Id };
+  Property: { readonly selection: NotePropsEntries.Selection };
 }>;
 
 const MenuPage = Data.taggedEnum<MenuPage>();

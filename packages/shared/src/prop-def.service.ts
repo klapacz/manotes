@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Stream } from "effect";
+import { Context, Effect, Layer, Record, Stream } from "effect";
 import { BuiltinAttrs } from "./builtin-attrs";
 import { PropRecordRepo } from "./prop-record.repo";
 
@@ -18,6 +18,10 @@ export class Service extends Context.Service<Service>()("PropDef.Service", {
   static readonly layer = Layer.effect(this, this.make).pipe(
     Layer.provide(PropRecordRepo.Service.layer),
   );
+}
+
+export function asRecord(defs: readonly PropRecordRepo.Def[]) {
+  return Record.fromIterableBy(defs, (def) => def.id);
 }
 
 export * as PropDef from "./prop-def.service";

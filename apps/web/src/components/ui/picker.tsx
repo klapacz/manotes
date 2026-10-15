@@ -41,6 +41,7 @@ export type Choice = {
   label: string;
   labelSuffix?: JSX.Element;
   group?: string;
+  groupLabel?: () => JSX.Element;
   icon?: JSX.Element;
   shortcut?: string;
   modified?: boolean;
@@ -267,10 +268,18 @@ export function Query<Option extends Choice>(
           <>
             <Show
               when={
-                index() > 0 && choice.group && query.visible()[index() - 1]?.group !== choice.group
+                choice.group &&
+                (index() === 0 || query.visible()[index() - 1]?.group !== choice.group)
               }
             >
-              <div role="separator" class="my-1 border-t border-border-subtle" />
+              <Show when={index() > 0}>
+                <div role="separator" class="my-1 border-t border-border-subtle" />
+              </Show>
+              <Show when={!query.search().trim() && choice.groupLabel}>
+                {(heading) => {
+                  return <div class="px-2 py-1.5 text-xs text-fg-subtle">{heading()()}</div>;
+                }}
+              </Show>
             </Show>
             <CommandItem
               value={choice.value}

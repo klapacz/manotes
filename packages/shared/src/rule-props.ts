@@ -1,15 +1,4 @@
-import {
-  Array,
-  Data,
-  Effect,
-  Match,
-  Option,
-  Record,
-  Result,
-  Stream,
-  type Types,
-  pipe,
-} from "effect";
+import { Data, Effect, Match, Option, Record, Result, Stream, type Types, pipe } from "effect";
 import type * as Y from "yjs";
 import { AttrsSchema } from "./attrs.schema";
 import { Attrs } from "./attrs.service";
@@ -77,9 +66,7 @@ export function watch(opts: { readonly recordId: NoteSchema.Id; readonly doc: Y.
       const rows = yield* definitions.reactiveDefs();
 
       // Index repository rows once for both value validation and editor metadata.
-      const defs = rows.pipe(
-        Stream.map((rows) => Record.fromEntries(Array.map(rows, (def) => [def.id, def] as const))),
-      );
+      const defs = rows.pipe(Stream.map(PropDef.asRecord));
 
       const expectations = RuleMatches.watch({ recordId: opts.recordId }).pipe(
         Stream.map(collectExpectations),
@@ -181,6 +168,13 @@ export function reconcileGroups(opts: {
 
 export function isUnexpected(prop: Prop) {
   return Option.isNone(prop.expectation) && !Attrs.ValueState.$is("Unset")(prop.value);
+}
+
+export function isRequired(prop: Prop) {
+  return (
+    Attrs.ValueState.$is("Unset")(prop.value) &&
+    Option.exists(prop.expectation, AttrsSchema.RuleExpectation.guards.required)
+  );
 }
 
 function reconcileRuleGroup(opts: {
