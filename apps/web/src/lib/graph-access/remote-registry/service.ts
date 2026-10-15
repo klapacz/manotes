@@ -2,7 +2,7 @@ import { Layer } from "effect";
 import { AtomRpc } from "effect/reactivity";
 import { RpcClient } from "effect/rpc";
 import { GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
-import * as RemoteRegistryLayer from "./layer";
+import { RemoteRegistryLayer } from "./layer";
 
 const makeClient = RpcClient.make(GraphRegistryRpc, { flatten: true });
 
@@ -21,3 +21,5 @@ export class Service extends AtomRpc.Service()("GraphAccess.RemoteRegistry.Servi
     reactivityKeys: listGraphsReactivityKeys,
   });
 }
+
+export * as RemoteRegistryService from "./service";

@@ -1,7 +1,7 @@
 import { Effect, Array, Order } from "effect";
 import { SqlClient } from "effect/sql";
-import * as Messages from "@manotes/shared/graph-sync/contract/messages";
-import * as EventSchema from "./schema.ts";
+import { GraphSyncMessages as Messages } from "@manotes/shared/graph-sync/contract/messages";
+import { GraphSyncEventSchema as EventSchema } from "./schema.ts";
 import type { NonEmptyReadonlyArray } from "effect/Array";
 
 export const migrate = Effect.gen(function* () {
@@ -73,3 +73,5 @@ const OrderEventByCommitSeq = Order.mapInput(
   Order.Number,
   (event: Messages.CommittedEvent) => event.commitSeq,
 );
+
+export * as GraphSyncRepo from "./repo.ts";

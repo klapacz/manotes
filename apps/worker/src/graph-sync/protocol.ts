@@ -1,12 +1,12 @@
 import { Array, Data, Effect, Match } from "effect";
-import type * as SqlError from "effect/sql/SqlError";
+import type { SqlError } from "effect/sql";
 import {
   MAX_EVENTS_PER_COMMIT,
   MAX_EVENTS_PER_REPLAY,
 } from "@manotes/shared/graph-sync/contract/limits";
-import * as Messages from "@manotes/shared/graph-sync/contract/messages";
-import * as Errors from "./errors.ts";
-import * as Repo from "./repo.ts";
+import { GraphSyncMessages as Messages } from "@manotes/shared/graph-sync/contract/messages";
+import { GraphSyncErrors as Errors } from "./errors.ts";
+import { GraphSyncRepo as Repo } from "./repo.ts";
 
 export class ResponsePlan extends Data.TaggedClass("ResponsePlan")<{
   reply: ReadonlyArray<Messages.ServerMessage>;
@@ -149,3 +149,5 @@ function isEventIdUniquenessSqlError(error: unknown): boolean {
 
   return message.includes("UNIQUE constraint failed") && message.includes("events.id");
 }
+
+export * as GraphSyncProtocol from "./protocol.ts";

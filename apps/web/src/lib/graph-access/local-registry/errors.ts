@@ -31,3 +31,5 @@ export function isGraphIdUniquenessSqlError(reason: SqlErrorReason): boolean {
     reason.cause.includes("graphs.graphId")
   );
 }
+
+export * as LocalRegistryErrors from "./errors";

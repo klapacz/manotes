@@ -50,3 +50,5 @@ export function waitForLeadership(localGraphId: string) {
 }
 
 export const leadershipLockName = (localGraphId: string) => `graph-worker-leader-${localGraphId}`;
+
+export * as LeaderElection from "./leader-election";

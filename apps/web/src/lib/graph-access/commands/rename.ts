@@ -1,5 +1,5 @@
 import { Effect, Layer, Context } from "effect";
-import * as LocalRegistry from "../local-registry";
+import { LocalRegistry } from "../local-registry";
 
 export type RenameGraphInput = {
   localGraphId: string;
@@ -21,3 +21,5 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Re
 }) {
   static readonly layer = Layer.effect(this, this.make);
 }
+
+export * as GraphAccessCommandsRename from "./rename";

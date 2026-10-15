@@ -1,8 +1,8 @@
 import { RecordSchema } from "@manotes/shared/record.schema";
-import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
+import { BrowserExtension } from "@manotes/shared/browser-extension/contract";
 import { DateTime, Effect, Layer, Context } from "effect";
 import { nanoid } from "nanoid";
-import * as MaterializedEventService from "../../materialized-event.service";
+import { MaterializedEventService } from "../../materialized-event.service";
 import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 
 export class Service extends Context.Service<Service>()(
@@ -52,3 +52,5 @@ export class Service extends Context.Service<Service>()(
     Layer.provide(MaterializedEventService.Service.layer),
   );
 }
+
+export * as BrowserExtensionTabRecordService from "./service";

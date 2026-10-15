@@ -1,13 +1,13 @@
 import { Effect, Fiber, Latch, Layer, SubscriptionRef } from "effect";
 import { TestClock } from "effect/testing";
-import * as Socket from "effect/socket/Socket";
+import { Socket } from "effect/socket";
 import { describe, expect, it } from "vite-plus/test";
-import * as EventRepo from "@manotes/shared/event.repo";
-import * as GraphSync from "@manotes/shared/graph-sync/service";
-import * as GraphSyncContext from "@manotes/shared/graph-sync/context";
-import * as GraphSyncEventLog from "@manotes/shared/graph-sync/event-log.service";
-import * as GraphSyncModel from "@manotes/shared/graph-sync/machine/model";
-import * as GraphSyncStatus from "@manotes/shared/graph-sync/status";
+import { EventRepo } from "@manotes/shared/event.repo";
+import { GraphSync } from "@manotes/shared/graph-sync/service";
+import { GraphSyncContext } from "@manotes/shared/graph-sync/context";
+import { GraphSyncEventLog } from "@manotes/shared/graph-sync/event-log.service";
+import { GraphSyncModel } from "@manotes/shared/graph-sync/machine/model";
+import { GraphSyncStatus } from "@manotes/shared/graph-sync/status";
 import { SyncStatusCloud } from "@manotes/shared/graph-sync/status.schema";
 import { CliSync } from "./cli.sync";
 

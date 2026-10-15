@@ -1,7 +1,7 @@
 import { Data, Effect, Layer } from "effect";
 import { EventRepo } from "@manotes/shared/event.repo";
-import type * as BackupSchema from "@manotes/shared/graph-backup/schema";
-import * as Materializer from "@manotes/shared/materializer.service";
+import type { GraphBackupSchema as BackupSchema } from "@manotes/shared/graph-backup/schema";
+import { Materializer } from "@manotes/shared/materializer.service";
 import { GraphDatabase } from "./database";
 
 export class InitializationError extends Data.TaggedError("GraphInitializationError")<{

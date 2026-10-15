@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import * as BackupSchema from "@manotes/shared/graph-backup/schema";
+import { GraphBackupSchema as BackupSchema } from "@manotes/shared/graph-backup/schema";
 
 export const readBackupFile = Effect.fn("GraphBackupFile.readBackupFile")(function* (file: File) {
   const text = yield* Effect.tryPromise(() => file.text());
@@ -45,3 +45,5 @@ function sanitizeFileName(input: string) {
 
   return sanitized.length > 0 ? sanitized : "graph";
 }
+
+export * as GraphBackupFile from "./file";

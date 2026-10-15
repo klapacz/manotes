@@ -4,9 +4,8 @@ import { PortSchema } from "@manotes/shared/schema/port";
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Command from "alchemy/Command";
-import * as Effect from "effect/Effect";
+import { Effect, Config, Layer } from "effect";
 import Worker from "./src/index.ts";
-import { Config, Layer } from "effect";
 
 export default Alchemy.Stack(
   "Manotes",

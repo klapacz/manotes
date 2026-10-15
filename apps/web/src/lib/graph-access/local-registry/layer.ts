@@ -1,7 +1,7 @@
 import { Effect, Context, Layer as EffectLayer } from "effect";
 import { SqlClient } from "effect/sql";
-import * as SqliteClient from "@manotes/sql-sqlite-wasm/sqlite-client";
-import * as Repo from "./repo";
+import { SqliteWasmClient as SqliteClient } from "@manotes/sql-sqlite-wasm/sqlite-client";
+import { LocalRegistryRepo as Repo } from "./repo";
 
 const REGISTRY_DATABASE_PATH = "local-registry.sqlite3";
 

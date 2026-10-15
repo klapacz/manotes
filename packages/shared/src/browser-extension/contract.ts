@@ -62,3 +62,5 @@ export function makeListTabsResponse(tabs: ReadonlyArray<TabCandidate>): ListTab
     tabs: Array.from(tabs),
   };
 }
+
+export * as BrowserExtension from "./contract";

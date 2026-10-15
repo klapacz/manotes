@@ -2,11 +2,11 @@ import * as Cloudflare from "alchemy/Cloudflare";
 import { SqliteClient } from "@effect/sql-sqlite-do";
 import { Boolean, Cause, Effect, Exit, Predicate } from "effect";
 
-import * as Codec from "@manotes/shared/graph-sync/contract/codec";
-import * as Messages from "@manotes/shared/graph-sync/contract/messages";
-import * as Protocol from "./protocol.ts";
-import * as Repo from "./repo.ts";
-import * as Errors from "./errors.ts";
+import { GraphSyncCodec as Codec } from "@manotes/shared/graph-sync/contract/codec";
+import { GraphSyncMessages as Messages } from "@manotes/shared/graph-sync/contract/messages";
+import { GraphSyncProtocol as Protocol } from "./protocol.ts";
+import { GraphSyncRepo as Repo } from "./repo.ts";
+import { GraphSyncErrors as Errors } from "./errors.ts";
 import { webSocketMessageToUint8Array } from "./websocket-message.ts";
 
 export default class GraphSyncDurableObject extends Cloudflare.DurableObject<GraphSyncDurableObject>()(

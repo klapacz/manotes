@@ -16,3 +16,5 @@ export const encodeClientMessage = Schema.encodeEffect(ClientMessageMsgPack);
 export const decodeServerMessage = Schema.decodeEffect(ServerMessageMsgPack);
 
 export const encodeServerMessageUnsafe = Schema.encodeSync(ServerMessageMsgPack);
+
+export * as GraphSyncCodec from "./codec";

@@ -8,3 +8,5 @@ export class Context extends C.Service<
     readonly origin?: string;
   }
 >()("GraphSync.Context") {}
+
+export * as GraphSyncContext from "./context";

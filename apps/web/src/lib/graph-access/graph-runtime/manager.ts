@@ -10,12 +10,12 @@ import {
   Context,
   Match,
 } from "effect";
-import * as Resolution from "../resolution/service";
-import * as GraphRuntimeLayer from "./layer";
-import * as ManagedRuntime from "./managed-runtime";
-import * as Fingerprint from "./fingerprint";
-import * as LocalRegistry from "../local-registry";
-import * as SessionService from "../session/service";
+import { GraphAccessResolution as Resolution } from "../resolution/service";
+import { GraphRuntimeLayer } from "./layer";
+import { GraphRuntimeManagedRuntime as ManagedRuntime } from "./managed-runtime";
+import { GraphRuntimeFingerprint as Fingerprint } from "./fingerprint";
+import { LocalRegistry } from "../local-registry";
+import { SessionService } from "../session/service";
 
 export type RuntimeContext = Layer.Success<GraphRuntimeLayer.AppLayer>;
 

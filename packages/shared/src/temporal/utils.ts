@@ -20,3 +20,5 @@ export function plainDateToJSDate(date: Temporal.PlainDate): Date {
 export function JSDateToPlainDate(date: Date): Temporal.PlainDate {
   return new Temporal.PlainDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
 }
+
+export * as TemporalUtils from "./utils";

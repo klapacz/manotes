@@ -2,7 +2,7 @@ import { RecordSchema } from "@manotes/shared/record.schema";
 import { Console, Effect, Exit, Result } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 import type { Api } from "./execute-api";
-import * as ExecuteScript from "./execute-script";
+import { ExecuteScript } from "./execute-script";
 
 describe("ExecuteScript.run", () => {
   it("has no Node globals, filesystem, network, or timers", async () => {

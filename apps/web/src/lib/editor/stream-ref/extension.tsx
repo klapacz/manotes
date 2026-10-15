@@ -4,7 +4,7 @@ import { Data, Option, Stream } from "effect";
 import { defineSolidNodeView, type SolidNodeViewProps } from "prosekit/solid";
 import { createMemo } from "solid-js";
 import { bindRt, createAtomStore, createSyncedAtom } from "../..";
-import * as RecordCache from "../../record-cache.service";
+import { RecordCache } from "../../record-cache.service";
 import { RecordFormat } from "../../record";
 import { PaneCursor } from "../../record/pane.cursor";
 import { PaneCtx } from "../../record/pane.ctx";

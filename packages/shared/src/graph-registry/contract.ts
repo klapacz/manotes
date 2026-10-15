@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/rpc";
-import * as GraphEncryption from "../graph-encryption";
+import { GraphEncryption } from "../graph-encryption";
 
 export const DisplayNameSchema = Schema.Trim.pipe(Schema.check(Schema.isNonEmpty()));
 
@@ -43,3 +43,5 @@ export class GraphRegistryRpc extends RpcGroup.make(
     error: DisplayNameTakenError,
   }),
 ) {}
+
+export * as GraphRegistryContract from "./contract";

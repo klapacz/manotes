@@ -1,8 +1,8 @@
 import { RecordSchema } from "../../record.schema";
 import { Query } from "effect-qb";
 import { Array, Effect, Layer, Context } from "effect";
-import * as DB from "../../db.service";
-import * as Tables from "../../db.tables";
+import { DB } from "../../db.service";
+import { Tables } from "../../db.tables";
 
 export class Service extends Context.Service<Service>()("Materializer.BacklinkRepo.Service", {
   make: Effect.gen(function* () {
@@ -42,3 +42,5 @@ export class Service extends Context.Service<Service>()("Materializer.BacklinkRe
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
+
+export * as BacklinkRepo from "./repo";

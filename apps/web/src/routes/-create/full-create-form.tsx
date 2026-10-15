@@ -1,14 +1,14 @@
 import { useAtom } from "@effect/atom-solid";
 import { Link, Navigate } from "@tanstack/solid-router";
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import * as GraphRegistryContract from "@manotes/shared/graph-registry/contract";
+import { GraphEncryption } from "@manotes/shared/graph-encryption";
+import { GraphRegistryContract } from "@manotes/shared/graph-registry/contract";
 import { Effect, Schema } from "effect";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button, buttonVariants } from "../../components/ui/button";
 import { AppForm, useAppForm } from "../../components/ui/form";
 import { MatchAsyncResult, MatchTag } from "../../lib";
-import * as GraphAccessRuntime from "../../lib/graph-access/runtime";
-import * as GraphAccessCommandsProvision from "../../lib/graph-access/commands/provision";
+import { GraphAccessRuntime } from "../../lib/graph-access/runtime";
+import { GraphAccessCommandsProvision } from "../../lib/graph-access/commands/provision";
 
 const CreateGraphFormSchema = Schema.Struct({
   displayName: GraphRegistryContract.DisplayNameSchema,

@@ -3,23 +3,23 @@ import { BrowserRuntime, BrowserWorkerRunner } from "@effect/platform-browser";
 import { Socket } from "effect/socket";
 import { Effect, Layer, References, Stream, SubscriptionRef } from "effect";
 import { RpcGroup, RpcServer, RpcWorker } from "effect/rpc";
-import * as DB from "@manotes/shared/db.service";
-import * as EventRepo from "@manotes/shared/event.repo";
-import * as MaterializationCheckpointRepo from "@manotes/shared/materialization-checkpoint.repo";
-import * as MaterializedEventService from "./materialized-event.service";
-import * as BacklinkService from "@manotes/shared/materializer/backlink/service";
-import * as MaterializerService from "@manotes/shared/materializer.service";
-import * as RecordRepo from "@manotes/shared/record.repo";
-import * as GraphSync from "@manotes/shared/graph-sync/service";
-import * as GraphSyncContext from "@manotes/shared/graph-sync/context";
-import * as GraphSyncEncryption from "@manotes/shared/graph-sync/encryption/service";
-import * as GraphSyncEventLog from "@manotes/shared/graph-sync/event-log.service";
+import { DB } from "@manotes/shared/db.service";
+import { EventRepo } from "@manotes/shared/event.repo";
+import { MaterializationCheckpointRepo } from "@manotes/shared/materialization-checkpoint.repo";
+import { MaterializedEventService } from "./materialized-event.service";
+import { BacklinkService } from "@manotes/shared/materializer/backlink/service";
+import { Materializer as MaterializerService } from "@manotes/shared/materializer.service";
+import { RecordRepo } from "@manotes/shared/record.repo";
+import { GraphSync } from "@manotes/shared/graph-sync/service";
+import { GraphSyncContext } from "@manotes/shared/graph-sync/context";
+import { GraphSyncEncryption } from "@manotes/shared/graph-sync/encryption/service";
+import { GraphSyncEventLog } from "@manotes/shared/graph-sync/event-log.service";
 import { GraphDedicatedRpc, GraphDedicatedInitialMessage } from "./graph.worker-rpc";
 import { SyncStatusCloud, SyncStatusLocal } from "@manotes/shared/graph-sync/status.schema";
-import * as GraphSyncStatus from "@manotes/shared/graph-sync/status";
-import * as GraphRuntimeDBResolution from "./graph-access/graph-runtime/db-resolution";
+import { GraphSyncStatus } from "@manotes/shared/graph-sync/status";
+import { GraphRuntimeDBResolution } from "./graph-access/graph-runtime/db-resolution";
 import { SqlLive } from "./db/sql-live";
-import * as GraphSyncConfig from "@manotes/shared/graph-sync/config";
+import { GraphSyncConfiguration as GraphSyncConfig } from "@manotes/shared/graph-sync/config";
 
 const bootstrapEffect = Effect.gen(function* () {
   // Build the bootstrap layers (WorkerRunner on `self`) using the Layer.unwrap

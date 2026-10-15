@@ -1,10 +1,10 @@
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { Effect, Layer, Context, DateTime } from "effect";
-import * as EventRepo from "@manotes/shared/event.repo";
-import * as EventSchema from "@manotes/shared/event.schema";
-import * as MaterializationCheckpointRepo from "@manotes/shared/materialization-checkpoint.repo";
-import * as RecordRepo from "@manotes/shared/record.repo";
-import * as DB from "@manotes/shared/db.service";
+import { EventRepo } from "@manotes/shared/event.repo";
+import { EventSchema } from "@manotes/shared/event.schema";
+import { MaterializationCheckpointRepo } from "@manotes/shared/materialization-checkpoint.repo";
+import { RecordRepo } from "@manotes/shared/record.repo";
+import { DB } from "@manotes/shared/db.service";
 
 type CreateInput = {
   recordId: RecordSchema.Id;
@@ -83,3 +83,5 @@ export class Service extends Context.Service<Service>()("MaterializedEventServic
     Layer.provide(RecordRepo.Service.layer),
   );
 }
+
+export * as MaterializedEventService from "./materialized-event.service";

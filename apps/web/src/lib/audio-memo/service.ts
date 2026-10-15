@@ -1,4 +1,4 @@
-import * as OpenAITranscriber from "@effect-uai/openai/OpenAITranscriber";
+import { OpenAITranscriber } from "@effect-uai/openai";
 import { DateTime, Effect, Option, Redacted } from "effect";
 import { FetchHttpClient } from "effect/http";
 import { nanoid } from "nanoid";

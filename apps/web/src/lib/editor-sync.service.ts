@@ -2,10 +2,10 @@ import { RecordSchema } from "@manotes/shared/record.schema";
 import { Chunk, Data, Deferred, Effect, Layer, pipe, Queue, Context, Stream } from "effect";
 import * as Y from "yjs";
 import { ySyncPluginKey } from "y-prosemirror";
-import * as EventRepo from "@manotes/shared/event.repo";
+import { EventRepo } from "@manotes/shared/event.repo";
 import { Array, DateTime, Option } from "effect";
-import * as RecordRepo from "@manotes/shared/record.repo";
-import * as RecordCache from "./record-cache.service";
+import { RecordRepo } from "@manotes/shared/record.repo";
+import { RecordCache } from "./record-cache.service";
 import { streamDebounceNoDrop } from "./stream-debounce-no-drop";
 
 const REMOTE_ORIGIN = Symbol("remote");
@@ -165,3 +165,5 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
     Layer.provide(RecordCache.Service.layer),
   );
 }
+
+export * as EditorSyncService from "./editor-sync.service";

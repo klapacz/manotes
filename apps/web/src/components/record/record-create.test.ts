@@ -2,7 +2,7 @@ import type { RecordRepo } from "@manotes/shared/record.repo";
 import { Data, Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
-import * as MaterializedEventService from "../../lib/materialized-event.service";
+import { MaterializedEventService } from "../../lib/materialized-event.service";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { Attrs } from "@manotes/shared/attrs.service";

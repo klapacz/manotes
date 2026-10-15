@@ -1,7 +1,7 @@
 import { Array as Arr, DateTime, Effect, Struct } from "effect";
-import * as EventRepo from "@manotes/shared/event.repo";
-import * as GraphAccessCommandsProvision from "../graph-access/commands/provision";
-import * as BackupSchema from "@manotes/shared/graph-backup/schema";
+import { EventRepo } from "@manotes/shared/event.repo";
+import { GraphAccessCommandsProvision } from "../graph-access/commands/provision";
+import { GraphBackupSchema as BackupSchema } from "@manotes/shared/graph-backup/schema";
 
 export function createBackup({
   sourceGraphDisplayName,
@@ -59,3 +59,5 @@ export const importBackupToNewGraph = Effect.fn("GraphBackupService.importBackup
     return yield* provision.createLocal({ displayName, events: backup.events });
   },
 );
+
+export * as GraphBackupService from "./service";

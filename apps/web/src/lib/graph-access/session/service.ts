@@ -1,6 +1,6 @@
 import { Effect, Layer, Context } from "effect";
 import { AtomRegistry, Atom as A } from "effect/reactivity";
-import * as Atom from "./atom";
+import { SessionAtom as Atom } from "./atom";
 
 export class Service extends Context.Service<Service>()("GraphAccess.Session.Service", {
   make: Effect.gen(function* () {
@@ -20,3 +20,5 @@ export class Service extends Context.Service<Service>()("GraphAccess.Session.Ser
 }) {
   static readonly layer = Layer.effect(this, this.make);
 }
+
+export * as SessionService from "./service";

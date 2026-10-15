@@ -1,8 +1,8 @@
 import { RecordSchema } from "../../record.schema";
 import { Data, Effect, Layer, Context } from "effect";
 import { castArray } from "../../graph-encryption";
-import * as GraphSyncContext from "../context";
-import * as EncryptionSchema from "./schema";
+import { GraphSyncContext } from "../context";
+import { GraphSyncEncryptionSchema as EncryptionSchema } from "./schema";
 
 export class StreamRefDerivationError extends Data.TaggedError(
   "GraphSyncEncryption.StreamRefDerivationError",
@@ -185,3 +185,5 @@ function remapError<A, E, E2>(
 ): Effect.Effect<A, E2> {
   return effect.pipe(Effect.mapError(mapError));
 }
+
+export * as GraphSyncEncryption from "./service";

@@ -15,3 +15,5 @@ export * as Manager from "./manager";
 export * as Router from "./router";
 
 export * as SyncSessionWatcher from "./sync-session-watcher";
+
+export * as GraphRuntime from "./index";

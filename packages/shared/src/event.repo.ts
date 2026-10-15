@@ -1,8 +1,8 @@
 import { Query, Cast, Type } from "effect-qb";
 import { Array, Effect, Layer, Option, pipe, Schema, Context, Stream, type Types } from "effect";
-import * as DB from "./db.service";
+import { DB } from "./db.service";
 import { RecordSchema } from "./record.schema";
-import * as Tables from "./db.tables";
+import { Tables } from "./db.tables";
 import { nanoid } from "nanoid";
 import { EffectOption } from "./effect/effect-option";
 

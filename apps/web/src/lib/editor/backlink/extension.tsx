@@ -9,7 +9,7 @@ import {
   type SolidNodeViewProps,
 } from "prosekit/solid";
 import { createEffect, createMemo, type JSX } from "solid-js";
-import * as RecordCache from "../../record-cache.service";
+import { RecordCache } from "../../record-cache.service";
 import { bindRt, createAtomStore, createSyncedAtom } from "../..";
 import { decodeBacklinkAttrs, type BacklinkAttrs } from "@manotes/shared/editor/backlink/spec";
 import { RecordFormat } from "../../record";

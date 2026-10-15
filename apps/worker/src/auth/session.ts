@@ -1,4 +1,4 @@
-import * as SessionAuth from "@manotes/shared/session/auth";
+import { SessionAuth } from "@manotes/shared/session/auth";
 import { Effect } from "effect";
 import { HttpServerResponse } from "effect/http";
 import { AuthService } from "./auth.ts";
@@ -52,3 +52,5 @@ const resolveCurrentSession = Effect.fn("AuthSession.resolveCurrentSession")(fun
     }),
   );
 });
+
+export * as AuthSession from "./session.ts";

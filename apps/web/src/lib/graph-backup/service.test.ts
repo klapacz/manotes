@@ -1,7 +1,7 @@
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { describe, expect, it } from "vite-plus/test";
 import { Effect, Schema } from "effect";
-import * as BackupSchema from "@manotes/shared/graph-backup/schema";
+import { GraphBackupSchema as BackupSchema } from "@manotes/shared/graph-backup/schema";
 import { createBackup, getSuggestedGraphName } from "./service";
 
 describe("graph backup service", () => {

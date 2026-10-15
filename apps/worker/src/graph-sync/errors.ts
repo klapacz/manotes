@@ -8,3 +8,5 @@ export class ProtocolViolationError extends Schema.TaggedError<ProtocolViolation
     return this.reason;
   }
 }
+
+export * as GraphSyncErrors from "./errors.ts";

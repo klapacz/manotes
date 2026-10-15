@@ -1,7 +1,7 @@
 import type { RecordSchema } from "@manotes/shared/record.schema";
 import { Cause, Context, Data, Deferred, Effect, Layer, RcMap, SubscriptionRef } from "effect";
 import * as Y from "yjs";
-import * as EditorSyncService from "./editor-sync.service";
+import { EditorSyncService } from "./editor-sync.service";
 
 export type Doc = Data.TaggedEnum<{
   Loading: {};

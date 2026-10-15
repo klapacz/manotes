@@ -19,3 +19,5 @@ export const InternalServerError = HttpApiError.InternalServerErrorNoContent;
 
 // Separate response schemas preserve each error's HTTP status and empty body.
 export const AuthMiddlewareError = [UnauthorizedError, InternalServerError] as const;
+
+export * as SessionAuth from "./auth";

@@ -1,7 +1,7 @@
 import { RecordSchema } from "../../record.schema";
 import { Msgpack } from "../../msgpack";
 import { Schema } from "effect";
-import * as EventSchema from "../../event.schema";
+import { EventSchema } from "../../event.schema";
 
 export const EnvelopeSchema = Schema.Struct({
   version: Schema.Literals([0]),
@@ -45,3 +45,5 @@ export type AuthenticatedMetadata = Schema.Schema.Type<typeof AuthenticatedMetad
 const AuthenticatedMetadataMsgPack = Msgpack.schema(AuthenticatedMetadataSchema);
 
 export const encodeAuthenticatedMetadata = Schema.encodeEffect(AuthenticatedMetadataMsgPack);
+
+export * as GraphSyncEncryptionSchema from "./schema";

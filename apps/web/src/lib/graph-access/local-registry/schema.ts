@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
+import { GraphEncryption } from "@manotes/shared/graph-encryption";
 
 export const Status = Schema.Literals(["active", "deleting"]);
 
@@ -40,3 +40,5 @@ export const encodeRecord = Schema.encodeEffect(Record);
 export const decodeRecord = Schema.decodeEffect(Record);
 
 export const decodeArray = Schema.decodeEffect(Schema.Array(Record));
+
+export * as LocalRegistrySchema from "./schema";

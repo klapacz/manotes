@@ -3,7 +3,7 @@
  */
 import { Socket } from "effect/socket";
 import { Data, Effect } from "effect";
-import * as Messages from "../contract/messages";
+import { GraphSyncMessages as Messages } from "../contract/messages";
 
 export type Input = Data.TaggedEnum<{
   SocketOpened: {};
@@ -24,3 +24,5 @@ export const State = Data.taggedEnum<State>();
 export type Write = (
   chunk: Uint8Array | string | Socket.CloseEvent,
 ) => Effect.Effect<void, Socket.SocketError>;
+
+export * as GraphSyncModel from "./model";

@@ -16,8 +16,8 @@ import {
   type DialogTriggerProps,
 } from "../../components/ui/dialog";
 import { MatchAsyncResult, MatchTag } from "../../lib";
-import * as LocalRegistry from "../../lib/graph-access/local-registry";
-import * as GraphAccessCommands from "../../lib/graph-access/commands";
+import { LocalRegistry } from "../../lib/graph-access/local-registry";
+import { GraphAccessCommands } from "../../lib/graph-access/commands";
 
 type Props<T extends ValidComponent = typeof Button> = {
   graph: LocalRegistry.Schema.Record;

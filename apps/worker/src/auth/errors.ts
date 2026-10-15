@@ -13,3 +13,5 @@ export class AccountResolutionError extends Data.TaggedError("Auth.AccountResolu
 export class EmailSendError extends Data.TaggedError("Auth.EmailSendError")<{
   readonly cause: unknown;
 }> {}
+
+export * as AuthErrors from "./errors.ts";

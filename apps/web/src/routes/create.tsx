@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/solid-router";
 import { useAtomValue } from "@effect/atom-solid";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { MatchAsyncResult, MatchTag } from "../lib";
-import * as SessionAtom from "../lib/graph-access/session/atom";
+import { SessionAtom } from "../lib/graph-access/session/atom";
 import { FullCreateForm } from "./-create/full-create-form";
 import { LocalOnlyCreateForm } from "./-create/local-only-create-form";
 

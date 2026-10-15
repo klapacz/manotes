@@ -2,10 +2,10 @@
  * Implements machine side effects like log updates and socket writes.
  */
 import { Effect, Option } from "effect";
-import * as Messages from "../contract/messages";
-import * as GraphSyncEventLog from "../event-log.service";
-import * as GraphSyncContext from "../context";
-import * as MachineContext from "./context";
+import { GraphSyncMessages as Messages } from "../contract/messages";
+import { GraphSyncEventLog } from "../event-log.service";
+import { GraphSyncContext } from "../context";
+import { MachineContext } from "./context";
 import type { NonEmptyReadonlyArray } from "effect/Array";
 
 /**
@@ -78,3 +78,5 @@ export const sendPendingCommit = Effect.fn("GraphSyncMachineCommands.sendPending
     return { didSendCommit: true };
   },
 );
+
+export * as GraphSyncMachineCommands from "./commands";

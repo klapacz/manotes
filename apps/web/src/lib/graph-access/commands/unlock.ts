@@ -1,7 +1,7 @@
 import { Effect, Layer, Context } from "effect";
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import * as KeyStoreService from "../key-store/service";
-import * as LocalRegistry from "../local-registry";
+import { GraphEncryption } from "@manotes/shared/graph-encryption";
+import { KeyStore as KeyStoreService } from "../key-store/service";
+import { LocalRegistry } from "../local-registry";
 
 export type UnlockCloudGraphInput = {
   graph: LocalRegistry.Schema.CloudRecord;
@@ -52,3 +52,5 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Un
     Layer.provide(KeyStoreService.Service.layer),
   );
 }
+
+export * as GraphAccessCommandsUnlock from "./unlock";

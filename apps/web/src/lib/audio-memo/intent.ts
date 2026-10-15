@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 import { RecordSchema } from "@manotes/shared/record.schema";
-import * as TemporalSchema from "@manotes/shared/temporal.schema";
+import { TemporalSchema } from "@manotes/shared/temporal.schema";
 
 export const Record = Schema.Struct({
   date: TemporalSchema.PlainDateString,

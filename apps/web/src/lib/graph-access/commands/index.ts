@@ -9,3 +9,5 @@ export * as Rename from "./rename";
 export * as Sync from "./sync";
 
 export * as Unlock from "./unlock";
+
+export * as GraphAccessCommands from "./index";

@@ -1,4 +1,4 @@
-import * as S from "effect/Schema";
+import { Schema as S } from "effect";
 
 export const Schema = S.Int.check(S.isBetween({ minimum: 1, maximum: 65_535 }));
 

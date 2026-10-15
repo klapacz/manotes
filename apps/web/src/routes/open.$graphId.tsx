@@ -1,9 +1,9 @@
 import { createFileRoute, redirect } from "@tanstack/solid-router";
 import { Array, Effect, Option, Schema } from "effect";
 import { GraphDestination } from "../lib/graph-access/graph-runtime/destination";
-import * as LocalRegistry from "../lib/graph-access/local-registry";
-import * as GraphAccessRuntime from "../lib/graph-access/runtime";
-import * as SessionService from "../lib/graph-access/session/service";
+import { LocalRegistry } from "../lib/graph-access/local-registry";
+import { GraphAccessRuntime } from "../lib/graph-access/runtime";
+import { SessionService } from "../lib/graph-access/session/service";
 import { RecordSearch } from "@manotes/shared/record/search";
 
 export const Route = createFileRoute("/open/$graphId")({

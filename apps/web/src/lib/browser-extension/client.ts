@@ -1,4 +1,4 @@
-import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
+import { BrowserExtension } from "@manotes/shared/browser-extension/contract";
 import { Effect, Option, pipe, Queue, Stream } from "effect";
 
 export const watchTabs = Stream.callback<BrowserExtension.TabCandidate[]>((queue) => {
@@ -24,3 +24,5 @@ export const watchTabs = Stream.callback<BrowserExtension.TabCandidate[]>((queue
     );
   });
 });
+
+export * as BrowserExtensionClient from "./client";

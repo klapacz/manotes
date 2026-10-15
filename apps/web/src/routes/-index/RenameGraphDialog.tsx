@@ -1,5 +1,5 @@
 import { useAtom } from "@effect/atom-solid";
-import * as GraphRegistryContract from "@manotes/shared/graph-registry/contract";
+import { GraphRegistryContract } from "@manotes/shared/graph-registry/contract";
 import { Schema } from "effect";
 import { createSignal, splitProps, type ValidComponent } from "solid-js";
 import { Alert, AlertDescription } from "../../components/ui/alert";
@@ -17,8 +17,8 @@ import {
 } from "../../components/ui/dialog";
 import { AppForm, useAppForm } from "../../components/ui/form";
 import { MatchAsyncResult, MatchTag } from "../../lib";
-import * as GraphAccessCommands from "../../lib/graph-access/commands";
-import * as LocalRegistry from "../../lib/graph-access/local-registry";
+import { GraphAccessCommands } from "../../lib/graph-access/commands";
+import { LocalRegistry } from "../../lib/graph-access/local-registry";
 
 const RenameGraphFormSchema = Schema.Struct({
   displayName: GraphRegistryContract.DisplayNameSchema,

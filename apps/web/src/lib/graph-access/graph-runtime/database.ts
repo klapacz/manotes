@@ -1,10 +1,10 @@
 import { Context, Effect, Layer } from "effect";
 import { SqlClient } from "effect/sql";
-import * as SqliteClient from "@manotes/sql-sqlite-wasm/sqlite-client";
-import * as DB from "@manotes/shared/db.service";
+import { SqliteWasmClient as SqliteClient } from "@manotes/sql-sqlite-wasm/sqlite-client";
+import { DB } from "@manotes/shared/db.service";
 import { SqlLive } from "../../db/sql-live";
-import * as Migrator from "../../migrator";
-import * as DBResolution from "./db-resolution";
+import { Migrator } from "../../migrator";
+import { GraphRuntimeDBResolution as DBResolution } from "./db-resolution";
 
 // TODO: use the same log level for migration and for the app
 export const layer = Effect.fnUntraced(function* (opts: { readonly localGraphId: string }) {

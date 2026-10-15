@@ -1,10 +1,10 @@
 import { Data, Effect, Layer, Context } from "effect";
 
 import { AudioMemoFiles } from "../../audio-memo/files";
-import * as OPFS from "../../opfs.service";
-import * as GraphRuntime from "../graph-runtime";
-import * as DBResolution from "../graph-runtime/db-resolution";
-import * as LocalRegistry from "../local-registry";
+import { OPFS } from "../../opfs.service";
+import { GraphRuntime } from "../graph-runtime";
+import { GraphRuntimeDBResolution as DBResolution } from "../graph-runtime/db-resolution";
+import { LocalRegistry } from "../local-registry";
 
 export class LockTimeout extends Data.TaggedError("GraphAccessCommandsDelete.LockTimeout")<{
   localGraphId: string;
@@ -49,3 +49,5 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.De
     Layer.provide(GraphRuntime.Manager.Service.layer),
   );
 }
+
+export * as GraphAccessCommandsDelete from "./delete";

@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { NodeServices } from "@effect/platform-node";
-import * as SqliteClient from "@effect/sql-sqlite-node/SqliteClient";
+import { SqliteClient } from "@effect/sql-sqlite-node";
 import { Command, Flag } from "effect/cli";
 import { Console, Effect, Option, Path } from "effect";
 import { EffectDbSqliteFiles } from "./files";

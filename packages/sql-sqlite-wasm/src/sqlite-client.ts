@@ -1,29 +1,30 @@
 /**
  * Adapted from Effect's `packages/sql/sqlite-wasm/src/SqliteClient.ts`; the
- * copied revision was not recorded. Local changes add worker initialization
- * and cooperative OPFS wiring.
+ * copied revision was not recorded. Local changes add worker initialization,
+ * cooperative OPFS wiring, and a module self export.
  */
 /* eslint-disable anti-slop/no-known-value-widening, anti-slop/no-unknown-parameters, anti-slop/no-unsafe-dictionary-type, anti-slop/require-safety-comment-for-type-assertion -- Preserve the copied Effect client's dynamic worker protocol and casts. */
 
 /**
  * @since 1.0.0
  */
-import * as Reactivity from "effect/reactivity/Reactivity";
-import * as Client from "effect/sql/SqlClient";
+import { Reactivity } from "effect/reactivity";
+import { SqlClient as Client, Statement } from "effect/sql";
 import type { Connection } from "effect/sql/SqlConnection";
 import { classifySqliteError, SqlError } from "effect/sql/SqlError";
-import * as Statement from "effect/sql/Statement";
-import * as Deferred from "effect/Deferred";
-import * as Effect from "effect/Effect";
-import * as Exit from "effect/Exit";
-import * as Fiber from "effect/Fiber";
+import {
+  Deferred,
+  Effect,
+  Exit,
+  Fiber,
+  Layer,
+  Semaphore,
+  Context,
+  Scope,
+  ScopedRef,
+  Stream,
+} from "effect";
 import { identity } from "effect/Function";
-import * as Layer from "effect/Layer";
-import * as Semaphore from "effect/Semaphore";
-import * as Context from "effect/Context";
-import * as Scope from "effect/Scope";
-import * as ScopedRef from "effect/ScopedRef";
-import * as Stream from "effect/Stream";
 import type { OpfsWorkerMessage } from "./internal/opfs-worker";
 
 const ATTR_DB_SYSTEM_NAME = "db.system.name";
@@ -316,3 +317,5 @@ export const layer = (
     }),
   ).pipe(Layer.provide(Reactivity.layer));
 };
+
+export * as SqliteWasmClient from "./sqlite-client";

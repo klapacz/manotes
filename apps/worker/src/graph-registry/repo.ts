@@ -1,10 +1,10 @@
 import { nanoid } from "nanoid";
 import { Array, Effect, Layer, Context } from "effect";
 import { SqlClient } from "effect/sql";
-import type * as SqlError from "effect/sql/SqlError";
-import type * as GraphEncryption from "@manotes/shared/graph-encryption";
+import type { SqlError } from "effect/sql";
+import type { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { DisplayNameTakenError } from "@manotes/shared/graph-registry/contract";
-import * as Schema from "./schema.ts";
+import { GraphRegistrySchema as Schema } from "./schema.ts";
 import { EffectOption } from "@manotes/shared/effect/effect-option";
 
 const GRAPH_ID_LENGTH = 12;
@@ -130,3 +130,5 @@ function isDisplayNameUniquenessSqlError(error: unknown): boolean {
 
   return message.includes("UNIQUE constraint failed") && message.includes("graphs.displayName");
 }
+
+export * as GraphRegistryRepo from "./repo.ts";

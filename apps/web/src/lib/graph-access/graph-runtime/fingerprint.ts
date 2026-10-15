@@ -1,5 +1,5 @@
 import { Data, Effect, Match, Schema, Types } from "effect";
-import * as Resolution from "../resolution/service";
+import { GraphAccessResolution as Resolution } from "../resolution/service";
 
 export type Fingerprint = Data.TaggedEnum<{
   Local: {
@@ -42,3 +42,5 @@ export const create = Effect.fn("GraphRuntimeFingerprint.create")(function* (
 
   return result;
 });
+
+export * as GraphRuntimeFingerprint from "./fingerprint";

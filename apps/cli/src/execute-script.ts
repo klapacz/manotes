@@ -116,3 +116,5 @@ const decodeEditRecordArgs = Schema.decodeUnknownSync(
 const decodeCreateRecordArgs = Schema.decodeUnknownSync(
   Schema.Tuple([Schema.NullOr(RecordSchema.Id), Schema.Array(CreateEdit)]),
 );
+
+export * as ExecuteScript from "./execute-script";

@@ -1,7 +1,7 @@
 import { Query } from "effect-qb";
 import { DateTime, Effect, Layer, Option, Context, Stream, Array } from "effect";
-import * as DB from "./db.service";
-import * as Tables from "./db.tables";
+import { DB } from "./db.service";
+import { Tables } from "./db.tables";
 import { EffectOption } from "./effect/effect-option";
 
 const CHECKPOINT_ROW_ID = 1;

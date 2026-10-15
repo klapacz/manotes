@@ -2,13 +2,13 @@
  * Wraps local event-log reads and writes used by graph sync.
  */
 import { Array, Effect, Layer, Option, pipe, Context } from "effect";
-import * as DB from "../db.service";
-import * as EventRepo from "../event.repo";
-import * as Messages from "./contract/messages";
+import { DB } from "../db.service";
+import { EventRepo } from "../event.repo";
+import { GraphSyncMessages as Messages } from "./contract/messages";
 import { MAX_EVENTS_PER_COMMIT } from "./contract/limits";
-import * as Errors from "./machine/errors";
-import * as GraphSyncEncryption from "./encryption/service";
-import * as GraphSyncEncryptionSchema from "./encryption/schema";
+import { GraphSyncMachineErrors as Errors } from "./machine/errors";
+import { GraphSyncEncryption } from "./encryption/service";
+import { GraphSyncEncryptionSchema } from "./encryption/schema";
 import type { NonEmptyReadonlyArray } from "effect/Array";
 
 export const PUSH_BATCH_SIZE = MAX_EVENTS_PER_COMMIT;
@@ -178,3 +178,5 @@ export class Service extends Context.Service<Service>()("GraphSyncEventLogServic
     Layer.provide(GraphSyncEncryption.Service.layer),
   );
 }
+
+export * as GraphSyncEventLog from "./event-log.service";

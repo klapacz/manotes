@@ -68,3 +68,5 @@ export const ServerMessage = Schema.Union([Replay, ReplayDone, CommitAck, Commit
 export type ClientMessage = typeof ClientMessage.Type;
 
 export type ServerMessage = typeof ServerMessage.Type;
+
+export * as GraphSyncMessages from "./messages";

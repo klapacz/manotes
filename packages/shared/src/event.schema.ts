@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 import { Msgpack } from "./msgpack";
-import * as TemporalSchema from "./temporal.schema";
+import { TemporalSchema } from "./temporal.schema";
 
 export const Type = Schema.Literals(["update", "date"]);
 

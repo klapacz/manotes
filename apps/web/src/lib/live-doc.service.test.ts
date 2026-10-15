@@ -3,7 +3,7 @@ import { Deferred, Effect, Exit, Option, Scope, Stream, SubscriptionRef } from "
 import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vite-plus/test";
 import * as Y from "yjs";
-import * as EditorSyncService from "./editor-sync.service";
+import { EditorSyncService } from "./editor-sync.service";
 import { LiveDoc } from "./live-doc.service";
 
 const recordId = RecordSchema.Id.make("record_id:shared");

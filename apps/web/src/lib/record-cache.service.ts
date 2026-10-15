@@ -1,6 +1,6 @@
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { Cache, Context, Effect, Layer, Option, RcMap, Stream } from "effect";
-import * as RecordRepo from "@manotes/shared/record.repo";
+import { RecordRepo } from "@manotes/shared/record.repo";
 
 export type RecordPreview = RecordRepo.Preview;
 
@@ -74,3 +74,5 @@ export class Service extends Context.Service<Service>()("RecordCache.Service", {
     Layer.provide(RecordRepo.Service.layer),
   );
 }
+
+export * as RecordCache from "./record-cache.service";

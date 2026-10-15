@@ -2,10 +2,10 @@
  * Handles each input for each graph sync machine state.
  */
 import { Effect, Match, Types, pipe } from "effect";
-import * as Model from "./model";
-import * as Commands from "./commands";
-import * as Errors from "./errors";
-import * as Transition from "./transition";
+import { GraphSyncModel as Model } from "./model";
+import { GraphSyncMachineCommands as Commands } from "./commands";
+import { GraphSyncMachineErrors as Errors } from "./errors";
+import { GraphSyncMachineTransition as Transition } from "./transition";
 
 /**
  * Handles the initial catch-up phase.
@@ -170,3 +170,5 @@ export function committing(state: Types.ExtractTag<Model.State, "Committing">, i
     }),
   );
 }
+
+export * as GraphSyncMachineStateHandlers from "./state-handlers";

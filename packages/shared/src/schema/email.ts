@@ -5,3 +5,5 @@ export const isEmail = Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, {
 });
 
 export const Email = Schema.Trim.pipe(Schema.check(isEmail));
+
+export * as EmailSchema from "./email";

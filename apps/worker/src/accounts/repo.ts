@@ -2,7 +2,7 @@ import { DateTime, Effect, Layer, Schema as S, Context } from "effect";
 import { EffectOption } from "@manotes/shared/effect/effect-option";
 import { nanoid } from "nanoid";
 import { SqlClient, SqlSchema } from "effect/sql";
-import * as Schema from "./schema.ts";
+import { AccountsSchema as Schema } from "./schema.ts";
 
 const ACCOUNT_ID_LENGTH = 12;
 
@@ -113,3 +113,5 @@ export const migrate = Effect.gen(function* () {
     ALTER TABLE accounts ADD COLUMN status TEXT NOT NULL DEFAULT 'WAITLIST'
   `.pipe(Effect.ignore);
 });
+
+export * as AccountsRepo from "./repo.ts";

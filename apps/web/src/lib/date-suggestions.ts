@@ -3,7 +3,7 @@
 import { Stream } from "effect";
 import * as chrono from "chrono-node";
 import { Temporal } from "temporal-polyfill";
-import * as TemporalUtils from "@manotes/shared/temporal/utils";
+import { TemporalUtils } from "@manotes/shared/temporal/utils";
 import { QueryEngine } from "./query-engine";
 
 const DISPLAY_FORMAT = new Intl.DateTimeFormat("en-US", {

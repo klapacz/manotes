@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { DevEnv } from "@manotes/shared/dev-env";
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
+import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
 import { Config, Console, Effect, Layer, Option, Redacted, Schedule, Schema } from "effect";
 import {
@@ -17,8 +17,8 @@ import { DevEntry } from "../../../scripts/dev-entry.ts";
 import { CliConfig } from "../src/cli.config";
 import { CliDB } from "../src/cli.db";
 import { CliSync } from "../src/cli.sync";
-import * as DB from "@manotes/shared/db.service";
-import * as EventRepo from "@manotes/shared/event.repo";
+import { DB } from "@manotes/shared/db.service";
+import { EventRepo } from "@manotes/shared/event.repo";
 import { bundle } from "./generate-demo-graph";
 
 const seed = Effect.gen(function* () {

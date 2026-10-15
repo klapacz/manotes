@@ -1,7 +1,7 @@
 import { constants } from "node:fs";
 import path from "node:path";
 import { Context, Effect, FileSystem, Layer, Schema } from "effect";
-import * as DB from "@manotes/shared/db.service";
+import { DB } from "@manotes/shared/db.service";
 import { CliPaths } from "./cli.paths";
 
 export const GraphKey = Schema.RedactedFromValue(

@@ -8,11 +8,11 @@ import { Button, buttonVariants } from "../components/ui/button";
 import { CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { List, ListItem } from "../components/ui/list";
 import { MatchAsyncResult, MatchTag, createAtomStore } from "../lib";
-import * as GraphAccessCommands from "../lib/graph-access/commands";
-import * as GraphAccessRuntime from "../lib/graph-access/runtime";
-import * as LocalRegistry from "../lib/graph-access/local-registry";
-import * as RemoteRegistryService from "../lib/graph-access/remote-registry/service";
-import * as SessionAtom from "../lib/graph-access/session/atom";
+import { GraphAccessCommands } from "../lib/graph-access/commands";
+import { GraphAccessRuntime } from "../lib/graph-access/runtime";
+import { LocalRegistry } from "../lib/graph-access/local-registry";
+import { RemoteRegistryService } from "../lib/graph-access/remote-registry/service";
+import { SessionAtom } from "../lib/graph-access/session/atom";
 import { GraphListItem } from "./-index/GraphListItem";
 import { WaitlistDialog } from "./-index/waitlist-dialog";
 

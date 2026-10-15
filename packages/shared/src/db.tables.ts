@@ -5,10 +5,10 @@ import type { ColumnDefinition } from "effect-qb/internal/column-state";
 import { ddlType } from "effect-qb/internal/column";
 // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- Upstream JSON type marker; alias describes its use here.
 import type { StoredShape as StoredJson } from "effect-qb/internal/json/storage";
-import * as EventSchema from "./event.schema";
+import { EventSchema } from "./event.schema";
 import { AttrsSchema } from "./attrs.schema";
 import { RecordSchema } from "./record.schema";
-import * as TemporalSchema from "./temporal.schema";
+import { TemporalSchema } from "./temporal.schema";
 
 export const records = Table.make("records", {
   id: Column.text().pipe(Column.schema(RecordSchema.Id), Column.primaryKey),

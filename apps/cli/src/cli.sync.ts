@@ -1,11 +1,11 @@
 import { Effect, Layer, Predicate, Option, Redacted, Stream, SubscriptionRef } from "effect";
 import { NodeWS } from "@effect/platform-node/NodeSocket";
-import * as Socket from "effect/socket/Socket";
-import * as GraphSync from "@manotes/shared/graph-sync/service";
-import * as GraphSyncContext from "@manotes/shared/graph-sync/context";
-import * as GraphSyncEncryption from "@manotes/shared/graph-sync/encryption/service";
-import * as GraphSyncEventLog from "@manotes/shared/graph-sync/event-log.service";
-import * as GraphSyncStatus from "@manotes/shared/graph-sync/status";
+import { Socket } from "effect/socket";
+import { GraphSync } from "@manotes/shared/graph-sync/service";
+import { GraphSyncContext } from "@manotes/shared/graph-sync/context";
+import { GraphSyncEncryption } from "@manotes/shared/graph-sync/encryption/service";
+import { GraphSyncEventLog } from "@manotes/shared/graph-sync/event-log.service";
+import { GraphSyncStatus } from "@manotes/shared/graph-sync/status";
 import { SyncStatusCloud } from "@manotes/shared/graph-sync/status.schema";
 import { CliConfig } from "./cli.config";
 

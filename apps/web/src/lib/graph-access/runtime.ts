@@ -1,15 +1,15 @@
 import { Layer, ManagedRuntime } from "effect";
 import { Atom, AtomRegistry } from "effect/reactivity";
-import * as CommandsDelete from "./commands/delete";
-import * as CommandsProvision from "./commands/provision";
-import * as CommandsRename from "./commands/rename";
-import * as CommandsSync from "./commands/sync";
-import * as CommandsUnlock from "./commands/unlock";
-import * as KeyStoreService from "./key-store/service";
-import * as SessionService from "./session/service";
-import * as GraphRuntime from "./graph-runtime";
-import * as LocalRegistryLayer from "./local-registry/layer";
-import * as RemoteRegistryService from "./remote-registry/service";
+import { GraphAccessCommandsDelete as CommandsDelete } from "./commands/delete";
+import { GraphAccessCommandsProvision as CommandsProvision } from "./commands/provision";
+import { GraphAccessCommandsRename as CommandsRename } from "./commands/rename";
+import { GraphAccessCommandsSync as CommandsSync } from "./commands/sync";
+import { GraphAccessCommandsUnlock as CommandsUnlock } from "./commands/unlock";
+import { KeyStore as KeyStoreService } from "./key-store/service";
+import { SessionService } from "./session/service";
+import { GraphRuntime } from "./graph-runtime";
+import { GraphAccessLocalRegistryLayer as LocalRegistryLayer } from "./local-registry/layer";
+import { RemoteRegistryService } from "./remote-registry/service";
 
 export const registry = AtomRegistry.make({ defaultIdleTTL: 400 });
 

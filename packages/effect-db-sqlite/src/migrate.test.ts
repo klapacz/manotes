@@ -1,6 +1,6 @@
 import { Effect, Exit } from "effect";
 import { SqlClient } from "effect/sql";
-import * as SqliteClient from "@effect/sql-sqlite-node/SqliteClient";
+import { SqliteClient } from "@effect/sql-sqlite-node";
 import { describe, expect, it } from "vite-plus/test";
 import { EffectDbSqliteMigrate } from "./migrate";
 import { EffectDbSqliteScript } from "./script";

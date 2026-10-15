@@ -1,6 +1,6 @@
 import { RecordSchema } from "../record.schema";
 import { Schema } from "effect";
-import * as EventSchema from "../event.schema";
+import { EventSchema } from "../event.schema";
 
 export const Record = Schema.Struct({
   recordId: RecordSchema.Id,
@@ -32,3 +32,5 @@ export const decodeBundle = Schema.decodeUnknownEffect(Bundle);
 export const encodeFile = Schema.encodeEffect(File);
 
 export const decodeFile = Schema.decodeUnknownEffect(File);
+
+export * as GraphBackupSchema from "./schema";

@@ -3,11 +3,11 @@
  */
 import { Effect, Match, Queue, Stream, SubscriptionRef } from "effect";
 import { encodeClientMessage } from "../contract/codec";
-import * as Status from "../status";
-import * as MachineContext from "./context";
-import * as Model from "./model";
-import * as Errors from "./errors";
-import * as StateHandlers from "./state-handlers";
+import { GraphSyncStatus as Status } from "../status";
+import { MachineContext } from "./context";
+import { GraphSyncModel as Model } from "./model";
+import { GraphSyncMachineErrors as Errors } from "./errors";
+import { GraphSyncMachineStateHandlers as StateHandlers } from "./state-handlers";
 import { SyncStatusCloud } from "../status.schema";
 
 export const run = Effect.fn("GraphSyncMachineRunner.run")(function* ({
@@ -52,3 +52,5 @@ function step(currentState: Model.State, input: Model.Input) {
     }),
   );
 }
+
+export * as GraphSyncMachineRunner from "./runner";

@@ -10,7 +10,7 @@ import { EmailService } from "./auth/email.ts";
 import { OtpService } from "./auth/otp.ts";
 import { SessionKvService } from "./auth/session-kv.ts";
 import { DevSeed } from "./dev-seed.ts";
-import * as Routes from "./routes.ts";
+import { Routes } from "./routes.ts";
 
 const layerCloudflareBindings = Layer.mergeAll(
   Cloudflare.KV.ReadWriteNamespaceBinding,

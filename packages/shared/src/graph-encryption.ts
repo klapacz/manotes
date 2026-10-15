@@ -205,3 +205,5 @@ export function castArray(arrayBufferLike: Uint8Array<ArrayBufferLike>): Uint8Ar
 export function normalizePassword(password: string) {
   return textDecoder.decode(textEncoder.encode(password)).trim();
 }
+
+export * as GraphEncryption from "./graph-encryption";

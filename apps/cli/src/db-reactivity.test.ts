@@ -6,7 +6,7 @@ import { DB } from "@manotes/shared/db.service";
 import { Tables } from "@manotes/shared/db.tables";
 import { RecordFilter } from "@manotes/shared/record/filter";
 import { Effect, Exit, Layer, Stream } from "effect";
-import * as Reactivity from "effect/reactivity/Reactivity";
+import { Reactivity } from "effect/reactivity";
 import { SqlClient } from "effect/sql";
 import { Query } from "effect-qb";
 import { describe, expect, it } from "vite-plus/test";

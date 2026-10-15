@@ -1,8 +1,8 @@
-import * as SessionAuth from "@manotes/shared/session/auth";
+import { SessionAuth } from "@manotes/shared/session/auth";
 import { Effect, Layer, pipe, Result, Schema } from "effect";
 import { HttpRouter, HttpServerError, HttpServerRequest, HttpServerResponse } from "effect/http";
-import * as AuthSession from "./auth/session.ts";
-import * as SessionRoutes from "./session/routes.ts";
+import { AuthSession } from "./auth/session.ts";
+import { SessionRoutes } from "./session/routes.ts";
 import GraphRegistryDurableObject from "./graph-registry/durable-object.ts";
 import GraphSyncDurableObject from "./graph-sync/durable-object.ts";
 
@@ -88,3 +88,5 @@ export const layer = Layer.mergeAll(
   SessionRoutes.layer,
   protectedRoutesLayer,
 );
+
+export * as Routes from "./routes.ts";

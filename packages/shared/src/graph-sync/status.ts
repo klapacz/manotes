@@ -4,3 +4,5 @@ import type { SyncStatusCloud } from "./status.schema";
 export class Ref extends Context.Service<Ref, SubscriptionRef.SubscriptionRef<SyncStatusCloud>>()(
   "GraphSyncStatus.Ref",
 ) {}
+
+export * as GraphSyncStatus from "./status";

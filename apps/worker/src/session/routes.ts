@@ -1,10 +1,10 @@
 import { Effect, Layer } from "effect";
 import { HttpApiBuilder, HttpApiError } from "effect/http-api";
-import * as SessionApi from "@manotes/shared/session/api";
-import * as SessionAuth from "@manotes/shared/session/auth";
-import * as Accounts from "../accounts/durable-object.ts";
+import { SessionApiContract as SessionApi } from "@manotes/shared/session/api";
+import { SessionAuth } from "@manotes/shared/session/auth";
+import { Accounts } from "../accounts/durable-object.ts";
 import { AuthService } from "../auth/auth.ts";
-import * as AuthSession from "../auth/session.ts";
+import { AuthSession } from "../auth/session.ts";
 import { SessionKvService } from "../auth/session-kv.ts";
 import AccountsDurableObject from "../accounts/durable-object.ts";
 
@@ -90,3 +90,5 @@ export const layer = HttpApiBuilder.layer(SessionApi.SessionApi).pipe(
     }),
   ),
 );
+
+export * as SessionRoutes from "./routes.ts";

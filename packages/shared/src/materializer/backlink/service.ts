@@ -2,7 +2,7 @@ import { RecordSchema } from "../../record.schema";
 import { Effect, Layer, Context } from "effect";
 import type { UnknownNodeJSON } from "../../node-json";
 import { collectBacklinkTargetIds } from "./target";
-import * as Repo from "./repo";
+import { BacklinkRepo as Repo } from "./repo";
 
 export class Service extends Context.Service<Service>()("Materializer.Backlink.Service", {
   make: Effect.gen(function* () {
@@ -21,3 +21,5 @@ export class Service extends Context.Service<Service>()("Materializer.Backlink.S
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(Repo.Service.layer));
 }
+
+export * as BacklinkService from "./service";

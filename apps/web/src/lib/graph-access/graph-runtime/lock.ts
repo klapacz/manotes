@@ -21,3 +21,5 @@ export const acquireExclusive = Effect.fn("GraphAccessGraphRuntimeLock.acquireEx
 );
 
 export const runtimeLockName = (localGraphId: string) => `graph-runtime-${localGraphId}`;
+
+export * as GraphRuntimeLock from "./lock";

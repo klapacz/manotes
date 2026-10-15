@@ -4,7 +4,7 @@ import { Option, Stream } from "effect";
 import { Show, type ComponentProps } from "solid-js";
 import Editor from "../../editor";
 import { MatchTag, RecordCache, bindRt, createAtomResultStore, createSyncedAtom } from "../../lib";
-import * as RecordLink from "../../lib/record/link";
+import { RecordLink } from "../../lib/record/link";
 import { RecordCreate } from "./record-create";
 import { PaneCtx } from "../../lib/record/pane.ctx";
 import {

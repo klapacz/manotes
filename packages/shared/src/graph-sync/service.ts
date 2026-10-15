@@ -12,10 +12,10 @@ import {
   SubscriptionRef,
 } from "effect";
 import { Socket } from "effect/socket";
-import * as EventRepo from "../event.repo";
-import * as GraphSyncEventLog from "./event-log.service";
-import * as Session from "./machine/session";
-import * as Status from "./status";
+import { EventRepo } from "../event.repo";
+import { GraphSyncEventLog } from "./event-log.service";
+import { Session } from "./machine/session";
+import { GraphSyncStatus as Status } from "./status";
 import { SyncStatusCloud } from "./status.schema";
 
 export class Service extends Context.Service<Service>()("GraphSyncService", {
@@ -69,3 +69,5 @@ export class Service extends Context.Service<Service>()("GraphSyncService", {
     Layer.provide(GraphSyncEventLog.Service.layer),
   );
 }
+
+export * as GraphSync from "./service";

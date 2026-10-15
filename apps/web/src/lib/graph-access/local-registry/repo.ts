@@ -1,8 +1,8 @@
 import { SqlClient, SqlSchema } from "effect/sql";
 import { Array, Effect, Option, Stream, Schema as S } from "effect";
-import * as Schema from "./schema";
-import * as Errors from "./errors";
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
+import { LocalRegistrySchema as Schema } from "./schema";
+import { LocalRegistryErrors as Errors } from "./errors";
+import { GraphEncryption } from "@manotes/shared/graph-encryption";
 
 const GRAPH_COLUMNS =
   "localGraphId, displayName, status, mode, graphId, accountId, graphKeyEnvelope";
@@ -305,3 +305,5 @@ export const reactiveListGraph = Effect.fn("LocalRegistryRepo.reactiveListGraph"
 
   return sql.reactive(["graphs"], query).pipe(Stream.mapEffect((rows) => Schema.decodeArray(rows)));
 }, Stream.unwrap);
+
+export * as LocalRegistryRepo from "./repo";

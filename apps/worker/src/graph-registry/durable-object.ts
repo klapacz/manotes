@@ -4,7 +4,7 @@ import { DisplayNameTakenError, GraphRegistryRpc } from "@manotes/shared/graph-r
 import { Effect, Layer, Option, Predicate, Scope, Context } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { RpcSerialization, RpcServer } from "effect/rpc";
-import * as Repo from "./repo.ts";
+import { GraphRegistryRepo as Repo } from "./repo.ts";
 
 // ---------------------------------------------------------------------------
 // RPC HttpApp tag

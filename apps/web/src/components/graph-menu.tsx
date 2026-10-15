@@ -2,13 +2,13 @@ import type { DropdownMenuTriggerProps } from "@kobalte/core/dropdown-menu";
 import { Effect, Exit } from "effect";
 import { Show } from "solid-js";
 import { toast } from "somoto";
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
+import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { bindRt } from "../lib";
 import { useGraph } from "../lib/graph-access/graph-runtime/context";
-import * as KeyStoreService from "../lib/graph-access/key-store/service";
-import * as LocalRegistry from "../lib/graph-access/local-registry";
-import * as GraphBackupFile from "../lib/graph-backup/file";
-import * as GraphBackupService from "../lib/graph-backup/service";
+import { KeyStore as KeyStoreService } from "../lib/graph-access/key-store/service";
+import { LocalRegistry } from "../lib/graph-access/local-registry";
+import { GraphBackupFile } from "../lib/graph-backup/file";
+import { GraphBackupService } from "../lib/graph-backup/service";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { ChevronLeftIcon, ChevronsUpDownIcon, DownloadIcon, LockIcon, TerminalIcon } from "./icons";
-import * as GraphAccessRuntime from "../lib/graph-access/runtime";
+import { GraphAccessRuntime } from "../lib/graph-access/runtime";
 import { useAtom } from "@effect/atom-solid";
 import { Button } from "./ui/button";
 import { CliSetupDialog } from "./cli-setup-dialog";

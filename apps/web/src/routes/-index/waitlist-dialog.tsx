@@ -1,5 +1,5 @@
 import { useAtom } from "@effect/atom-solid";
-import * as EmailSchema from "@manotes/shared/schema/email";
+import { EmailSchema } from "@manotes/shared/schema/email";
 import { Schema } from "effect";
 import { Atom } from "effect/reactivity";
 import { createSignal, onMount, Show, type ValidComponent } from "solid-js";
@@ -18,8 +18,8 @@ import {
 } from "../../components/ui/dialog";
 import { AppForm, useAppForm } from "../../components/ui/form";
 import { MatchAsyncResult } from "../../lib";
-import * as GraphAccessRuntime from "../../lib/graph-access/runtime";
-import * as SessionAtom from "../../lib/graph-access/session/atom";
+import { GraphAccessRuntime } from "../../lib/graph-access/runtime";
+import { SessionAtom } from "../../lib/graph-access/session/atom";
 
 type OtpRequest = {
   readonly email: string;

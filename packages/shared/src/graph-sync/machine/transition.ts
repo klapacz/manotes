@@ -2,9 +2,9 @@
  * Builds next-state transitions after machine commands complete.
  */
 import { Effect, Match, Types } from "effect";
-import * as Messages from "../contract/messages";
-import * as Model from "./model";
-import * as Commands from "./commands";
+import { GraphSyncMessages as Messages } from "../contract/messages";
+import { GraphSyncModel as Model } from "./model";
+import { GraphSyncMachineCommands as Commands } from "./commands";
 
 export const stayInState = <TState extends Model.State>(state: TState) => Effect.as<TState>(state);
 
@@ -51,3 +51,5 @@ export const readyOrCommitPending = Effect.fn("GraphSyncMachineTransition.readyO
     return Model.State.Ready();
   },
 );
+
+export * as GraphSyncMachineTransition from "./transition";

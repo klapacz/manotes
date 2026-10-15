@@ -3,16 +3,16 @@ import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
 import { Effect, Schema } from "effect";
 import { AsyncResult, Atom } from "effect/reactivity";
 import { Show, createMemo } from "solid-js";
-import * as GraphRegistryContract from "@manotes/shared/graph-registry/contract";
+import { GraphRegistryContract } from "@manotes/shared/graph-registry/contract";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button, buttonVariants } from "../components/ui/button";
 import { AppForm, useAppForm } from "../components/ui/form";
 import { List, ListItem } from "../components/ui/list";
 import { MatchAsyncResult, MatchTag } from "../lib";
-import * as GraphAccessRuntime from "../lib/graph-access/runtime";
-import * as GraphBackupFile from "../lib/graph-backup/file";
-import * as GraphBackupService from "../lib/graph-backup/service";
-import type * as GraphBackupSchema from "@manotes/shared/graph-backup/schema";
+import { GraphAccessRuntime } from "../lib/graph-access/runtime";
+import { GraphBackupFile } from "../lib/graph-backup/file";
+import { GraphBackupService } from "../lib/graph-backup/service";
+import type { GraphBackupSchema } from "@manotes/shared/graph-backup/schema";
 
 export const Route = createFileRoute("/import")({
   component: RouteComponent,

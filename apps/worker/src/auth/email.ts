@@ -1,6 +1,6 @@
 import * as Cloudflare from "alchemy/Cloudflare";
 import { Config, Context, Effect, Layer } from "effect";
-import * as Errors from "./errors.ts";
+import { AuthErrors as Errors } from "./errors.ts";
 
 export type EmailMessage = {
   readonly to: string;

@@ -2,7 +2,7 @@ import { Effect, Schema } from "effect";
 import { nanoid } from "nanoid";
 import type { RecordRepo } from "../record.repo";
 import { RecordSchema } from "../record.schema";
-import * as TemporalSchema from "../temporal.schema";
+import { TemporalSchema } from "../temporal.schema";
 import { StreamSettings as Settings } from "./stream-settings";
 import { AttrsSchema } from "../attrs.schema";
 

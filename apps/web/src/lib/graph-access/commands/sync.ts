@@ -1,10 +1,10 @@
 import { Effect, Layer, Option, Context } from "effect";
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import * as GraphAccessErrors from "../errors";
-import * as KeyStoreService from "../key-store/service";
-import * as LocalRegistry from "../local-registry";
-import * as RemoteRegistryService from "../remote-registry/service";
-import * as SessionService from "../session/service";
+import { GraphEncryption } from "@manotes/shared/graph-encryption";
+import { GraphAccessErrors } from "../errors";
+import { KeyStore as KeyStoreService } from "../key-store/service";
+import { LocalRegistry } from "../local-registry";
+import { RemoteRegistryService } from "../remote-registry/service";
+import { SessionService } from "../session/service";
 
 export type UploadInput = {
   password: string;
@@ -111,3 +111,5 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Sy
     Layer.provide(SessionService.Service.layer),
   );
 }
+
+export * as GraphAccessCommandsSync from "./sync";

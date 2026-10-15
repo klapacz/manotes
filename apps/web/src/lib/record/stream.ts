@@ -1,7 +1,7 @@
 import type { RecordRepo } from "@manotes/shared/record.repo";
 import { Array, DateTime, Predicate } from "effect";
 import type { AudioMemoSession } from "../audio-memo/session";
-import type * as RecordSchema from "@manotes/shared/record.schema";
+import type { RecordSchema } from "@manotes/shared/record.schema";
 import { toLocalDateString } from "@manotes/shared/temporal/utils";
 import type { StreamSort } from "@manotes/shared/record/pane.schema";
 

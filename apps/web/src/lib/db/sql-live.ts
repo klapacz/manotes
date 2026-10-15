@@ -1,5 +1,5 @@
 import { Effect, Layer } from "effect";
-import * as SqliteClient from "@manotes/sql-sqlite-wasm/sqlite-client";
+import { SqliteWasmClient as SqliteClient } from "@manotes/sql-sqlite-wasm/sqlite-client";
 import { DB } from "@manotes/shared/db.service";
 
 export const SqlLive = Layer.unwrap(

@@ -1,8 +1,8 @@
 import { Effect, Option, Schema } from "effect";
 import { HttpApiClient } from "effect/http-api";
-import * as SessionApi from "@manotes/shared/session/api";
-import * as KeyStore from "../key-store/service";
-import type * as LocalRegistry from "../local-registry/schema";
+import { SessionApiContract as SessionApi } from "@manotes/shared/session/api";
+import { KeyStore } from "../key-store/service";
+import type { LocalRegistrySchema as LocalRegistry } from "../local-registry/schema";
 
 export const prepare = Effect.fn("GraphAccessCommandsCliSetup.prepare")(function* (input: {
   readonly graph: LocalRegistry.CloudRecord;

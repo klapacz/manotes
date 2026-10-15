@@ -2,7 +2,7 @@ import { Match, Stream } from "effect";
 import { Show } from "solid-js";
 import { bindRt, createAtomStore } from "../lib";
 import { sampleLatest } from "../lib/primitives/stream/sample-latest";
-import * as GraphWorkerClient from "../lib/graph-worker.client";
+import { GraphWorkerClient } from "../lib/graph-worker.client";
 import { DedicatedWorkerHealth } from "../lib/graph.worker-rpc";
 import { cx } from "../lib/cva";
 

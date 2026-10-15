@@ -1,5 +1,5 @@
 import { Data, Effect } from "effect";
-import * as Migrator from "@manotes/shared/migrator";
+import { Migrator } from "@manotes/shared/migrator";
 import { Migrations } from "../../migrations/migrations";
 
 class Error extends Data.TaggedError("Migrator.Error")<{
@@ -9,3 +9,5 @@ class Error extends Data.TaggedError("Migrator.Error")<{
 export const migrate = Migrator.migrate(Migrations.migrations).pipe(
   Effect.mapError((cause) => new Error({ cause })),
 );
+
+export * as Migrator from "./migrator";

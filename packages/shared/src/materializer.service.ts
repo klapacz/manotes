@@ -1,13 +1,13 @@
 import { RecordSchema } from "./record.schema";
 import { Array as Arr, Effect, Layer, Option, Order, pipe, Record, Context, Stream } from "effect";
 import * as Y from "yjs";
-import * as DB from "./db.service";
-import * as EventSchema from "./event.schema";
-import * as EventRepo from "./event.repo";
-import * as MaterializationCheckpointRepo from "./materialization-checkpoint.repo";
-import * as BacklinkService from "./materializer/backlink/service";
+import { DB } from "./db.service";
+import { EventSchema } from "./event.schema";
+import { EventRepo } from "./event.repo";
+import { MaterializationCheckpointRepo } from "./materialization-checkpoint.repo";
+import { BacklinkService } from "./materializer/backlink/service";
 import { MaterializerAttrs } from "./materializer/attrs.service";
-import * as RecordRepo from "./record.repo";
+import { RecordRepo } from "./record.repo";
 import { RecordDoc } from "./record/doc";
 import { extractText, findFirstH1Text, yDocToNodeJSON } from "./prosemirror-materializer.utils";
 import { toLocalDateString } from "./temporal/utils";
@@ -301,3 +301,5 @@ function buildMaterializationTargets(
     ),
   );
 }
+
+export * as Materializer from "./materializer.service";

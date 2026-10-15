@@ -4,12 +4,12 @@
 import { Socket } from "effect/socket";
 import { Effect, Predicate, Queue, Stream, SubscriptionRef } from "effect";
 import { decodeServerMessage } from "../contract/codec";
-import * as EventRepo from "../../event.repo";
-import * as GraphSyncContext from "../context";
-import * as Status from "../status";
-import * as Model from "./model";
-import * as Runner from "./runner";
-import * as Errors from "./errors";
+import { EventRepo } from "../../event.repo";
+import { GraphSyncContext } from "../context";
+import { GraphSyncStatus as Status } from "../status";
+import { GraphSyncModel as Model } from "./model";
+import { GraphSyncMachineRunner as Runner } from "./runner";
+import { GraphSyncMachineErrors as Errors } from "./errors";
 import { SyncStatusCloud } from "../status.schema";
 
 /**
@@ -89,3 +89,5 @@ const createSocket = Effect.fn("GraphSyncMachineSession.createSocket")(function*
     openTimeout: "10 seconds",
   });
 });
+
+export * as Session from "./session";

@@ -1,7 +1,7 @@
 import { Layer } from "effect";
-import * as EventRepo from "@manotes/shared/event.repo";
-import * as RecordRepo from "@manotes/shared/record.repo";
-import * as Materializer from "@manotes/shared/materializer.service";
+import { EventRepo } from "@manotes/shared/event.repo";
+import { RecordRepo } from "@manotes/shared/record.repo";
+import { Materializer } from "@manotes/shared/materializer.service";
 import { CliDB } from "./cli.db";
 
 export const layer = Layer.mergeAll(

@@ -2,7 +2,7 @@
  * Declares runtime capabilities the graph sync machine depends on.
  */
 import { Effect, Schema, Context } from "effect";
-import * as Messages from "../contract/messages";
+import { GraphSyncMessages as Messages } from "../contract/messages";
 import { Socket } from "effect/socket";
 
 export class GraphSyncMachineContext extends Context.Service<
@@ -13,3 +13,5 @@ export class GraphSyncMachineContext extends Context.Service<
     ) => Effect.Effect<void, Socket.SocketError | Schema.SchemaError, never>;
   }
 >()("GraphSyncMachineContext") {}
+
+export * as MachineContext from "./context";

@@ -3,8 +3,8 @@ import { createFileRoute, Navigate, Outlet } from "@tanstack/solid-router";
 import { GraphNavbar } from "../components/graph-navbar";
 import { MatchAsyncResult, MatchTag, createSyncedAtom } from "../lib";
 import { GraphProvider } from "../lib/graph-access/graph-runtime/context";
-import * as GraphRuntime from "../lib/graph-access/graph-runtime";
-import * as GraphAccessRuntime from "../lib/graph-access/runtime";
+import { GraphRuntime } from "../lib/graph-access/graph-runtime";
+import { GraphAccessRuntime } from "../lib/graph-access/runtime";
 import { Stream } from "effect";
 import { GraphDestination } from "../lib/graph-access/graph-runtime/destination";
 

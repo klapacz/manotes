@@ -11,3 +11,5 @@ export class LocalGraphAlreadySyncedError extends Data.TaggedError(
 )<{
   localGraphId: string;
 }> {}
+
+export * as GraphAccessErrors from "./errors";

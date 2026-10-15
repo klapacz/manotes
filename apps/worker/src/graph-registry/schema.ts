@@ -1,4 +1,4 @@
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
+import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { Schema } from "effect";
 
 export const DisplayNameSchema = Schema.Trim.pipe(Schema.check(Schema.isNonEmpty()));
@@ -19,3 +19,5 @@ export const encodeRecord = Schema.encodeEffect(Record);
 export const decodeRecord = Schema.decodeEffect(Record);
 
 export const decodeArray = Schema.decodeEffect(Schema.Array(Record));
+
+export * as GraphRegistrySchema from "./schema.ts";

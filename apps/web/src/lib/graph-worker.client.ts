@@ -1,14 +1,14 @@
 import { BrowserWorker } from "@effect/platform-browser";
 import { Data, Duration, Effect, Exit, Layer, Schedule, Scope, Context } from "effect";
 import { RpcClient, RpcClientError, RpcGroup, RpcWorker } from "effect/rpc";
-import * as DB from "@manotes/shared/db.service";
-import * as GraphSyncConfig from "@manotes/shared/graph-sync/config";
+import { DB } from "@manotes/shared/db.service";
+import { GraphSyncConfiguration as GraphSyncConfig } from "@manotes/shared/graph-sync/config";
 import {
   GraphSharedWorkerRpc,
   GraphSharedInitialMessageSchema,
   GraphDedicatedInitialMessage,
 } from "./graph.worker-rpc";
-import * as LeaderElection from "./leader-election";
+import { LeaderElection } from "./leader-election";
 
 // Type for the SharedWorker RPC client
 type GraphSharedRpcClient = RpcClient.RpcClient<

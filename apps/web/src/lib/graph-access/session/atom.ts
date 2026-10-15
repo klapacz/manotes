@@ -1,6 +1,6 @@
 import { Option, Cause, Result, identity, Predicate } from "effect";
 import { Atom, AtomHttpApi } from "effect/reactivity";
-import * as SessionApi from "@manotes/shared/session/api";
+import { SessionApiContract as SessionApi } from "@manotes/shared/session/api";
 import { AsyncResult } from "effect/reactivity";
 import { FetchHttpClient } from "effect/http";
 
@@ -40,3 +40,5 @@ export const find = Atom.map(get, (result) => {
     }),
   );
 });
+
+export * as SessionAtom from "./atom";

@@ -1,10 +1,10 @@
 import { fileURLToPath } from "node:url";
 import { Effect, Layer } from "effect";
-import * as Reactivity from "effect/reactivity/Reactivity";
+import { Reactivity } from "effect/reactivity";
 import { SqlClient } from "effect/sql";
-import * as SqliteClient from "@effect/sql-sqlite-node/SqliteClient";
-import * as DB from "@manotes/shared/db.service";
-import * as Migrator from "@manotes/shared/migrator";
+import { SqliteClient } from "@effect/sql-sqlite-node";
+import { DB } from "@manotes/shared/db.service";
+import { Migrator } from "@manotes/shared/migrator";
 import { EffectDbSqliteFiles } from "@manotes/effect-db-sqlite/files";
 
 const layerSQL = Layer.effect(

@@ -1,4 +1,4 @@
-import * as BrowserExtension from "@manotes/shared/browser-extension/contract";
+import { BrowserExtension } from "@manotes/shared/browser-extension/contract";
 import { Option, pipe } from "effect";
 import { AppUrlMatchPatterns } from "../app-url";
 

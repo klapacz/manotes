@@ -2,7 +2,7 @@ import { useAtom } from "@effect/atom-solid";
 import { Navigate } from "@tanstack/solid-router";
 import { Schema } from "effect";
 import { createSignal, splitProps, type ValidComponent } from "solid-js";
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
+import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import {
@@ -18,8 +18,8 @@ import {
 } from "../../components/ui/dialog";
 import { AppForm, useAppForm } from "../../components/ui/form";
 import { MatchAsyncResult, MatchTag } from "../../lib";
-import * as GraphAccessCommands from "../../lib/graph-access/commands";
-import * as LocalRegistry from "../../lib/graph-access/local-registry";
+import { GraphAccessCommands } from "../../lib/graph-access/commands";
+import { LocalRegistry } from "../../lib/graph-access/local-registry";
 
 const UploadGraphFormSchema = Schema.Struct({
   password: GraphEncryption.PasswordSchema,

@@ -1,6 +1,6 @@
 import { linkOptions, redirect } from "@tanstack/solid-router";
 import { Effect, Match, Types } from "effect";
-import * as GraphAccessRuntime from "../runtime";
+import { GraphAccessRuntime } from "../runtime";
 import { Service, State, type RuntimeContext } from "./manager";
 import type { GraphDestination } from "./destination";
 

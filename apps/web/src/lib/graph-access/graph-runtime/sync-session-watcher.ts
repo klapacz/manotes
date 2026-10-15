@@ -1,6 +1,6 @@
 import { Context, Effect, Layer, Schedule, Stream } from "effect";
-import * as GraphWorkerClient from "../../graph-worker.client";
-import * as SessionService from "../session/service";
+import { GraphWorkerClient } from "../../graph-worker.client";
+import { SessionService } from "../session/service";
 
 export class Service extends Context.Service<Service>()(
   "GraphAccess.GraphRuntime.SyncSessionWatcher",
@@ -36,3 +36,5 @@ export class Service extends Context.Service<Service>()(
     Layer.provide(GraphWorkerClient.Service.layer),
   );
 }
+
+export * as GraphRuntimeSyncSessionWatcher from "./sync-session-watcher";

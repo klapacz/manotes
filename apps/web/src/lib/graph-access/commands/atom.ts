@@ -1,10 +1,10 @@
 import { Effect } from "effect";
-import * as Runtime from "../runtime";
-import * as Delete from "./delete";
-import * as Provision from "./provision";
-import * as Sync from "./sync";
-import * as Unlock from "./unlock";
-import * as Rename from "./rename";
+import { GraphAccessRuntime as Runtime } from "../runtime";
+import { GraphAccessCommandsDelete as Delete } from "./delete";
+import { GraphAccessCommandsProvision as Provision } from "./provision";
+import { GraphAccessCommandsSync as Sync } from "./sync";
+import { GraphAccessCommandsUnlock as Unlock } from "./unlock";
+import { GraphAccessCommandsRename as Rename } from "./rename";
 
 export const deleteLocal = Runtime.atom.fn(
   Effect.fn("GraphAccessCommandsAtom.deleteLocal")(function* (localGraphId: string) {

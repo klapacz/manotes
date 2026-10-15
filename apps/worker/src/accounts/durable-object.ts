@@ -1,7 +1,7 @@
 import { Config, Data, Effect, Layer, Option } from "effect";
 import { Struct } from "effect";
 import { SqliteClient } from "@effect/sql-sqlite-do";
-import * as Repo from "./repo.ts";
+import { AccountsRepo as Repo } from "./repo.ts";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { Email } from "@manotes/shared/schema/email";
 
@@ -95,3 +95,5 @@ const checkOrWaitlist = Effect.fn("AccountsDurableObject.checkOrWaitlist")(funct
 class AccountNotActiveError extends Data.TaggedError("Accounts.AccountNotActiveError")<{
   readonly email: string;
 }> {}
+
+export * as Accounts from "./durable-object.ts";

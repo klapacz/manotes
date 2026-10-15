@@ -14,3 +14,5 @@ export const GraphSyncConfigSchema = Schema.Union([
 export type GraphSyncConfig = Schema.Schema.Type<typeof GraphSyncConfigSchema>;
 
 export class Config extends Context.Service<Config, GraphSyncConfig>()("GraphSync.Config") {}
+
+export * as GraphSyncConfiguration from "./config";

@@ -7,3 +7,5 @@ export * as Errors from "./errors";
 export * as Labels from "./labels";
 
 export * as Schema from "./schema";
+
+export * as LocalRegistry from "./index";

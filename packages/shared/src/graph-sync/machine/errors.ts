@@ -2,8 +2,8 @@
  * Defines domain errors raised while running the graph sync machine.
  */
 import { Data, Schema } from "effect";
-import * as Messages from "../contract/messages";
-import * as Model from "./model";
+import { GraphSyncMessages as Messages } from "../contract/messages";
+import { GraphSyncModel as Model } from "./model";
 import type { Socket } from "effect/socket";
 
 export class LastCommitSeqMismatchError extends Data.TaggedError(
@@ -68,3 +68,5 @@ export class SocketClosedError extends Data.TaggedError("GraphSyncMachineSocketC
 }
 
 export type RunnerQueueErrors = Socket.SocketError | Schema.SchemaError | SocketClosedError;
+
+export * as GraphSyncMachineErrors from "./errors";

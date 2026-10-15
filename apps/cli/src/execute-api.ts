@@ -4,19 +4,19 @@ import { Array, DateTime, Effect, FileSystem, flow, Option, Schema, Stdio, Strea
 import { nanoid } from "nanoid";
 import * as Y from "yjs";
 import { initProseMirrorDoc, updateYFragment } from "y-prosemirror";
-import * as DB from "@manotes/shared/db.service";
-import * as EventRepo from "@manotes/shared/event.repo";
-import * as EventSchema from "@manotes/shared/event.schema";
+import { DB } from "@manotes/shared/db.service";
+import { EventRepo } from "@manotes/shared/event.repo";
+import { EventSchema } from "@manotes/shared/event.schema";
 import { PlainDateString } from "@manotes/shared/temporal.schema";
 import { toLocalDateString } from "@manotes/shared/temporal/utils";
-import * as Materializer from "@manotes/shared/materializer.service";
-import * as RecordRepo from "@manotes/shared/record.repo";
+import { Materializer } from "@manotes/shared/materializer.service";
+import { RecordRepo } from "@manotes/shared/record.repo";
 import { RECORD_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
 import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
 import { CliPaths } from "./cli.paths";
 import { EditDocument } from "./edit-document";
 import { BacklinkLabels } from "./backlink-labels";
-import * as ExecuteScript from "./execute-script";
+import { ExecuteScript } from "./execute-script";
 
 export type Edit = EditDocument.Edit | { readonly kind: "date"; readonly date: string };
 

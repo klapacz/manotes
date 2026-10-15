@@ -1,7 +1,7 @@
 import { RegistryContext } from "@effect/atom-solid";
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/solid-router";
 import { TanStackRouterDevtools } from "@tanstack/solid-router-devtools";
-import * as GraphAccessRuntime from "../lib/graph-access/runtime";
+import { GraphAccessRuntime } from "../lib/graph-access/runtime";
 
 import styleCss from "../styles.css?url";
 

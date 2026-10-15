@@ -1,7 +1,7 @@
 import path from "node:path";
 import { DateTime, Effect, FileSystem } from "effect";
 import { RECORD_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
-import * as RecordRepo from "@manotes/shared/record.repo";
+import { RecordRepo } from "@manotes/shared/record.repo";
 import { CliPaths } from "./cli.paths";
 import { MdSerialize } from "@manotes/shared/prosemirror/md/serialize";
 import { BacklinkLabels } from "./backlink-labels";

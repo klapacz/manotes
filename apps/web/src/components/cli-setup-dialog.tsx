@@ -5,8 +5,8 @@ import { Atom } from "effect/reactivity";
 import { splitProps, type ValidComponent } from "solid-js";
 import { MatchAsyncResult } from "../lib";
 import { CliSetup } from "../lib/graph-access/commands/cli-setup";
-import type * as LocalRegistry from "../lib/graph-access/local-registry/schema";
-import * as GraphAccessRuntime from "../lib/graph-access/runtime";
+import type { LocalRegistrySchema as LocalRegistry } from "../lib/graph-access/local-registry/schema";
+import { GraphAccessRuntime } from "../lib/graph-access/runtime";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
 import {

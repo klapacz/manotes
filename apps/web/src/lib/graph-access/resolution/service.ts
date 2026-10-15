@@ -1,8 +1,8 @@
 import { Data, Effect, Option, Result, Stream, Types } from "effect";
-import * as KeyStoreService from "../key-store/service";
-import * as LocalRegistry from "../local-registry";
-import * as SessionService from "../session/service";
-import * as SessionApi from "@manotes/shared/session/api";
+import { KeyStore as KeyStoreService } from "../key-store/service";
+import { LocalRegistry } from "../local-registry";
+import { SessionService } from "../session/service";
+import { SessionApiContract as SessionApi } from "@manotes/shared/session/api";
 import type { SchemaError } from "effect/Schema";
 import type { SqlError } from "effect/sql/SqlError";
 
@@ -101,3 +101,5 @@ const resolveWithoutKeyLookup = (
 
   return Result.fail(record);
 };
+
+export * as GraphAccessResolution from "./service";

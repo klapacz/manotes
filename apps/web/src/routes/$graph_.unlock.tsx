@@ -4,10 +4,10 @@ import { Match, Schema } from "effect";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { AppForm, useAppForm } from "../components/ui/form";
 import { MatchAsyncResult, MatchTag, createSyncedAtom } from "../lib";
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
-import * as GraphAccessCommands from "../lib/graph-access/commands";
-import * as Resolution from "../lib/graph-access/resolution/service";
-import * as GraphAccessRuntime from "../lib/graph-access/runtime";
+import { GraphEncryption } from "@manotes/shared/graph-encryption";
+import { GraphAccessCommands } from "../lib/graph-access/commands";
+import { GraphAccessResolution as Resolution } from "../lib/graph-access/resolution/service";
+import { GraphAccessRuntime } from "../lib/graph-access/runtime";
 import { GraphDestination } from "../lib/graph-access/graph-runtime/destination";
 
 const UnlockGraphFormSchema = Schema.Struct({

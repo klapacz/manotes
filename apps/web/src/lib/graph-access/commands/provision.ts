@@ -1,12 +1,12 @@
 import { Effect, Layer, Context } from "effect";
 import { nanoid } from "nanoid";
-import * as GraphEncryption from "@manotes/shared/graph-encryption";
+import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { type Graph } from "@manotes/shared/graph-registry/contract";
-import * as KeyStoreService from "../key-store/service";
-import * as LocalRegistry from "../local-registry";
-import * as RemoteRegistryService from "../remote-registry/service";
-import * as SessionService from "../session/service";
-import type * as BackupSchema from "@manotes/shared/graph-backup/schema";
+import { KeyStore as KeyStoreService } from "../key-store/service";
+import { LocalRegistry } from "../local-registry";
+import { RemoteRegistryService } from "../remote-registry/service";
+import { SessionService } from "../session/service";
+import type { GraphBackupSchema as BackupSchema } from "@manotes/shared/graph-backup/schema";
 import { GraphInitialize } from "../graph-runtime/initialize";
 
 export type CreateLocalInput = {
@@ -120,3 +120,5 @@ const makeLocalRecord = ({ displayName }: CreateLocalInput): LocalRegistry.Schem
 });
 
 const LOCAL_GRAPH_ID_LENGTH = 6;
+
+export * as GraphAccessCommandsProvision from "./provision";

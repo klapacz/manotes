@@ -20,3 +20,5 @@ export const PlainDateString = Schema.String.pipe(
     }),
   ),
 );
+
+export * as TemporalSchema from "./temporal.schema";

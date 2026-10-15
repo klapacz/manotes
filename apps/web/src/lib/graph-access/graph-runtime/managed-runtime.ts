@@ -48,3 +48,5 @@ export const createScoped = Effect.fn("GraphAccessGraphRuntimeManagedRuntime.cre
     return runtime;
   },
 );
+
+export * as GraphRuntimeManagedRuntime from "./managed-runtime";

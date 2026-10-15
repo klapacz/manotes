@@ -1,5 +1,5 @@
 import { Effect, Layer, RcMap, Context, Stream } from "effect";
-import * as RecordRepo from "@manotes/shared/record.repo";
+import { RecordRepo } from "@manotes/shared/record.repo";
 
 const ENTRY_IDLE_TTL = "5 seconds";
 
@@ -56,3 +56,5 @@ function cacheKey(query: RecordRepo.StreamListQuery): RecordRepo.StreamListQuery
     props: query.props && { ...query.props },
   };
 }
+
+export * as RecordStreamCache from "./record-stream-cache.service";

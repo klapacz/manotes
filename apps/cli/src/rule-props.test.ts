@@ -3,7 +3,7 @@ import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { DB } from "@manotes/shared/db.service";
 import { EventRepo } from "@manotes/shared/event.repo";
-import * as Materializer from "@manotes/shared/materializer.service";
+import { Materializer } from "@manotes/shared/materializer.service";
 import { RecordRepo } from "@manotes/shared/record.repo";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { StreamFilter } from "@manotes/shared/record/stream-filter";
@@ -21,7 +21,7 @@ import {
   SubscriptionRef,
   type Scope,
 } from "effect";
-import * as Reactivity from "effect/reactivity/Reactivity";
+import { Reactivity } from "effect/reactivity";
 import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
 import { CliRuntime } from "./cli.runtime";

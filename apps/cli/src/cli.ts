@@ -1,7 +1,7 @@
 import { RecordSchema } from "@manotes/shared/record.schema";
 import path from "node:path";
 import { Console, Effect, Option, Redacted, Result, Schema, flow } from "effect";
-import * as Reactivity from "effect/reactivity/Reactivity";
+import { Reactivity } from "effect/reactivity";
 import { Argument, CliError, Command, Flag } from "effect/cli";
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { CliConfig } from "./cli.config";
@@ -9,10 +9,10 @@ import { CliPaths } from "./cli.paths";
 import { CliUrl } from "./url";
 import { CliSync } from "./cli.sync";
 import { MaterializedFiles } from "./materialized-files";
-import * as Materializer from "@manotes/shared/materializer.service";
+import { Materializer } from "@manotes/shared/materializer.service";
 import { CliRuntime } from "./cli.runtime";
 import { ExecuteApi } from "./execute-api";
-import * as EventRepo from "@manotes/shared/event.repo";
+import { EventRepo } from "@manotes/shared/event.repo";
 
 const init = Command.make(
   "init",

@@ -1,18 +1,18 @@
 import { Effect, Layer, References } from "effect";
 import { LiveDoc } from "../../live-doc.service";
-import * as EventRepo from "@manotes/shared/event.repo";
-import * as GraphSyncConfig from "@manotes/shared/graph-sync/config";
-import * as GraphWorkerClient from "../../graph-worker.client";
-import * as MaterializationCheckpointRepo from "@manotes/shared/materialization-checkpoint.repo";
-import * as MaterializedEventService from "../../materialized-event.service";
-import * as BacklinkService from "@manotes/shared/materializer/backlink/service";
-import * as RecordCache from "../../record-cache.service";
-import * as RecordStreamCache from "../../record-stream-cache.service";
-import * as RecordRepo from "@manotes/shared/record.repo";
-import * as BrowserExtensionTabRecordService from "../../browser-extension/tab-record/service";
-import * as SessionService from "../session/service";
-import * as SyncSessionWatcher from "./sync-session-watcher";
-import * as Lock from "./lock";
+import { EventRepo } from "@manotes/shared/event.repo";
+import { GraphSyncConfiguration as GraphSyncConfig } from "@manotes/shared/graph-sync/config";
+import { GraphWorkerClient } from "../../graph-worker.client";
+import { MaterializationCheckpointRepo } from "@manotes/shared/materialization-checkpoint.repo";
+import { MaterializedEventService } from "../../materialized-event.service";
+import { BacklinkService } from "@manotes/shared/materializer/backlink/service";
+import { RecordCache } from "../../record-cache.service";
+import { RecordStreamCache } from "../../record-stream-cache.service";
+import { RecordRepo } from "@manotes/shared/record.repo";
+import { BrowserExtensionTabRecordService } from "../../browser-extension/tab-record/service";
+import { SessionService } from "../session/service";
+import { GraphRuntimeSyncSessionWatcher as SyncSessionWatcher } from "./sync-session-watcher";
+import { GraphRuntimeLock as Lock } from "./lock";
 import { GraphDatabase } from "./database";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { PropDef } from "@manotes/shared/prop-def.service";
@@ -65,3 +65,5 @@ export const makeLayer = (opts: SetupOpts) => {
 };
 
 export type AppLayer = ReturnType<typeof makeLayer>;
+
+export * as GraphRuntimeLayer from "./layer";

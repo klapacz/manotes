@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import { HttpApi, HttpApiEndpoint, HttpApiGroup, HttpApiError } from "effect/http-api";
-import * as EmailSchema from "../schema/email";
-import * as SessionAuth from "./auth";
+import { EmailSchema } from "../schema/email";
+import { SessionAuth } from "./auth";
 
 export const Session = Schema.Struct({
   accountId: Schema.NonEmptyString,
@@ -86,3 +86,5 @@ export const SessionApi = HttpApi.make("SessionApi").add(
       }),
     ),
 );
+
+export * as SessionApiContract from "./api";
