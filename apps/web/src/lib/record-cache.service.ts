@@ -1,8 +1,7 @@
 import { Cache, Context, Effect, Layer, Option, RcMap, Stream } from "effect";
 import * as RecordRepo from "@manotes/shared/record.repo";
-import * as RecordSchema from "@manotes/shared/record.schema";
 
-export type RecordPreview = RecordSchema.Preview;
+export type RecordPreview = RecordRepo.Preview;
 
 const ENTRY_IDLE_TTL = "5 seconds";
 

@@ -1,8 +1,9 @@
+import type { RecordRepo } from "@manotes/shared/record.repo";
 import { useAtom } from "@effect/atom-solid";
 import { DateTime, Effect, Predicate } from "effect";
 import { nanoid } from "nanoid";
 import { toast } from "somoto";
-import { MaterializedEventService, RecordSchema, bindRt } from "../../lib";
+import { MaterializedEventService, bindRt } from "../../lib";
 import { StreamFilter } from "@manotes/shared/record/stream-filter";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
@@ -57,7 +58,7 @@ const resolvePayload = Effect.fn("ComponentsRecordRecordCreate.resolvePayload")(
 export function useCreateRecord() {
   const [, createRecord] = useAtom(CreateRecord, { mode: "promise" });
 
-  return (input: CreateInput, onCreated?: (record: RecordSchema.Record) => void) => {
+  return (input: CreateInput, onCreated?: (record: RecordRepo.Record) => void) => {
     return toast.promise(
       createRecord(input).then((record) => {
         onCreated?.(record);

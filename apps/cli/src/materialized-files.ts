@@ -2,7 +2,6 @@ import path from "node:path";
 import { DateTime, Effect, FileSystem } from "effect";
 import { RECORD_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
 import * as RecordRepo from "@manotes/shared/record.repo";
-import type { RecordSchema } from "@manotes/shared/record.schema";
 import { CliPaths } from "./cli.paths";
 import { MdSerialize } from "@manotes/shared/prosemirror/md/serialize";
 import { BacklinkLabels } from "./backlink-labels";
@@ -35,7 +34,7 @@ export const writeAll = Effect.fn("MaterializedFiles.writeAll")(function* () {
 });
 
 // Metadata belongs to the exported file, not the editable ProseMirror body.
-function formatFile(record: Pick<RecordSchema.Record, "date" | "updatedAt">, body: string): string {
+function formatFile(record: Pick<RecordRepo.Record, "date" | "updatedAt">, body: string): string {
   return `---\ndate: "${record.date}"\nmodified: "${DateTime.formatIso(record.updatedAt)}"\n---\n\n${body}`;
 }
 

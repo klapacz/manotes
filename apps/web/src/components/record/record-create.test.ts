@@ -1,3 +1,4 @@
+import type { RecordRepo } from "@manotes/shared/record.repo";
 import { Data, Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
@@ -26,7 +27,7 @@ vi.mock("@effect/atom-solid", () => ({
   useAtom: (
     bound: () => (
       input: CreateInput,
-    ) => Effect.Effect<RecordSchema.Record, unknown, MaterializedEventService.Service>,
+    ) => Effect.Effect<RecordRepo.Record, unknown, MaterializedEventService.Service>,
   ) => {
     return [
       undefined,

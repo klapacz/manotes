@@ -1,3 +1,4 @@
+import type { RecordRepo } from "@manotes/shared/record.repo";
 import { Array, DateTime, Predicate } from "effect";
 import type { AudioMemoSession } from "../audio-memo/session";
 import type * as RecordSchema from "@manotes/shared/record.schema";
@@ -6,7 +7,7 @@ import type { StreamSort } from "@manotes/shared/record/pane.schema";
 
 export type InnerItem = {
   /** Latest row data for this pinned stream item, refreshed on every SQL emission. */
-  record: RecordSchema.Meta;
+  record: RecordRepo.Meta;
   /** Separator bucket captured when the item entered the stream. */
   groupKey: string;
   /** True when the item would move or disappear after a full refresh. */
@@ -56,7 +57,7 @@ export const initialState: State = { dirty: false, items: [] };
 // `sort` is fixed for a stream instance; changing the query/sort recreates the
 // pane atom and starts from an empty state.
 export const retain = (sort: StreamSort) => {
-  return (prev: State, live: ReadonlyArray<RecordSchema.Meta>): State => {
+  return (prev: State, live: ReadonlyArray<RecordRepo.Meta>): State => {
     const liveById = new Map(Array.map(live, (record) => [record.id, record] as const));
     const prevIds = new Set(Array.map(prev.items, ({ record }) => record.id));
 
@@ -191,7 +192,7 @@ function insertDraft(
   return Array.appendAll(Array.append(before, row), after);
 }
 
-function groupKey(record: RecordSchema.Meta, sort: StreamSort): string {
+function groupKey(record: RecordRepo.Meta, sort: StreamSort): string {
   return sort === "date" ? record.date : toLocalDateString(record.updatedAt);
 }
 

@@ -1,3 +1,4 @@
+import type { RecordRepo } from "@manotes/shared/record.repo";
 import { useAtomValue } from "@effect/atom-solid";
 import { AsyncResult } from "effect/reactivity";
 import { LiveDoc } from "../../lib/live-doc.service";
@@ -105,7 +106,7 @@ function RecordingContent(props: {
 }
 
 function RecordContent(props: {
-  record: RecordSchema.Meta;
+  record: RecordRepo.Meta;
   groupKey: string;
   firstInGroup: boolean;
 }) {

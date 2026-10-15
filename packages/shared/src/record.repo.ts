@@ -10,6 +10,7 @@ import { nanoid } from "nanoid";
 import { EffectOption } from "./effect/effect-option";
 import { AttrsSchema } from "./attrs.schema";
 import type * as Sqlite from "effect-qb/sqlite";
+import type { ReadonlyRecord } from "effect/Record";
 
 type QueryError = Sqlite.Executor.SqliteExecutorError | Sqlite.Errors.SqliteReadQueryError;
 
@@ -18,8 +19,8 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
     const db = yield* DB.Service;
 
     const create = Effect.fn("RecordRepo.create")(function* (
-      values: RecordSchema.Create,
-    ): Effect.fn.Return<RecordSchema.Record, QueryError | Schema.SchemaError | DB.NotFoundError> {
+      values: Create,
+    ): Effect.fn.Return<Record, QueryError | Schema.SchemaError | DB.NotFoundError> {
       const id = yield* Schema.decodeEffect(RecordSchema.Id)(values.id ?? nanoid());
 
       return yield* db
@@ -46,8 +47,8 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
 
     const updateById = Effect.fn("RecordRepo.updateById")(function* (
       id: string,
-      values: RecordSchema.Update,
-    ): Effect.fn.Return<RecordSchema.Record, QueryError | Schema.SchemaError | DB.NotFoundError> {
+      values: Update,
+    ): Effect.fn.Return<Record, QueryError | Schema.SchemaError | DB.NotFoundError> {
       return yield* db
         .find(
           Query.update(Tables.records, values).pipe(
@@ -71,7 +72,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
 
     const findById = Effect.fn("RecordRepo.findById")(function* (
       id: string,
-    ): Effect.fn.Return<Option.Option<RecordSchema.Record>, QueryError> {
+    ): Effect.fn.Return<Option.Option<Record>, QueryError> {
       return yield* db.find(
         Query.select(recordColumns).pipe(
           Query.from(Tables.records),
@@ -156,7 +157,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
     });
 
     const findAllNotes = Effect.fn("RecordRepo.findAllNotes")(function* (): Effect.fn.Return<
-      ReadonlyArray<RecordSchema.Record>,
+      ReadonlyArray<Record>,
       QueryError
     > {
       return yield* db.query(
@@ -168,7 +169,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
     });
 
     const reactiveNotes = Effect.fn("RecordRepo.reactiveNotes")(function* (): Effect.fn.Return<
-      Stream.Stream<ReadonlyArray<RecordSchema.Record>, QueryError>
+      Stream.Stream<ReadonlyArray<Record>, QueryError>
     > {
       return yield* db.reactiveQuery(
         Query.select(recordColumns).pipe(
@@ -289,6 +290,37 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
 
+export type Record = Pick<
+  Tables.Record,
+  | "id"
+  | "title"
+  | "content"
+  | "text"
+  | "date"
+  | "materializedYUpdate"
+  | "createdAt"
+  | "updatedAt"
+  | "lastEventLocalSeq"
+>;
+
+export type MaterializedYUpdate = Record["materializedYUpdate"];
+
+export type Preview = Pick<Record, "id" | "title" | "text" | "date" | "createdAt" | "updatedAt">;
+
+/** One-shot editor boot payload — read atomically once; events drive the doc afterwards. */
+export type BootRecord = Pick<Record, "materializedYUpdate" | "lastEventLocalSeq">;
+
+/** Ordering/grouping metadata for stream lists; content stays out of list queries. */
+export type Meta = Pick<Record, "id" | "date" | "createdAt" | "updatedAt">;
+
+export type Create = Omit<Record, "id" | "materializedYUpdate" | "lastEventLocalSeq"> & {
+  readonly id?: string;
+  readonly materializedYUpdate?: MaterializedYUpdate;
+  readonly lastEventLocalSeq?: Record["lastEventLocalSeq"];
+};
+
+export type Update = Partial<Omit<Record, "id">>;
+
 export type AttrsColumns = Pick<
   Tables.Record,
   | "_tag"
@@ -303,15 +335,15 @@ export type AttrsColumns = Pick<
 >;
 
 export type RecordWithBacklinks = {
-  readonly record: RecordSchema.Record;
+  readonly record: Record;
   /** Previews of the record's outgoing [[link]] targets. */
-  readonly backlinks: ReadonlyArray<RecordSchema.Preview>;
+  readonly backlinks: ReadonlyArray<Preview>;
 };
 
 export type BootResult = {
-  readonly record: RecordSchema.BootRecord;
+  readonly record: BootRecord;
   /** Previews of the record's outgoing [[link]] targets, for priming the record cache. */
-  readonly backlinks: ReadonlyArray<RecordSchema.Preview>;
+  readonly backlinks: ReadonlyArray<Preview>;
 };
 
 export const bootResultEmpty = (): BootResult => ({
@@ -333,7 +365,7 @@ export type StreamListQuery = {
   readonly backlinksTo?: string;
   readonly linksFrom?: string;
   readonly search?: string;
-  readonly props?: Readonly<Record<RecordSchema.Id, AttrsSchema.PropVal>>;
+  readonly props?: ReadonlyRecord<RecordSchema.Id, AttrsSchema.PropVal>;
   readonly sort: "date" | "updated";
 };
 

@@ -3,7 +3,6 @@ import * as Y from "yjs";
 import { ySyncPluginKey } from "y-prosemirror";
 import * as EventRepo from "@manotes/shared/event.repo";
 import { Array, DateTime, Option } from "effect";
-import * as RecordSchema from "@manotes/shared/record.schema";
 import * as RecordRepo from "@manotes/shared/record.repo";
 import * as RecordCache from "./record-cache.service";
 import { streamDebounceNoDrop } from "./stream-debounce-no-drop";
@@ -32,7 +31,7 @@ export class Service extends Context.Service<Service>()("EditorSyncService.Servi
 
     const applyMaterializedYUpdate = Effect.fn("applyMaterializedYUpdate")(function* (
       doc: Y.Doc,
-      materializedYUpdate: RecordSchema.MaterializedYUpdate,
+      materializedYUpdate: RecordRepo.MaterializedYUpdate,
     ) {
       if (materializedYUpdate === null) return;
 

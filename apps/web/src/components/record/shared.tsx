@@ -1,3 +1,4 @@
+import type { RecordRepo } from "@manotes/shared/record.repo";
 import { getRouteApi } from "@tanstack/solid-router";
 import { Data, Exit, type Types } from "effect";
 import { useAtom } from "@effect/atom-solid";
@@ -31,7 +32,7 @@ import { QueryEngine } from "../../lib/query-engine";
 import { MenuQuery } from "../../lib/menu-query";
 import { DateSuggestions } from "../../lib/date-suggestions";
 import { splitProps, type ComponentProps, type ParentProps } from "solid-js";
-import { MatchTag, type RecordSchema } from "../../lib";
+import { MatchTag } from "../../lib";
 import { Focus } from "./focus";
 import { RecordProps } from "./record-props";
 import { RecordPropsEntries } from "./record-props.entries";
@@ -156,7 +157,7 @@ function PaneActions(props: PaneActionsProps) {
   );
 }
 
-export function RecordActions(props: { record: RecordSchema.Meta }) {
+export function RecordActions(props: { record: RecordRepo.Meta }) {
   const state = LiveDocAtom.use({ recordId: () => props.record.id });
   const doc = createMemo(() => LiveDoc.readyDoc(state()));
 

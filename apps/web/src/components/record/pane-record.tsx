@@ -1,15 +1,9 @@
+import type { RecordRepo } from "@manotes/shared/record.repo";
 import { getRouteApi } from "@tanstack/solid-router";
 import { Option, Stream } from "effect";
 import { Show, type ComponentProps } from "solid-js";
 import Editor from "../../editor";
-import {
-  MatchTag,
-  RecordCache,
-  RecordSchema,
-  bindRt,
-  createAtomResultStore,
-  createSyncedAtom,
-} from "../../lib";
+import { MatchTag, RecordCache, bindRt, createAtomResultStore, createSyncedAtom } from "../../lib";
 import * as RecordLink from "../../lib/record/link";
 import { RecordCreate } from "./record-create";
 import { PaneCtx } from "../../lib/record/pane.ctx";
@@ -96,7 +90,7 @@ export function PaneRecord(props: ComponentProps<"section">) {
   );
 }
 
-function PaneRecordInner(props: { record: RecordSchema.Meta }) {
+function PaneRecordInner(props: { record: RecordRepo.Meta }) {
   const fnode = Focus.createRecordNode(
     () => props.record.id,
     () => ({ focus: Focus.focusBrowseTarget }),

@@ -1,8 +1,8 @@
+import type { RecordRepo } from "../record.repo";
 import { DateTime } from "effect";
 import { Temporal } from "temporal-polyfill";
-import type * as RecordSchema from "../record.schema";
 
-type RecordPreview = Pick<RecordSchema.Preview, "title" | "text">;
+type RecordPreview = Pick<RecordRepo.Preview, "title" | "text">;
 
 export function label(record: RecordPreview): string {
   const label = record.title ?? record.text;
