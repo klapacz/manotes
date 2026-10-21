@@ -1,24 +1,22 @@
 import { AttrsSchema } from "../../attrs.schema";
 import { RecordSchema } from "../../record.schema";
-import { Array, Data, Equal, identity, Match, Option, pipe, Result, Schema } from "effect";
+import { Array, identity, Match, Option, Result, Schema } from "effect";
 import {
   defineCommands as defineProsekitCommands,
   defineNodeSpec,
   insertNode,
 } from "prosekit/core";
 import { PaneSchema } from "../../record/pane.schema";
+import { Filters } from "../../record/filters";
 import { StreamSettings } from "../../record/stream-settings";
 
 export const Attrs = PaneSchema.StreamSettings;
 
 export type Attrs = typeof Attrs.Type;
 
-export type Label = Data.TaggedEnum<{
-  Literal: { val: string };
-  Record: { id: RecordSchema.Id; val: (label: string) => string };
-}>;
+export type Label = Filters.Label;
 
-export const Label = Data.taggedEnum<Label>();
+export const Label = Filters.Label;
 
 export const decodeAttrs = Schema.decodeUnknownSync(Attrs);
 
@@ -69,8 +67,13 @@ export function defineCommands() {
   });
 }
 
-export function labels(settings: Attrs): readonly Label[] {
-  const [recognized, otherFilters] = Array.partition(settings.filter, expressionLabel);
+export function labels(
+  settings: Attrs,
+  registry: Filters.Registry = Filters.builtin,
+): readonly Label[] {
+  const [recognized, otherFilters] = Array.partition(settings.filter, (expression) => {
+    return expressionLabel(expression, registry);
+  });
 
   const filters = Match.value(otherFilters.length).pipe(
     Match.when(0, () => recognized),
@@ -98,68 +101,14 @@ export function renderLabels(
   labels: readonly Label[],
   recordLabel: (id: RecordSchema.Id) => string = (id) => id,
 ): string {
-  return pipe(
-    labels,
-    Array.map((label) => {
-      return Match.value(label).pipe(
-        Match.tag("Literal", ({ val }) => val),
-        Match.tag("Record", ({ id, val }) => val(recordLabel(id))),
-        Match.exhaustive,
-      );
-    }),
-    Array.join(" · "),
-  );
+  return Array.map(labels, (label) => Filters.renderLabel(label, recordLabel)).join(" · ");
 }
 
 export function expressionLabel(
   expression: AttrsSchema.FilterExpr,
+  registry: Filters.Registry = Filters.builtin,
 ): Result.Result<Label, AttrsSchema.FilterExpr> {
-  return StreamSettings.enumOptionsParent(expression).pipe(
-    Result.map((id) => {
-      return Label.Record({ id, val: (label) => `Enum options · ${label}` });
-    }),
-    Result.orElse((expression) => {
-      return Match.value(expression).pipe(
-        Match.when(
-          (value: AttrsSchema.FilterExpr): boolean => {
-            return Equal.equals(value, StreamSettings.conditions.notes);
-          },
-          () => Label.Literal({ val: "Notes" }),
-        ),
-        Match.when(
-          (value: AttrsSchema.FilterExpr): boolean => {
-            return Equal.equals(value, StreamSettings.conditions.pages);
-          },
-          () => Label.Literal({ val: "Pages" }),
-        ),
-        Match.when(
-          (value: AttrsSchema.FilterExpr): boolean => {
-            return Equal.equals(value, StreamSettings.conditions.unarchived);
-          },
-          () => Label.Literal({ val: "Unarchived" }),
-        ),
-        Match.when({ _tag: "cmp", val: ["body", "contains", Match.string] }, ({ val }) => {
-          return Label.Literal({ val: `“${val[2]}”` });
-        }),
-        Match.when({ _tag: "cmp", val: ["date", "=", Match.string] }, ({ val }) => {
-          return Label.Literal({ val: val[2] });
-        }),
-        Match.when(
-          { _tag: "cmp", val: [Schema.is(AttrsSchema.LinkTarget), "exists", true] },
-          ({ val: [link] }) => {
-            const direction = Match.value(link[1]).pipe(
-              Match.when("->", () => "Links to"),
-              Match.when("<-", () => "Links from"),
-              Match.exhaustive,
-            );
-
-            return Label.Record({ id: link[2], val: (label) => `${direction} ${label}` });
-          },
-        ),
-        Match.result,
-      );
-    }),
-  );
+  return Result.fromOption(registry.getLabel(expression), () => expression);
 }
 
 export * as StreamRefSpec from "./spec";

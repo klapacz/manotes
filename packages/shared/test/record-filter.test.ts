@@ -106,6 +106,21 @@ describe("record filter expressions", () => {
     });
   });
 
+  it("combines default equality with explicit assignments and allows contradictions", async () => {
+    await withRecords(async (executor, database) => {
+      const equals = StreamSettings.conditions.unarchived;
+      const exists = expr.cmp({ val: [["prop", BuiltinAttrs.archivedId], "exists", true] });
+      const missing = expr.cmp({ val: [["prop", BuiltinAttrs.archivedId], "exists", false] });
+      expect(await findIds(executor, [equals, exists])).toEqual([]);
+      database
+        .prepare("INSERT INTO props (recordId, path, propId, value) VALUES (?, ?, ?, ?)")
+        .run("alpha", "[]", BuiltinAttrs.archivedId, JSON.stringify(boolean({ val: false })));
+      expect(await findIds(executor, [equals, exists])).toEqual(["alpha"]);
+      expect(await findIds(executor, [equals, missing])).toEqual(["body", "prop"]);
+      expect(await findIds(executor, [exists, missing])).toEqual([]);
+    });
+  });
+
   it("prioritizes any title term while preserving AND filtering", async () => {
     await withRecords(async (executor) => {
       const filter = [

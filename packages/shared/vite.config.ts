@@ -10,7 +10,7 @@ export default defineConfig({
     },
   },
   pack: {
-    entry: ["src/**/*.ts", "!src/**/*.test.ts"],
+    entry: ["src/**/*.ts", "!src/**/*.test.ts", "!src/**/*.internal.ts"],
     dts: true,
     exports: true,
     deps: { neverBundle: true },

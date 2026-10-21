@@ -1,6 +1,6 @@
 import { Array, Match, Option, Record, Result, Schema, Struct } from "effect";
 import type { PaneSchema } from "./pane.schema";
-import { BuiltinAttrs } from "../builtin-attrs";
+import { Filters } from "./filters";
 import { AttrsSchema } from "../attrs.schema";
 
 export type Settings = PaneSchema.StreamSettings;
@@ -10,23 +10,13 @@ export type Filter = AttrsSchema.Filter;
 export type Display = Pick<Settings, "sort" | "view">;
 
 export const conditions = {
-  notes: AttrsSchema.makeTargetFilterExpr.and({
-    val: [
-      AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
-      AttrsSchema.makeTargetFilterExpr.cmp({ val: ["title", "exists", false] }),
-    ],
-  }),
-  pages: AttrsSchema.makeTargetFilterExpr.and({
-    val: [
-      AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
-      AttrsSchema.makeTargetFilterExpr.cmp({ val: ["title", "exists", true] }),
-    ],
-  }),
-  unarchived: AttrsSchema.makeTargetFilterExpr.cmp({
-    val: [["prop", BuiltinAttrs.archivedId], "=", BuiltinAttrs.archived.prop_default],
-  }),
-} as const satisfies Record<string, AttrsSchema.TargetFilterExpr>;
+  notes: Filters.namedTypes.notes.make(),
+  pages: Filters.namedTypes.pages.make(),
+  unarchived: Filters.aliases.unarchived.make(),
+};
 
+// TODO: Use these presets and enumOptionsPreset to generate PresetCommands in
+// apps/web/src/components/record/filter-picker.tsx.
 export const presets = {
   notes: { filter: [conditions.notes, conditions.unarchived], sort: "date", view: "full" },
   pages: { filter: [conditions.pages, conditions.unarchived], sort: "updated", view: "full" },
@@ -36,15 +26,7 @@ export const defaultPreset = presets.notes;
 
 export const defaultDisplay = Struct.pick(defaultPreset, ["sort", "view"]);
 
-export function enumOptions(parentId: AttrsSchema.RecordId): AttrsSchema.TargetFilterExpr {
-  return AttrsSchema.makeTargetFilterExpr.and({
-    val: [
-      AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "owned"] }),
-      AttrsSchema.makeTargetFilterExpr.cmp({ val: ["owned_type", "=", "enum_option"] }),
-      AttrsSchema.makeTargetFilterExpr.cmp({ val: ["owned_parent", "=", parentId] }),
-    ],
-  });
-}
+export const enumOptions = Filters.enumOptions.make;
 
 export function enumOptionsPreset(parentId: AttrsSchema.RecordId): Settings {
   return {
@@ -54,37 +36,7 @@ export function enumOptionsPreset(parentId: AttrsSchema.RecordId): Settings {
   };
 }
 
-export function enumOptionsParent(
-  expression: AttrsSchema.FilterExpr,
-): Result.Result<AttrsSchema.RecordId, AttrsSchema.FilterExpr> {
-  return Match.value(expression).pipe(
-    Match.tag("and", ({ val }) => {
-      // Named enum groups contain exactly these three comparisons, in order.
-      if (val.length !== 3) return Result.fail(expression);
-
-      const comparisons = Array.map(val, (child) => {
-        return Match.value(child).pipe(
-          Match.tag("cmp", ({ val }) => val),
-          Match.orElse(() => undefined),
-        );
-      });
-
-      return Match.value([comparisons[0], comparisons[1], comparisons[2]] as const).pipe(
-        Match.when(
-          [
-            ["_tag", "=", "owned"],
-            ["owned_type", "=", "enum_option"],
-            ["owned_parent", "=", Schema.is(AttrsSchema.RecordId)],
-          ],
-          (matches) => matches[2][2],
-        ),
-        Match.result,
-        Result.mapError(() => expression),
-      );
-    }),
-    Match.orElse(() => Result.fail(expression)),
-  );
-}
+export const enumOptionsParent = Filters.enumOptions.match;
 
 /** Comparisons required by every match, for creation defaults. Never chooses an OR branch. */
 export function requiredComparisons(filter: Filter): readonly AttrsSchema.FilterCmp[] {

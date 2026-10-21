@@ -70,6 +70,7 @@
     "./record.schema": "./dist/record.schema.mjs",
     "./record/doc": "./dist/record/doc.mjs",
     "./record/filter": "./dist/record/filter.mjs",
+    "./record/filters": "./dist/record/filters.mjs",
     "./record/format": "./dist/record/format.mjs",
     "./record/pane.schema": "./dist/record/pane.schema.mjs",
     "./record/search": "./dist/record/search.mjs",

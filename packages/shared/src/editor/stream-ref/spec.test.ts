@@ -1,6 +1,7 @@
-import { Predicate, Result } from "effect";
+import { Option, Predicate, Result } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { AttrsSchema } from "../../attrs.schema";
+import { Filters } from "../../record/filters";
 import { StreamSettings } from "../../record/stream-settings";
 import { StreamRefSpec } from "./spec";
 
@@ -102,6 +103,39 @@ describe("simple stream-ref labels", () => {
       "Links to Renamed · Enum options · Renamed",
     );
     expect(label([StreamSettings.enumOptions(project)])).toBe("Enum options · Project");
+  });
+
+  it("uses generated property labels and both record names at runtime", () => {
+    const status = AttrsSchema.RecordId.make("status");
+    const done = AttrsSchema.RecordId.make("done");
+
+    const registry = Filters.fromDefinitions([
+      { id: status, title: "Status", prop_type: "enum", prop_default: null },
+    ]);
+
+    const selection = Filters.property({
+      id: status,
+      title: "Status",
+      prop_type: "enum",
+      prop_default: null,
+    }).entries[0]!.select(done);
+
+    expect(Option.isSome(selection)).toBe(true);
+    const filter = Option.toArray(selection);
+
+    const labels = StreamRefSpec.labels({ ...StreamSettings.defaultDisplay, filter }, registry);
+    expect(labels.flatMap(Filters.labelRecords)).toEqual([status, done]);
+    expect(StreamRefSpec.renderLabels(labels, (id) => (id === status ? "Status" : "Done"))).toBe(
+      "Status is Done",
+    );
+    expect(
+      StreamRefSpec.renderLabels(labels, (id) => (id === status ? "Workflow" : "Complete")),
+    ).toBe("Workflow is Complete");
+    expect(
+      StreamRefSpec.renderLabels(
+        StreamRefSpec.labels({ ...StreamSettings.defaultDisplay, filter }),
+      ),
+    ).toBe("1 Filter");
   });
 
   it("preserves unrecognized expressions in the failure", () => {
