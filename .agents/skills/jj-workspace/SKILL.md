@@ -1,26 +1,27 @@
 ---
 name: jj-workspace
-description: Create a Jujutsu workspace for parallel development. Use when a user asks for /workspace or wants to set up a new jj workspace.
+description: Create shared JJ workspaces and bootstrap T3 worktrees.
 ---
 
-# JJ Workspace
+# JJ workspace
 
-## Overview
+Requires JJ 0.46+. Never run `jj git init` in a worktree.
 
-Create a new Jujutsu workspace with `jj workspace add`. This creates an isolated working copy under `.workspace/<name>`. After creating it, install dependencies with `vp install`.
+For manual creation, run from the source workspace. Choose a task name and use the requested revision, or `@`:
 
-## Workflow
+```sh
+project_root="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+workspace_name="task-name"
+workspace_path="$project_root/.workspace/$workspace_name"
+mkdir -p "$project_root/.workspace"
+jj workspace add --colocate --name "$workspace_name" -r @ "$workspace_path"
+cd "$workspace_path"
+direnv allow
+scripts/nix-develop -c sh "$project_root/scripts/setup"
+```
 
-1. Get the workspace name from the user.
-   - Must be a short, descriptive kebab-case identifier (e.g. `fix-auth`, `feature-billing`).
-2. Create the workspace.
-   - ```sh
-     mkdir -p .workspace/$workspace_name
-     jj workspace add .workspace/$workspace_name --name $workspace_name
-     cp apps/worker/.env.local apps/worker/.env.prod ".workspace/$workspace_name/apps/worker/"
-     (
-       cd .workspace/$workspace_name
-       direnv allow
-       scripts/nix-develop -c vp install
-     )
-     ```
+For app work, copy worker `.env.local` and `.env.prod` from the source when present, without printing their contents.
+
+- T3's `t3.json` hook converts fresh Git worktrees at the same path and runs setup. Delegated worktree launches can skip the hook; run the setup command above explicitly if needed. Report setup failures before editing.
+- Before implementation, confirm parent registration with `jj -R "$project_root" workspace list`, colocation, and matching Git/JJ roots.
+- Attach existing workspaces in the same T3 project with `workspaceStrategy: { type: "existing_worktree", worktreePath: workspacePath }`. Omit `branch` for detached HEAD and verify the recorded path. Changing directory in a root-bound thread does not attach it.

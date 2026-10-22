@@ -1,0 +1,13 @@
+{
+  "$schema": "https://t3.codes/schema/t3.json",
+  "defaultThreadEnvMode": "local",
+  "scripts": [
+    {
+      "name": "Setup workspace",
+      "command": "scripts/nix-develop -c sh \"$(git rev-parse --path-format=absolute --git-common-dir)/../scripts/setup\"",
+      "icon": "configure",
+      "runOnWorktreeCreate": true,
+      "async": false
+    }
+  ]
+}

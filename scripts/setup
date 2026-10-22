@@ -1,0 +1,61 @@
+#!/bin/sh
+# Used by t3.json and the jj-workspace skill to prepare the current checkout.
+# Converts fresh Git worktrees into shared JJ workspaces, then installs and builds.
+set -eu
+
+fail() {
+  printf 'Workspace setup: %s\n' "$*" >&2
+  exit 1
+}
+
+workspace_root="$(git rev-parse --show-toplevel)"
+cd "$workspace_root"
+
+git_common_dir="$(git rev-parse --path-format=absolute --git-common-dir)"
+project_root="$(dirname "$git_common_dir")"
+[ "$(jj -R "$project_root" root)" = "$project_root" ] || fail 'The main checkout must be a JJ workspace.'
+
+if [ "$workspace_root" != "$project_root" ] && [ ! -f .jj/repo ]; then
+  [ ! -e .jj ] && [ ! -L .jj ] || fail 'Refusing to replace existing .jj metadata.'
+  [ -f .git ] || fail 'Expected a linked Git worktree.'
+  worktree_status="$(git status --porcelain=v1 --untracked-files=all --ignored)"
+  [ -z "$worktree_status" ] ||
+    fail 'Conversion requires a fresh worktree without changed, untracked, or ignored files.'
+
+  start_commit="$(git rev-parse HEAD)"
+  branch="$(git symbolic-ref --quiet --short HEAD || :)"
+  workspace_name="$(basename "$workspace_root")"
+  workspace_names="$(jj -R "$project_root" workspace list -T 'name ++ "\n"')"
+  if printf '%s\n' "$workspace_names" | grep -Fx -- "$workspace_name" >/dev/null; then
+    fail "JJ workspace name already exists: $workspace_name"
+  fi
+
+  # Leave the directory before replacing it so this shell can re-enter the new checkout.
+  cd "$project_root"
+  git worktree remove "$workspace_root"
+  jj workspace add --colocate --sparse-patterns full --name "$workspace_name" -r "$start_commit" "$workspace_root"
+  cd "$workspace_root"
+  if [ -n "$branch" ]; then
+    git switch "$branch"
+  fi
+
+  [ "$(git rev-parse HEAD)" = "$start_commit" ] || fail 'Conversion changed Git HEAD.'
+  [ "$(git symbolic-ref --quiet --short HEAD || :)" = "$branch" ] || fail 'Conversion changed the Git branch.'
+  [ "$(jj -R "$project_root" workspace root --name "$workspace_name")" = "$workspace_root" ] ||
+    fail 'JJ did not register the workspace at the original path.'
+fi
+
+[ "$(jj root)" = "$workspace_root" ] || fail 'Git and JJ workspace roots differ.'
+if [ "$workspace_root" != "$project_root" ]; then
+  [ -f .jj/repo ] || fail 'Expected shared JJ repository metadata.'
+  [ "$(cd .jj && cd "$(cat repo)" && pwd -P)" = "$project_root/.jj/repo" ] ||
+    fail 'The workspace does not share the main JJ repository.'
+fi
+
+# The extension's postinstall imports shared package outputs.
+vp install --frozen-lockfile --ignore-scripts
+vp run @manotes/effect-db-sqlite#build
+vp run @manotes/shared#build
+vp run @manotes/sql-sqlite-wasm#build
+pnpm rebuild --pending
+vp install --frozen-lockfile
