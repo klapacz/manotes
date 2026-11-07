@@ -1,6 +1,6 @@
-import { RecordSchema } from "@manotes/shared/record.schema";
-import type { RecordRepo } from "@manotes/shared/record.repo";
-import { RecordFormat } from "@manotes/shared/record/format";
+import { RecordSchema } from "./record.schema";
+import type { RecordRepo } from "./record.repo";
+import { RecordFormat } from "./record/format";
 
 /** File output and literal edit matching must use the same backlink labels. */
 export function buildCache(

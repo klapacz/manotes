@@ -1,8 +1,8 @@
 import dedent from "dedent";
 import { describe, expect, it } from "vite-plus/test";
-import { MdParse } from "@manotes/shared/prosemirror/md/parse";
-import { MdSerialize } from "@manotes/shared/prosemirror/md/serialize";
-import { RECORD_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
+import { MdParse } from "./prosemirror/md/parse";
+import { MdSerialize } from "./prosemirror/md/serialize";
+import { RECORD_SCHEMA } from "./prosemirror/app-schema";
 import { EditDocument, type Edit } from "./edit-document";
 
 function edit(markdown: string, edits: readonly Edit[]) {

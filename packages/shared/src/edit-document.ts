@@ -1,8 +1,8 @@
 import type { Node } from "prosekit/pm/model";
 import { Fragment } from "prosekit/pm/model";
 import { Transform } from "prosekit/pm/transform";
-import { MdParse } from "@manotes/shared/prosemirror/md/parse";
-import { MdSerialize } from "@manotes/shared/prosemirror/md/serialize";
+import { MdParse } from "./prosemirror/md/parse";
+import { MdSerialize } from "./prosemirror/md/serialize";
 
 export type Edit =
   | {

@@ -2,9 +2,10 @@ import { readFile } from "node:fs/promises";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { Console, Effect } from "effect";
 import { expect, it, vi } from "vite-plus/test";
-import type { Api } from "./execute-api";
-import { ExecuteScript } from "./execute-script";
-import type { CliList } from "./list";
+import type { Api } from "@manotes/shared/execute-api";
+import { ExecuteScript } from "@manotes/shared/execute-script";
+import { CliExecute } from "./cli.execute";
+import type { CliList } from "@manotes/shared/list";
 
 it("lists active tasks by state and priority using the task script", async () => {
   const script = await readFile(new URL("../../../scripts/tasks", import.meta.url), "utf8");
@@ -31,6 +32,7 @@ it("lists active tasks by state and priority using the task script", async () =>
 
   await Effect.runPromise(
     ExecuteScript.run(source, "tasks.js", api).pipe(
+      Effect.provideService(ExecuteScript.Sandbox, CliExecute.nodeSandbox),
       Effect.provideService(Console.Console, {
         ...console,
         log: (...args) => {

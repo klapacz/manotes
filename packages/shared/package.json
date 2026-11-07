@@ -5,6 +5,7 @@
   "exports": {
     "./attrs.schema": "./dist/attrs.schema.mjs",
     "./attrs.service": "./dist/attrs.service.mjs",
+    "./backlink-labels": "./dist/backlink-labels.mjs",
     "./browser-extension/contract": "./dist/browser-extension/contract.mjs",
     "./builtin-attrs": "./dist/builtin-attrs.mjs",
     "./db.service": "./dist/db.service.mjs",
@@ -12,6 +13,7 @@
     "./db.used-tables": "./dist/db.used-tables.mjs",
     "./db.values": "./dist/db.values.mjs",
     "./dev-env": "./dist/dev-env.mjs",
+    "./edit-document": "./dist/edit-document.mjs",
     "./editor.schema": "./dist/editor.schema.mjs",
     "./editor/backlink/spec": "./dist/editor/backlink/spec.mjs",
     "./editor/link/spec": "./dist/editor/link/spec.mjs",
@@ -24,6 +26,8 @@
     "./enum-option.repo": "./dist/enum-option.repo.mjs",
     "./event.repo": "./dist/event.repo.mjs",
     "./event.schema": "./dist/event.schema.mjs",
+    "./execute-api": "./dist/execute-api.mjs",
+    "./execute-script": "./dist/execute-script.mjs",
     "./graph-backup/schema": "./dist/graph-backup/schema.mjs",
     "./graph-encryption": "./dist/graph-encryption.mjs",
     "./graph-registry/contract": "./dist/graph-registry/contract.mjs",
@@ -46,6 +50,7 @@
     "./graph-sync/service": "./dist/graph-sync/service.mjs",
     "./graph-sync/status": "./dist/graph-sync/status.mjs",
     "./graph-sync/status.schema": "./dist/graph-sync/status.schema.mjs",
+    "./list": "./dist/list.mjs",
     "./materialization-checkpoint.repo": "./dist/materialization-checkpoint.repo.mjs",
     "./materializer.service": "./dist/materializer.service.mjs",
     "./materializer/attrs.service": "./dist/materializer/attrs.service.mjs",
@@ -94,6 +99,7 @@
     "dev": "vp pack --watch --no-clean"
   },
   "dependencies": {
+    "@earendil-works/pi-codemode": "^1.2.0",
     "@manotes/effect-db-sqlite": "workspace:*",
     "@manotes/effect-qb-sqlite": "workspace:*",
     "effect": "catalog:",

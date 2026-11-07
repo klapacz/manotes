@@ -18,11 +18,7 @@
     "@manotes/effect-db-sqlite": "workspace:*",
     "@manotes/shared": "workspace:*",
     "effect": "catalog:",
-    "nanoid": "^5.1.6",
-    "prosekit": "^0.22.3",
-    "ws": "^8.18.3",
-    "y-prosemirror": "^1.3.7",
-    "yjs": "^13.6.27"
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
@@ -31,10 +27,13 @@
     "dedent": "^1.7.2",
     "effect-qb": "0.24.1",
     "esbuild": "^0.28.2",
+    "nanoid": "^5.1.6",
     "tsx": "^4.21.0",
     "vite": "catalog:",
     "vite-plus": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "y-prosemirror": "^1.3.7",
+    "yjs": "^13.6.27"
   },
   "engines": {
     "node": "^22.19.0 || >=24.0.0"

@@ -11,7 +11,7 @@ import { CliSync } from "./cli.sync";
 import { MaterializedFiles } from "./materialized-files";
 import { Materializer } from "@manotes/shared/materializer.service";
 import { CliRuntime } from "./cli.runtime";
-import { ExecuteApi } from "./execute-api";
+import { CliExecute } from "./cli.execute";
 import { EventRepo } from "@manotes/shared/event.repo";
 
 const init = Command.make(
@@ -97,12 +97,12 @@ const execute = Command.make(
   Effect.fn("Cli.execute")(
     function* ({ script }) {
       const scriptPath = yield* Option.match(script, {
-        onNone: () => ExecuteApi.acquireStdinScript(),
+        onNone: () => CliExecute.acquireStdinScript(),
         onSome: (file) => Effect.succeed(path.resolve(process.cwd(), file)),
       });
 
       yield* Effect.gen(function* () {
-        yield* ExecuteApi.runScript(scriptPath);
+        yield* CliExecute.runScript(scriptPath);
         // TODO: Skip Markdown export and auto-sync for read-only scripts.
         const materializer = yield* Materializer.Service;
         yield* materializer.catchUp();

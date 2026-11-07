@@ -1,9 +1,10 @@
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { Console, Effect, Exit, Result } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
-import type { Api } from "./execute-api";
-import { ExecuteScript } from "./execute-script";
-import type { CliList } from "./list";
+import type { Api } from "@manotes/shared/execute-api";
+import { ExecuteScript } from "@manotes/shared/execute-script";
+import { CliExecute } from "./cli.execute";
+import type { CliList } from "@manotes/shared/list";
 
 const item: CliList.Item = {
   id: RecordSchema.Id.make("note"),
@@ -21,7 +22,7 @@ describe("ExecuteScript.run", () => {
     const output: unknown[] = [];
 
     await Effect.runPromise(
-      ExecuteScript.run(
+      run(
         `text([
           typeof process, typeof require, typeof module, typeof Buffer,
           typeof fetch, typeof setTimeout, typeof globalThis.api.editRecord,
@@ -62,9 +63,7 @@ describe("ExecuteScript.run", () => {
     "export default async () => {};",
     'const value: string = "TypeScript";',
   ])("rejects host imports and unsupported script syntax: %s", async (source) => {
-    const result = await Effect.runPromise(
-      ExecuteScript.run(source, "edit.js", makeApi()).pipe(Effect.result),
-    );
+    const result = await Effect.runPromise(run(source, "edit.js", makeApi()).pipe(Effect.result));
 
     expect(Result.isFailure(result)).toBe(true);
 
@@ -100,9 +99,7 @@ describe("ExecuteScript.run", () => {
   ])("rejects malformed arguments before calling the host: %s", async (source) => {
     const api = makeApi();
 
-    const result = await Effect.runPromise(
-      ExecuteScript.run(source, "edit.js", api).pipe(Effect.result),
-    );
+    const result = await Effect.runPromise(run(source, "edit.js", api).pipe(Effect.result));
 
     expect(Result.isFailure(result)).toBe(true);
     expect(api.editRecord).not.toHaveBeenCalled();
@@ -112,7 +109,7 @@ describe("ExecuteScript.run", () => {
 
   it.each(["", "undefined", "null"])("accepts omitted list options: %s", async (argument) => {
     const api = makeApi();
-    await Effect.runPromise(ExecuteScript.run(`await api.list(${argument});`, "list.js", api));
+    await Effect.runPromise(run(`await api.list(${argument});`, "list.js", api));
     expect(api.list).toHaveBeenCalledWith(undefined, expect.any(AbortSignal));
   });
 
@@ -122,7 +119,7 @@ describe("ExecuteScript.run", () => {
     const output: unknown[] = [];
 
     await Effect.runPromise(
-      ExecuteScript.run(
+      run(
         'await api.showList("short", await api.list({ limit: 1 })); await api.showList("full", []);',
         "list.js",
         api,
@@ -159,10 +156,9 @@ describe("ExecuteScript.run", () => {
       );
     });
 
-    const execution = Effect.runPromiseExit(
-      ExecuteScript.run("await api.list();", "list.js", api),
-      { signal: controller.signal },
-    );
+    const execution = Effect.runPromiseExit(run("await api.list();", "list.js", api), {
+      signal: controller.signal,
+    });
 
     await started.promise;
     controller.abort();
@@ -175,7 +171,7 @@ describe("ExecuteScript.run", () => {
     const output: unknown[] = [];
 
     const result = await Effect.runPromise(
-      ExecuteScript.run(
+      run(
         'console.log("before failure"); text({ count: 2 }); throw new Error("script failure");',
         "edit.js",
         makeApi(),
@@ -223,7 +219,7 @@ describe("ExecuteScript.run", () => {
     });
 
     const execution = Effect.runPromiseExit(
-      ExecuteScript.run('await api.editRecord("note", []);', "edit.js", api),
+      run('await api.editRecord("note", []);', "edit.js", api),
       { signal: controller.signal },
     );
 
@@ -259,9 +255,7 @@ describe("ExecuteScript.run", () => {
       });
 
       const result = await Effect.runPromise(
-        ExecuteScript.run(`api.editRecord("note", []); ${ending}`, "edit.js", api).pipe(
-          Effect.result,
-        ),
+        run(`api.editRecord("note", []); ${ending}`, "edit.js", api).pipe(Effect.result),
       );
 
       expect(Result.isFailure(result)).toBe(ending !== "");
@@ -280,4 +274,10 @@ function makeApi() {
       async (id) => id ?? RecordSchema.Id.make("generated-id"),
     ),
   };
+}
+
+function run(...args: Parameters<typeof ExecuteScript.run>) {
+  return ExecuteScript.run(...args).pipe(
+    Effect.provideService(ExecuteScript.Sandbox, CliExecute.nodeSandbox),
+  );
 }

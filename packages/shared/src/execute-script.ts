@@ -1,8 +1,18 @@
-import { RecordSchema } from "@manotes/shared/record.schema";
-import { CodemodeSandbox, type CodemodeTool } from "@earendil-works/pi-codemode";
-import { Console, Data, Effect, Schema } from "effect";
+import { RecordSchema } from "./record.schema";
+import type {
+  CodemodeSandboxBase,
+  CodemodeSandboxBaseOptions,
+  CodemodeTool,
+} from "@earendil-works/pi-codemode/portable";
+import { Console, Context, Data, Effect, Schema } from "effect";
 import type { Api } from "./execute-api";
 import { CliList } from "./list";
+
+/** Hosts provide the VM runtime, e.g. Node worker threads or an inline browser sandbox. */
+export class Sandbox extends Context.Service<
+  Sandbox,
+  { readonly make: (options: CodemodeSandboxBaseOptions) => CodemodeSandboxBase }
+>()("ExecuteScript.Sandbox") {}
 
 export class ScriptExecutionError extends Data.TaggedError("ExecuteScript.ScriptExecutionError")<{
   scriptPath: string;
@@ -15,12 +25,13 @@ export const run = Effect.fn("ExecuteScript.run")(function* (
   scriptPath: string,
   api: Api,
 ) {
+  const sandboxes = yield* Sandbox;
   const pending: Promise<unknown>[] = [];
   const output = yield* Console.Console;
 
   const result = yield* Effect.acquireUseRelease(
     Effect.sync(() => {
-      return new CodemodeSandbox({
+      return sandboxes.make({
         globals: createGlobals(api, pending, output),
         memoryLimitBytes: 256 * 1024 * 1024,
       });

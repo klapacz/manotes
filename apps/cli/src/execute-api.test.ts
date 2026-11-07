@@ -27,9 +27,9 @@ import {
   PROSEMIRROR_XML_FRAGMENT_KEY,
 } from "@manotes/shared/prosemirror/yjs";
 import { CliRuntime } from "./cli.runtime";
-import { ExecuteApi } from "./execute-api";
-import { BacklinkLabels } from "./backlink-labels";
-import { CliList } from "./list";
+import { CliExecute } from "./cli.execute";
+import { BacklinkLabels } from "@manotes/shared/backlink-labels";
+import { CliList } from "@manotes/shared/list";
 
 const RECORD_ID = RecordSchema.Id.make("record-1");
 
@@ -680,7 +680,7 @@ describe("ExecuteApi.list", () => {
   });
 });
 
-describe("ExecuteApi.runScript", () => {
+describe("CliExecute.runScript", () => {
   it("rejects module exports instead of executing them on the host", async () => {
     await expect(runIntegration(runTestScript("export const edit = true;\n"))).rejects.toThrow(
       /unsupported keyword: export/i,
@@ -698,7 +698,7 @@ function runTestScript(source: string) {
 
       const scriptPath = path.join(workspace, "edit.js");
       yield* Effect.promise(() => writeFile(scriptPath, source));
-      yield* ExecuteApi.runScript(scriptPath);
+      yield* CliExecute.runScript(scriptPath);
     }),
   );
 }

@@ -1,4 +1,4 @@
-import { RecordSchema } from "@manotes/shared/record.schema";
+import { RecordSchema } from "./record.schema";
 import { describe, expect, it } from "vite-plus/test";
 import { CliList } from "./list";
 

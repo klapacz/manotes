@@ -1,22 +1,19 @@
-import { RecordSchema } from "@manotes/shared/record.schema";
-import path from "node:path";
-import { Array, DateTime, Effect, FileSystem, flow, Option, Schema, Stdio, Stream } from "effect";
+import { RecordSchema } from "./record.schema";
+import { Array, DateTime, Effect, flow, Option, Schema } from "effect";
 import { nanoid } from "nanoid";
 import * as Y from "yjs";
 import { initProseMirrorDoc, updateYFragment } from "y-prosemirror";
-import { DB } from "@manotes/shared/db.service";
-import { EventRepo } from "@manotes/shared/event.repo";
-import { EventSchema } from "@manotes/shared/event.schema";
-import { PlainDateString } from "@manotes/shared/temporal.schema";
-import { toLocalDateString } from "@manotes/shared/temporal/utils";
-import { Materializer } from "@manotes/shared/materializer.service";
-import { RecordRepo } from "@manotes/shared/record.repo";
-import { RECORD_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
-import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
-import { CliPaths } from "./cli.paths";
+import { DB } from "./db.service";
+import { EventRepo } from "./event.repo";
+import { EventSchema } from "./event.schema";
+import { PlainDateString } from "./temporal.schema";
+import { toLocalDateString } from "./temporal/utils";
+import { Materializer } from "./materializer.service";
+import { RecordRepo } from "./record.repo";
+import { RECORD_SCHEMA } from "./prosemirror/app-schema";
+import { getProsemirrorXmlFragment } from "./prosemirror/yjs";
 import { EditDocument } from "./edit-document";
 import { BacklinkLabels } from "./backlink-labels";
-import { ExecuteScript } from "./execute-script";
 import { CliList } from "./list";
 
 export type UpdateOp = EditDocument.Edit | { readonly kind: "date.set"; readonly date: string };
@@ -40,34 +37,7 @@ export type Api = {
   ) => Promise<RecordSchema.Id>;
 };
 
-export const runScript = Effect.fn("ExecuteApi.runScript")(function* (scriptPath: string) {
-  const fs = yield* FileSystem.FileSystem;
-  const source = yield* fs.readFileString(scriptPath);
-  const api = yield* makeApi();
-  yield* ExecuteScript.run(source, scriptPath, api);
-});
-
-export const acquireStdinScript = Effect.fn("ExecuteApi.acquireStdinScript")(function* () {
-  return yield* Effect.acquireRelease(
-    Effect.gen(function* () {
-      const paths = yield* CliPaths.Service;
-      const fs = yield* FileSystem.FileSystem;
-      const stdio = yield* Stdio.Stdio;
-      const script = yield* stdio.stdin.pipe(Stream.decodeText(), Stream.mkString);
-      const scriptPath = path.join(paths.manotesDir, `execute-${process.pid}-${Date.now()}.js`);
-
-      yield* fs.writeFileString(scriptPath, script, { mode: 0o600 });
-
-      return scriptPath;
-    }),
-    Effect.fnUntraced(function* (scriptPath) {
-      const fs = yield* FileSystem.FileSystem;
-      yield* fs.remove(scriptPath, { force: true }).pipe(Effect.ignore);
-    }),
-  );
-});
-
-const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
+export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
   const db = yield* DB.Service;
   const recordRepo = yield* RecordRepo.Service;
   const eventRepo = yield* EventRepo.Service;

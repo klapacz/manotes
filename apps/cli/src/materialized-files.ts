@@ -4,7 +4,7 @@ import { RECORD_SCHEMA } from "@manotes/shared/prosemirror/app-schema";
 import { RecordRepo } from "@manotes/shared/record.repo";
 import { CliPaths } from "./cli.paths";
 import { MdSerialize } from "@manotes/shared/prosemirror/md/serialize";
-import { BacklinkLabels } from "./backlink-labels";
+import { BacklinkLabels } from "@manotes/shared/backlink-labels";
 
 /**
  * Renders every note to a `.md` file. Local markdown is output-only; it is not
