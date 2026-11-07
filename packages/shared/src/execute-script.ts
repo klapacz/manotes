@@ -8,7 +8,7 @@ import { Console, Context, Data, Effect, Schema } from "effect";
 import type { Api } from "./execute-api";
 import { CliList } from "./list";
 
-/** Hosts provide the VM runtime, e.g. Node worker threads or an inline browser sandbox. */
+/** Hosts provide the VM runtime, e.g. Node worker threads or a browser Web Worker. */
 export class Sandbox extends Context.Service<
   Sandbox,
   { readonly make: (options: CodemodeSandboxBaseOptions) => CodemodeSandboxBase }

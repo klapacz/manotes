@@ -181,6 +181,9 @@ importers:
       '@corvu/drawer':
         specifier: ^0.2.4
         version: 0.2.4(solid-js@1.9.15)
+      '@earendil-works/pi-codemode':
+        specifier: ^1.2.0
+        version: 1.2.0
       '@effect-uai/core':
         specifier: 0.18.0
         version: 0.18.0(effect@4.0.3)
@@ -292,6 +295,9 @@ importers:
       prosemirror-model:
         specifier: ^1.25.12
         version: 1.25.12
+      quickjs-wasi:
+        specifier: 3.6.2
+        version: 3.6.2
       solid-js:
         specifier: 1.9.15
         version: 1.9.15

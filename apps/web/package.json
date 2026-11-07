@@ -10,6 +10,7 @@
   "dependencies": {
     "@corvu/calendar": "^0.1.2",
     "@corvu/drawer": "^0.2.4",
+    "@earendil-works/pi-codemode": "^1.2.0",
     "@effect-uai/core": "0.18.0",
     "@effect-uai/openai": "0.18.0",
     "@effect/atom-solid": "catalog:",
@@ -47,6 +48,7 @@
     "prosekit": "^0.22.3",
     "prosemirror-flat-list": "^0.7.1",
     "prosemirror-model": "^1.25.12",
+    "quickjs-wasi": "3.6.2",
     "solid-js": "1.9.15",
     "somoto": "^0.0.2",
     "tailwind-merge": "^3.5.0",
