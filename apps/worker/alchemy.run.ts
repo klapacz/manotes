@@ -25,7 +25,7 @@ export default Alchemy.Stack(
         strictPort: true,
       },
       workersDev: false,
-      domain: stage === "prod" ? "sand.manotes.dev" : undefined,
+      domain: stage === "dune" ? "dune.manotes.dev" : undefined,
     });
 
     const dev = yield* Alchemy.ALCHEMY_DEV;

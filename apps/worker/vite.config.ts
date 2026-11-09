@@ -8,8 +8,9 @@ export default defineConfig({
         cache: false,
       },
       deploy: {
-        command: "alchemy deploy --env-file .env.prod --stage prod",
+        command: 'alchemy deploy --env-file "$PWD/.env.prod" --stage dune',
         dependsOn: ["@manotes/shared#build", "@manotes/sql-sqlite-wasm#build"],
+        cache: false,
       },
     },
   },
