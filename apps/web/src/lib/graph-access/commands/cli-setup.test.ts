@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Effect, Layer, Option } from "effect";
 import { FetchHttpClient } from "effect/http";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { KeyStore } from "../key-store/service";
@@ -33,19 +33,17 @@ describe("CliSetup.prepare", () => {
       .fn<typeof globalThis.fetch>()
       .mockResolvedValue(Response.json({ apiKey: "cli-token" }));
 
-    const command = await Effect.runPromise(
-      Effect.gen(function* () {
-        const keys = yield* KeyStore.Service;
-        yield* keys.set(graph.graphKeyEnvelope, graphKey);
+    const getKey = vi.fn(() => Effect.succeed(Option.some(graphKey)));
 
-        return yield* CliSetup.prepare({ graph, origin });
-      }).pipe(
-        Effect.provide(KeyStore.Service.layer),
+    const command = await Effect.runPromise(
+      CliSetup.prepare({ graph, origin }).pipe(
+        Effect.provide(Layer.mock(KeyStore.Service, { get: getKey })),
         Effect.provide(FetchHttpClient.layer),
         Effect.provideService(FetchHttpClient.Fetch, fetch),
       ),
     );
 
+    expect(getKey).toHaveBeenCalledExactlyOnceWith(graph.graphKeyEnvelope);
     expect(command).toBe(
       " manotes init --auto-sync --origin 'https://manotes.example' --token 'cli-token' " +
         "--graph-id 'cloud'\\''id; $(printf wrong)' " +
@@ -65,7 +63,9 @@ describe("CliSetup.prepare", () => {
     await expect(
       Effect.runPromise(
         CliSetup.prepare({ graph, origin }).pipe(
-          Effect.provide(KeyStore.Service.layer),
+          Effect.provide(
+            Layer.mock(KeyStore.Service, { get: () => Effect.succeed(Option.none()) }),
+          ),
           Effect.provide(FetchHttpClient.layer),
           Effect.provideService(FetchHttpClient.Fetch, fetch),
         ),
@@ -81,13 +81,10 @@ describe("CliSetup.prepare", () => {
 
     await expect(
       Effect.runPromise(
-        Effect.gen(function* () {
-          const keys = yield* KeyStore.Service;
-          yield* keys.set(graph.graphKeyEnvelope, graphKey);
-
-          return yield* CliSetup.prepare({ graph, origin });
-        }).pipe(
-          Effect.provide(KeyStore.Service.layer),
+        CliSetup.prepare({ graph, origin }).pipe(
+          Effect.provide(
+            Layer.mock(KeyStore.Service, { get: () => Effect.succeed(Option.some(graphKey)) }),
+          ),
           Effect.provide(FetchHttpClient.layer),
           Effect.provideService(FetchHttpClient.Fetch, fetch),
         ),

@@ -56,7 +56,7 @@ describe("prefixed menu queries", () => {
     const results = await read(query({ text: "  LINKS TO   Sleep Log  " }));
     expect(requests[0]?.text).toBe("Sleep Log");
     expect(results[0]?.value).toEqual({
-      value: "Links to:record",
+      value: "Links to:note",
       label: "Sleep Log",
       path: ["Links to"],
     });
