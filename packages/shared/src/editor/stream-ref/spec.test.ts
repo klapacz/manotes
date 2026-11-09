@@ -19,7 +19,7 @@ function label(filter: AttrsSchema.Filter) {
 describe("simple stream-ref labels", () => {
   it("labels the default conditions and an unrestricted filter", () => {
     expect(label(StreamSettings.defaultPreset.filter)).toBe("Notes · Unarchived");
-    expect(label([StreamSettings.conditions.pages])).toBe("Pages");
+    expect(label([Filters.namedTypes.pages.make()])).toBe("Pages");
     expect(label([])).toBe("All records");
   });
 
@@ -37,7 +37,7 @@ describe("simple stream-ref labels", () => {
   it("counts each unknown top-level group once without expanding its children", () => {
     const group = expr.or({
       val: [
-        StreamSettings.conditions.notes,
+        Filters.namedTypes.notes.make(),
         expr.cmp({ val: [["link", "->", project], "exists", true] }),
       ],
     });
@@ -52,9 +52,9 @@ describe("simple stream-ref labels", () => {
     expect(recordLabel).not.toHaveBeenCalled();
     expect(
       label([
-        StreamSettings.conditions.unarchived,
+        Filters.aliases.unarchived.make(),
         group,
-        expr.and({ val: [StreamSettings.conditions.pages] }),
+        expr.and({ val: [Filters.namedTypes.pages.make()] }),
         expr.cmp({ val: ["id", "=", project] }),
       ]),
     ).toBe("Unarchived · 3 Filters");
@@ -73,7 +73,7 @@ describe("simple stream-ref labels", () => {
   });
 
   it("describes literal labels without record dependencies", () => {
-    expect(StreamRefSpec.expressionLabel(StreamSettings.conditions.notes)).toEqual(
+    expect(StreamRefSpec.expressionLabel(Filters.namedTypes.notes.make())).toEqual(
       Result.succeed(StreamRefSpec.Label.Literal({ val: "Notes" })),
     );
   });
@@ -84,7 +84,7 @@ describe("simple stream-ref labels", () => {
     );
 
     const options = Result.getOrThrow(
-      StreamRefSpec.expressionLabel(StreamSettings.enumOptions(project)),
+      StreamRefSpec.expressionLabel(Filters.enumOptions.make(project)),
     );
 
     if (!Predicate.isTagged(link, "Record") || !Predicate.isTagged(options, "Record")) {
@@ -102,7 +102,7 @@ describe("simple stream-ref labels", () => {
     expect(StreamRefSpec.renderLabels([link, options], () => "Renamed")).toBe(
       "Links to Renamed · Enum options · Renamed",
     );
-    expect(label([StreamSettings.enumOptions(project)])).toBe("Enum options · Project");
+    expect(label([Filters.enumOptions.make(project)])).toBe("Enum options · Project");
   });
 
   it("uses generated property labels and both record names at runtime", () => {

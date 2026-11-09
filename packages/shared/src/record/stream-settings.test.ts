@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { AttrsSchema } from "../attrs.schema";
 import { PaneSchema } from "./pane.schema";
 import { StreamSettings } from "./stream-settings";
+import { Filters } from "./filters";
 import { RecordSearch } from "./search";
 
 const expr = AttrsSchema.makeFilterExpr;
@@ -29,7 +30,7 @@ describe("canonical stream settings", () => {
       panes: [
         PaneSchema.make.stream({
           filter: [
-            expr.or({ val: [StreamSettings.conditions.notes, StreamSettings.enumOptions(parent)] }),
+            expr.or({ val: [Filters.namedTypes.notes.make(), Filters.enumOptions.make(parent)] }),
           ],
           source: PaneSchema.Source.cases.prop.make({ id: parent }),
         }),
@@ -40,21 +41,21 @@ describe("canonical stream settings", () => {
   });
 
   it("recognizes the complete ordered enum parent group", () => {
-    const options = StreamSettings.enumOptions(parent);
-    expect(StreamSettings.enumOptionsParent(options)).toEqual(Result.succeed(parent));
+    const options = Filters.enumOptions.make(parent);
+    expect(Filters.enumOptions.match(options)).toEqual(Result.succeed(parent));
 
     if (!Predicate.isTagged(options, "and")) throw new Error("Expected enum group");
 
     const unmatched = [
-      StreamSettings.conditions.notes,
+      Filters.namedTypes.notes.make(),
       expr.and({ val: [options] }),
-      expr.and({ val: [...options.val, StreamSettings.conditions.unarchived] }),
+      expr.and({ val: [...options.val, Filters.aliases.unarchived.make()] }),
       expr.and({ val: [...options.val].reverse() }),
       expr.and({ val: [options, options.val[1]!, options.val[2]!] }),
     ];
 
     for (const expression of unmatched) {
-      expect(StreamSettings.enumOptionsParent(expression)).toEqual(Result.fail(expression));
+      expect(Filters.enumOptions.match(expression)).toEqual(Result.fail(expression));
     }
   });
 
@@ -63,7 +64,7 @@ describe("canonical stream settings", () => {
     expect(StreamSettings.changedDisplay(StreamSettings.presets.pages)).toEqual(["sort"]);
     expect(
       StreamSettings.requiredComparisons([
-        StreamSettings.conditions.notes,
+        Filters.namedTypes.notes.make(),
         expr.or({ val: [expr.cmp({ val: ["date", "=", "2026-10-15"] })] }),
       ]),
     ).toEqual([
@@ -91,7 +92,7 @@ describe("canonical stream settings", () => {
       optional,
       expr.and({
         val: [
-          StreamSettings.conditions.notes,
+          Filters.namedTypes.notes.make(),
           expr.cmp({ val: ["body", "contains", "alpha"] }),
           expr.cmp({ val: ["date", "=", "2026-10-15"] }),
         ],

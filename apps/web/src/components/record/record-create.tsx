@@ -6,6 +6,7 @@ import { nanoid } from "nanoid";
 import { toast } from "somoto";
 import { MaterializedEventService, bindRt } from "../../lib";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
+import { Filters } from "@manotes/shared/record/filters";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import type { UnknownNodeJSON } from "@manotes/shared/node-json";
 import type { Hotkey } from "@tanstack/hotkeys";
@@ -125,7 +126,7 @@ export const prefilledPayload = Effect.fn("ComponentsRecordRecordCreate.prefille
       }),
       Match.when("owned", () => {
         return Array.findFirst(pane.filter, (expression) => {
-          return StreamSettings.enumOptionsParent(expression).pipe(Result.getSuccess);
+          return Filters.enumOptions.match(expression).pipe(Result.getSuccess);
         }).pipe(
           Option.match({
             onNone: () => Effect.void,

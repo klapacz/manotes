@@ -9,7 +9,7 @@ import { RecordSchema } from "../src/record.schema";
 import { AttrsSchema } from "../src/attrs.schema";
 import { BuiltinAttrs } from "../src/builtin-attrs";
 import { RecordFilter } from "../src/record/filter";
-import { StreamSettings } from "../src/record/stream-settings";
+import { Filters } from "../src/record/filters";
 
 const expr = AttrsSchema.makeFilterExpr;
 
@@ -93,7 +93,7 @@ describe("record filter expressions", () => {
       expect(
         await findIds(executor, [expr.cmp({ val: [["link", "<-", id("alpha")], "exists", true] })]),
       ).toEqual(["body"]);
-      expect(await findIds(executor, [StreamSettings.conditions.unarchived])).toEqual([
+      expect(await findIds(executor, [Filters.aliases.unarchived.make()])).toEqual([
         "alpha",
         "body",
         "prop",
@@ -108,7 +108,7 @@ describe("record filter expressions", () => {
 
   it("combines default equality with explicit assignments and allows contradictions", async () => {
     await withRecords(async (executor, database) => {
-      const equals = StreamSettings.conditions.unarchived;
+      const equals = Filters.aliases.unarchived.make();
       const exists = expr.cmp({ val: [["prop", BuiltinAttrs.archivedId], "exists", true] });
       const missing = expr.cmp({ val: [["prop", BuiltinAttrs.archivedId], "exists", false] });
       expect(await findIds(executor, [equals, exists])).toEqual([]);

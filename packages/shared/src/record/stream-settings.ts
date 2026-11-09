@@ -9,34 +9,32 @@ export type Filter = AttrsSchema.Filter;
 
 export type Display = Pick<Settings, "sort" | "view">;
 
-export const conditions = {
-  notes: Filters.namedTypes.notes.make(),
-  pages: Filters.namedTypes.pages.make(),
-  unarchived: Filters.aliases.unarchived.make(),
-};
-
 // TODO: Use these presets and enumOptionsPreset to generate PresetCommands in
 // apps/web/src/components/record/filter-picker.tsx.
 export const presets = {
-  notes: { filter: [conditions.notes, conditions.unarchived], sort: "date", view: "full" },
-  pages: { filter: [conditions.pages, conditions.unarchived], sort: "updated", view: "full" },
+  notes: {
+    filter: [Filters.namedTypes.notes.make(), Filters.aliases.unarchived.make()],
+    sort: "date",
+    view: "full",
+  },
+  pages: {
+    filter: [Filters.namedTypes.pages.make(), Filters.aliases.unarchived.make()],
+    sort: "updated",
+    view: "full",
+  },
 } as const satisfies Record<string, Settings>;
 
 export const defaultPreset = presets.notes;
 
 export const defaultDisplay = Struct.pick(defaultPreset, ["sort", "view"]);
 
-export const enumOptions = Filters.enumOptions.make;
-
 export function enumOptionsPreset(parentId: AttrsSchema.RecordId): Settings {
   return {
-    filter: [enumOptions(parentId), conditions.unarchived],
+    filter: [Filters.enumOptions.make(parentId), Filters.aliases.unarchived.make()],
     sort: "updated",
     view: "full",
   };
 }
-
-export const enumOptionsParent = Filters.enumOptions.match;
 
 /** Comparisons required by every match, for creation defaults. Never chooses an OR branch. */
 export function requiredComparisons(filter: Filter): readonly AttrsSchema.FilterCmp[] {

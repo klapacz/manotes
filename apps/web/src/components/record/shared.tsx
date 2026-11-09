@@ -1,6 +1,6 @@
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { PaneNavigate } from "../../lib/record/pane.navigate";
-import { StreamSettings } from "@manotes/shared/record/stream-settings";
+import { Filters } from "@manotes/shared/record/filters";
 import type { RecordRepo } from "@manotes/shared/record.repo";
 import { getRouteApi } from "@tanstack/solid-router";
 import { Data, Exit, type Types } from "effect";
@@ -179,7 +179,7 @@ export function RecordActions(props: { record: RecordRepo.Meta }) {
           AttrsSchema.makeFilterExpr.cmp({
             val: [["link", "->", props.record.id], "exists", true],
           }),
-          StreamSettings.conditions.unarchived,
+          Filters.aliases.unarchived.make(),
         ],
         sort: "date",
         view: "full",
@@ -194,7 +194,7 @@ export function RecordActions(props: { record: RecordRepo.Meta }) {
           AttrsSchema.makeFilterExpr.cmp({
             val: [["link", "<-", props.record.id], "exists", true],
           }),
-          StreamSettings.conditions.unarchived,
+          Filters.aliases.unarchived.make(),
         ],
         sort: "updated",
         view: "full",
@@ -207,7 +207,7 @@ export function RecordActions(props: { record: RecordRepo.Meta }) {
       PaneSchema.make.stream({
         filter: [
           AttrsSchema.makeFilterExpr.cmp({ val: ["date", "=", props.record.date] }),
-          StreamSettings.conditions.unarchived,
+          Filters.aliases.unarchived.make(),
         ],
         sort: "date",
         view: "full",

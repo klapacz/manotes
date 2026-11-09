@@ -18,6 +18,7 @@ import { RecordSchema } from "@manotes/shared/record.schema";
 import { RecordDoc } from "@manotes/shared/record/doc";
 import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
+import { Filters } from "@manotes/shared/record/filters";
 import { YSchema } from "@manotes/shared/y-schema";
 import {
   DateTime,
@@ -112,7 +113,7 @@ describe("Archived builtin", () => {
 
           expect(rows.map(({ id }) => id).toSorted()).toEqual(["high", "untitled"]);
 
-          const type = StreamSettings.enumOptions(parent);
+          const type = Filters.enumOptions.make(parent);
 
           const list = (props: Readonly<Record<string, AttrsSchema.PropVal>>) => {
             return records
@@ -184,7 +185,7 @@ describe("Archived builtin", () => {
             expect(
               Option.getOrThrow(
                 yield* (yield* records.reactiveStreamList({
-                  filter: [StreamSettings.conditions[type]],
+                  filter: [Filters.namedTypes[type].make()],
                   sort: "date",
                 })).pipe(Stream.runHead),
               ),
@@ -278,7 +279,7 @@ describe("Archived builtin", () => {
               const rows = Option.getOrThrow(
                 yield* (yield* records.reactiveStreamList({
                   filter: [
-                    StreamSettings.conditions.notes,
+                    Filters.namedTypes.notes.make(),
                     ...propertyComparisons({
                       [propId]: AttrsSchema.PropVal.cases.number.make({ val }),
                     }),
@@ -313,7 +314,7 @@ describe("Archived builtin", () => {
           const rows = Option.getOrThrow(
             yield* (yield* records.reactiveStreamList({
               filter: [
-                StreamSettings.conditions.notes,
+                Filters.namedTypes.notes.make(),
                 ...propertyComparisons({
                   [propId]: AttrsSchema.PropVal.cases.number.make({ val: 7.5 }),
                   [AttrsSchema.RecordId.make("missing")]: AttrsSchema.PropVal.cases.bool.make({
@@ -396,7 +397,7 @@ describe("Archived builtin", () => {
             return Effect.gen(function* () {
               const rows = Option.getOrThrow(
                 yield* (yield* records.reactiveStreamList({
-                  filter: [StreamSettings.conditions.notes, ...propertyComparisons(props)],
+                  filter: [Filters.namedTypes.notes.make(), ...propertyComparisons(props)],
                   sort: "date",
                 })).pipe(Stream.runHead),
               );
@@ -428,7 +429,7 @@ describe("Archived builtin", () => {
 
           const pull = yield* Stream.toPull(
             (yield* records.reactiveStreamList({
-              filter: [StreamSettings.conditions.notes, ...propertyComparisons(defaultProps)],
+              filter: [Filters.namedTypes.notes.make(), ...propertyComparisons(defaultProps)],
               sort: "date",
             })).pipe(Stream.changesWith((a, b) => JSON.stringify(a) === JSON.stringify(b))),
           );
@@ -617,7 +618,7 @@ describe("Archived builtin", () => {
             ...definitions.map((value) => ({ [`prop:${value._tag}`]: value })),
             props,
           ]) {
-            const filter = [StreamSettings.conditions.notes, ...propertyComparisons(filters)];
+            const filter = [Filters.namedTypes.notes.make(), ...propertyComparisons(filters)];
 
             const rows = Option.getOrThrow(
               yield* (yield* records.reactiveStreamList({ filter, sort: "updated" })).pipe(

@@ -5,6 +5,7 @@ import { PaneCursor } from "./pane.cursor";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
+import { Filters } from "@manotes/shared/record/filters";
 
 const decodePane = Schema.decodeUnknownSync(PaneSchema.Pane);
 
@@ -30,7 +31,7 @@ describe("PaneCursor.inputMatches", () => {
   it("compares nested expressions and sort while ignoring display view", () => {
     const filter = [
       AttrsSchema.makeFilterExpr.or({
-        val: [StreamSettings.conditions.notes, StreamSettings.conditions.pages],
+        val: [Filters.namedTypes.notes.make(), Filters.namedTypes.pages.make()],
       }),
     ] as const;
 
@@ -41,7 +42,7 @@ describe("PaneCursor.inputMatches", () => {
     expect(
       PaneCursor.inputMatches({
         ...input,
-        filter: [...filter, StreamSettings.conditions.unarchived],
+        filter: [...filter, Filters.aliases.unarchived.make()],
       })(pane),
     ).toBe(false);
   });

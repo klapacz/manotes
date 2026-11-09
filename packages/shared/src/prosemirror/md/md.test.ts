@@ -1,5 +1,5 @@
 import { AttrsSchema } from "../../attrs.schema";
-import { StreamSettings } from "../../record/stream-settings";
+import { Filters } from "../../record/filters";
 import { RecordSchema } from "../../record.schema";
 import dedent from "dedent";
 import { createEditor, union } from "prosekit/core";
@@ -149,7 +149,7 @@ describe("app Markdown conversion", () => {
       paneId: "source-pane",
       href: "https://old-device.example/graph",
       filter: [
-        StreamSettings.conditions.pages,
+        Filters.namedTypes.pages.make(),
         AttrsSchema.makeFilterExpr.cmp({ val: ["body", "contains", "a & b [x] (é)!"] }),
         AttrsSchema.makeFilterExpr.cmp({
           val: [["link", "->", RecordSchema.Id.make("project")], "exists", true],
@@ -182,7 +182,7 @@ describe("app Markdown conversion", () => {
     expect(
       StreamRefSpec.renderLabels(
         StreamRefSpec.labels({
-          filter: [StreamSettings.conditions.pages],
+          filter: [Filters.namedTypes.pages.make()],
           sort: "updated",
           view: "full",
         }),
@@ -191,7 +191,7 @@ describe("app Markdown conversion", () => {
     expect(
       StreamRefSpec.renderLabels(
         StreamRefSpec.labels({
-          filter: [StreamSettings.conditions.notes],
+          filter: [Filters.namedTypes.notes.make()],
           sort: "date",
           view: "full",
         }),
@@ -200,7 +200,7 @@ describe("app Markdown conversion", () => {
     expect(StreamRefSpec.renderLabels(StreamRefSpec.labels(attrs))).toContain("snippets");
     expect(
       StreamRefSpec.decodeAttrs({
-        filter: [StreamSettings.conditions.notes],
+        filter: [Filters.namedTypes.notes.make()],
       }),
     ).toMatchObject({
       sort: "date",
@@ -374,7 +374,7 @@ describe("app Markdown conversion", () => {
           RECORD_SCHEMA.node(
             "streamRef",
             StreamRefSpec.decodeAttrs({
-              filter: [StreamSettings.conditions.notes],
+              filter: [Filters.namedTypes.notes.make()],
             }),
           ),
         ]),

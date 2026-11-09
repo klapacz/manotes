@@ -1,4 +1,5 @@
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
+import { Filters } from "@manotes/shared/record/filters";
 import type { RecordRepo } from "@manotes/shared/record.repo";
 import { Data, Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
@@ -107,7 +108,7 @@ describe("blank record creation", () => {
       prefilledPayload(
         PaneSchema.Pane.cases.stream.make({
           paneId: PaneSchema.Id.make("options"),
-          filter: [StreamSettings.enumOptions(enum_parent)],
+          filter: [Filters.enumOptions.make(enum_parent)],
           sort: "updated",
           view: "full",
         }),
