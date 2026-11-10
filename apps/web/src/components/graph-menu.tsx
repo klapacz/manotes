@@ -25,6 +25,7 @@ import { GraphAccessRuntime } from "../lib/graph-access/runtime";
 import { useAtom } from "@effect/atom-solid";
 import { Button } from "./ui/button";
 import { CliSetupDialog } from "./cli-setup-dialog";
+import { OpenAIKeyModal } from "./openai-key-modal";
 
 // Adapted from shadcn-solid using @kobalte/core 0.13.11 / solid-js 1.9.10.
 // Source: .reference/shadcn-solid/apps/docs/src/registry/blocks/sidebar-01/components/nav-user.tsx
@@ -123,6 +124,7 @@ export const GraphMenu = () => {
               <DownloadIcon class="size-4" />
               Export backup
             </DropdownMenuItem>
+            <OpenAIKeyModal.Root />
             <Show when={cloudGraph()}>
               {(cloudGraph) => (
                 <>

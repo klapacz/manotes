@@ -18,6 +18,7 @@ export {
   Expand as ArrowsOutIcon,
   GitPullRequestArrow as RebaseIcon,
   Link as LinkIcon,
+  Key as KeyIcon,
   Lock as LockIcon,
   PanelLeftClose as PanelLeftCloseIcon,
   PanelLeftOpen as PanelLeftOpenIcon,

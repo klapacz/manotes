@@ -1,6 +1,5 @@
 import { Link, getRouteApi, useMatchRoute } from "@tanstack/solid-router";
 import { Show } from "solid-js";
-import { OpenAIKeyModal } from "./openai-key-modal";
 import { AudioMemo } from "./audio-memo";
 import { GraphMenu } from "./graph-menu";
 import { DatabaseIcon, HouseIcon } from "./icons";
@@ -23,7 +22,6 @@ export function GraphNavbar() {
           <Show when={!onStudio()}>
             <AudioMemo.RecordingsLink />
           </Show>
-          <OpenAIKeyModal.Root />
           <SyncStatusIndicator />
           <WorkerHealthBanner />
           <Show

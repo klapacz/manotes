@@ -4,7 +4,8 @@ import { createSignal } from "solid-js";
 import { toast } from "somoto";
 import { GraphAccessRuntime } from "../lib/graph-access/runtime";
 import { SettingsRepo } from "../lib/settings/repo";
-import { Button } from "./ui/button";
+import { KeyIcon } from "./icons";
+import { DropdownMenuItem } from "./ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -38,7 +39,8 @@ export function Root() {
 
   return (
     <Dialog open={open()} onOpenChange={setOpen}>
-      <DialogTrigger as={Button} variant="ghost" size="sm">
+      <DialogTrigger as={DropdownMenuItem} closeOnSelect={false}>
+        <KeyIcon class="size-4" />
         OpenAI key
       </DialogTrigger>
       <DialogPortal>
