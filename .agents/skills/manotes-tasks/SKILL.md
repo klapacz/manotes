@@ -6,7 +6,7 @@ description: Read and manage Manotes development tasks, including projects, stat
 # Manotes tasks
 
 - Purpose: Manage development work in the `manotes` graph.
-- Recordbook: The main checkout's `.tasks` directory, shared by all workspaces. Prefix `manotes` and `zk` commands with `tasks --` to run them there.
+- Recordbook: The main checkout's `.tasks` directory, shared by all workspaces. Prefix `manotes` commands with `tasks --` to run them there.
 - Read [manotes-cli](../manotes-cli/SKILL.md) for querying, creating, editing, and syncing records.
 - Graph rules: Read `.tasks/AGENTS.md` with `tasks AGENTS`.
 
@@ -15,20 +15,22 @@ description: Read and manage Manotes development tasks, including projects, stat
 Run from the repository or a nested workspace, in the Nix devshell:
 
 ```sh
-# Active tasks.
-tasks -- zk list --format '{{path}} {{title}}' --match 'title: task' \
-  --no-link-to state:done.md --no-link-to state:backlog.md
-
-# CLI project tasks.
-tasks -- zk list --format '{{path}} {{title}}' --match 'title: task' \
-  --link-to project:cli.md
-
-# Tasks depending on this task.
-tasks -- zk list --format '{{path}} {{title}}' --match 'title: task' \
-  --link-to task:ABCD.md
+# Active tasks, grouped by state and sorted by priority.
+tasks
 
 # Complete task body.
 tasks task:ABCD
+```
+
+```sh
+tasks -- manotes execute <<'JS'
+// CLI project tasks. Use "task:ABCD" as the target to find dependent tasks.
+const records = await api.list({
+  filter: [{ _tag: "cmp", val: [["link", "->", "project:cli"], "exists", true] }],
+});
+const tasks = records.filter(record => record.title?.startsWith("task:"));
+await api.showList("oneline", tasks);
+JS
 ```
 
 ## Start work

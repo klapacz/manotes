@@ -233,6 +233,22 @@ describe("CLI local workflow", () => {
 
         expect(reexportResult.code, reexportResult.stdout + reexportResult.stderr).toBe(0);
         expect(await readFile(path.join(workspace, `${RECORD_ID}.md`), "utf8")).toBe(initialFile);
+
+        const listResult = await runCli(
+          workspace,
+          ["execute"],
+          `
+          await api.showList("full", await api.list({
+            filter: [{ _tag: "cmp", val: ["id", "=", "${RECORD_ID}"] }],
+          }));
+        `,
+        );
+
+        expect(listResult.code, listResult.stdout + listResult.stderr).toBe(0);
+        expect(listResult.stdout).toContain(`Workflow ${RECORD_ID} ${record.date}`);
+        expect(listResult.stdout).toContain("  # Workflow\n");
+        expect(listResult.stdout).toContain("  Initial.");
+        expect(listResult.stderr).not.toContain("Automatic sync failed.");
         await writeFile(
           fileScript,
           dedent`

@@ -1,110 +1,199 @@
 ---
 name: manotes-cli
-description: Read, filter, create, and edit Manotes records with zk and the CLI, then sync changes.
+description: Query, display, create, and edit Manotes records through sandboxed JavaScript, then sync changes.
 ---
 
 # Manotes CLI
 
-- Purpose: Read and filter Manotes records with zk; create and edit through `manotes execute`.
-- Workspace: Use the current directory unless told otherwise.
-- Read `<record-id>.md` files, but never edit them or `.manotes/` directly.
-- Metadata: Frontmatter `date` is the logical assigned date, called `created` in zk. `modified` is the last update in UTC.
-- Setup: Consult `manotes init --help`.
-
-## Notes and pages
-
-- Notes capture thoughts, ideas, and experiences.
-- Pages are records with an H1 heading (`# Title`), representing entities such as projects, libraries, or articles in progress.
-- Default to a record without an H1 for ordinary capture. Add an H1 when creating a page for an entity.
-
-## Filter records
-
-- Default command: `zk list --format short [filters]`.
-- Prefer zk for filtering and sorting records.
-- Filter and sort by `created` unless asked about updates or modifications. "Recent", "latest", and "newest" mean `--sort created-`.
-- Date output: Keep filenames and dates together with `--format '{{path}}\t{{created}}'`. Use `{{modified}}` for update queries.
-- Read selected files when snippets aren't enough.
-- If query output is truncated, consider rerunning with fewer output fields.
-- Path arguments accept filenames, directories, or ID prefixes.
-- For filenames only, use `--format '{{path}}'`.
-
-| Find                                    | Filters                                                                                                                                               |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Specific paths; exclude paths           | Positional `path ...`; `--exclude path`                                                                                                               |
-| Title/body text                         | `--match 'query'`; repeat for AND                                                                                                                     |
-| Literal text, including punctuation     | `--match-strategy exact --match 'text'`, case-insensitive                                                                                             |
-| Regular expression                      | `--match-strategy re --match 'regex'`, RE2 syntax                                                                                                     |
-| Tags                                    | `--tag 'a,b'` for AND, `'a OR b'` for OR, `'NOT a'` to exclude, `'topic/*'` for glob; `--tagless`                                                     |
-| Assigned date                           | `--created 2026-09-12`; `--created-after DATE`, `--created-before DATE`                                                                               |
-| Last update                             | `--modified DATE`; `--modified-after DATE`, `--modified-before DATE`                                                                                  |
-| Notes linking to ID                     | `--link-to ID.md`; inverse: `--no-link-to ID.md`                                                                                                      |
-| Notes ID links to                       | `--linked-by ID.md`; inverse: `--no-linked-by ID.md`                                                                                                  |
-| Indirect links                          | Add `--recursive` and optionally `--max-distance N` to a link filter                                                                                  |
-| Unconnected records sharing a linked record | `--related ID.md`                                                                                                                                     |
-| Notes mentioning a record's title         | `--mention ID.md`; add `--no-link-to ID.md` for unlinked mentions                                                                                     |
-| Notes whose titles a record mentions      | `--mentioned-by ID.md`; add `--no-linked-by ID.md` for unlinked mentions                                                                              |
-| Link maintenance                        | `--orphan` for no incoming links; `--missing-backlink` for an incoming link not reciprocated; `--broken-links` for broken outgoing links              |
-| Order and cap results                   | `--sort created-,title+`; criteria: `created`, `modified`, `path`, `title`, `word-count`, `random`. Suffix `+` ascending, `-` descending; `--limit N` |
-
-- Text matching: Case-insensitive full-text search by default. Quote queries for the shell.
-- Full-text syntax: `a b` for AND, `a OR b`, `a NOT b`, `"exact phrase"`, `(a OR b) c`, `prefix*`, `title: term`, `body: term`, `title: ^first`.
-- With `--match-strategy exact`, pass literal text.
-- Date syntax: ISO dates/times or quoted relative dates such as `'last monday'`.
-
-```sh
-# Three most recent records linking to a project, by logical date.
-zk list --format '{{path}}\t{{created}}' \
-  --link-to PROJECT_ID.md --sort created- --limit 3
-```
-
-[Filtering reference](https://zk-org.github.io/zk/records/record-filtering.html).
-
-## Create and edit records
-
-- Body edits exclude frontmatter. Use a `date` action to change the assigned date.
-- Write plain JavaScript with top-level `await`; the sandbox provides `api` with this interface:
-- Scripts cannot import modules or access the filesystem, network, or Node globals.
-
-```ts
-type Edit =
-  | { kind: "replace"; text: string; with: string; occurrence?: number | "all" }
-  | { kind: "append"; markdown: string }
-  | { kind: "date"; date: string }; // YYYY-MM-DD
-
-type CreateEdit = { kind: "append"; markdown: string } | { kind: "date"; date: string };
-
-type Api = {
-  editRecord(recordId: string, edits: readonly Edit[]): Promise<void>;
-  createRecord(recordId: string | undefined, edits: readonly CreateEdit[]): Promise<string>;
-};
-```
-
-- Record ID: Filename without `.md`.
-- Create: Pass `undefined` to generate an ID, or a non-empty unused ID. Returns the created ID. Date defaults to today.
-- Edits run in order; each awaited `editRecord` or `createRecord` call saves independently.
-- Replacement text matches literal Markdown in the body, not a regex.
-- Occurrence: Omit for exactly one match; otherwise use a zero-based index or `"all"`.
-- Delete: Set `with: ""`.
+Use the current directory unless told otherwise. Consult `manotes init --help` for setup.
+Run plain JavaScript with top-level `await` using `manotes execute script.js` or stdin:
 
 ```sh
 manotes execute <<'JS'
-await api.createRecord(undefined, [
-  { kind: "append", markdown: "First paragraph." },
-  { kind: "date", date: "2026-09-12" },
-]);
-
-await api.editRecord("record-id", [
-  { kind: "replace", text: "# Draft", with: "# Plan" },
-  { kind: "replace", text: "TODO", with: "Done", occurrence: 0 },
-  { kind: "replace", text: "(obsolete)", with: "", occurrence: "all" },
-  { kind: "append", markdown: "\n## Next steps\n\n- Review the plan." },
-  { kind: "date", date: "2026-09-12" },
-]);
+await api.showList("short", await api.list({ limit: 10 }));
 JS
 ```
 
-Saved script: `manotes execute edit.js`.
+Scripts cannot import modules or access the filesystem, network, or Node globals.
+The following TypeScript describes the API; scripts themselves must be JavaScript.
+
+## API
+
+```ts
+type RecordId = string; // Non-empty, without the .md suffix.
+type RecordTag = "note" | "prop" | "owned" | "rule";
+type PropType = "text" | "number" | "bool" | "enum" | "link";
+
+type PropValue =
+  | { _tag: "text"; val: string }
+  | { _tag: "number"; val: number } // Finite.
+  | { _tag: "bool"; val: boolean }
+  | { _tag: "enum" | "link"; val: RecordId };
+
+type PropertyTarget = ["prop", RecordId];
+type LinkTarget = ["link", "->" | "<-", RecordId];
+
+type Comparison =
+  | ["id", "=", RecordId]
+  | ["_tag", "=", RecordTag] // "note" includes ordinary notes and pages.
+  | ["title", "exists", boolean] // Pages have a title; ordinary notes do not.
+  | ["body", "contains", string] // Literal text, including titles.
+  | ["date", "=", string] // Valid YYYY-MM-DD assigned date.
+  | ["prop_type", "=", PropType]
+  | ["owned_type", "=", "enum_option"]
+  | ["owned_parent", "=", RecordId]
+  | [LinkTarget, "exists", true] // -> links to ID; <- is linked from ID.
+  | [PropertyTarget, "=", PropValue] // Uses the definition's default when unset.
+  | [PropertyTarget, "exists", boolean] // Explicit assignments; defaults do not count.
+  | [PropertyTarget, "invalid", boolean]; // Not implemented; currently matches nothing.
+
+type FilterExpr =
+  | { _tag: "cmp"; val: Comparison }
+  | { _tag: "and" | "or"; val: readonly FilterExpr[] };
+
+type Filter = readonly FilterExpr[]; // Root is AND. [] matches everything.
+
+type ListOptions = {
+  filter?: Filter; // Default []. Includes all record kinds and archived records.
+  sort?: "date" | "updated"; // Default "date", descending.
+  limit?: number; // Positive integer; omitted means all matches. Applied after sorting.
+};
+
+type ListItem = {
+  id: RecordId;
+  title: string | null;
+  text: string; // Plain text, including the title.
+  date: string; // Logical assigned date, YYYY-MM-DD.
+  createdAt: string; // Creation time, ISO 8601 UTC.
+  updatedAt: string; // Last update, ISO 8601 UTC.
+  markdown: string; // Complete Markdown body, without exported frontmatter.
+  snippets: readonly string[]; // Leading Markdown snippet, or []. Not search matches.
+};
+
+type ListFormat =
+  | "oneline" // Title, ID, assigned ISO date. Missing title prints "Untitled".
+  | "short" // Same header, then Markdown snippets.
+  | "full"; // Same header, then the complete Markdown body.
+
+type Edit =
+  | { kind: "replace"; text: string; with: string; occurrence?: number | "all" }
+  | { kind: "append"; markdown: string }
+  | { kind: "date"; date: string }; // Valid YYYY-MM-DD.
+
+type CreateEdit = Extract<Edit, { kind: "append" | "date" }>;
+
+interface Api {
+  list(options?: ListOptions): Promise<readonly ListItem[]>;
+  showList(format: ListFormat, items: readonly ListItem[]): Promise<void>;
+  createRecord(id: RecordId | undefined, edits: readonly CreateEdit[]): Promise<RecordId>;
+  editRecord(id: RecordId, edits: readonly Edit[]): Promise<void>;
+}
+```
+
+Use `showList` for formatted output or `text(records)` for JSON.
+Avoid mixing `showList` with `text()` or `console.log()` in the same script;
+their output can appear out of order.
+
+## Query examples
+
+```js
+// Ten newest ordinary notes, including archived ones.
+const recent = await api.list({
+  filter: [
+    { _tag: "cmp", val: ["_tag", "=", "note"] },
+    { _tag: "cmp", val: ["title", "exists", false] },
+  ],
+  sort: "date",
+  limit: 10,
+});
+await api.showList("short", recent);
+```
+
+```js
+// Text AND outgoing link AND unarchived. IDs do not include .md.
+const matches = await api.list({
+  filter: [
+    { _tag: "cmp", val: ["_tag", "=", "note"] },
+    { _tag: "cmp", val: ["body", "contains", "literal text"] },
+    { _tag: "cmp", val: [["link", "->", "project-id"], "exists", true] },
+    {
+      _tag: "cmp",
+      val: [["prop", "builtin:archived"], "=", { _tag: "bool", val: false }],
+    },
+  ],
+  limit: 3,
+});
+await api.showList("short", matches);
+```
+
+```js
+// Nested alternatives: a dated record OR a page containing a phrase.
+const alternatives = await api.list({
+  filter: [{
+    _tag: "or",
+    val: [
+      { _tag: "cmp", val: ["date", "=", "2026-11-08"] },
+      { _tag: "and", val: [
+        { _tag: "cmp", val: ["title", "exists", true] },
+        { _tag: "cmp", val: ["body", "contains", "draft"] },
+      ] },
+    ],
+  }],
+});
+await api.showList("oneline", alternatives);
+```
+
+```js
+// Additional JS selection runs before the result limit.
+const candidates = await api.list({
+  filter: [{ _tag: "cmp", val: [["link", "->", "project-id"], "exists", true] }],
+});
+const selected = candidates
+  .filter(record => record.date >= "2026-11-01" && record.date < "2026-12-01")
+  .slice(0, 5);
+await api.showList("full", selected);
+
+// Custom output.
+console.log(selected.map(record => `${record.id}\t${record.date}`).join("\n"));
+```
+
+## Create and edit examples
+
+Notes capture thoughts, ideas, and experiences. Pages are notes with an H1 heading representing an entity.
+Default to an ordinary note without an H1 for capture. Use an H1 when creating a page.
+
+```js
+// Create with a generated ID. Date defaults to today.
+const id = await api.createRecord(undefined, [
+  { kind: "append", markdown: "First paragraph." },
+  { kind: "date", date: "2026-11-08" },
+]);
+await api.editRecord(id, [
+  { kind: "replace", text: "First", with: "Updated" },
+  { kind: "append", markdown: "\n## Next steps\n\n- Review the plan." },
+]);
+```
+
+```js
+// Inspect matches before running a batch edit.
+const records = await api.list({
+  filter: [{ _tag: "cmp", val: ["id", "=", "record-id"] }],
+});
+for (const record of records) {
+  await api.editRecord(record.id, [
+    { kind: "replace", text: "TODO", with: "DONE", occurrence: "all" },
+  ]);
+}
+```
+
+Body replacements match literal Markdown. Omit `occurrence` for exactly one match,
+use a zero-based index for one occurrence, or `"all"` for all. Use `with: ""` to delete text.
+Edits run in order. Each awaited create/edit call saves independently; earlier calls survive a later failure.
+Creation accepts an unused explicit ID or `undefined`. IDs starting with `builtin:` are reserved.
+Read `<record-id>.md` files when needed, but never edit them or `.manotes/` directly.
 
 ## Sync
 
-- `manotes sync` publishes local edits and downloads remote changes.
+`manotes sync` publishes local edits and downloads remote changes.
+`manotes execute` can auto-sync pending changes when auto-sync is enabled,
+including when the script only reads records.

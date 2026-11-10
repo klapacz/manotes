@@ -17,12 +17,17 @@ import { CliPaths } from "./cli.paths";
 import { EditDocument } from "./edit-document";
 import { BacklinkLabels } from "./backlink-labels";
 import { ExecuteScript } from "./execute-script";
+import { CliList } from "./list";
 
 export type Edit = EditDocument.Edit | { readonly kind: "date"; readonly date: string };
 
 export type CreateEdit = Extract<Edit, { readonly kind: "append" | "date" }>;
 
 export type Api = {
+  readonly list: (
+    options?: CliList.Options,
+    signal?: AbortSignal,
+  ) => Promise<ReadonlyArray<CliList.Item>>;
   readonly editRecord: (
     id: RecordSchema.Id,
     edits: readonly Edit[],
@@ -178,6 +183,14 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
   });
 
   return {
+    list: (options, signal) => {
+      return Effect.runPromise(
+        materializer
+          .catchUp()
+          .pipe(Effect.andThen(CliList.list(options)), Effect.provideService(DB.Service, db)),
+        { signal },
+      );
+    },
     editRecord: (id, edits, signal) => Effect.runPromise(editRecord(id, edits), { signal }),
     createRecord: (id, edits, signal) => Effect.runPromise(createRecord(id, edits), { signal }),
   } satisfies Api;

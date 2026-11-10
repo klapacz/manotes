@@ -59,7 +59,6 @@
               bun
               jq
               nix-vite-plus.packages.${pkgs.stdenv.hostPlatform.system}.vp
-              # Use the installed zk fork rather than overriding it with nixpkgs' zk.
               (writeShellScriptBin "tasks" (builtins.readFile ./scripts/tasks))
             ];
 

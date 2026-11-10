@@ -1,10 +1,13 @@
 import { RecordSchema } from "@manotes/shared/record.schema";
+import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { NodeServices } from "@effect/platform-node";
 import dedent from "dedent";
-import { DateTime, Effect, type FileSystem, Layer, Result } from "effect";
+import { Console, DateTime, Effect, type FileSystem, Layer, Result } from "effect";
+import { Query } from "effect-qb";
+import { Tables } from "@manotes/shared/db.tables";
 import { Reactivity } from "effect/reactivity";
 import { describe, expect, it } from "vite-plus/test";
 import { initProseMirrorDoc, prosemirrorJSONToYDoc, updateYFragment } from "y-prosemirror";
@@ -26,6 +29,7 @@ import {
 import { CliRuntime } from "./cli.runtime";
 import { ExecuteApi } from "./execute-api";
 import { BacklinkLabels } from "./backlink-labels";
+import { CliList } from "./list";
 
 const RECORD_ID = RecordSchema.Id.make("record-1");
 
@@ -184,7 +188,7 @@ describe("ExecuteApi.editRecord", () => {
         expect(yield* eventRepo.countPending()).toBe(0);
 
         yield* runTestScript(dedent`
-          if (Object.keys(api).sort().join(",") !== "createRecord,editRecord") throw new Error("unexpected API");
+          if (Object.keys(api).sort().join(",") !== "createRecord,editRecord,list,showList") throw new Error("unexpected API");
           await api.editRecord("${RECORD_ID}", [
             { kind: "replace", text: "Alpha", with: "Beta" },
             { kind: "append", markdown: "Beta follows." },
@@ -487,6 +491,190 @@ describe("ExecuteApi.createRecord", () => {
         const eventRepo = yield* EventRepo.Service;
         expect(yield* recordRepo.findAllNotes()).toHaveLength(1);
         expect(yield* eventRepo.countPending()).toBe(2);
+      }),
+    );
+  });
+});
+
+describe("ExecuteApi.list", () => {
+  it("uses nested text, link and property filters and resolves labels outside the result", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        const project = RecordSchema.Id.make("project");
+        const archived = RecordSchema.Id.make("archived");
+        yield* seedRecord(project, "# Project");
+        yield* seedRecord(
+          RECORD_ID,
+          "# Match\n\nNeedle%_ [Project](./project.md).\n\nLater paragraph.",
+          2,
+        );
+        yield* seedRecord(archived, "Needle%_ [Project](./project.md).", 3);
+        yield* seedRecord(RecordSchema.Id.make("other"), "NeedleXY [Project](./project.md).", 4);
+        const db = yield* DB.Service;
+        yield* db.execute(
+          Query.insert(Tables.props).pipe(
+            Query.from(
+              DB.values(Tables.props, {
+                recordId: archived,
+                path: [],
+                propId: RecordSchema.Id.make("builtin:archived"),
+                value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+              }),
+            ),
+          ),
+        );
+        const events = yield* EventRepo.Service;
+        const before = yield* events.countPending();
+        const output: unknown[] = [];
+
+        yield* runTestScript(`
+        const records = await api.list({ filter: [
+          { _tag: "and", val: [
+            { _tag: "cmp", val: ["_tag", "=", "note"] },
+            { _tag: "or", val: [
+              { _tag: "cmp", val: ["body", "contains", "Needle%_"] },
+              { _tag: "cmp", val: ["body", "contains", "absent"] },
+            ] },
+          ] },
+          { _tag: "cmp", val: [["link", "->", "project"], "exists", true] },
+          { _tag: "cmp", val: [["prop", "builtin:archived"], "=", { _tag: "bool", val: false }] },
+        ] });
+        text(records);
+      `).pipe(
+          Effect.provideService(Console.Console, {
+            ...console,
+            log: (...args) => {
+              output.push(...args);
+            },
+          }),
+        );
+
+        expect(output).toHaveLength(1);
+        const result = JSON.parse(String(output[0]));
+        expect(result).toHaveLength(1);
+        expect(result[0]).toMatchObject({
+          id: RECORD_ID,
+          title: "Match",
+          markdown: "# Match\n\nNeedle%\\_ [Project](./project.md).\n\nLater paragraph.\n",
+          snippets: ["Needle%\\_ [Project](./project.md)."],
+          createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+          updatedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+        });
+        expect(result[0]).not.toHaveProperty("content");
+        expect(yield* events.countPending()).toBe(before);
+
+        yield* runTestScript(`
+        const records = await api.list({ filter: [
+          { _tag: "cmp", val: [["link", "<-", "${RECORD_ID}"], "exists", true] },
+        ] });
+        if (records.length !== 1 || records[0].id !== "project") throw new Error("incoming link filter");
+      `);
+      }),
+    );
+  });
+
+  it("sorts before limiting and uses stable date, creation and ID tie-breakers", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        const records = yield* RecordRepo.Service;
+        const ids = ["b", "a", "c", "d"].map((id) => RecordSchema.Id.make(id));
+
+        for (const [index, id] of ids.entries()) {
+          yield* seedRecord(id, `# ${id}`, index + 1);
+          yield* records.updateById(id, {
+            date: "2026-11-08",
+            createdAt: DateTime.makeUnsafe("2026-11-08T10:00:00.000Z"),
+            updatedAt: DateTime.makeUnsafe("2026-11-09T10:00:00.000Z"),
+          });
+        }
+
+        yield* records.updateById(RecordSchema.Id.make("c"), {
+          createdAt: DateTime.makeUnsafe("2026-11-08T11:00:00.000Z"),
+        });
+        yield* records.updateById(RecordSchema.Id.make("d"), {
+          date: "2026-11-07",
+          updatedAt: DateTime.makeUnsafe("2026-11-10T10:00:00.000Z"),
+        });
+
+        yield* runTestScript(`
+        const byDate = await api.list();
+        if (byDate.map(record => record.id).join() !== "c,a,b,d") throw new Error("date ordering");
+        const limited = await api.list({ limit: 2 });
+        if (limited.map(record => record.id).join() !== "c,a") throw new Error("limit after sort");
+        const byUpdate = await api.list({ sort: "updated" });
+        if (byUpdate.map(record => record.id).join() !== "d,a,b,c") throw new Error("updated ordering");
+      `);
+      }),
+    );
+  });
+
+  it("catches up interrupted events and sees creates and edits within the same script", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        const events = yield* EventRepo.Service;
+        yield* events.create({
+          recordId: RECORD_ID,
+          type: "update",
+          payload: fullUpdateFromMarkdown("# Interrupted\n\nPending body."),
+          createdAt: yield* DateTime.now,
+        });
+
+        yield* runTestScript(`
+        const pending = await api.list();
+        if (pending.length !== 1 || pending[0].title !== "Interrupted") throw new Error("catch-up");
+        await api.createRecord("created", [{ kind: "append", markdown: "# Created" }]);
+        if ((await api.list()).length !== 2) throw new Error("create visibility");
+        await api.editRecord("created", [{ kind: "replace", text: "Created", with: "Edited" }]);
+        const edited = await api.list({ filter: [{ _tag: "cmp", val: ["id", "=", "created"] }] });
+        if (edited[0].title !== "Edited") throw new Error("edit visibility");
+      `);
+        expect(yield* events.countPending()).toBe(4);
+      }),
+    );
+  });
+
+  it("keeps all record kinds by default and preserves Markdown blocks in snippets", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        const fixtures = [
+          ["empty", ""],
+          ["heading", "# Heading"],
+          ["code", "# Code\n\n```js\nconst x = 1;\n```\n\nLater."],
+          ["list", "# List\n\n- [ ] First\n- Second"],
+        ] as const;
+
+        for (const [index, fixture] of fixtures.entries()) {
+          const [id, markdown] = fixture;
+          yield* seedRecord(RecordSchema.Id.make(id), markdown, index + 1);
+        }
+
+        const records = yield* RecordRepo.Service;
+        yield* records.updateAttrs({
+          id: RecordSchema.Id.make("heading"),
+          columns: {
+            _tag: AttrsSchema.RecordTag.make("prop"),
+            prop_type: null,
+            prop_default: null,
+            prop_targets: null,
+            owned_type: null,
+            owned_parent: null,
+            rule_storage: null,
+            rule_targets: null,
+            attrs_valid: true,
+          },
+        });
+        const all = yield* CliList.list();
+        expect(all).toHaveLength(4);
+        expect(all.find(({ id }) => id === "empty")?.snippets).toEqual([]);
+        expect(all.find(({ id }) => id === "heading")?.snippets).toEqual([]);
+        expect(all.find(({ id }) => id === "code")?.snippets).toEqual(["```js\nconst x = 1;\n```"]);
+        expect(all.find(({ id }) => id === "list")?.snippets).toEqual(["- [ ] First"]);
+
+        const filtered = yield* CliList.list({
+          filter: [AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "prop"] })],
+        });
+
+        expect(filtered.map(({ id }) => id)).toEqual(["heading"]);
       }),
     );
   });

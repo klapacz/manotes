@@ -2,6 +2,7 @@ import { RecordSchema } from "@manotes/shared/record.schema";
 import { CodemodeSandbox, type CodemodeTool } from "@earendil-works/pi-codemode";
 import { Console, Data, Effect, Schema } from "effect";
 import type { Api } from "./execute-api";
+import { CliList } from "./list";
 
 export class ScriptExecutionError extends Data.TaggedError("ExecuteScript.ScriptExecutionError")<{
   scriptPath: string;
@@ -15,11 +16,12 @@ export const run = Effect.fn("ExecuteScript.run")(function* (
   api: Api,
 ) {
   const pending: Promise<unknown>[] = [];
+  const output = yield* Console.Console;
 
   const result = yield* Effect.acquireUseRelease(
     Effect.sync(() => {
       return new CodemodeSandbox({
-        globals: createGlobals(api, pending),
+        globals: createGlobals(api, pending, output),
         memoryLimitBytes: 256 * 1024 * 1024,
       });
     }),
@@ -59,8 +61,33 @@ export const run = Effect.fn("ExecuteScript.run")(function* (
   }
 });
 
-function createGlobals(api: Api, pending: Promise<unknown>[]): CodemodeTool[] {
+function createGlobals(
+  api: Api,
+  pending: Promise<unknown>[],
+  output: Console.Console,
+): CodemodeTool[] {
   return [
+    {
+      name: "api.list",
+      spread: true,
+      execute: (args, { signal }) => {
+        const [options] = decodeListArgs(args);
+        const call = api.list(options ?? undefined, signal);
+        pending.push(call);
+
+        return call;
+      },
+    },
+    {
+      name: "api.showList",
+      spread: true,
+      execute: (args) => {
+        const [format, items] = decodeShowListArgs(args);
+        const rendered = CliList.format(format, items);
+
+        if (rendered.length > 0) output.log(rendered);
+      },
+    },
     {
       name: "api.editRecord",
       spread: true,
@@ -115,6 +142,14 @@ const decodeEditRecordArgs = Schema.decodeUnknownSync(
 
 const decodeCreateRecordArgs = Schema.decodeUnknownSync(
   Schema.Tuple([Schema.NullOr(RecordSchema.Id), Schema.Array(CreateEdit)]),
+);
+
+const decodeListArgs = Schema.decodeUnknownSync(
+  Schema.Tuple([Schema.optionalKey(Schema.NullOr(CliList.Options))]),
+);
+
+const decodeShowListArgs = Schema.decodeUnknownSync(
+  Schema.Tuple([CliList.Format, Schema.Array(CliList.Item)]),
 );
 
 export * as ExecuteScript from "./execute-script";

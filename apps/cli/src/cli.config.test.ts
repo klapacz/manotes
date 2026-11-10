@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { NodeServices } from "@effect/platform-node";
@@ -16,7 +16,7 @@ const config: CliConfig.Config = {
 
 describe("CliConfig.write", () => {
   it.each([undefined, "", '[record]\nlanguage = "pl"\n'])(
-    "initializes zk without replacing existing config %j",
+    "writes Manotes config without creating or replacing zk config %j",
     async (existing) => {
       const dir = await mkdtemp(path.join(tmpdir(), "manotes-config-"));
 
@@ -47,7 +47,12 @@ describe("CliConfig.write", () => {
           ),
         );
 
-        expect(await readFile(zkConfigPath, "utf8")).toBe(existing ?? "");
+        if (existing === undefined) {
+          expect(await readdir(dir)).toEqual([".manotes"]);
+        } else {
+          expect(await readFile(zkConfigPath, "utf8")).toBe(existing);
+        }
+
         expect(JSON.parse(await readFile(configPath, "utf8"))).toEqual({
           ...config,
           graphKey: Buffer.from(Redacted.value(config.graphKey)).toString("base64"),

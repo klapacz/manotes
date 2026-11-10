@@ -103,6 +103,7 @@ const execute = Command.make(
 
       yield* Effect.gen(function* () {
         yield* ExecuteApi.runScript(scriptPath);
+        // TODO: Skip Markdown export and auto-sync for read-only scripts.
         const materializer = yield* Materializer.Service;
         yield* materializer.catchUp();
         yield* MaterializedFiles.writeAll();
@@ -149,11 +150,12 @@ const execute = Command.make(
     ),
   ),
 ).pipe(
-  Command.withDescription("Run sandboxed JavaScript and save changes."),
+  Command.withDescription("Run sandboxed JavaScript to query records and save changes."),
   Command.withExamples([
     {
       command: "cat edit.js | manotes execute",
-      description: "Read JavaScript from stdin; api provides createRecord and editRecord.",
+      description:
+        "Read JavaScript from stdin; api provides list, showList, createRecord and editRecord.",
     },
   ]),
 );
