@@ -15,16 +15,40 @@ const id = AttrsSchema.RecordId.make("priority");
 const other = AttrsSchema.RecordId.make("other");
 
 describe("Filters definitions and Outline operations", () => {
-  it("offers property violations only in stream registries and labels built-in and custom properties", () => {
+  it("offers valid and invalid choices only in stream registries, including nested filters", () => {
     const streams = Filters.forStreams(registry);
 
-    for (const propId of [id, BuiltinAttrs.archivedId]) {
-      const expression = Filters.propertyViolation.make(propId);
-      expect(expression).toEqual(expr.cmp({ val: [["prop", propId], "violation", true] }));
-      expect(Filters.propertyViolation.select(propId)).toEqual(Option.some(expression));
-      expect(Filters.propertyViolation.selection(expression)).toEqual(Option.some(propId));
-      expect(Option.isSome(streams.findGroup(expression))).toBe(true);
+    for (const violation of [true, false]) {
+      const expression = expr.cmp({
+        val: [["prop", BuiltinAttrs.archivedId], "violation", violation],
+      });
+
       expect(registry.findGroup(expression)).toEqual(Option.none());
+      const group = Option.getOrThrow(streams.findGroup(expression));
+      expect(group.entries).toHaveLength(3);
+      expect(Option.isSome(streams.getLabel(expression))).toBe(true);
+      const nested = [expr.or({ val: [expr.and({ val: [expression] })] })];
+      expect(Schema.decodeUnknownOption(AttrsSchema.TargetFilter)(nested)).toEqual(Option.none());
+    }
+  });
+
+  it("keeps property violations in each property's group and labels built-in and custom properties", () => {
+    const definitions = Filters.fromDefinitions([
+      ...BuiltinAttrs.defs,
+      { id, title: "Priority", prop_type: "number", prop_default: null },
+    ]);
+
+    const streams = Filters.forStreams(definitions);
+
+    expect(
+      streams.groups.some((group) => Filters.renderLabel(group.label) === "Property violations"),
+    ).toBe(false);
+
+    for (const propId of [id, BuiltinAttrs.archivedId]) {
+      const expression = expr.cmp({ val: [["prop", propId], "violation", true] });
+      const group = Option.getOrThrow(streams.findGroup(expression));
+      expect(group.propertyId).toBe(propId);
+      expect(definitions.findGroup(expression)).toEqual(Option.none());
       const label = Option.getOrThrow(streams.getLabel(expression));
       const rendered = Filters.renderLabel(label, () => "Priority");
 
@@ -33,10 +57,7 @@ describe("Filters definitions and Outline operations", () => {
       } else expect(rendered).toBe('Property "Priority" violations');
     }
 
-    expect(Filters.propertyViolation.picker._tag).toBe("Property");
-    expect(Filters.propertyViolation.picker.label).toBe("Property violations");
     expect(Filters.ruleViolation.picker.label).toBe("Rule violations");
-    expect(Filters.propertyViolation.select(false)).toEqual(Option.none());
   });
 
   it("uses distinct family tokens even when their labels match", () => {

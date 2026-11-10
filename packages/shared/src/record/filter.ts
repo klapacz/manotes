@@ -220,15 +220,18 @@ function comparisonPredicate(
         return Query.eq(propertyExistsPredicate(id), exists);
       },
     ),
-    Match.when([["prop", Schema.is(AttrsSchema.RecordId)], "violation", true], ([[, propId]]) => {
-      if (metadata.defs === undefined) return Query.literal(false);
+    Match.when(
+      [["prop", Schema.is(AttrsSchema.RecordId)], "violation", Match.boolean],
+      ([[, propId], , violation]) => {
+        if (metadata.defs === undefined) return Query.literal(false);
 
-      const def = Record.get(metadata.defs, propId);
+        const def = Record.get(metadata.defs, propId);
 
-      if (Option.isNone(def)) return Query.literal(false);
+        if (Option.isNone(def)) return Query.literal(false);
 
-      return propertyViolationPredicate(propId, def.value);
-    }),
+        return Query.eq(propertyViolationPredicate(propId, def.value), violation);
+      },
+    ),
     Match.when([["rule", Schema.is(AttrsSchema.RecordId)], "violation", true], ([[, ruleId]]) => {
       return pipe(
         metadata.rules ?? [],

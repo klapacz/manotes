@@ -82,7 +82,6 @@ type PickerKind = Data.TaggedEnum<{
   Number: {};
   Date: {};
   Record: { filter: AttrsSchema.TargetFilter };
-  Property: {};
   Choices: {
     groups: readonly { label: string; choices: readonly { label: string; value: PickerValue }[] }[];
     getLabel: (raw: PickerValue) => Option.Option<Label>;
@@ -109,7 +108,6 @@ export const Picker = {
   Number: scalarPicker(pickerKind.Number(), Schema.Finite),
   Date: scalarPicker(pickerKind.Date(), PlainDateString),
   Record: recordPicker,
-  Property: scalarPicker(pickerKind.Property(), AttrsSchema.RecordId),
   Choices: choicesPicker,
 };
 
@@ -227,7 +225,11 @@ export function namedWithPicker<Value extends FilterValue>(opts: {
   };
 }
 
-export type Group = { label: DisplayLabel; entries: readonly Definition[] };
+export type Group = {
+  label: DisplayLabel;
+  entries: readonly Definition[];
+  propertyId?: AttrsSchema.RecordId;
+};
 
 export function group(opts: Group): Group {
   return opts;

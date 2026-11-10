@@ -123,20 +123,6 @@ export const ruleViolation = comparison({
   }),
 });
 
-export const propertyViolation = comparison({
-  when: [["prop", Schema.is(AttrsSchema.RecordId)], "violation", true],
-  make: (id: AttrsSchema.RecordId) => [["prop", id], "violation", true] as const,
-  getValue: ([[, id]]) => id,
-  getLabel: ([[, id]]) => {
-    return Label.Record({ id, val: (name) => `Property "${name}" violations` });
-  },
-  picker: Picker.Property({
-    label: "Property violations",
-    map: identity,
-    unmap: Schema.decodeUnknownOption(AttrsSchema.RecordId),
-  }),
-});
-
 export function property(definition: PropRecordRepo.Def): Group {
   const label = Label.Record({ id: definition.id, val: identity });
 
@@ -259,7 +245,7 @@ export function property(definition: PropRecordRepo.Def): Group {
     }),
   });
 
-  return group({ label, entries: [equals, exists] });
+  return group({ label, entries: [equals, exists], propertyId: definition.id });
 }
 
 export const body = comparison({
@@ -432,12 +418,47 @@ export function forStreams(registry: Registry, presets: readonly PresetRecordRep
   );
 
   return create({
-    groups: Array.appendAll(registry.groups, [
-      ...savedGroups,
-      ruleViolationGroup,
-      group({ label: propertyViolation.picker.label, entries: [propertyViolation] }),
-    ]),
+    groups: pipe(
+      Array.map(registry.groups, (group) => {
+        if (group.propertyId === undefined) return group;
+
+        return {
+          ...group,
+          entries: Array.append(group.entries, propertyValidity(group.propertyId)),
+        };
+      }),
+      Array.appendAll([...savedGroups, ruleViolationGroup]),
+    ),
     aliases: hiddenAliases,
+  });
+}
+
+function propertyValidity(propId: AttrsSchema.RecordId) {
+  return comparison({
+    when: [["prop", propId], "violation", Match.boolean],
+    make: (violation: boolean) => [["prop", propId], "violation", violation] as const,
+    getLabel: ([, , violation]) => {
+      return Label.Record({
+        id: propId,
+        val: (name) => {
+          return violation ? `Property "${name}" violations` : `Property "${name}" is valid`;
+        },
+      });
+    },
+    picker: Picker.Choices({
+      label: "Validity",
+      map: identity,
+      unmap: Schema.decodeUnknownOption(Schema.Boolean),
+      groups: [
+        {
+          label: "",
+          choices: [
+            { label: "Is valid", value: false },
+            { label: "Is invalid", value: true },
+          ],
+        },
+      ],
+    }),
   });
 }
 

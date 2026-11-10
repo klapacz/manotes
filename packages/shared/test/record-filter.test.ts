@@ -20,6 +20,55 @@ const boolean = (value: { val: boolean }) => AttrsSchema.PropVal.cases.bool.make
 const createdAt = DateTime.makeUnsafe("2026-10-15T12:00:00Z");
 
 describe("record filter expressions", () => {
+  it("inverts property violations across paths and keeps unavailable definitions unmatched", async () => {
+    await withRecords(async (executor, database) => {
+      const propId = id("flag");
+
+      const insert = database.prepare(
+        "INSERT INTO props (recordId, path, propId, value) VALUES (?, ?, ?, ?)",
+      );
+
+      insert.run("alpha", "[]", propId, JSON.stringify(boolean({ val: true })));
+      insert.run(
+        "alpha",
+        JSON.stringify(["group"]),
+        propId,
+        JSON.stringify(AttrsSchema.PropVal.cases.text.make({ val: "wrong" })),
+      );
+      insert.run("body", "[]", propId, null);
+
+      const metadata: RecordFilter.Metadata = {
+        defs: {
+          [propId]: {
+            id: propId,
+            title: null,
+            prop_type: "bool",
+            prop_default: boolean({ val: true }),
+          },
+        },
+      };
+
+      const validity = (violation: boolean) => {
+        return expr.cmp({ val: [["prop", propId], "violation", violation] });
+      };
+
+      const valid = [expr.or({ val: [expr.and({ val: [validity(false)] })] })];
+
+      expect(await findIds(executor, [validity(true)], metadata)).toEqual(["alpha", "body"]);
+      // An unset property has no saved-value violation, even when it has a default.
+      expect(await findIds(executor, valid, metadata)).toEqual(["prop"]);
+      expect(await findIds(executor, valid)).toEqual([]);
+      expect(await findIds(executor, valid, { defs: {} })).toEqual([]);
+
+      database.prepare("DELETE FROM props WHERE path != '[]'").run();
+      database
+        .prepare("UPDATE props SET value = ? WHERE recordId = 'body'")
+        .run(JSON.stringify(boolean({ val: false })));
+      expect(await findIds(executor, valid, metadata)).toEqual(["alpha", "body", "prop"]);
+      expect(await findIds(executor, [validity(true)], metadata)).toEqual([]);
+    });
+  });
+
   it("executes nested AND/OR, empty groups, IDs, and literal substring searches", async () => {
     await withRecords(async (executor) => {
       const ids = (filter: AttrsSchema.Filter) => findIds(executor, filter);
@@ -141,13 +190,17 @@ describe("record filter expressions", () => {
   });
 });
 
-async function findIds(executor: ReturnType<typeof makeExecutor>, filter: AttrsSchema.Filter) {
+async function findIds(
+  executor: ReturnType<typeof makeExecutor>,
+  filter: AttrsSchema.Filter,
+  metadata: RecordFilter.Metadata = {},
+) {
   const rows = await Effect.runPromise(
     executor.execute(
       Query.select({ id: Tables.records.id }).pipe(
         Query.from(Tables.records),
         Query.where(Query.neq(Tables.records.id, id("flag"))),
-        Query.where(RecordFilter.filterPredicate(filter)),
+        Query.where(RecordFilter.filterPredicate(filter, metadata)),
         Query.orderBy(Tables.records.id),
       ),
     ),

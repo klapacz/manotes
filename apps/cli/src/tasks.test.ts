@@ -53,38 +53,41 @@ it("lists active tasks by state and priority using the task script", async () =>
   expect(output[4]).toContain("Task context.");
   expect(output).toHaveLength(5);
   expect(output.join("\n")).not.toContain("record-");
-  expect(api.list).toHaveBeenCalledWith({
-    filter: [
-      AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
-      AttrsSchema.makeFilterExpr.cmp({
-        val: [
-          ["prop", RecordSchema.Id.make("prop:kind")],
-          "=",
-          AttrsSchema.PropVal.cases.enum.make({ val: RecordSchema.Id.make("option:kind:task") }),
-        ],
-      }),
-      AttrsSchema.makeFilterExpr.cmp({
-        val: [
-          ["prop", RecordSchema.Id.make("builtin:archived")],
-          "=",
-          AttrsSchema.PropVal.cases.bool.make({ val: false }),
-        ],
-      }),
-      AttrsSchema.makeFilterExpr.or({
-        val: ["in-progress", "todo"].map((state) => {
-          return AttrsSchema.makeFilterExpr.cmp({
-            val: [
-              ["prop", RecordSchema.Id.make("prop:state")],
-              "=",
-              AttrsSchema.PropVal.cases.enum.make({
-                val: RecordSchema.Id.make(`option:state:${state}`),
-              }),
-            ],
-          });
+  expect(api.list).toHaveBeenCalledWith(
+    {
+      filter: [
+        AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+        AttrsSchema.makeFilterExpr.cmp({
+          val: [
+            ["prop", RecordSchema.Id.make("prop:kind")],
+            "=",
+            AttrsSchema.PropVal.cases.enum.make({ val: RecordSchema.Id.make("option:kind:task") }),
+          ],
         }),
-      }),
-    ],
-  });
+        AttrsSchema.makeFilterExpr.cmp({
+          val: [
+            ["prop", RecordSchema.Id.make("builtin:archived")],
+            "=",
+            AttrsSchema.PropVal.cases.bool.make({ val: false }),
+          ],
+        }),
+        AttrsSchema.makeFilterExpr.or({
+          val: ["in-progress", "todo"].map((state) => {
+            return AttrsSchema.makeFilterExpr.cmp({
+              val: [
+                ["prop", RecordSchema.Id.make("prop:state")],
+                "=",
+                AttrsSchema.PropVal.cases.enum.make({
+                  val: RecordSchema.Id.make(`option:state:${state}`),
+                }),
+              ],
+            });
+          }),
+        }),
+      ],
+    },
+    expect.any(AbortSignal),
+  );
   expect(api.editRecord).not.toHaveBeenCalled();
   expect(api.createRecord).not.toHaveBeenCalled();
 });

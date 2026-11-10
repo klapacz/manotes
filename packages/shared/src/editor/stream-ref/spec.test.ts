@@ -27,10 +27,16 @@ describe("simple stream-ref labels", () => {
   it("preserves property violation labels and record dependencies in saved stream settings", () => {
     const settings = StreamRefSpec.decodeAttrs({
       ...StreamSettings.defaultDisplay,
-      filter: [Filters.propertyViolation.make(project)],
+      filter: [expr.cmp({ val: [["prop", project], "violation", true] })],
     });
 
-    const labels = StreamRefSpec.labels(settings);
+    const registry = Filters.forStreams(
+      Filters.fromDefinitions([
+        { id: project, title: "Priority", prop_type: "number", prop_default: null },
+      ]),
+    );
+
+    const labels = StreamRefSpec.labels(settings, registry);
     expect(StreamRefSpec.renderLabels(labels, () => "Priority")).toBe(
       'Property "Priority" violations',
     );

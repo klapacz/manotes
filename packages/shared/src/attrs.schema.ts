@@ -107,7 +107,7 @@ export type TargetFilterCmp = typeof TargetFilterCmp.Type;
 // Only general stream filters can depend on validation; target filters cannot.
 export const FilterCmp = Schema.Union([
   ...TargetFilterCmp.members,
-  Schema.Tuple([PropTarget, Schema.Literal("violation"), Schema.Literal(true)]),
+  Schema.Tuple([PropTarget, Schema.Literal("violation"), Schema.Boolean]),
   Schema.Tuple([RuleTarget, Schema.Literal("violation"), Schema.Literal(true)]),
   Schema.Tuple([
     Schema.Literals(["rules", "props"]),

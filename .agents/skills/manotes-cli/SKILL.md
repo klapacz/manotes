@@ -47,7 +47,7 @@ type Cmp =
   | [LinkTarget, "exists", true] // -> links to ID; <- is linked from ID.
   | [PropTarget, "=", PropValue] // Uses the definition's default when unset.
   | [PropTarget, "exists", boolean] // Explicit assignments; defaults do not count.
-  | [PropTarget, "violation", true] // An available definition has a saved value with the wrong type or invalid target.
+  | [PropTarget, "violation", boolean] // true: invalid saved value; false: no saved-value violation.
   | [RuleTarget, "violation", true] // Rule applies and a required property is unset at its storage path.
   | ["rules", "violation", true] // Violates any unarchived rule.
   | ["props", "violation", true]; // Invalid saved value for any unarchived property or built-in.
@@ -59,7 +59,7 @@ type FilterExpr =
 type Filter = readonly FilterExpr[]; // Root is AND. [] matches everything.
 
 type TargetFilterExpr =
-  | { _tag: "cmp"; val: Exclude<Cmp, [PropTarget, "violation", true] | [RuleTarget, "violation", true] | ["rules" | "props", "violation", true]> }
+  | { _tag: "cmp"; val: Exclude<Cmp, [PropTarget, "violation", boolean] | [RuleTarget, "violation", true] | ["rules" | "props", "violation", true]> }
   | { _tag: "and" | "or"; val: readonly TargetFilterExpr[] };
 
 type TargetFilter = readonly TargetFilterExpr[];
@@ -206,6 +206,10 @@ Avoid mixing `showList` with `text()` or `console.log()` in the same script;
 their output can appear out of order.
 
 ## Query examples
+
+Property `violation` filters use `true` for invalid saved assignments and `false`
+for no saved-value violation. Unset properties match `false`; unavailable definitions
+match neither. `TargetFilter` rejects both values at every nesting level.
 
 ```js
 // Ten newest ordinary notes, including archived ones.

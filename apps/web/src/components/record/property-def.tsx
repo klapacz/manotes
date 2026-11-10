@@ -2,7 +2,6 @@ import { PropValidation } from "@manotes/shared/prop-validation";
 import { PaneNavigate } from "../../lib/record/pane.navigate";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
-import { Filters } from "@manotes/shared/record/filters";
 import { useAtom } from "../../lib/atom-solid";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
@@ -95,7 +94,9 @@ export function Root(props: {
     openNext(
       PaneSchema.make.stream({
         ...StreamSettings.defaultDisplay,
-        filter: [Filters.propertyViolation.make(props.recordId)],
+        filter: [
+          AttrsSchema.makeFilterExpr.cmp({ val: [["prop", props.recordId], "violation", true] }),
+        ],
       }),
     );
   };

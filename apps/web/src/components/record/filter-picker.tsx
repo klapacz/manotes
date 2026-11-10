@@ -7,10 +7,9 @@ import type { JSX } from "@solidjs/web";
 import type { RecordRepo } from "@manotes/shared/record.repo";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Filters } from "@manotes/shared/record/filters";
-import { PropDef } from "@manotes/shared/prop-def.service";
 import { Array, Equal, Match, Option, Predicate, Result, Stream } from "effect";
 import { Show, createMemo, createSignal, untrack } from "solid-js";
-import { CircleCheck, CircleDashed } from "@lucide/solid";
+import { CircleCheck, CircleDashed, CircleX } from "@lucide/solid";
 import { DateSuggestions } from "../../lib/date-suggestions";
 import { MenuQuery } from "../../lib/menu-query";
 import { QueryEngine } from "../../lib/query-engine";
@@ -306,7 +305,7 @@ function GroupCommands(props: {
     const queries: QueryEngine.Query<
       Choice | MenuQuery.Action,
       unknown,
-      RecordRepo.Service | PropDef.Service | RecordCache.Service
+      RecordRepo.Service | RecordCache.Service
     >[] = props.group.entries.map((entry, index) => {
       if (Predicate.isTagged(entry, "Named") && entry.picker && props.group.entries.length > 1) {
         const label = labels()[index + 1] ?? Filters.renderLabel(entry.picker.label);
@@ -390,7 +389,7 @@ function entryQuery(
   entry: Filters.Definition,
   index: number,
   expression?: AttrsSchema.FilterExpr,
-): QueryEngine.Query<Choice, unknown, RecordRepo.Service | PropDef.Service | RecordCache.Service> {
+): QueryEngine.Query<Choice, unknown, RecordRepo.Service | RecordCache.Service> {
   const selection = expression ? entry.selection(expression) : Option.none();
 
   if (!entry.picker) {
@@ -440,74 +439,61 @@ function entryQuery(
     ) : undefined,
   });
 
-  const query: QueryEngine.Query<Candidate, unknown, RecordRepo.Service | PropDef.Service> =
-    Match.value(picker).pipe(
-      Match.tag("Choices", ({ groups }) => {
-        const query = MenuQuery.choices(() => {
-          return groups.flatMap((group) => {
-            return group.choices.map((item) => ({
-              ...choice(item.value, item.label),
-              group: `${index}:${group.label}`,
-              groupLabel: group.label ? () => group.label : undefined,
-            }));
-          });
+  const query: QueryEngine.Query<Candidate, unknown, RecordRepo.Service> = Match.value(picker).pipe(
+    Match.tag("Choices", ({ groups }) => {
+      const query = MenuQuery.choices(() => {
+        return groups.flatMap((group) => {
+          return group.choices.map((item) => ({
+            ...choice(item.value, item.label),
+            group: group.label ? `${index}:${group.label}` : "operators",
+            groupLabel: group.label ? () => group.label : undefined,
+          }));
         });
+      });
 
-        return query;
-      }),
-      Match.tag("Record", ({ filter }) => {
-        const query = filter.length ? RecordQuery.scoped({ filter }) : RecordQuery.query;
+      return query;
+    }),
+    Match.tag("Record", ({ filter }) => {
+      const query = filter.length ? RecordQuery.scoped({ filter }) : RecordQuery.query;
 
-        return QueryEngine.map(query, (record) => ({
-          ...choice(record.value, record.label),
-          group: String(index),
-          groupLabel: () => <FilterLabel label={picker.label} />,
-        }));
-      }),
-      Match.tag("Property", () => {
-        return (request: QueryEngine.Request) => {
-          return PropDef.Service.use((defs) => defs.reactiveDefs()).pipe(
-            Stream.unwrap,
-            Stream.switchMap((defs) => {
-              return MenuQuery.choices(() => {
-                return Array.map(defs, (def) => choice(def.id, def.title ?? "Untitled property"));
-              })(request);
-            }),
-          );
-        };
-      }),
-      Match.tag("Text", () => {
-        return (request: QueryEngine.Request) => {
-          return Stream.succeed([
-            ...(request.text === "" &&
-            Predicate.isString(picker.defaultValue) &&
-            picker.defaultValue !== ""
-              ? [{ score: 1, value: choice(picker.defaultValue, picker.defaultValue) }]
-              : []),
-            {
-              score: 1,
-              value: choice(request.text, request.text === "" ? 'Use empty text ""' : request.text),
-            },
-          ]);
-        };
-      }),
-      Match.tag("Number", () => {
-        return (request: QueryEngine.Request) => {
-          return Stream.succeed(
-            !request.text.trim() && Predicate.isNumber(picker.defaultValue)
-              ? [{ score: 1, value: choice(picker.defaultValue, String(picker.defaultValue)) }]
-              : Option.match(PropQuery.parseNumber(request.text), {
-                  onNone: () => [],
-                  onSome: ({ val }) => [{ score: 1, value: choice(val, String(val)) }],
-                }),
-          );
-        };
-      }),
-      Match.tag("Date", () => {
-        return QueryEngine.map(DateSuggestions.query, (date) => choice(date.id, date.title));
-      }),
-      Match.exhaustive,
-    );
+      return QueryEngine.map(query, (record) => ({
+        ...choice(record.value, record.label),
+        group: String(index),
+        groupLabel: () => <FilterLabel label={picker.label} />,
+      }));
+    }),
+    Match.tag("Text", () => {
+      return (request: QueryEngine.Request) => {
+        return Stream.succeed([
+          ...(request.text === "" &&
+          Predicate.isString(picker.defaultValue) &&
+          picker.defaultValue !== ""
+            ? [{ score: 1, value: choice(picker.defaultValue, picker.defaultValue) }]
+            : []),
+          {
+            score: 1,
+            value: choice(request.text, request.text === "" ? 'Use empty text ""' : request.text),
+          },
+        ]);
+      };
+    }),
+    Match.tag("Number", () => {
+      return (request: QueryEngine.Request) => {
+        return Stream.succeed(
+          !request.text.trim() && Predicate.isNumber(picker.defaultValue)
+            ? [{ score: 1, value: choice(picker.defaultValue, String(picker.defaultValue)) }]
+            : Option.match(PropQuery.parseNumber(request.text), {
+                onNone: () => [],
+                onSome: ({ val }) => [{ score: 1, value: choice(val, String(val)) }],
+              }),
+        );
+      };
+    }),
+    Match.tag("Date", () => {
+      return QueryEngine.map(DateSuggestions.query, (date) => choice(date.id, date.title));
+    }),
+    Match.exhaustive,
+  );
 
   return (request) => {
     return query(request).pipe(
@@ -519,16 +505,21 @@ function entryQuery(
               value: {
                 ...match.value,
                 expression,
-                icon:
-                  Predicate.isTagged(expression, "cmp") &&
-                  expression.val[1] === "exists" &&
-                  Predicate.isBoolean(match.value.raw) ? (
-                    match.value.raw ? (
-                      <CircleCheck aria-hidden="true" />
-                    ) : (
-                      <CircleDashed aria-hidden="true" />
-                    )
-                  ) : undefined,
+                icon: Match.value(expression).pipe(
+                  Match.when({ _tag: "cmp", val: [Match.any, "exists", true] }, () => (
+                    <CircleCheck aria-hidden="true" />
+                  )),
+                  Match.when({ _tag: "cmp", val: [Match.any, "exists", false] }, () => (
+                    <CircleDashed aria-hidden="true" />
+                  )),
+                  Match.when({ _tag: "cmp", val: [Match.any, "violation", true] }, () => (
+                    <CircleX aria-hidden="true" />
+                  )),
+                  Match.when({ _tag: "cmp", val: [Match.any, "violation", false] }, () => (
+                    <CircleCheck aria-hidden="true" />
+                  )),
+                  Match.orElse(() => undefined),
+                ),
               },
             })),
             () => undefined,
