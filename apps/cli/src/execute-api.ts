@@ -19,9 +19,9 @@ import { BacklinkLabels } from "./backlink-labels";
 import { ExecuteScript } from "./execute-script";
 import { CliList } from "./list";
 
-export type Edit = EditDocument.Edit | { readonly kind: "date"; readonly date: string };
+export type UpdateOp = EditDocument.Edit | { readonly kind: "date"; readonly date: string };
 
-export type CreateEdit = Extract<Edit, { readonly kind: "append" | "date" }>;
+export type CreateOp = Extract<UpdateOp, { readonly kind: "append" | "date" }>;
 
 export type Api = {
   readonly list: (
@@ -30,12 +30,12 @@ export type Api = {
   ) => Promise<ReadonlyArray<CliList.Item>>;
   readonly editRecord: (
     id: RecordSchema.Id,
-    edits: readonly Edit[],
+    ops: readonly UpdateOp[],
     signal?: AbortSignal,
   ) => Promise<void>;
   readonly createRecord: (
     id: RecordSchema.Id | undefined,
-    edits: readonly CreateEdit[],
+    ops: readonly CreateOp[],
     signal?: AbortSignal,
   ) => Promise<RecordSchema.Id>;
 };
@@ -75,7 +75,7 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
 
   const editRecord = Effect.fn("ExecuteApi.editRecord")(function* (
     id: RecordSchema.Id,
-    edits: readonly Edit[],
+    ops: readonly UpdateOp[],
   ) {
     // Read, edit, and save in one SQLite transaction. A concurrent writer cannot
     // slip between a separate stale check and the insert; a lock conflict fails.
@@ -92,7 +92,7 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
         const { record, backlinks } = found.value;
 
         // Resolve metadata separately; only body edits go through Yjs.
-        const resolved = yield* resolveEdits(edits);
+        const resolved = yield* resolveOps(ops);
         const date = Option.filter(resolved.date, (date) => date !== record.date);
 
         // Match the same backlink labels shown in exported Markdown.
@@ -139,12 +139,12 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
 
   const createRecord = Effect.fn("ExecuteApi.createRecord")(function* (
     requestedId: RecordSchema.Id | undefined,
-    edits: readonly CreateEdit[],
+    ops: readonly CreateOp[],
   ) {
     const id = yield* Schema.decodeUnknownEffect(RecordSchema.CreateId)(requestedId ?? nanoid());
 
     // Scripts can be plain JavaScript, so enforce the narrower creation API at runtime too.
-    if (edits.some((edit) => edit.kind !== "append" && edit.kind !== "date")) {
+    if (ops.some((op) => op.kind !== "append" && op.kind !== "date")) {
       return yield* Effect.fail(new Error("createRecord only accepts append and date edits"));
     }
 
@@ -161,7 +161,7 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
           return yield* Effect.fail(new Error(`Record already exists: ${id}`));
         }
 
-        const resolved = yield* resolveEdits(edits);
+        const resolved = yield* resolveOps(ops);
         const bodyUpdate = yield* createInitialUpdate(resolved.bodyEdits);
         const createdAt = yield* DateTime.now;
         yield* eventRepo.create({ recordId: id, type: "update", payload: bodyUpdate, createdAt });
@@ -191,21 +191,21 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
         { signal },
       );
     },
-    editRecord: (id, edits, signal) => Effect.runPromise(editRecord(id, edits), { signal }),
-    createRecord: (id, edits, signal) => Effect.runPromise(createRecord(id, edits), { signal }),
+    editRecord: (id, ops, signal) => Effect.runPromise(editRecord(id, ops), { signal }),
+    createRecord: (id, ops, signal) => Effect.runPromise(createRecord(id, ops), { signal }),
   } satisfies Api;
 });
 
-const resolveEdits = Effect.fn("ExecuteApi.resolveEdits")(function* (edits: readonly Edit[]) {
-  const date = yield* Array.findLast(edits, (edit) => edit.kind === "date").pipe(
-    Option.map((edit) => edit.date),
+const resolveOps = Effect.fn("ExecuteApi.resolveOps")(function* (ops: readonly UpdateOp[]) {
+  const date = yield* Array.findLast(ops, (op) => op.kind === "date").pipe(
+    Option.map((op) => op.date),
     Option.match({
       onNone: () => Effect.succeedNone,
       onSome: flow(Schema.decodeUnknownEffect(PlainDateString), Effect.asSome),
     }),
   );
 
-  const bodyEdits = Array.filter(edits, (edit) => edit.kind !== "date");
+  const bodyEdits = Array.filter(ops, (op) => op.kind !== "date");
 
   return { date, bodyEdits };
 });

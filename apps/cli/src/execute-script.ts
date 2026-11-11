@@ -92,8 +92,8 @@ function createGlobals(
       name: "api.editRecord",
       spread: true,
       execute: (args, { signal }) => {
-        const [id, edits] = decodeEditRecordArgs(args);
-        const call = api.editRecord(id, edits, signal);
+        const [id, ops] = decodeEditRecordArgs(args);
+        const call = api.editRecord(id, ops, signal);
         pending.push(call);
 
         return call;
@@ -103,8 +103,8 @@ function createGlobals(
       name: "api.createRecord",
       spread: true,
       execute: (args, { signal }) => {
-        const [id, edits] = decodeCreateRecordArgs(args);
-        const call = api.createRecord(id ?? undefined, edits, signal);
+        const [id, ops] = decodeCreateRecordArgs(args);
+        const call = api.createRecord(id ?? undefined, ops, signal);
         pending.push(call);
 
         return call;
@@ -113,17 +113,17 @@ function createGlobals(
   ];
 }
 
-const AppendEdit = Schema.Struct({
+const AppendOp = Schema.Struct({
   kind: Schema.Literal("append"),
   markdown: Schema.String,
 });
 
-const DateEdit = Schema.Struct({
+const DateOp = Schema.Struct({
   kind: Schema.Literal("date"),
   date: Schema.String,
 });
 
-const ReplaceEdit = Schema.Struct({
+const ReplaceOp = Schema.Struct({
   kind: Schema.Literal("replace"),
   text: Schema.String,
   with: Schema.String,
@@ -132,16 +132,16 @@ const ReplaceEdit = Schema.Struct({
   ),
 });
 
-const CreateEdit = Schema.Union([AppendEdit, DateEdit]);
+const CreateOp = Schema.Union([AppendOp, DateOp]);
 
-const Edit = Schema.Union([CreateEdit, ReplaceEdit]);
+const UpdateOp = Schema.Union([CreateOp, ReplaceOp]);
 
 const decodeEditRecordArgs = Schema.decodeUnknownSync(
-  Schema.Tuple([RecordSchema.Id, Schema.Array(Edit)]),
+  Schema.Tuple([RecordSchema.Id, Schema.Array(UpdateOp)]),
 );
 
 const decodeCreateRecordArgs = Schema.decodeUnknownSync(
-  Schema.Tuple([Schema.NullOr(RecordSchema.Id), Schema.Array(CreateEdit)]),
+  Schema.Tuple([Schema.NullOr(RecordSchema.Id), Schema.Array(CreateOp)]),
 );
 
 const decodeListArgs = Schema.decodeUnknownSync(

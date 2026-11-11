@@ -75,18 +75,18 @@ type ListFormat =
   | "short" // Same header, then Markdown snippets.
   | "full"; // Same header, then the complete Markdown body.
 
-type Edit =
+type UpdateOp =
   | { kind: "replace"; text: string; with: string; occurrence?: number | "all" }
   | { kind: "append"; markdown: string }
   | { kind: "date"; date: string }; // Valid YYYY-MM-DD.
 
-type CreateEdit = Extract<Edit, { kind: "append" | "date" }>;
+type CreateOp = Extract<UpdateOp, { kind: "append" | "date" }>;
 
 interface Api {
   list(options?: ListOptions): Promise<readonly ListItem[]>;
   showList(format: ListFormat, items: readonly ListItem[]): Promise<void>;
-  createRecord(id: RecordId | undefined, edits: readonly CreateEdit[]): Promise<RecordId>;
-  editRecord(id: RecordId, edits: readonly Edit[]): Promise<void>;
+  createRecord(id: RecordId | undefined, ops: readonly CreateOp[]): Promise<RecordId>;
+  editRecord(id: RecordId, ops: readonly UpdateOp[]): Promise<void>;
 }
 ```
 
