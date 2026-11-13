@@ -13,9 +13,9 @@ describe("EditDocument.apply", () => {
   it("applies replacements and appends in order", () => {
     expect(
       edit("start", [
-        { kind: "replace", text: "start", with: "middle" },
-        { kind: "append", markdown: "end" },
-        { kind: "replace", text: "middle", with: "beginning" },
+        { kind: "body.replace", text: "start", with: "middle" },
+        { kind: "body.append", markdown: "end" },
+        { kind: "body.replace", text: "middle", with: "beginning" },
       ]),
     ).toBe("beginning\n\nend\n");
   });
@@ -27,7 +27,10 @@ describe("EditDocument.apply", () => {
       - Keep **formatting** and [record](./record-id.md)
     `);
 
-    const updated = EditDocument.apply(doc, [{ kind: "replace", text: "Hello", with: "Updated" }]);
+    const updated = EditDocument.apply(doc, [
+      { kind: "body.replace", text: "Hello", with: "Updated" },
+    ]);
+
     expect(updated.child(1)).toBe(doc.child(1));
     expect(updated.child(0).textContent).toBe("Updated.");
   });
@@ -35,35 +38,37 @@ describe("EditDocument.apply", () => {
   it("rejects no matches, even for all occurrences", () => {
     for (const occurrence of [undefined, "all"] as const) {
       expect(() => {
-        return edit("Hello", [{ kind: "replace", text: "missing", with: "x", occurrence }]);
+        return edit("Hello", [{ kind: "body.replace", text: "missing", with: "x", occurrence }]);
       }).toThrow(/found 0/);
     }
   });
 
   it("rejects ambiguous matches unless an occurrence is supplied", () => {
-    expect(() => edit("foo foo", [{ kind: "replace", text: "foo", with: "bar" }])).toThrow(
+    expect(() => edit("foo foo", [{ kind: "body.replace", text: "foo", with: "bar" }])).toThrow(
       /found 2/,
     );
   });
 
   it("selects zero-based occurrences, including a match at string offset zero", () => {
-    expect(edit("foo foo", [{ kind: "replace", text: "foo", with: "bar", occurrence: 0 }])).toBe(
-      "bar foo\n",
-    );
-    expect(edit("foo foo", [{ kind: "replace", text: "foo", with: "bar", occurrence: 1 }])).toBe(
-      "foo bar\n",
-    );
+    expect(
+      edit("foo foo", [{ kind: "body.replace", text: "foo", with: "bar", occurrence: 0 }]),
+    ).toBe("bar foo\n");
+    expect(
+      edit("foo foo", [{ kind: "body.replace", text: "foo", with: "bar", occurrence: 1 }]),
+    ).toBe("foo bar\n");
 
     for (const occurrence of [-1, 2, 0.5]) {
       expect(() => {
-        return edit("foo foo", [{ kind: "replace", text: "foo", with: "bar", occurrence }]);
+        return edit("foo foo", [{ kind: "body.replace", text: "foo", with: "bar", occurrence }]);
       }).toThrow(/occurrence/);
     }
   });
 
   it("merges overlapping block ranges and replaces every match", () => {
     expect(
-      edit("foo foo\n\nfoo", [{ kind: "replace", text: "foo", with: "longer", occurrence: "all" }]),
+      edit("foo foo\n\nfoo", [
+        { kind: "body.replace", text: "foo", with: "longer", occurrence: "all" },
+      ]),
     ).toBe("longer longer\n\nlonger\n");
   });
 
@@ -71,7 +76,7 @@ describe("EditDocument.apply", () => {
     expect(
       edit("Hello **bold** world.\n\n## Log\n\nDone.", [
         {
-          kind: "replace",
+          kind: "body.replace",
           text: "**bold** world.\n\n## Log",
           with: "*italic* there.\n\n## Journal",
         },
@@ -80,19 +85,19 @@ describe("EditDocument.apply", () => {
   });
 
   it("assigns separator whitespace to the following block", () => {
-    expect(edit("a\n\nb", [{ kind: "replace", text: "\nb", with: "\nB" }])).toBe("a\n\nB\n");
+    expect(edit("a\n\nb", [{ kind: "body.replace", text: "\nb", with: "\nB" }])).toBe("a\n\nB\n");
   });
 
   it("removes empty blocks but keeps a paragraph when the whole record is deleted", () => {
     const doc = EditDocument.apply(MdParse.parse("a\n\nb\n\nc"), [
-      { kind: "replace", text: "b", with: "" },
+      { kind: "body.replace", text: "b", with: "" },
     ]);
 
     expect(doc.childCount).toBe(2);
     expect(MdSerialize.serialize(doc)).toBe("a\n\nc\n");
 
     const empty = EditDocument.apply(MdParse.parse("only"), [
-      { kind: "replace", text: "only", with: "" },
+      { kind: "body.replace", text: "only", with: "" },
     ]);
 
     expect(empty.toJSON()).toEqual({ type: "doc", content: [{ type: "paragraph" }] });
@@ -101,12 +106,12 @@ describe("EditDocument.apply", () => {
   it("inserts blocks and changes task state", () => {
     expect(
       edit("## Log\n\n- old entry", [
-        { kind: "replace", text: "## Log", with: "## Log\n\n- new entry" },
+        { kind: "body.replace", text: "## Log", with: "## Log\n\n- new entry" },
       ]),
     ).toBe("## Log\n\n- new entry\n\n- old entry\n");
 
     const doc = EditDocument.apply(MdParse.parse("- [ ] Task one\n- [x] Task two"), [
-      { kind: "replace", text: "- [ ] Task one", with: "- [x] Task one" },
+      { kind: "body.replace", text: "- [ ] Task one", with: "- [x] Task one" },
     ]);
 
     expect(doc.child(0).attrs.checked).toBe(true);
@@ -114,26 +119,28 @@ describe("EditDocument.apply", () => {
   });
 
   it("replaces the empty placeholder on append and ignores empty appends", () => {
-    expect(edit("", [{ kind: "append", markdown: "Hello." }])).toBe("Hello.\n");
+    expect(edit("", [{ kind: "body.append", markdown: "Hello." }])).toBe("Hello.\n");
     const doc = MdParse.parse("Hello.");
-    expect(EditDocument.apply(doc, [{ kind: "append", markdown: " \n" }])).toBe(doc);
+    expect(EditDocument.apply(doc, [{ kind: "body.append", markdown: " \n" }])).toBe(doc);
     expect(EditDocument.apply(doc, [])).toBe(doc);
-    expect(EditDocument.apply(doc, [{ kind: "replace", text: "Hello", with: "Hello" }])).toBe(doc);
+    expect(EditDocument.apply(doc, [{ kind: "body.replace", text: "Hello", with: "Hello" }])).toBe(
+      doc,
+    );
   });
 
   it("leaves input unchanged if a later edit fails", () => {
     const doc = MdParse.parse("original");
     expect(() => {
       return EditDocument.apply(doc, [
-        { kind: "replace", text: "original", with: "changed" },
-        { kind: "replace", text: "missing", with: "x" },
+        { kind: "body.replace", text: "original", with: "changed" },
+        { kind: "body.replace", text: "missing", with: "x" },
       ]);
     }).toThrow();
     expect(doc.textContent).toBe("original");
   });
 
   it("rejects an empty replacement anchor", () => {
-    expect(() => edit("a", [{ kind: "replace", text: "", with: "x" }])).toThrow(
+    expect(() => edit("a", [{ kind: "body.replace", text: "", with: "x" }])).toThrow(
       /must not be empty/,
     );
   });
@@ -158,13 +165,15 @@ describe("EditDocument.apply", () => {
     );
 
     // No-op replacements need neither a matching anchor nor serializable content.
-    expect(EditDocument.apply(doc, [{ kind: "replace", text: "missing", with: "missing" }])).toBe(
-      doc,
-    );
+    expect(
+      EditDocument.apply(doc, [{ kind: "body.replace", text: "missing", with: "missing" }]),
+    ).toBe(doc);
     expect(() => {
-      return EditDocument.apply(doc, [{ kind: "replace", text: "headerless", with: "changed" }]);
+      return EditDocument.apply(doc, [
+        { kind: "body.replace", text: "headerless", with: "changed" },
+      ]);
     }).toThrow();
-    const appended = EditDocument.apply(doc, [{ kind: "append", markdown: "new" }]);
+    const appended = EditDocument.apply(doc, [{ kind: "body.append", markdown: "new" }]);
     expect(appended.child(0)).toBe(doc.child(0));
     expect(appended.child(1).textContent).toBe("new");
   });
@@ -172,11 +181,11 @@ describe("EditDocument.apply", () => {
     const original = MdParse.parse("before");
 
     const appended = EditDocument.apply(original, [
-      { kind: "append", markdown: "| A | B |\n| --- | --- |\n| one | two |" },
+      { kind: "body.append", markdown: "| A | B |\n| --- | --- |\n| one | two |" },
     ]);
 
     const edited = EditDocument.apply(appended, [
-      { kind: "replace", text: "one", with: "**changed**" },
+      { kind: "body.replace", text: "one", with: "**changed**" },
     ]);
 
     expect(edited.child(0)).toBe(original.child(0));
@@ -193,14 +202,14 @@ describe("EditDocument.apply", () => {
     expect(MdParse.parse(MdSerialize.serialize(doc)).eq(doc)).toBe(true);
 
     const untouched = EditDocument.apply(doc, [
-      { kind: "replace", text: "before", with: "changed" },
+      { kind: "body.replace", text: "before", with: "changed" },
     ]);
 
     expect(untouched.child(1)).toBe(doc.child(1));
     const markdown = MdSerialize.serialize(doc).trimEnd();
 
     const edited = EditDocument.apply(doc, [
-      { kind: "replace", text: markdown, with: markdown.replace("before", "changed") },
+      { kind: "body.replace", text: markdown, with: markdown.replace("before", "changed") },
     ]);
 
     expect(edited.childCount).toBe(3);
@@ -213,7 +222,7 @@ describe("EditDocument.apply", () => {
 
     const edited = EditDocument.apply(doc, [
       {
-        kind: "replace",
+        kind: "body.replace",
         text: "<!-- manotes:empty-paragraph -->",
         with: "**filled**",
         occurrence: 1,
@@ -230,7 +239,10 @@ describe("EditDocument.apply", () => {
       "- parent\n\n  - ```ts\n    const n = 1;\n    ```\n\n  - [after](./after.md)",
     );
 
-    const edited = EditDocument.apply(doc, [{ kind: "replace", text: "parent", with: "changed" }]);
+    const edited = EditDocument.apply(doc, [
+      { kind: "body.replace", text: "parent", with: "changed" },
+    ]);
+
     const expected = doc.toJSON();
     expected.content[0].content[0].content[0].text = "changed";
 

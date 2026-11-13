@@ -6,21 +6,21 @@ import { MdSerialize } from "@manotes/shared/prosemirror/md/serialize";
 
 export type Edit =
   | {
-      readonly kind: "replace";
+      readonly kind: "body.replace";
       /** Literal Markdown, including displayed backlink labels. */
       readonly text: string;
       readonly with: string;
       /** Zero-based; omitted means exactly one match is required. */
       readonly occurrence?: number | "all";
     }
-  | { readonly kind: "append"; readonly markdown: string };
+  | { readonly kind: "body.append"; readonly markdown: string };
 
 /** Work on a private transform; a failed edit leaves the input document untouched. */
 export function apply(doc: Node, edits: readonly Edit[], options: MdSerialize.Options = {}): Node {
   const tx = new Transform(doc);
 
   for (const edit of edits) {
-    if (edit.kind === "append") append(tx, edit.markdown);
+    if (edit.kind === "body.append") append(tx, edit.markdown);
     else replace(tx, edit, options);
     tx.doc.check();
   }
@@ -45,7 +45,7 @@ function append(tx: Transform, markdown: string): void {
 
 function replace(
   tx: Transform,
-  edit: Extract<Edit, { kind: "replace" }>,
+  edit: Extract<Edit, { kind: "body.replace" }>,
   options: MdSerialize.Options,
 ): void {
   if (edit.text === edit.with) return;
@@ -114,7 +114,7 @@ function blockAt(blocks: readonly MdSerialize.BlockSpan[], offset: number): numb
   return index;
 }
 
-function findMatches(markdown: string, edit: Extract<Edit, { kind: "replace" }>): number[] {
+function findMatches(markdown: string, edit: Extract<Edit, { kind: "body.replace" }>): number[] {
   const matches: number[] = [];
   let offset = markdown.indexOf(edit.text);
 

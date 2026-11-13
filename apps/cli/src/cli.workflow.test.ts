@@ -253,7 +253,7 @@ describe("CLI local workflow", () => {
           fileScript,
           dedent`
             await api.editRecord("${RECORD_ID}", [
-              { kind: "append", markdown: "From file." },
+              { kind: "body.append", markdown: "From file." },
             ]);
           `,
         );
@@ -281,7 +281,7 @@ describe("CLI local workflow", () => {
           ["execute"],
           dedent`
             await api.editRecord("${RECORD_ID}", [
-              { kind: "append", markdown: "From stdin." },
+              { kind: "body.append", markdown: "From stdin." },
             ]);
           `,
         );
@@ -293,7 +293,7 @@ describe("CLI local workflow", () => {
         const failedStdinResult = await runCli(
           workspace,
           ["execute"],
-          `await api.editRecord("${RECORD_ID}", [{ kind: "append", markdown: "Before failure." }]);
+          `await api.editRecord("${RECORD_ID}", [{ kind: "body.append", markdown: "Before failure." }]);
             throw new Error("stdin failure");\n`,
         );
 

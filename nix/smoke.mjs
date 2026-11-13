@@ -39,7 +39,7 @@ try {
   assert.match(run(["status"]), /Pending publication: 0 changes/);
   run(
     ["execute"],
-    'await api.createRecord("smoke", [{ kind: "append", markdown: "# Packaged CLI\\n\\nCreated outside the checkout." }]);',
+    'await api.createRecord("smoke", [{ kind: "body.append", markdown: "# Packaged CLI\\n\\nCreated outside the checkout." }]);',
   );
   assert.match(
     readFileSync(path.join(directory, "smoke.md"), "utf8"),
@@ -48,7 +48,7 @@ try {
 
   writeFileSync(
     path.join(directory, "edit.js"),
-    'await api.editRecord("smoke", [{ kind: "replace", text: "Created outside the checkout.", with: "Updated by the installed CLI." }]);',
+    'await api.editRecord("smoke", [{ kind: "body.replace", text: "Created outside the checkout.", with: "Updated by the installed CLI." }]);',
   );
   run(["execute", path.join(directory, "edit.js")]);
   assert.match(

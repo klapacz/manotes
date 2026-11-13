@@ -19,9 +19,9 @@ import { BacklinkLabels } from "./backlink-labels";
 import { ExecuteScript } from "./execute-script";
 import { CliList } from "./list";
 
-export type UpdateOp = EditDocument.Edit | { readonly kind: "date"; readonly date: string };
+export type UpdateOp = EditDocument.Edit | { readonly kind: "date.set"; readonly date: string };
 
-export type CreateOp = Extract<UpdateOp, { readonly kind: "append" | "date" }>;
+export type CreateOp = Extract<UpdateOp, { readonly kind: "body.append" | "date.set" }>;
 
 export type Api = {
   readonly list: (
@@ -144,8 +144,10 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
     const id = yield* Schema.decodeUnknownEffect(RecordSchema.CreateId)(requestedId ?? nanoid());
 
     // Scripts can be plain JavaScript, so enforce the narrower creation API at runtime too.
-    if (ops.some((op) => op.kind !== "append" && op.kind !== "date")) {
-      return yield* Effect.fail(new Error("createRecord only accepts append and date edits"));
+    if (ops.some((op) => op.kind !== "body.append" && op.kind !== "date.set")) {
+      return yield* Effect.fail(
+        new Error("createRecord only accepts body.append and date.set ops"),
+      );
     }
 
     return yield* db.transaction(
@@ -197,7 +199,7 @@ const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
 });
 
 const resolveOps = Effect.fn("ExecuteApi.resolveOps")(function* (ops: readonly UpdateOp[]) {
-  const date = yield* Array.findLast(ops, (op) => op.kind === "date").pipe(
+  const date = yield* Array.findLast(ops, (op) => op.kind === "date.set").pipe(
     Option.map((op) => op.date),
     Option.match({
       onNone: () => Effect.succeedNone,
@@ -205,7 +207,7 @@ const resolveOps = Effect.fn("ExecuteApi.resolveOps")(function* (ops: readonly U
     }),
   );
 
-  const bodyEdits = Array.filter(ops, (op) => op.kind !== "date");
+  const bodyEdits = Array.filter(ops, (op) => op.kind !== "date.set");
 
   return { date, bodyEdits };
 });

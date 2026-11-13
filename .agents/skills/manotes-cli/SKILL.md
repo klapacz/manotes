@@ -76,11 +76,11 @@ type ListFormat =
   | "full"; // Same header, then the complete Markdown body.
 
 type UpdateOp =
-  | { kind: "replace"; text: string; with: string; occurrence?: number | "all" }
-  | { kind: "append"; markdown: string }
-  | { kind: "date"; date: string }; // Valid YYYY-MM-DD.
+  | { kind: "body.replace"; text: string; with: string; occurrence?: number | "all" }
+  | { kind: "body.append"; markdown: string }
+  | { kind: "date.set"; date: string }; // Valid YYYY-MM-DD.
 
-type CreateOp = Extract<UpdateOp, { kind: "append" | "date" }>;
+type CreateOp = Extract<UpdateOp, { kind: "body.append" | "date.set" }>;
 
 interface Api {
   list(options?: ListOptions): Promise<readonly ListItem[]>;
@@ -165,12 +165,12 @@ Default to an ordinary note without an H1 for capture. Use an H1 when creating a
 ```js
 // Create with a generated ID. Date defaults to today.
 const id = await api.createRecord(undefined, [
-  { kind: "append", markdown: "First paragraph." },
-  { kind: "date", date: "2026-11-08" },
+  { kind: "body.append", markdown: "First paragraph." },
+  { kind: "date.set", date: "2026-11-08" },
 ]);
 await api.editRecord(id, [
-  { kind: "replace", text: "First", with: "Updated" },
-  { kind: "append", markdown: "\n## Next steps\n\n- Review the plan." },
+  { kind: "body.replace", text: "First", with: "Updated" },
+  { kind: "body.append", markdown: "\n## Next steps\n\n- Review the plan." },
 ]);
 ```
 
@@ -181,7 +181,7 @@ const records = await api.list({
 });
 for (const record of records) {
   await api.editRecord(record.id, [
-    { kind: "replace", text: "TODO", with: "DONE", occurrence: "all" },
+    { kind: "body.replace", text: "TODO", with: "DONE", occurrence: "all" },
   ]);
 }
 ```

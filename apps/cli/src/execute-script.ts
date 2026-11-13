@@ -114,17 +114,17 @@ function createGlobals(
 }
 
 const AppendOp = Schema.Struct({
-  kind: Schema.Literal("append"),
+  kind: Schema.Literal("body.append"),
   markdown: Schema.String,
 });
 
 const DateOp = Schema.Struct({
-  kind: Schema.Literal("date"),
+  kind: Schema.Literal("date.set"),
   date: Schema.String,
 });
 
 const ReplaceOp = Schema.Struct({
-  kind: Schema.Literal("replace"),
+  kind: Schema.Literal("body.replace"),
   text: Schema.String,
   with: Schema.String,
   occurrence: Schema.optionalKey(

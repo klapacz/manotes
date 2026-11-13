@@ -56,7 +56,7 @@ describe("ExecuteApi.editRecord", () => {
         const before = yield* recordRepo.getById(RECORD_ID);
 
         yield* runTestScript(dedent`
-          await api.editRecord("${RECORD_ID}", [{ kind: "date", date: "2024-02-29" }]);
+          await api.editRecord("${RECORD_ID}", [{ kind: "date.set", date: "2024-02-29" }]);
         `);
 
         const after = yield* recordRepo.getById(RECORD_ID);
@@ -76,10 +76,10 @@ describe("ExecuteApi.editRecord", () => {
         expect(after.updatedAt).toEqual(event.createdAt);
 
         yield* runTestScript(dedent`
-          await api.editRecord("${RECORD_ID}", [{ kind: "date", date: "2024-02-29" }]);
+          await api.editRecord("${RECORD_ID}", [{ kind: "date.set", date: "2024-02-29" }]);
           await api.editRecord("${RECORD_ID}", [
-            { kind: "date", date: "2025-01-01" },
-            { kind: "date", date: "2024-02-29" },
+            { kind: "date.set", date: "2025-01-01" },
+            { kind: "date.set", date: "2024-02-29" },
           ]);
         `);
         expect(yield* eventRepo.countPending()).toBe(1);
@@ -94,9 +94,9 @@ describe("ExecuteApi.editRecord", () => {
         yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
         yield* runTestScript(dedent`
           await api.editRecord("${RECORD_ID}", [
-            { kind: "date", date: "2025-02-29" },
-            { kind: "replace", text: "Alpha", with: "Beta" },
-            { kind: "date", date: "2024-02-29" },
+            { kind: "date.set", date: "2025-02-29" },
+            { kind: "body.replace", text: "Alpha", with: "Beta" },
+            { kind: "date.set", date: "2024-02-29" },
           ]);
         `);
         const recordRepo = yield* RecordRepo.Service;
@@ -122,13 +122,13 @@ describe("ExecuteApi.editRecord", () => {
 
         for (const edits of [
           [
-            { kind: "replace", text: "Alpha", with: "Beta" },
-            { kind: "date", date: "2024-02-29" },
-            { kind: "date", date: "2025-02-29" },
+            { kind: "body.replace", text: "Alpha", with: "Beta" },
+            { kind: "date.set", date: "2024-02-29" },
+            { kind: "date.set", date: "2025-02-29" },
           ],
           [
-            { kind: "date", date: "2024-02-29" },
-            { kind: "replace", text: "missing", with: "never saved" },
+            { kind: "date.set", date: "2024-02-29" },
+            { kind: "body.replace", text: "missing", with: "never saved" },
           ],
         ]) {
           const result = yield* runTestScript(dedent`
@@ -164,7 +164,7 @@ describe("ExecuteApi.editRecord", () => {
 
         yield* runTestScript(dedent`
           await api.editRecord("${RECORD_ID}", [{
-            kind: "replace",
+            kind: "body.replace",
             text: ${JSON.stringify(exported.trimEnd())},
             with: ${JSON.stringify(`- [ ] ${exported.trimEnd()}`)},
           }]);
@@ -190,9 +190,9 @@ describe("ExecuteApi.editRecord", () => {
         yield* runTestScript(dedent`
           if (Object.keys(api).sort().join(",") !== "createRecord,editRecord,list,showList") throw new Error("unexpected API");
           await api.editRecord("${RECORD_ID}", [
-            { kind: "replace", text: "Alpha", with: "Beta" },
-            { kind: "append", markdown: "Beta follows." },
-            { kind: "replace", text: "Beta", with: "Done", occurrence: "all" },
+            { kind: "body.replace", text: "Alpha", with: "Beta" },
+            { kind: "body.append", markdown: "Beta follows." },
+            { kind: "body.replace", text: "Beta", with: "Done", occurrence: "all" },
           ]);
         `);
 
@@ -228,8 +228,8 @@ describe("ExecuteApi.editRecord", () => {
         const recordRepo = yield* RecordRepo.Service;
 
         yield* runTestScript(dedent`
-          await api.editRecord("${RECORD_ID}", [{ kind: "replace", text: "Alpha", with: "Beta" }]);
-          await api.editRecord("${RECORD_ID}", [{ kind: "replace", text: "Beta", with: "Gamma" }]);
+          await api.editRecord("${RECORD_ID}", [{ kind: "body.replace", text: "Alpha", with: "Beta" }]);
+          await api.editRecord("${RECORD_ID}", [{ kind: "body.replace", text: "Beta", with: "Gamma" }]);
         `);
 
         const events = yield* eventRepo.findUpdatesForRecord(RECORD_ID);
@@ -256,8 +256,8 @@ describe("ExecuteApi.editRecord", () => {
 
         yield* runTestScript(dedent`
           await Promise.all([
-            api.editRecord("${RECORD_ID}", [{ kind: "append", markdown: "First concurrent append." }]),
-            api.editRecord("${RECORD_ID}", [{ kind: "append", markdown: "Second concurrent append." }]),
+            api.editRecord("${RECORD_ID}", [{ kind: "body.append", markdown: "First concurrent append." }]),
+            api.editRecord("${RECORD_ID}", [{ kind: "body.append", markdown: "Second concurrent append." }]),
           ]);
         `);
 
@@ -279,10 +279,10 @@ describe("ExecuteApi.editRecord", () => {
         const recordRepo = yield* RecordRepo.Service;
 
         yield* runTestScript(dedent`
-          await api.editRecord("${RECORD_ID}", [{ kind: "replace", text: "Alpha", with: "Alpha" }]);
+          await api.editRecord("${RECORD_ID}", [{ kind: "body.replace", text: "Alpha", with: "Alpha" }]);
           await api.editRecord("${RECORD_ID}", [
-            { kind: "replace", text: "Alpha", with: "Beta" },
-            { kind: "replace", text: "Beta", with: "Alpha" },
+            { kind: "body.replace", text: "Alpha", with: "Beta" },
+            { kind: "body.replace", text: "Beta", with: "Alpha" },
           ]);
         `);
 
@@ -303,8 +303,8 @@ describe("ExecuteApi.editRecord", () => {
 
         const result = yield* runTestScript(dedent`
           await api.editRecord("${RECORD_ID}", [
-            { kind: "replace", text: "Alpha", with: "Beta" },
-            { kind: "replace", text: "missing", with: "never saved" },
+            { kind: "body.replace", text: "Alpha", with: "Beta" },
+            { kind: "body.replace", text: "missing", with: "never saved" },
           ]);
         `).pipe(Effect.result);
 
@@ -344,7 +344,7 @@ describe("ExecuteApi.editRecord", () => {
 
         yield* runTestScript(dedent`
           await api.editRecord("${RECORD_ID}", [
-            { kind: "replace", text: "Remote pending", with: "Caught up" },
+            { kind: "body.replace", text: "Remote pending", with: "Caught up" },
           ]);
         `);
 
@@ -371,13 +371,13 @@ describe("ExecuteApi.createRecord", () => {
       Effect.gen(function* () {
         yield* runTestScript(dedent`
           const id = await api.createRecord("created-record", [
-            { kind: "date", date: "invalid but superseded" },
-            { kind: "append", markdown: "# Created" },
-            { kind: "append", markdown: "See [Target](./target.md)." },
-            { kind: "date", date: "2024-02-29" },
+            { kind: "date.set", date: "invalid but superseded" },
+            { kind: "body.append", markdown: "# Created" },
+            { kind: "body.append", markdown: "See [Target](./target.md)." },
+            { kind: "date.set", date: "2024-02-29" },
           ]);
           if (id !== "created-record") throw new Error("unexpected ID");
-          await api.editRecord(id, [{ kind: "append", markdown: "Next." }]);
+          await api.editRecord(id, [{ kind: "body.append", markdown: "Next." }]);
         `);
         const recordRepo = yield* RecordRepo.Service;
         const eventRepo = yield* EventRepo.Service;
@@ -402,9 +402,9 @@ describe("ExecuteApi.createRecord", () => {
       Effect.gen(function* () {
         yield* runTestScript(dedent`
           const first = await api.createRecord(undefined, []);
-          const second = await api.createRecord(undefined, [{ kind: "date", date: "2024-02-29" }]);
+          const second = await api.createRecord(undefined, [{ kind: "date.set", date: "2024-02-29" }]);
           if (!first || !second || first === second) throw new Error("invalid generated IDs");
-          await api.editRecord(first, [{ kind: "append", markdown: "Generated." }]);
+          await api.editRecord(first, [{ kind: "body.append", markdown: "Generated." }]);
         `);
         const recordRepo = yield* RecordRepo.Service;
         const records = yield* recordRepo.findAllNotes();
@@ -424,8 +424,8 @@ describe("ExecuteApi.createRecord", () => {
       Effect.gen(function* () {
         for (const call of [
           'api.createRecord("", [])',
-          'api.createRecord("invalid", [{ kind: "replace", text: "", with: "no" }])',
-          'api.createRecord("invalid", [{ kind: "append", markdown: "Not saved" }, { kind: "date", date: "2025-02-29" }])',
+          'api.createRecord("invalid", [{ kind: "body.replace", text: "", with: "no" }])',
+          'api.createRecord("invalid", [{ kind: "body.append", markdown: "Not saved" }, { kind: "date.set", date: "2025-02-29" }])',
         ]) {
           const result = yield* runTestScript(`await ${call};`).pipe(Effect.result);
 
@@ -456,7 +456,7 @@ describe("ExecuteApi.createRecord", () => {
 
         for (const id of [RECORD_ID, "unmaterialized"]) {
           const result = yield* runTestScript(dedent`
-            await api.createRecord("${id}", [{ kind: "append", markdown: "Never saved." }]);
+            await api.createRecord("${id}", [{ kind: "body.append", markdown: "Never saved." }]);
           `).pipe(Effect.result);
 
           expect(Result.isFailure(result)).toBe(true);
@@ -480,8 +480,8 @@ describe("ExecuteApi.createRecord", () => {
       Effect.gen(function* () {
         yield* runTestScript(dedent`
           const results = await Promise.allSettled([
-            api.createRecord("same-id", [{ kind: "append", markdown: "First." }]),
-            api.createRecord("same-id", [{ kind: "append", markdown: "Second." }]),
+            api.createRecord("same-id", [{ kind: "body.append", markdown: "First." }]),
+            api.createRecord("same-id", [{ kind: "body.append", markdown: "Second." }]),
           ]);
           if (results.filter((result) => result.status === "fulfilled").length !== 1) {
             throw new Error("Expected one successful creation");
@@ -622,9 +622,9 @@ describe("ExecuteApi.list", () => {
         yield* runTestScript(`
         const pending = await api.list();
         if (pending.length !== 1 || pending[0].title !== "Interrupted") throw new Error("catch-up");
-        await api.createRecord("created", [{ kind: "append", markdown: "# Created" }]);
+        await api.createRecord("created", [{ kind: "body.append", markdown: "# Created" }]);
         if ((await api.list()).length !== 2) throw new Error("create visibility");
-        await api.editRecord("created", [{ kind: "replace", text: "Created", with: "Edited" }]);
+        await api.editRecord("created", [{ kind: "body.replace", text: "Created", with: "Edited" }]);
         const edited = await api.list({ filter: [{ _tag: "cmp", val: ["id", "=", "created"] }] });
         if (edited[0].title !== "Edited") throw new Error("edit visibility");
       `);
