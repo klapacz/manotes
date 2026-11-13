@@ -33,7 +33,7 @@ type PropValue =
 type PropertyTarget = ["prop", RecordId];
 type LinkTarget = ["link", "->" | "<-", RecordId];
 
-type Comparison =
+type Cmp =
   | ["id", "=", RecordId]
   | ["_tag", "=", RecordTag] // "note" includes ordinary notes and pages.
   | ["title", "exists", boolean] // Pages have a title; ordinary notes do not.
@@ -48,7 +48,7 @@ type Comparison =
   | [PropertyTarget, "invalid", boolean]; // Not implemented; currently matches nothing.
 
 type FilterExpr =
-  | { _tag: "cmp"; val: Comparison }
+  | { _tag: "cmp"; val: Cmp }
   | { _tag: "and" | "or"; val: readonly FilterExpr[] };
 
 type Filter = readonly FilterExpr[]; // Root is AND. [] matches everything.
