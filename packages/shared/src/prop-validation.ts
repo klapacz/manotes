@@ -49,12 +49,14 @@ export function watchEntries(opts: {
 }
 
 export function valueState(opts: {
-  readonly type: AttrsSchema.PropValTag;
+  readonly type: Option.Option<AttrsSchema.PropValTag>;
   readonly value: Option.Option<AttrsSchema.PropVal>;
 }): Attrs.ValueState<AttrsSchema.PropVal> {
   return opts.value.pipe(
     Option.map((value) => {
-      if (AttrsSchema.PropVal.guards[opts.type](value)) return Attrs.ValueState.Valid({ value });
+      if (Option.exists(opts.type, (type) => AttrsSchema.PropVal.guards[type](value))) {
+        return Attrs.ValueState.Valid({ value });
+      }
 
       return Attrs.ValueState.Invalid({ value });
     }),

@@ -1,3 +1,6 @@
+import { PropDef } from "@manotes/shared/prop-def.service";
+import { RuleRecord } from "@manotes/shared/rule-record.service";
+import { Attrs } from "@manotes/shared/attrs.service";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -30,6 +33,7 @@ import { CliRuntime } from "./cli.runtime";
 import { CliExecute } from "./cli.execute";
 import { BacklinkLabels } from "@manotes/shared/backlink-labels";
 import { CliList } from "@manotes/shared/list";
+import { ExecuteApi } from "@manotes/shared/execute-api";
 
 const RECORD_ID = RecordSchema.Id.make("record-1");
 
@@ -44,7 +48,9 @@ type RuntimeServices =
   | EventRepo.Service
   | Materializer.Service
   | RecordRepo.Service
-  | FileSystem.FileSystem;
+  | FileSystem.FileSystem
+  | PropDef.Service
+  | RuleRecord.Service;
 
 describe("ExecuteApi.editRecord", () => {
   it("saves a date event without changing content, and skips unchanged or cancelling dates", async () => {
@@ -188,7 +194,7 @@ describe("ExecuteApi.editRecord", () => {
         expect(yield* eventRepo.countPending()).toBe(0);
 
         yield* runTestScript(dedent`
-          if (Object.keys(api).sort().join(",") !== "createRecord,editRecord,list,showList") throw new Error("unexpected API");
+          if (Object.keys(api).sort().join(",") !== "createRecord,editRecord,list,listProps,showList") throw new Error("unexpected API");
           await api.editRecord("${RECORD_ID}", [
             { kind: "body.replace", text: "Alpha", with: "Beta" },
             { kind: "body.append", markdown: "Beta follows." },
@@ -573,6 +579,264 @@ describe("ExecuteApi.list", () => {
     );
   });
 
+  it("reads definitions, rule metadata and UI property states without writing events", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        const attrs = yield* Attrs.Service.make;
+        const status = RecordSchema.Id.make("status");
+        const priority = RecordSchema.Id.make("priority");
+        const related = RecordSchema.Id.make("related");
+        const restricted = RecordSchema.Id.make("restricted");
+        const done = RecordSchema.Id.make("done");
+        const allowed = RecordSchema.Id.make("allowed");
+        const task = RecordSchema.Id.make("task-rule");
+        const old = RecordSchema.Id.make("old-rule");
+        const missing = RecordSchema.Id.make("missing-rule");
+        const formerProp = RecordSchema.Id.make("former-prop");
+        const required = AttrsSchema.RuleExpectation.cases.required.make({});
+        const optional = AttrsSchema.RuleExpectation.cases.optional.make({});
+        const targets = [AttrsSchema.makeTargetFilterExpr.cmp({ val: ["id", "=", RECORD_ID] })];
+
+        yield* seedPropsRecord(status, "# Status", (doc) => {
+          return attrs.initializeProp({
+            doc,
+            defaultValue: AttrsSchema.PropVal.cases.enum.make({ val: done }),
+          });
+        });
+        yield* seedPropsRecord(priority, "# Priority", (doc) => {
+          return attrs.initializeProp({
+            doc,
+            defaultValue: AttrsSchema.PropVal.cases.number.make({ val: 2 }),
+          });
+        });
+        yield* seedPropsRecord(done, "# Done", (doc) => {
+          return attrs.initializeEnumOption({
+            doc,
+            enum_parent: status,
+          });
+        });
+        yield* seedPropsRecord(allowed, "Allowed target", () => Effect.void);
+        yield* seedPropsRecord(related, "# Related", (doc) => {
+          return Effect.gen(function* () {
+            yield* attrs.initializeProp({
+              doc,
+              defaultValue: AttrsSchema.PropVal.cases.link.make({ val: allowed }),
+            });
+            yield* attrs.setPropTargets({
+              doc,
+              targets: [AttrsSchema.makeTargetFilterExpr.cmp({ val: ["id", "=", allowed] })],
+            });
+          });
+        });
+        yield* seedPropsRecord(restricted, "# Restricted", (doc) => {
+          return Effect.gen(function* () {
+            yield* attrs.initializeProp({
+              doc,
+              defaultValue: AttrsSchema.PropVal.cases.link.make({ val: done }),
+            });
+            yield* attrs.setPropTargets({
+              doc,
+              targets: [AttrsSchema.makeTargetFilterExpr.cmp({ val: ["id", "=", done] })],
+            });
+          });
+        });
+        yield* seedPropsRecord(task, "# Task", (doc) => {
+          return Effect.gen(function* () {
+            yield* attrs.initializeRule({ doc, targets });
+            yield* attrs.setRuleStorage({
+              doc,
+              storage: AttrsSchema.RuleStorage.cases.group.make({}),
+            });
+            yield* attrs.setRuleExpectation({ doc, propId: priority, value: required });
+            yield* attrs.setRuleExpectation({ doc, propId: status, value: optional });
+          });
+        });
+        yield* seedPropsRecord(old, "# Old rule", (doc) => {
+          return attrs.initializeRule({
+            doc,
+            targets: [AttrsSchema.makeTargetFilterExpr.cmp({ val: ["id", "=", allowed] })],
+          });
+        });
+        yield* seedPropsRecord(missing, "# Former rule", () => Effect.void);
+        yield* seedPropsRecord(formerProp, "# Former property", () => Effect.void);
+        yield* seedPropsRecord(RecordSchema.Id.make("empty-rule"), "# Empty group", (doc) => {
+          return Effect.gen(function* () {
+            yield* attrs.initializeRule({ doc, targets });
+            yield* attrs.setRuleStorage({
+              doc,
+              storage: AttrsSchema.RuleStorage.cases.group.make({}),
+            });
+          });
+        });
+        yield* seedPropsRecord(RecordSchema.Id.make("top-rule"), "# Top rule", (doc) => {
+          return Effect.gen(function* () {
+            yield* attrs.initializeRule({ doc, targets });
+            yield* attrs.setRuleExpectation({ doc, propId: status, value: required });
+          });
+        });
+        yield* seedPropsRecord(RECORD_ID, "# Match", (doc) => {
+          return Effect.gen(function* () {
+            yield* attrs.setProp({
+              doc,
+              recordId: RECORD_ID,
+              propId: related,
+              value: AttrsSchema.PropVal.cases.link.make({ val: allowed }),
+            });
+            yield* attrs.setProp({
+              doc,
+              recordId: RECORD_ID,
+              propId: restricted,
+              value: AttrsSchema.PropVal.cases.link.make({ val: allowed }),
+            });
+            yield* attrs.setProp({
+              doc,
+              recordId: RECORD_ID,
+              propId: formerProp,
+              value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+            });
+            yield* attrs.setGroupProp({
+              doc,
+              recordId: RECORD_ID,
+              ruleId: task,
+              propId: priority,
+              value: AttrsSchema.PropVal.cases.text.make({ val: "wrong type" }),
+            });
+            yield* attrs.setGroupProp({
+              doc,
+              recordId: RECORD_ID,
+              ruleId: old,
+              propId: status,
+              value: AttrsSchema.PropVal.cases.enum.make({ val: done }),
+            });
+            yield* attrs.setGroupProp({
+              doc,
+              recordId: RECORD_ID,
+              ruleId: missing,
+              propId: status,
+              value: AttrsSchema.PropVal.cases.enum.make({ val: done }),
+            });
+          });
+        });
+
+        const events = yield* EventRepo.Service;
+        const before = yield* events.countPending();
+        const api = yield* ExecuteApi.makeApi();
+        const defs = yield* Effect.promise(() => api.listProps());
+        expect(defs.map((def) => def.id)).toContain("builtin:archived");
+        expect(defs.find((def) => def.id === priority)).toMatchObject({
+          prop_type: "number",
+          prop_default: AttrsSchema.PropVal.cases.number.make({ val: 2 }),
+        });
+
+        const items = yield* Effect.promise(() => {
+          return api.list({
+            filter: [
+              AttrsSchema.makeFilterExpr.or({
+                val: [RECORD_ID, task, related, done].map((id) => {
+                  return AttrsSchema.makeFilterExpr.cmp({ val: ["id", "=", id] });
+                }),
+              }),
+            ],
+          });
+        });
+
+        const note = items.find((item) => item.id === RECORD_ID);
+        expect(note?._tag).toBe("note");
+        expect(note?.props.top).toContainEqual(
+          expect.objectContaining({
+            propId: status,
+            expectation: required,
+            value: { state: Attrs.ValueState.Unset(), label: null },
+          }),
+        );
+        expect(note?.props.top).toContainEqual(
+          expect.objectContaining({
+            propId: related,
+            value: {
+              state: Attrs.ValueState.Valid({
+                value: AttrsSchema.PropVal.cases.link.make({ val: allowed }),
+              }),
+              label: "Allowed target",
+            },
+          }),
+        );
+        expect(note?.props.top).toContainEqual(
+          expect.objectContaining({
+            propId: restricted,
+            value: {
+              state: Attrs.ValueState.Invalid({
+                value: AttrsSchema.PropVal.cases.link.make({ val: allowed }),
+              }),
+              label: "Allowed target",
+            },
+          }),
+        );
+        expect(note?.props.top).toContainEqual({
+          propId: formerProp,
+          label: "Former property",
+          def: null,
+          expectation: null,
+          value: {
+            state: Attrs.ValueState.Invalid({
+              value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+            }),
+            label: "True",
+          },
+        });
+        expect(note?.props.groups).toEqual([
+          expect.objectContaining({ ruleId: missing, label: "Former rule", status: "Unavailable" }),
+          expect.objectContaining({ ruleId: old, label: "Old rule", status: "Unmatched" }),
+          expect.objectContaining({
+            ruleId: task,
+            status: "Matching",
+            props: [
+              expect.objectContaining({
+                propId: priority,
+                expectation: required,
+                value: {
+                  state: Attrs.ValueState.Invalid({
+                    value: AttrsSchema.PropVal.cases.text.make({ val: "wrong type" }),
+                  }),
+                  label: "wrong type",
+                },
+              }),
+              expect.objectContaining({
+                propId: status,
+                expectation: optional,
+                value: { state: Attrs.ValueState.Unset(), label: null },
+              }),
+            ],
+          }),
+        ]);
+        expect(
+          note?.props.groups.find((group) => group.ruleId === old)?.props[0]?.value.label,
+        ).toBe("Done");
+        expect(items.find((item) => item.id === task)?._tag).toBe("rule");
+        expect(items.find((item) => item.id === task)).toMatchObject({
+          rule_storage: AttrsSchema.RuleStorage.cases.group.make({}),
+          rule_targets: targets,
+          rule_expects: { [priority]: required, [status]: optional },
+        });
+        expect(items.find((item) => item.id === related)?._tag).toBe("prop");
+        expect(items.find((item) => item.id === related)).toMatchObject({
+          prop_type: "link",
+          prop_default: {
+            state: Attrs.ValueState.Valid({
+              value: AttrsSchema.PropVal.cases.link.make({ val: allowed }),
+            }),
+            label: "Allowed target",
+          },
+        });
+        expect(items.find((item) => item.id === done)?._tag).toBe("owned");
+        expect(items.find((item) => item.id === done)).toMatchObject({
+          owned_type: "enum_option",
+          owned_parent: status,
+        });
+        expect(yield* events.countPending()).toBe(before);
+      }),
+    );
+  });
+
   it("sorts before limiting and uses stable date, creation and ID tie-breakers", async () => {
     await runIntegration(
       Effect.gen(function* () {
@@ -660,7 +924,7 @@ describe("ExecuteApi.list", () => {
             owned_parent: null,
             rule_storage: null,
             rule_targets: null,
-            attrs_valid: true,
+            attrs_valid: false,
           },
         });
         const all = yield* CliList.list();
@@ -723,6 +987,31 @@ function seedRecord(recordId: RecordSchema.Id, markdown: string, commitSeq = 1) 
     return { localSeq: event.localSeq, update };
   });
 }
+
+const seedPropsRecord = Effect.fn("ExecuteApiTest.seedPropsRecord")(function* (
+  recordId: RecordSchema.Id,
+  markdown: string,
+  configure: (doc: Y.Doc) => Effect.Effect<void, unknown>,
+) {
+  const doc = yield* Effect.acquireRelease(
+    Effect.sync(() => new Y.Doc()),
+    (doc) => Effect.sync(() => doc.destroy()),
+  );
+
+  Y.applyUpdate(doc, fullUpdateFromMarkdown(markdown));
+  yield* configure(doc);
+  const events = yield* EventRepo.Service;
+  const materializer = yield* Materializer.Service;
+
+  const event = yield* events.create({
+    recordId,
+    type: "update",
+    payload: Y.encodeStateAsUpdate(doc),
+    createdAt: yield* DateTime.now,
+  });
+
+  yield* materializer.materializeRecordUpTo({ recordId, upToLocalSeq: event.localSeq });
+}, Effect.scoped);
 
 function fullUpdateFromMarkdown(markdown: string): Uint8Array<ArrayBufferLike> {
   const yDoc = prosemirrorJSONToYDoc(

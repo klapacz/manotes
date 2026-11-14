@@ -1,5 +1,5 @@
 import { RecordSchema } from "./record.schema";
-import { Array, DateTime, Effect, flow, Option, Schema } from "effect";
+import { Array, DateTime, Effect, flow, Option, Schema, Stream } from "effect";
 import { nanoid } from "nanoid";
 import * as Y from "yjs";
 import { initProseMirrorDoc, updateYFragment } from "y-prosemirror";
@@ -15,6 +15,9 @@ import { getProsemirrorXmlFragment } from "./prosemirror/yjs";
 import { EditDocument } from "./edit-document";
 import { BacklinkLabels } from "./backlink-labels";
 import { CliList } from "./list";
+import { PropDef } from "./prop-def.service";
+import { PropRecordRepo } from "./prop-record.repo";
+import { RuleRecord } from "./rule-record.service";
 
 export type UpdateOp = EditDocument.Edit | { readonly kind: "date.set"; readonly date: string };
 
@@ -25,6 +28,7 @@ export type Api = {
     options?: RecordRepo.ListOpts,
     signal?: AbortSignal,
   ) => Promise<ReadonlyArray<CliList.Item>>;
+  readonly listProps: (signal?: AbortSignal) => Promise<readonly PropRecordRepo.Def[]>;
   readonly editRecord: (
     id: RecordSchema.Id,
     ops: readonly UpdateOp[],
@@ -42,6 +46,16 @@ export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
   const recordRepo = yield* RecordRepo.Service;
   const eventRepo = yield* EventRepo.Service;
   const materializer = yield* Materializer.Service;
+  const defs = yield* PropDef.Service;
+  const ruleRecords = yield* RuleRecord.Service;
+
+  const listProps = Effect.fn("ExecuteApi.listProps")(function* () {
+    yield* materializer.catchUp();
+
+    return yield* defs
+      .reactiveDefs()
+      .pipe(Effect.flatMap(Stream.runHead), Effect.flatMap(Effect.fromOption));
+  });
 
   const editRecord = Effect.fn("ExecuteApi.editRecord")(function* (
     id: RecordSchema.Id,
@@ -155,17 +169,20 @@ export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
   });
 
   return {
-    list: (options, signal) => {
+    list: (options?: RecordRepo.ListOpts, signal?: AbortSignal) => {
       return Effect.runPromise(
         materializer
           .catchUp()
           .pipe(
             Effect.andThen(CliList.list(options)),
             Effect.provideService(RecordRepo.Service, recordRepo),
+            Effect.provideService(PropDef.Service, defs),
+            Effect.provideService(RuleRecord.Service, ruleRecords),
           ),
         { signal },
       );
     },
+    listProps: (signal?: AbortSignal) => Effect.runPromise(listProps(), { signal }),
     editRecord: (id, ops, signal) => Effect.runPromise(editRecord(id, ops), { signal }),
     createRecord: (id, ops, signal) => Effect.runPromise(createRecord(id, ops), { signal }),
   } satisfies Api;

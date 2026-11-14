@@ -31,9 +31,12 @@ export const ListOpts = Schema.Struct({
 
 export type ListOpts = typeof ListOpts.Type;
 
-export type ListRecord = Pick<
-  Tables.Record,
-  "id" | "title" | "text" | "date" | "createdAt" | "updatedAt" | "content"
+export type ListRecord = Types.MergeRight<
+  Omit<Tables.Record, "materializedYUpdate" | "lastEventLocalSeq" | "attrs_valid">,
+  {
+    readonly props: readonly Pick<Tables.Prop, "path" | "propId" | "value">[];
+    readonly rule_expects: readonly Pick<Tables.RuleExpect, "propId" | "value">[];
+  }
 >;
 
 export class Service extends Context.Service<Service>()("RecordRepo.Service", {
@@ -180,17 +183,40 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
     const list = Effect.fn("RecordRepo.list")(function* (
       opts: ListOpts = {},
     ): Effect.fn.Return<readonly ListRecord[], QueryError> {
-      return yield* Query.select(
-        Struct.pick(Tables.records, [
+      return yield* Query.select({
+        ...Struct.pick(Tables.records, [
           "id",
+          "_tag",
           "title",
+          "content",
           "text",
           "date",
           "createdAt",
           "updatedAt",
-          "content",
+          "prop_type",
+          "prop_default",
+          "prop_targets",
+          "owned_type",
+          "owned_parent",
+          "rule_storage",
+          "rule_targets",
         ]),
-      ).pipe(
+        props: db.jsonArrayFrom(
+          Query.select(Struct.pick(Tables.props, ["path", "propId", "value"])).pipe(
+            Query.from(Tables.props),
+            Query.where(Query.eq(Tables.props.recordId, Tables.records.id)),
+            Query.orderBy(Tables.props.path),
+            Query.orderBy(Tables.props.propId),
+          ),
+        ),
+        rule_expects: db.jsonArrayFrom(
+          Query.select(Struct.pick(Tables.ruleExpects, ["propId", "value"])).pipe(
+            Query.from(Tables.ruleExpects),
+            Query.where(Query.eq(Tables.ruleExpects.ruleId, Tables.records.id)),
+            Query.orderBy(Tables.ruleExpects.propId),
+          ),
+        ),
+      }).pipe(
         Query.from(Tables.records),
         Query.where(RecordFilter.filterPredicate(opts.filter ?? [])),
         opts.sort === "updated"
@@ -212,6 +238,17 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
       return yield* Query.select(Struct.pick(Tables.records, ["id", "title", "text"])).pipe(
         Query.from(Tables.records),
         db.query,
+      );
+    });
+
+    const listIds = Effect.fn("RecordRepo.listIds")(function* (
+      filter: AttrsSchema.Filter,
+    ): Effect.fn.Return<readonly RecordSchema.Id[], QueryError> {
+      return yield* Query.select({ id: Tables.records.id }).pipe(
+        Query.from(Tables.records),
+        Query.where(RecordFilter.filterPredicate(filter)),
+        db.query,
+        Effect.map((rows) => Array.map(rows, (row) => row.id)),
       );
     });
 
@@ -288,6 +325,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
       findAllNotes,
       list,
       listLabels,
+      listIds,
       reactiveNotes,
       reactiveStreamList,
       reactiveFindPreview,

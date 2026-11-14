@@ -65,7 +65,7 @@ export function Root(props: {
   const validation = PropState.use({
     state: () => {
       return PropValidation.valueState({
-        type: props.attrs.prop_type,
+        type: Option.some(props.attrs.prop_type),
         value: Option.fromNullishOr(props.attrs.prop_default),
       });
     },

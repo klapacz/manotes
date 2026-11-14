@@ -5,7 +5,7 @@ import { expect, it, vi } from "vite-plus/test";
 import type { Api } from "@manotes/shared/execute-api";
 import { ExecuteScript } from "@manotes/shared/execute-script";
 import { CliExecute } from "./cli.execute";
-import type { CliList } from "@manotes/shared/list";
+import { CliList } from "@manotes/shared/list";
 
 it("lists active tasks by state and priority using the task script", async () => {
   const script = await readFile(new URL("../../../scripts/tasks", import.meta.url), "utf8");
@@ -24,6 +24,7 @@ it("lists active tasks by state and priority using the task script", async () =>
         { ...task("INCOMPLETE", "todo", "low"), snippets: ["No assignments."] },
       ];
     }),
+    listProps: vi.fn<Api["listProps"]>(async () => []),
     editRecord: vi.fn<Api["editRecord"]>(async () => undefined),
     createRecord: vi.fn<Api["createRecord"]>(async () => RecordSchema.Id.make("unused")),
   };
@@ -55,7 +56,8 @@ it("lists active tasks by state and priority using the task script", async () =>
 function task(id: string, state: string, priority: string): CliList.Item {
   const assignments = `[State](./state%3A${state}.md) [Priority](./priority:${priority}.md)`;
 
-  return {
+  return CliList.Item.cases.note.make({
+    props: { top: [], groups: [] },
     id: RecordSchema.Id.make(`task:${id}`),
     title: `task:${id}`,
     text: assignments,
@@ -64,5 +66,5 @@ function task(id: string, state: string, priority: string): CliList.Item {
     updatedAt: "2026-11-08T10:00:00.000Z",
     markdown: `# task:${id}\n\n${assignments}\n`,
     snippets: [assignments],
-  };
+  });
 }

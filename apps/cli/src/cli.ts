@@ -155,7 +155,7 @@ const execute = Command.make(
     {
       command: "cat edit.js | manotes execute",
       description:
-        "Read JavaScript from stdin; api provides list, showList, createRecord and editRecord.",
+        "Read JavaScript from stdin; api provides list, listProps, showList, createRecord and editRecord.",
     },
   ]),
 );

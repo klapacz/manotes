@@ -36,6 +36,7 @@ const runScript = (source: string, label: string) => provideMock(ScriptRun.run(s
 describe("ScriptRun.run", () => {
   const dummyApi: Api = {
     list: vi.fn(),
+    listProps: vi.fn(),
     editRecord: vi.fn(),
     createRecord: vi.fn(),
   };

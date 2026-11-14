@@ -27,6 +27,7 @@
     "./event.repo": "./dist/event.repo.mjs",
     "./event.schema": "./dist/event.schema.mjs",
     "./execute-api": "./dist/execute-api.mjs",
+    "./execute-props": "./dist/execute-props.mjs",
     "./execute-script": "./dist/execute-script.mjs",
     "./graph-backup/schema": "./dist/graph-backup/schema.mjs",
     "./graph-encryption": "./dist/graph-encryption.mjs",

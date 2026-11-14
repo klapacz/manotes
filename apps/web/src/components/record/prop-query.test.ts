@@ -13,17 +13,31 @@ it("formats unset, valid, and invalid property states without raw JSON", () => {
     "Invalid",
   );
 
-  const valid = PropValidation.valueState({ type: "number", value: Option.some(value) });
+  const valid = PropValidation.valueState({
+    type: Option.some("number"),
+    value: Option.some(value),
+  });
+
   expect(valid).toEqual(Attrs.ValueState.Valid({ value }));
   expect(PropQuery.stateLabel(valid)).toBe("1234");
 
-  const invalid = PropValidation.valueState({ type: "bool", value: Option.some(value) });
+  const invalid = PropValidation.valueState({
+    type: Option.some("bool"),
+    value: Option.some(value),
+  });
+
   expect(invalid).toEqual(Attrs.ValueState.Invalid({ value }));
   expect(PropQuery.stateLabel(invalid)).toBe("Invalid: 1234");
 
   const bool = AttrsSchema.PropVal.cases.bool.make({ val: false });
   expect(PropQuery.stateLabel(Attrs.ValueState.Valid({ value: bool }))).toBe("False");
-  expect(PropValidation.valueState({ type: "bool", value: Option.none() })).toEqual(
+  expect(PropValidation.valueState({ type: Option.some("bool"), value: Option.none() })).toEqual(
+    Attrs.ValueState.Unset(),
+  );
+  expect(PropValidation.valueState({ type: Option.none(), value: Option.some(value) })).toEqual(
+    Attrs.ValueState.Invalid({ value }),
+  );
+  expect(PropValidation.valueState({ type: Option.none(), value: Option.none() })).toEqual(
     Attrs.ValueState.Unset(),
   );
 });
@@ -110,9 +124,9 @@ describe("text property choices", () => {
 
   it("keeps an empty text value distinct from unset", () => {
     const value = AttrsSchema.PropVal.cases.text.make({ val: "" });
-    expect(PropValidation.valueState({ type: "text", value: Option.some(value) })).toEqual(
-      Attrs.ValueState.Valid({ value }),
-    );
+    expect(
+      PropValidation.valueState({ type: Option.some("text"), value: Option.some(value) }),
+    ).toEqual(Attrs.ValueState.Valid({ value }));
     expect(PropQuery.stateLabel(Attrs.ValueState.Valid({ value }))).toBe('""');
   });
 

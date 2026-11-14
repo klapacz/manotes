@@ -91,6 +91,17 @@ function createGlobals(
       },
     },
     {
+      name: "api.listProps",
+      spread: true,
+      execute: (args, { signal }) => {
+        decodeListPropsArgs(args);
+        const call = api.listProps(signal);
+        pending.push(call);
+
+        return call;
+      },
+    },
+    {
       name: "api.showList",
       spread: true,
       execute: (args) => {
@@ -159,6 +170,8 @@ const decodeCreateRecordArgs = Schema.decodeUnknownSync(
 const decodeListArgs = Schema.decodeUnknownSync(
   Schema.Tuple([Schema.optionalKey(Schema.NullOr(RecordRepo.ListOpts))]),
 );
+
+const decodeListPropsArgs = Schema.decodeUnknownSync(Schema.Tuple([]));
 
 const decodeShowListArgs = Schema.decodeUnknownSync(
   Schema.Tuple([CliList.Format, Schema.Array(CliList.Item)]),

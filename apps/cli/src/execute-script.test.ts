@@ -1,12 +1,14 @@
+import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { Console, Effect, Exit, Result } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 import type { Api } from "@manotes/shared/execute-api";
 import { ExecuteScript } from "@manotes/shared/execute-script";
 import { CliExecute } from "./cli.execute";
-import type { CliList } from "@manotes/shared/list";
+import { CliList } from "@manotes/shared/list";
 
-const item: CliList.Item = {
+const item = CliList.Item.cases.note.make({
+  props: { top: [], groups: [] },
   id: RecordSchema.Id.make("note"),
   title: null,
   text: "First paragraph. Second paragraph.",
@@ -15,7 +17,7 @@ const item: CliList.Item = {
   updatedAt: "2026-11-08T11:00:00.000Z",
   markdown: "First paragraph.\n\nSecond paragraph.\n",
   snippets: ["First paragraph."],
-};
+});
 
 describe("ExecuteScript.run", () => {
   it("has no Node globals, filesystem, network, or timers", async () => {
@@ -27,7 +29,7 @@ describe("ExecuteScript.run", () => {
           typeof process, typeof require, typeof module, typeof Buffer,
           typeof fetch, typeof setTimeout, typeof globalThis.api.editRecord,
           typeof globalThis.api.createRecord, typeof globalThis.api.list,
-          typeof globalThis.api.showList,
+          typeof globalThis.api.showList, typeof globalThis.api.listProps,
         ]);`,
         "edit.js",
         makeApi(),
@@ -49,6 +51,7 @@ describe("ExecuteScript.run", () => {
         "undefined",
         "undefined",
         "undefined",
+        "function",
         "function",
         "function",
         "function",
@@ -88,6 +91,7 @@ describe("ExecuteScript.run", () => {
     'await api.createRecord("note", [{ kind: "body.replace", text: "a", with: "b" }]);',
     'await api.createRecord("note", [{ kind: "date.set", date: 7 }]);',
     'await api.list("wrong");',
+    'await api.listProps("wrong");',
     "await api.list({ limit: 0 });",
     "await api.list({ limit: -1 });",
     "await api.list({ limit: 1.5 });",
@@ -105,12 +109,40 @@ describe("ExecuteScript.run", () => {
     expect(api.editRecord).not.toHaveBeenCalled();
     expect(api.createRecord).not.toHaveBeenCalled();
     expect(api.list).not.toHaveBeenCalled();
+    expect(api.listProps).not.toHaveBeenCalled();
   });
 
   it.each(["", "undefined", "null"])("accepts omitted list options: %s", async (argument) => {
     const api = makeApi();
     await Effect.runPromise(run(`await api.list(${argument});`, "list.js", api));
     expect(api.list).toHaveBeenCalledWith(undefined, expect.any(AbortSignal));
+  });
+
+  it("returns property definitions through the sandbox", async () => {
+    const api = makeApi();
+    api.listProps.mockResolvedValue([
+      {
+        id: RecordSchema.Id.make("builtin:archived"),
+        title: "Archived",
+        prop_type: "bool",
+        prop_default: AttrsSchema.PropVal.cases.bool.make({ val: false }),
+      },
+    ]);
+    const output: unknown[] = [];
+
+    await Effect.runPromise(
+      run("text(await api.listProps());", "props.js", api).pipe(
+        Effect.provideService(Console.Console, {
+          ...console,
+          log: (...args) => {
+            output.push(...args);
+          },
+        }),
+      ),
+    );
+
+    expect(api.listProps).toHaveBeenCalledWith(expect.any(AbortSignal));
+    expect(JSON.parse(String(output[0]))).toEqual(await api.listProps.mock.results[0]?.value);
   });
 
   it("prints selected records and skips empty lists", async () => {
@@ -137,35 +169,45 @@ describe("ExecuteScript.run", () => {
     expect(api.list).toHaveBeenCalledWith({ limit: 1 }, expect.any(AbortSignal));
   });
 
-  it("forwards cancellation to listing and waits for cleanup", async () => {
-    const api = makeApi();
-    const started = Promise.withResolvers<void>();
-    const controller = new AbortController();
-    let cleanedUp = false;
-    api.list.mockImplementation((_options, signal) => {
-      return Effect.runPromise(
-        Effect.sync(() => started.resolve()).pipe(
-          Effect.andThen(Effect.never),
-          Effect.onExit(() => {
-            return Effect.sync(() => {
-              cleanedUp = true;
-            });
-          }),
-        ),
-        { signal },
-      );
-    });
+  it.each(["list", "listProps"] as const)(
+    "forwards cancellation to %s and waits for cleanup",
+    async (method) => {
+      const api = makeApi();
+      const started = Promise.withResolvers<void>();
+      const controller = new AbortController();
+      let cleanedUp = false;
+      let receivedSignal: AbortSignal | undefined;
 
-    const execution = Effect.runPromiseExit(run("await api.list();", "list.js", api), {
-      signal: controller.signal,
-    });
+      const request = (signal?: AbortSignal) => {
+        receivedSignal = signal;
 
-    await started.promise;
-    controller.abort();
-    expect(Exit.isFailure(await execution)).toBe(true);
-    expect(api.list.mock.calls[0]?.[1]?.aborted).toBe(true);
-    expect(cleanedUp).toBe(true);
-  });
+        return Effect.runPromise(
+          Effect.sync(() => started.resolve()).pipe(
+            Effect.andThen(Effect.never),
+            Effect.onExit(() => {
+              return Effect.sync(() => {
+                cleanedUp = true;
+              });
+            }),
+          ),
+          { signal },
+        );
+      };
+
+      api.list.mockImplementation((_options, signal) => request(signal));
+      api.listProps.mockImplementation(request);
+
+      const execution = Effect.runPromiseExit(run(`await api.${method}();`, "list.js", api), {
+        signal: controller.signal,
+      });
+
+      await started.promise;
+      controller.abort();
+      expect(Exit.isFailure(await execution)).toBe(true);
+      expect(receivedSignal?.aborted).toBe(true);
+      expect(cleanedUp).toBe(true);
+    },
+  );
 
   it("keeps output before a tagged script failure", async () => {
     const output: unknown[] = [];
@@ -269,6 +311,7 @@ describe("ExecuteScript.run", () => {
 function makeApi() {
   return {
     list: vi.fn<Api["list"]>(async () => []),
+    listProps: vi.fn<Api["listProps"]>(async () => []),
     editRecord: vi.fn<Api["editRecord"]>(async () => undefined),
     createRecord: vi.fn<Api["createRecord"]>(
       async (id) => id ?? RecordSchema.Id.make("generated-id"),

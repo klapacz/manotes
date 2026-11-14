@@ -2,7 +2,8 @@ import { RecordSchema } from "./record.schema";
 import { describe, expect, it } from "vite-plus/test";
 import { CliList } from "./list";
 
-const item: CliList.Item = {
+const item = CliList.Item.cases.note.make({
+  props: { top: [], groups: [] },
   id: RecordSchema.Id.make("record-1"),
   title: "Plan",
   text: "Plan First paragraph. Second paragraph.",
@@ -11,7 +12,7 @@ const item: CliList.Item = {
   updatedAt: "2026-11-08T11:00:00.000Z",
   markdown: "# Plan\n\nFirst paragraph.\n\nSecond paragraph.\n",
   snippets: ["First paragraph."],
-};
+});
 
 describe("CliList.format", () => {
   it.each([

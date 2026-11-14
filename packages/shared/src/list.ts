@@ -1,12 +1,27 @@
+import { AttrsSchema } from "./attrs.schema";
 import { RECORD_SCHEMA } from "./prosemirror/app-schema";
 import { MdSerialize } from "./prosemirror/md/serialize";
 import { RecordRepo } from "./record.repo";
 import { RecordSchema } from "./record.schema";
 import { PlainDateString } from "./temporal.schema";
-import { DateTime, Effect, Schema } from "effect";
+import {
+  Array,
+  DateTime,
+  Effect,
+  Match,
+  Option,
+  Record,
+  Result,
+  Schema,
+  Stream,
+  pipe,
+} from "effect";
 import { BacklinkLabels } from "./backlink-labels";
+import { ExecuteProps } from "./execute-props";
+import { PropDef } from "./prop-def.service";
+import { RecordFormat } from "./record/format";
 
-export const Item = Schema.Struct({
+const commonFields = {
   id: RecordSchema.Id,
   title: Schema.NullOr(Schema.String),
   text: Schema.String,
@@ -15,7 +30,42 @@ export const Item = Schema.Struct({
   updatedAt: Schema.String,
   markdown: Schema.String,
   snippets: Schema.Array(Schema.String),
+  props: ExecuteProps.Groups,
+};
+
+export const ItemNote = Schema.TaggedStruct("note", commonFields);
+
+export type ItemNote = typeof ItemNote.Type;
+
+export const ItemProp = Schema.TaggedStruct("prop", {
+  ...commonFields,
+  prop_type: Schema.NullOr(AttrsSchema.PropValTag),
+  prop_default: ExecuteProps.Value,
+  prop_targets: Schema.NullOr(AttrsSchema.TargetFilter),
 });
+
+export type ItemProp = typeof ItemProp.Type;
+
+export const ItemOwned = Schema.TaggedStruct("owned", {
+  ...commonFields,
+  owned_type: Schema.NullOr(Schema.Literal("enum_option")),
+  owned_parent: Schema.NullOr(RecordSchema.Id),
+});
+
+export type ItemOwned = typeof ItemOwned.Type;
+
+export const ItemRule = Schema.TaggedStruct("rule", {
+  ...commonFields,
+  rule_storage: Schema.NullOr(AttrsSchema.RuleStorage),
+  rule_targets: Schema.NullOr(AttrsSchema.TargetFilter),
+  rule_expects: Schema.Record(RecordSchema.Id, AttrsSchema.RuleExpectation),
+});
+
+export type ItemRule = typeof ItemRule.Type;
+
+export const Item = Schema.Union([ItemNote, ItemProp, ItemOwned, ItemRule]).pipe(
+  Schema.toTaggedUnion("_tag"),
+);
 
 export type Item = typeof Item.Type;
 
@@ -23,20 +73,40 @@ export const Format = Schema.Literals(["oneline", "short", "full"]);
 
 export type Format = typeof Format.Type;
 
-export const list = Effect.fn("CliList.list")(function* (options: RecordRepo.ListOpts = {}) {
+export const list = Effect.fn("CliList.list")(function* (opts: RecordRepo.ListOpts = {}) {
   const records = yield* RecordRepo.Service;
-  const labels = yield* records.listLabels().pipe(Effect.map(BacklinkLabels.buildCache));
+  const rows = yield* records.list(opts);
 
-  return yield* records.list(options).pipe(
-    Effect.map((rows) => {
-      return rows.map(({ content, ...row }): Item => ({
-        ...row,
-        createdAt: DateTime.formatIso(row.createdAt),
-        updatedAt: DateTime.formatIso(row.updatedAt),
-        ...serializeContent(content, { backlinkLabel: (id) => labels.get(id) }),
-      }));
-    }),
+  if (rows.length === 0) return [];
+
+  const def = yield* PropDef.Service;
+
+  const defs = yield* def
+    .reactiveDefs()
+    .pipe(
+      Effect.flatMap(Stream.runHead),
+      Effect.flatMap(Effect.fromOption),
+      Effect.map(PropDef.asRecord),
+    );
+
+  const labelRows = yield* records.listLabels();
+
+  const labels = new Map(
+    Array.map(labelRows, (row) => [row.id, RecordFormat.queryLabel(row)] as const),
   );
+
+  // Markdown keeps the same labels as exported files and literal body edits.
+  const backlinkLabels = BacklinkLabels.buildCache(labelRows);
+  const rulesByRecord = yield* ExecuteProps.readRules(Array.map(rows, (row) => row.id));
+
+  return yield* Effect.forEach(rows, (row) => {
+    return Effect.gen(function* () {
+      const rules = Record.get(rulesByRecord, row.id).pipe(Option.getOrElse(() => ({})));
+      const props = yield* ExecuteProps.readGroups({ rows: row.props, defs, rules, labels });
+
+      return yield* readItem({ row, props, labels, backlinkLabels });
+    });
+  });
 });
 
 export function format(format: Format, items: readonly Item[]): string {
@@ -51,6 +121,77 @@ export function format(format: Format, items: readonly Item[]): string {
       return items.map((item) => formatWithBody(item, item.markdown)).join("\n\n");
   }
 }
+
+const readItem = Effect.fn("CliList.readItem")(function* (opts: {
+  readonly row: RecordRepo.ListRecord;
+  readonly props: ExecuteProps.Groups;
+  readonly labels: ReadonlyMap<RecordSchema.Id, string>;
+  readonly backlinkLabels: ReadonlyMap<RecordSchema.Id, string>;
+}) {
+  const common = {
+    id: opts.row.id,
+    title: opts.row.title,
+    text: opts.row.text,
+    date: opts.row.date,
+    createdAt: DateTime.formatIso(opts.row.createdAt),
+    updatedAt: DateTime.formatIso(opts.row.updatedAt),
+    props: opts.props,
+    ...serializeContent(opts.row.content, {
+      backlinkLabel: (id) => opts.backlinkLabels.get(id),
+    }),
+  };
+
+  return yield* Match.value(opts.row._tag).pipe(
+    Match.when("note", () => Effect.succeed(Item.cases.note.make(common))),
+    Match.when("owned", () => {
+      return Effect.succeed(
+        Item.cases.owned.make({
+          ...common,
+          owned_type: opts.row.owned_type,
+          owned_parent: opts.row.owned_parent,
+        }),
+      );
+    }),
+    Match.when("prop", () => {
+      // TODO: Reconsider whether defaults need display labels and resolved record names.
+      return ExecuteProps.readDefault({
+        type: opts.row.prop_type,
+        value: opts.row.prop_default,
+        targets: opts.row.prop_targets,
+        labels: opts.labels,
+      }).pipe(
+        Effect.map((propDefault) => {
+          return Item.cases.prop.make({
+            ...common,
+            prop_type: opts.row.prop_type,
+            prop_default: propDefault,
+            prop_targets: opts.row.prop_targets,
+          });
+        }),
+      );
+    }),
+    Match.when("rule", () => {
+      return Effect.succeed(
+        Item.cases.rule.make({
+          ...common,
+          rule_storage: opts.row.rule_storage,
+          rule_targets: opts.row.rule_targets,
+          rule_expects: pipe(
+            opts.row.rule_expects,
+            // Like the UI, omit expectations without a decoded value.
+            Array.filterMap((row) => {
+              if (row.value === null) return Result.fail(undefined);
+
+              return Result.succeed([row.propId, row.value] as const);
+            }),
+            Record.fromEntries,
+          ),
+        }),
+      );
+    }),
+    Match.exhaustive,
+  );
+});
 
 function formatHeader(item: Item): string {
   return `${item.title ?? "Untitled"} ${item.id} ${item.date}`;
