@@ -136,8 +136,8 @@ type ListItem = CommonItem & (
 
 type ListFormat =
   | "oneline" // Title, ID, assigned ISO date. Missing title prints "Untitled".
-  | "short" // Same header, then Markdown snippets.
-  | "full"; // Same header, then the complete Markdown body.
+  | "short" // Header, Markdown snippets, then grouped props.
+  | "full"; // Header, complete Markdown body, kind-specific settings, then grouped props.
 
 type UpdateOp =
   | { kind: "body.replace"; text: string; with: string; occurrence?: number | "all" }
@@ -155,7 +155,8 @@ interface Api {
 }
 ```
 
-Use `showList` for formatted note bodies or `text(records)` for all fields, including properties and rule metadata.
+Use `showList` for formatted bodies and props. `full` also shows prop defs, owned-record
+settings and rule settings. Use `text(records)` for the structured fields.
 Avoid mixing `showList` with `text()` or `console.log()` in the same script;
 their output can appear out of order.
 
@@ -234,7 +235,7 @@ text(await api.listProps());
 const records = await api.list({
   filter: [{ _tag: "cmp", val: ["id", "=", "record-id"] }],
 });
-text(records.map(record => ({ id: record.id, props: record.props })));
+await api.showList("full", records);
 ```
 
 ```js
@@ -242,7 +243,7 @@ text(records.map(record => ({ id: record.id, props: record.props })));
 const rules = await api.list({
   filter: [{ _tag: "cmp", val: ["_tag", "=", "rule"] }],
 });
-text(rules);
+await api.showList("full", rules);
 ```
 
 ```js
@@ -260,6 +261,11 @@ For link choices, pass the definition's `prop_targets` to `list({ filter })`.
 A null target filter means any record. Assigned values keep their saved form;
 `value.state` reports validity and `value.label` supplies the displayed value.
 Required expectations can appear with `Unset` values. Empty rule groups are omitted.
+Text output includes prop, rule and referenced-record IDs in brackets. Group warnings
+show rules that no longer apply or are unavailable. Prop rows mark required unset values,
+unexpected assignments and unavailable defs. Text values use quotes and escaped newlines;
+invalid values are marked and keep any available contents. Full settings show target
+filters as exact API JSON, or `all records` for an empty filter.
 This API currently reads property data; property assignment operations are not available.
 
 ## Create and edit examples

@@ -10,6 +10,7 @@ import {
   Effect,
   Match,
   Option,
+  Predicate,
   Record,
   Result,
   Schema,
@@ -118,7 +119,11 @@ export function format(format: Format, items: readonly Item[]): string {
       return items.map((item) => formatWithBody(item, item.snippets.join("\n\n"))).join("\n\n");
 
     case "full":
-      return items.map((item) => formatWithBody(item, item.markdown)).join("\n\n");
+      return items
+        .map((item) => {
+          return formatWithBody(item, item.markdown, formatSettings(item));
+        })
+        .join("\n\n");
   }
 }
 
@@ -197,17 +202,160 @@ function formatHeader(item: Item): string {
   return `${item.title ?? "Untitled"} ${item.id} ${item.date}`;
 }
 
-function formatWithBody(item: Item, body: string): string {
+function formatWithBody(item: Item, body: string, settings = ""): string {
   const header = formatHeader(item);
 
-  if (body.length === 0) return header;
+  const content = pipe(
+    [body, settings, formatProps(item.props)],
+    Array.filter((section) => section.length > 0),
+    Array.join("\n\n"),
+  );
 
-  const indented = body
+  if (content.length === 0) return header;
+
+  const indented = content
     .split("\n")
     .map((line) => `  ${line}`)
     .join("\n");
 
   return `${header}\n\n${indented}`;
+}
+
+function formatProps(props: ExecuteProps.Groups): string {
+  const lines = [
+    ...Array.map(props.top, (prop) => {
+      return `  ${formatPropRow({ prop, grouped: false })}`;
+    }),
+    ...Array.flatMap(props.groups, (group) => {
+      return [
+        `  ${formatPropGroupHeader(group)}:`,
+        ...Array.map(group.props, (prop) => {
+          return `    ${formatPropRow({ prop, grouped: true })}`;
+        }),
+      ];
+    }),
+  ];
+
+  if (lines.length === 0) return "";
+
+  return ["Props:", ...lines].join("\n");
+}
+
+function formatPropGroupHeader(group: ExecuteProps.RuleGroup): string {
+  const label = `${group.label} [${group.ruleId}]`;
+
+  return Match.value(group.status).pipe(
+    Match.when("Matching", () => label),
+    Match.when("Unmatched", () => `${label} (no longer applies)`),
+    Match.when("Unavailable", () => `${label} (rule unavailable)`),
+    Match.exhaustive,
+  );
+}
+
+function formatPropRow(opts: {
+  readonly prop: ExecuteProps.Entry;
+  readonly grouped: boolean;
+}): string {
+  const unset = ExecuteProps.ValueState.guards.Unset(opts.prop.value.state);
+
+  const annotations = pipe(
+    {
+      required: Predicate.isTagged(opts.prop.expectation, "required") && unset,
+      unexpected: opts.grouped && opts.prop.expectation === null && !unset,
+      "prop unavailable": opts.prop.def === null,
+    },
+    Record.filter((visible) => visible),
+    Record.keys,
+  );
+
+  const row = `${opts.prop.label} [${opts.prop.propId}]: ` + formatPropValue(opts.prop.value);
+
+  if (annotations.length === 0) return row;
+
+  return `${row} (${annotations.join(", ")})`;
+}
+
+function formatPropValue(value: ExecuteProps.Value): string {
+  return Match.value(value.state).pipe(
+    Match.tag("Unset", () => "unset"),
+    Match.tag("Valid", (state) => {
+      return formatAssignedPropValue(state.value, value.label);
+    }),
+    Match.tag("Invalid", (state) => {
+      if (state.value === undefined) return "invalid";
+
+      return `invalid: ${formatAssignedPropValue(state.value, value.label)}`;
+    }),
+    Match.exhaustive,
+  );
+}
+
+function formatAssignedPropValue(value: AttrsSchema.PropVal, label: string | null): string {
+  return Match.value(value).pipe(
+    Match.tag("text", (value) => JSON.stringify(value.val)),
+    Match.tag("enum", "link", (value) => {
+      return `${label ?? "Unavailable record"} [${value.val}]`;
+    }),
+    Match.orElse((value) => {
+      return label ?? RecordFormat.propValueLabel(value);
+    }),
+  );
+}
+
+function formatSettings(item: Item): string {
+  return Match.value(item).pipe(
+    Match.tag("note", () => ""),
+    Match.tag("prop", (item) => {
+      const lines = [
+        "Prop def:",
+        `  Type: ${item.prop_type ?? "unset"}`,
+        `  Default: ${formatPropValue(item.prop_default)}`,
+      ];
+
+      if (item.prop_type !== "link") return lines.join("\n");
+
+      return [...lines, `  Targets: ${formatTargets(item.prop_targets ?? [])}`].join("\n");
+    }),
+    Match.tag("owned", (item) => {
+      const parentLabel = Match.value(item.owned_parent).pipe(
+        Match.when(null, () => "unset"),
+        Match.orElse((id) => `[${id}]`),
+      );
+
+      return [
+        "Owned record:",
+        `  Type: ${item.owned_type ?? "unset"}`,
+        `  Parent: ${parentLabel}`,
+      ].join("\n");
+    }),
+    Match.tag("rule", (item) => {
+      const targetsLabel = Match.value(item.rule_targets).pipe(
+        Match.when(null, () => "unset"),
+        Match.orElse(formatTargets),
+      );
+
+      const lines = [
+        "Rule def:",
+        `  Storage: ${item.rule_storage?._tag ?? "unset"}`,
+        `  Targets: ${targetsLabel}`,
+      ];
+
+      const expects = Record.collect(item.rule_expects, (propId, expectation) => {
+        return `    [${propId}]: ${expectation._tag}`;
+      });
+
+      if (expects.length === 0) return [...lines, "  Expects: none"].join("\n");
+
+      return [...lines, "  Expects:", ...expects].join("\n");
+    }),
+    Match.exhaustive,
+  );
+}
+
+function formatTargets(targets: AttrsSchema.TargetFilter): string {
+  if (targets.length === 0) return "all records";
+
+  return JSON.stringify(targets);
 }
 
 /**
