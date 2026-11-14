@@ -87,9 +87,16 @@ describe("ExecuteScript.run", () => {
     'await api.editRecord("note", [{ kind: "body.append", markdown: 7 }]);',
     'await api.editRecord("note", [{ kind: "body.replace", text: "a", with: "b", occurrence: -1 }]);',
     'await api.editRecord("note", [{ kind: "unknown" }]);',
+    'await api.editRecord("note", [{ kind: "prop.set", propId: "", value: { _tag: "bool", val: true } }]);',
+    'await api.editRecord("note", [{ kind: "prop.set", propId: "flag", ruleId: "", value: { _tag: "bool", val: true } }]);',
+    'await api.editRecord("note", [{ kind: "prop.set", propId: "flag" }]);',
+    'await api.editRecord("note", [{ kind: "prop.set", propId: "flag", value: { _tag: "bool", val: "true" } }]);',
+    'await api.editRecord("note", [{ kind: "prop.set", propId: "number", value: { _tag: "number", val: NaN } }]);',
+    'await api.editRecord("note", [{ kind: "prop.clear", propId: "" }]);',
     'await api.createRecord("", []);',
     'await api.createRecord("note", [{ kind: "body.replace", text: "a", with: "b" }]);',
     'await api.createRecord("note", [{ kind: "date.set", date: 7 }]);',
+    'await api.createRecord("note", [{ kind: "prop.clear", propId: "flag" }]);',
     'await api.list("wrong");',
     'await api.listProps("wrong");',
     "await api.list({ limit: 0 });",
@@ -110,6 +117,51 @@ describe("ExecuteScript.run", () => {
     expect(api.createRecord).not.toHaveBeenCalled();
     expect(api.list).not.toHaveBeenCalled();
     expect(api.listProps).not.toHaveBeenCalled();
+  });
+
+  it("forwards prop sets during creation and grouped sets and clears during editing", async () => {
+    const api = makeApi();
+
+    await Effect.runPromise(
+      run(
+        `
+      const id = await api.createRecord("note", [
+        { kind: "prop.set", propId: "builtin:archived", value: { _tag: "bool", val: true } },
+      ]);
+      await api.editRecord(id, [
+        { kind: "prop.set", propId: "status", ruleId: "task", value: { _tag: "enum", val: "done" } },
+        { kind: "prop.clear", propId: "priority", ruleId: "task" },
+      ]);
+    `,
+        "props.js",
+        api,
+      ),
+    );
+
+    expect(api.createRecord).toHaveBeenCalledWith(
+      "note",
+      [
+        {
+          kind: "prop.set",
+          propId: "builtin:archived",
+          value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+        },
+      ],
+      expect.any(AbortSignal),
+    );
+    expect(api.editRecord).toHaveBeenCalledWith(
+      "note",
+      [
+        {
+          kind: "prop.set",
+          propId: "status",
+          ruleId: "task",
+          value: AttrsSchema.PropVal.cases.enum.make({ val: RecordSchema.Id.make("done") }),
+        },
+        { kind: "prop.clear", propId: "priority", ruleId: "task" },
+      ],
+      expect.any(AbortSignal),
+    );
   });
 
   it.each(["", "undefined", "null"])("accepts omitted list options: %s", async (argument) => {

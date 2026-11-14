@@ -1,5 +1,5 @@
 import { RecordSchema } from "./record.schema";
-import { Array, DateTime, Effect, flow, Option, Schema, Stream } from "effect";
+import { Array, DateTime, Effect, Option, Result, Schema, Stream } from "effect";
 import { nanoid } from "nanoid";
 import * as Y from "yjs";
 import { initProseMirrorDoc, updateYFragment } from "y-prosemirror";
@@ -18,10 +18,36 @@ import { CliList } from "./list";
 import { PropDef } from "./prop-def.service";
 import { PropRecordRepo } from "./prop-record.repo";
 import { RuleRecord } from "./rule-record.service";
+import { Attrs } from "./attrs.service";
+import { ExecuteProps } from "./execute-props";
+import { EffectOption } from "./effect/effect-option";
 
-export type UpdateOp = EditDocument.Edit | { readonly kind: "date.set"; readonly date: string };
+const AppendOp = Schema.Struct({
+  kind: Schema.Literal("body.append"),
+  markdown: Schema.String,
+});
 
-export type CreateOp = Extract<UpdateOp, { readonly kind: "body.append" | "date.set" }>;
+const DateOp = Schema.Struct({
+  kind: Schema.Literal("date.set"),
+  date: Schema.String,
+});
+
+const ReplaceOp = Schema.Struct({
+  kind: Schema.Literal("body.replace"),
+  text: Schema.String,
+  with: Schema.String,
+  occurrence: Schema.optionalKey(
+    Schema.Union([Schema.Literal("all"), Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))]),
+  ),
+});
+
+export const CreateOp = Schema.Union([AppendOp, DateOp, ExecuteProps.SetOp]);
+
+export type CreateOp = typeof CreateOp.Type;
+
+export const UpdateOp = Schema.Union([CreateOp, ReplaceOp, ExecuteProps.ClearOp]);
+
+export type UpdateOp = typeof UpdateOp.Type;
 
 export type Api = {
   readonly list: (
@@ -48,6 +74,7 @@ export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
   const materializer = yield* Materializer.Service;
   const defs = yield* PropDef.Service;
   const ruleRecords = yield* RuleRecord.Service;
+  const attrs = yield* Attrs.Service;
 
   const listProps = Effect.fn("ExecuteApi.listProps")(function* () {
     yield* materializer.catchUp();
@@ -75,28 +102,30 @@ export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
         if (Option.isNone(found)) return yield* Effect.fail(new Error(`Record not found: ${id}`));
         const { record, backlinks } = found.value;
 
-        // Resolve metadata separately; only body edits go through Yjs.
+        // Date stays separate; body and props share the Yjs update.
         const resolved = yield* resolveOps(ops);
         const date = Option.filter(resolved.date, (date) => date !== record.date);
 
         // Match the same backlink labels shown in exported Markdown.
-        const bodyUpdate = yield* createBodyUpdate(
-          record.materializedYUpdate,
-          resolved.bodyEdits,
-          BacklinkLabels.buildCache(backlinks),
-        );
+        const update = yield* createUpdate({
+          recordId: id,
+          snapshot: record.materializedYUpdate,
+          body: resolved.body,
+          prop: resolved.prop,
+          backlinkLabels: BacklinkLabels.buildCache(backlinks),
+        });
 
-        // No effective change means no events and no updated-at change.
-        if (bodyUpdate === null && Option.isNone(date)) return;
+        // Body/date no-ops are skipped; requested prop operations produce an update.
+        if (update === null && Option.isNone(date)) return;
 
         const createdAt = yield* DateTime.now;
         let upToLocalSeq = record.lastEventLocalSeq;
 
-        if (bodyUpdate !== null) {
+        if (update !== null) {
           const event = yield* eventRepo.create({
             recordId: id,
             type: "update",
-            payload: bodyUpdate,
+            payload: update,
             createdAt,
           });
 
@@ -114,7 +143,7 @@ export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
           upToLocalSeq = event.localSeq;
         }
 
-        // Reuse production derivation for content, title, text, and backlinks.
+        // Reuse production derivation for body, attrs, and backlinks.
         // The next editRecord call sees this update even before Markdown is written.
         yield* materializer.materializeRecordUpTo({ recordId: id, upToLocalSeq });
       }),
@@ -126,13 +155,6 @@ export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
     ops: readonly CreateOp[],
   ) {
     const id = yield* Schema.decodeUnknownEffect(RecordSchema.CreateId)(requestedId ?? nanoid());
-
-    // Scripts can be plain JavaScript, so enforce the narrower creation API at runtime too.
-    if (ops.some((op) => op.kind !== "body.append" && op.kind !== "date.set")) {
-      return yield* Effect.fail(
-        new Error("createRecord only accepts body.append and date.set ops"),
-      );
-    }
 
     return yield* db.transaction(
       Effect.gen(function* () {
@@ -148,9 +170,15 @@ export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
         }
 
         const resolved = yield* resolveOps(ops);
-        const bodyUpdate = yield* createInitialUpdate(resolved.bodyEdits);
+
+        const update = yield* createInitialUpdate({
+          recordId: id,
+          body: resolved.body,
+          prop: resolved.prop,
+        });
+
         const createdAt = yield* DateTime.now;
-        yield* eventRepo.create({ recordId: id, type: "update", payload: bodyUpdate, createdAt });
+        yield* eventRepo.create({ recordId: id, type: "update", payload: update, createdAt });
 
         const date = Option.getOrElse(resolved.date, () => toLocalDateString(createdAt));
 
@@ -183,34 +211,52 @@ export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
       );
     },
     listProps: (signal?: AbortSignal) => Effect.runPromise(listProps(), { signal }),
-    editRecord: (id, ops, signal) => Effect.runPromise(editRecord(id, ops), { signal }),
-    createRecord: (id, ops, signal) => Effect.runPromise(createRecord(id, ops), { signal }),
+    editRecord: (id, ops, signal) => {
+      return Effect.runPromise(
+        editRecord(id, ops).pipe(Effect.provideService(Attrs.Service, attrs)),
+        { signal },
+      );
+    },
+    createRecord: (id, ops, signal) => {
+      return Effect.runPromise(
+        createRecord(id, ops).pipe(Effect.provideService(Attrs.Service, attrs)),
+        { signal },
+      );
+    },
   } satisfies Api;
 });
 
 const resolveOps = Effect.fn("ExecuteApi.resolveOps")(function* (ops: readonly UpdateOp[]) {
-  const date = yield* Array.findLast(ops, (op) => op.kind === "date.set").pipe(
-    Option.map((op) => op.date),
-    Option.match({
-      onNone: () => Effect.succeedNone,
-      onSome: flow(Schema.decodeUnknownEffect(PlainDateString), Effect.asSome),
-    }),
+  const [dates, remaining] = Array.partition(ops, (op) => {
+    if (op.kind === "date.set") return Result.succeed(op.date);
+
+    return Result.fail(op);
+  });
+
+  const [prop, body] = Array.partition(remaining, (op) => {
+    if (op.kind === "prop.set" || op.kind === "prop.clear") return Result.succeed(op);
+
+    return Result.fail(op);
+  });
+
+  const date = yield* Effect.succeed(Array.last(dates)).pipe(
+    EffectOption.traverse(Schema.decodeUnknownEffect(PlainDateString)),
   );
 
-  const bodyEdits = Array.filter(ops, (op) => op.kind !== "date.set");
-
-  return { date, bodyEdits };
+  return { date, body, prop };
 });
 
-const createInitialUpdate = Effect.fn("ExecuteApi.createInitialUpdate")(function* (
-  edits: readonly EditDocument.Edit[],
-) {
+const createInitialUpdate = Effect.fn("ExecuteApi.createInitialUpdate")(function* (opts: {
+  readonly recordId: RecordSchema.Id;
+  readonly body: readonly EditDocument.Edit[];
+  readonly prop: readonly ExecuteProps.Op[];
+}) {
   // Creation must persist the empty paragraph too; a date event alone has no body.
   const doc = yield* Effect.try({
     try: () => {
       return EditDocument.apply(
         RECORD_SCHEMA.node("doc", null, [RECORD_SCHEMA.node("paragraph")]),
-        edits,
+        opts.body,
       );
     },
     catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
@@ -225,15 +271,21 @@ const createInitialUpdate = Effect.fn("ExecuteApi.createInitialUpdate")(function
   const { meta } = initProseMirrorDoc(fragment, RECORD_SCHEMA);
   updateYFragment(yDoc, fragment, doc, meta);
 
+  for (const op of opts.prop) {
+    yield* ExecuteProps.apply({ doc: yDoc, recordId: opts.recordId, op });
+  }
+
   return Y.encodeStateAsUpdate(yDoc);
 }, Effect.scoped);
 
-const createBodyUpdate = Effect.fn("ExecuteApi.createBodyUpdate")(function* (
-  snapshot: Uint8Array<ArrayBufferLike> | null,
-  edits: readonly EditDocument.Edit[],
-  labels: ReadonlyMap<RecordSchema.Id, string>,
-) {
-  if (edits.length === 0) return null;
+const createUpdate = Effect.fn("ExecuteApi.createUpdate")(function* (opts: {
+  readonly recordId: RecordSchema.Id;
+  readonly snapshot: RecordRepo.MaterializedYUpdate;
+  readonly body: readonly EditDocument.Edit[];
+  readonly prop: readonly ExecuteProps.Op[];
+  readonly backlinkLabels: ReadonlyMap<RecordSchema.Id, string>;
+}) {
+  if (opts.body.length === 0 && opts.prop.length === 0) return null;
 
   // Only encoded bytes leave this scope; the private Yjs document is destroyed
   // before the caller persists any events, including when editing fails.
@@ -242,21 +294,31 @@ const createBodyUpdate = Effect.fn("ExecuteApi.createBodyUpdate")(function* (
     (yDoc) => Effect.sync(() => yDoc.destroy()),
   );
 
-  if (snapshot !== null) Y.applyUpdate(yDoc, snapshot);
+  if (opts.snapshot !== null) Y.applyUpdate(yDoc, opts.snapshot);
   const fragment = getProsemirrorXmlFragment(yDoc);
   const { doc, meta } = initProseMirrorDoc(fragment, RECORD_SCHEMA);
 
   const updated = yield* Effect.try({
-    try: () => EditDocument.apply(doc, edits, { backlinkLabel: (id) => labels.get(id) }),
+    try: () => {
+      return EditDocument.apply(doc, opts.body, {
+        backlinkLabel: (id) => opts.backlinkLabels.get(id),
+      });
+    },
     catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
   });
 
-  // Empty Yjs updates still have bytes. Document equality also catches edits
-  // that cancel each other out.
-  if (updated.eq(doc)) return null;
+  const bodyChanged = !updated.eq(doc);
+
+  // Preserve body-only no-op handling; requested prop operations still run.
+  if (!bodyChanged && opts.prop.length === 0) return null;
 
   const stateVector = Y.encodeStateVector(yDoc);
-  updateYFragment(yDoc, fragment, updated, meta);
+
+  if (bodyChanged) updateYFragment(yDoc, fragment, updated, meta);
+
+  for (const op of opts.prop) {
+    yield* ExecuteProps.apply({ doc: yDoc, recordId: opts.recordId, op });
+  }
 
   return Y.encodeStateAsUpdate(yDoc, stateVector);
 }, Effect.scoped);

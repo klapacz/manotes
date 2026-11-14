@@ -9,6 +9,54 @@ import { RecordFormat } from "./record/format";
 import { RuleMatches } from "./rule-matches";
 import { RuleProps } from "./rule-props";
 import { RuleRecord } from "./rule-record.service";
+import type * as Y from "yjs";
+
+export const SetOp = Schema.Struct({
+  kind: Schema.Literal("prop.set"),
+  propId: RecordSchema.Id,
+  ruleId: Schema.optionalKey(RecordSchema.Id),
+  value: AttrsSchema.PropVal,
+});
+
+export type SetOp = typeof SetOp.Type;
+
+export const ClearOp = Schema.Struct({
+  kind: Schema.Literal("prop.clear"),
+  propId: RecordSchema.Id,
+  ruleId: Schema.optionalKey(RecordSchema.Id),
+});
+
+export type ClearOp = typeof ClearOp.Type;
+
+export const Op = Schema.Union([SetOp, ClearOp]);
+
+export type Op = typeof Op.Type;
+
+export const apply = Effect.fn("ExecuteProps.apply")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly recordId: RecordSchema.Id;
+  readonly op: Op;
+}) {
+  const attrs = yield* Attrs.Service;
+  const prop = { doc: opts.doc, propId: opts.op.propId };
+  const ruleId = opts.op.ruleId;
+
+  yield* Match.value(opts.op).pipe(
+    Match.when({ kind: "prop.set" }, (op) => {
+      if (ruleId === undefined) {
+        return attrs.setProp({ ...prop, recordId: opts.recordId, value: op.value });
+      }
+
+      return attrs.setGroupProp({ ...prop, recordId: opts.recordId, ruleId, value: op.value });
+    }),
+    Match.when({ kind: "prop.clear" }, () => {
+      if (ruleId === undefined) return attrs.clearProp(prop);
+
+      return attrs.clearGroupProp({ ...prop, ruleId });
+    }),
+    Match.exhaustive,
+  );
+});
 
 export const ValueState = Schema.TaggedUnion({
   Unset: {},

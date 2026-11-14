@@ -142,9 +142,11 @@ type ListFormat =
 type UpdateOp =
   | { kind: "body.replace"; text: string; with: string; occurrence?: number | "all" }
   | { kind: "body.append"; markdown: string }
-  | { kind: "date.set"; date: string }; // Valid YYYY-MM-DD.
+  | { kind: "date.set"; date: string } // Valid YYYY-MM-DD.
+  | { kind: "prop.set"; propId: RecordId; ruleId?: RecordId; value: PropValue }
+  | { kind: "prop.clear"; propId: RecordId; ruleId?: RecordId };
 
-type CreateOp = Extract<UpdateOp, { kind: "body.append" | "date.set" }>;
+type CreateOp = Extract<UpdateOp, { kind: "body.append" | "date.set" | "prop.set" }>;
 
 interface Api {
   list(options?: ListOpts): Promise<readonly ListItem[]>;
@@ -266,7 +268,6 @@ show rules that no longer apply or are unavailable. Prop rows mark required unse
 unexpected assignments and unavailable defs. Text values use quotes and escaped newlines;
 invalid values are marked and keep any available contents. Full settings show target
 filters as exact API JSON, or `all records` for an empty filter.
-This API currently reads property data; property assignment operations are not available.
 
 ## Create and edit examples
 
@@ -278,6 +279,7 @@ Default to an ordinary note without an H1 for capture. Use an H1 when creating a
 const id = await api.createRecord(undefined, [
   { kind: "body.append", markdown: "First paragraph." },
   { kind: "date.set", date: "2026-11-08" },
+  { kind: "prop.set", propId: "builtin:archived", value: { _tag: "bool", val: false } },
 ]);
 await api.editRecord(id, [
   { kind: "body.replace", text: "First", with: "Updated" },
@@ -302,6 +304,38 @@ use a zero-based index for one occurrence, or `"all"` for all. Use `with: ""` to
 Edits run in order. Each awaited create/edit call saves independently; earlier calls survive a later failure.
 Creation accepts an unused explicit ID or `undefined`. IDs starting with `builtin:` are reserved.
 Read `<record-id>.md` files when needed, but never edit them or `.manotes/` directly.
+
+## Set and clear props
+
+Use `listProps()` to discover prop IDs and types. Use `list()` to inspect a record's
+`props.top` and `props.groups`; grouped entries include their owning `ruleId`.
+Omit `ruleId` for a top-level assignment, or supply it to edit one rule group.
+Use enum option and link target IDs discovered with the query examples above.
+
+```js
+await api.editRecord("record-id", [
+  {
+    kind: "prop.set",
+    propId: "status-prop-id",
+    ruleId: "task-rule-id",
+    value: { _tag: "enum", val: "done-option-id" },
+  },
+  { kind: "prop.clear", propId: "builtin:archived" },
+]);
+
+await api.showList("full", await api.list({
+  filter: [{ _tag: "cmp", val: ["id", "=", "record-id"] }],
+}));
+```
+
+Values use the tagged `PropValue` format. Their shape is checked, but assignments
+can use unavailable defs/rules, a different value type, or targets outside the
+def's choices. Read the record again to inspect validity and rule expectations.
+Clearing removes the saved assignment; property equality filters can then use the
+def's default. Creation accepts `prop.set`, but not `prop.clear`.
+Prop operations run in their given order. A requested prop batch produces an update
+even if its final values are unchanged, and can change `updatedAt`.
+These operations edit assignments. They do not create or edit prop defs or rules.
 
 ## Sync
 

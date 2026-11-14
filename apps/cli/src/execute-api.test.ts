@@ -34,6 +34,8 @@ import { CliExecute } from "./cli.execute";
 import { BacklinkLabels } from "@manotes/shared/backlink-labels";
 import { CliList } from "@manotes/shared/list";
 import { ExecuteApi } from "@manotes/shared/execute-api";
+import { RecordDoc } from "@manotes/shared/record/doc";
+import { YSchema } from "@manotes/shared/y-schema";
 
 const RECORD_ID = RecordSchema.Id.make("record-1");
 
@@ -50,7 +52,8 @@ type RuntimeServices =
   | RecordRepo.Service
   | FileSystem.FileSystem
   | PropDef.Service
-  | RuleRecord.Service;
+  | RuleRecord.Service
+  | Attrs.Service;
 
 describe("ExecuteApi.editRecord", () => {
   it("saves a date event without changing content, and skips unchanged or cancelling dates", async () => {
@@ -366,6 +369,198 @@ describe("ExecuteApi.editRecord", () => {
           Caught up.
         `}\n`,
         );
+      }),
+    );
+  });
+});
+
+describe("ExecuteApi prop operations", () => {
+  it("materializes mixed edits, all value types and grouped assignments and replays the event", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
+
+        yield* runTestScript(`
+        await api.editRecord("${RECORD_ID}", [
+          { kind: "body.replace", text: "Alpha", with: "Beta" },
+          { kind: "date.set", date: "2024-02-29" },
+          { kind: "prop.set", propId: "builtin:archived", value: { _tag: "bool", val: true } },
+          { kind: "prop.set", propId: "caption", value: { _tag: "text", val: "hello" } },
+          { kind: "prop.set", propId: "priority", value: { _tag: "number", val: 2 } },
+          { kind: "prop.set", propId: "status", value: { _tag: "enum", val: "foreign-option" } },
+          { kind: "prop.set", propId: "related", value: { _tag: "link", val: "missing-target" } },
+          { kind: "prop.set", propId: "priority", ruleId: "task", value: { _tag: "number", val: 3 } },
+        ]);
+        const [record] = await api.list({ filter: [{ _tag: "cmp", val: ["id", "=", "${RECORD_ID}"] }] });
+        if (record.date !== "2024-02-29" || !record.markdown.includes("Beta")) throw new Error("body/date visibility");
+        const archived = record.props.top.find(prop => prop.propId === "builtin:archived");
+        if (archived.value.state.value.val !== true) throw new Error("top prop visibility");
+        const group = record.props.groups.find(group => group.ruleId === "task");
+        if (group.props[0].value.state.value.val !== 3) throw new Error("group prop visibility");
+      `);
+
+        const records = yield* RecordRepo.Service;
+        const events = yield* EventRepo.Service;
+        const db = yield* DB.Service;
+        const record = yield* records.getById(RECORD_ID);
+        expect(record.date).toBe("2024-02-29");
+        expect(record.text).toContain("Beta");
+        expect((yield* events.findPending(10)).map((event) => event.type)).toEqual([
+          "update",
+          "date",
+        ]);
+
+        const rows = yield* db.query(
+          Query.select(Tables.props.columns).pipe(
+            Query.from(Tables.props),
+            Query.where(Query.eq(Tables.props.recordId, RECORD_ID)),
+          ),
+        );
+
+        expect(rows).toHaveLength(6);
+        expect(rows).toEqual(
+          expect.arrayContaining([
+            {
+              recordId: RECORD_ID,
+              path: [],
+              propId: "priority",
+              value: AttrsSchema.PropVal.cases.number.make({ val: 2 }),
+            },
+            {
+              recordId: RECORD_ID,
+              path: ["task"],
+              propId: "priority",
+              value: AttrsSchema.PropVal.cases.number.make({ val: 3 }),
+            },
+          ]),
+        );
+
+        const updates = yield* events.findUpdatesForRecord(RECORD_ID);
+        expect(updates).toHaveLength(2);
+        const doc = replay(updates.map((event) => event.payload));
+
+        try {
+          const saved = yield* YSchema.exportLoose(RecordDoc.fromDoc({ doc }).attrs);
+          expect(saved.props).toEqual({
+            "builtin:archived": AttrsSchema.PropVal.cases.bool.make({ val: true }),
+            caption: AttrsSchema.PropVal.cases.text.make({ val: "hello" }),
+            priority: AttrsSchema.PropVal.cases.number.make({ val: 2 }),
+            status: AttrsSchema.PropVal.cases.enum.make({
+              val: RecordSchema.Id.make("foreign-option"),
+            }),
+            related: AttrsSchema.PropVal.cases.link.make({
+              val: RecordSchema.Id.make("missing-target"),
+            }),
+            task: AttrsSchema.PropGroup.make({
+              props: {
+                [RecordSchema.Id.make("priority")]: AttrsSchema.PropVal.cases.number.make({
+                  val: 3,
+                }),
+              },
+            }),
+          });
+        } finally {
+          doc.destroy();
+        }
+      }),
+    );
+  });
+
+  it("keeps events for repeated and cancelling prop edits and clears assignments in order", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
+        const records = yield* RecordRepo.Service;
+        const before = yield* records.getById(RECORD_ID);
+
+        yield* runTestScript(`
+        for (let i = 0; i < 2; i++) {
+          await api.editRecord("${RECORD_ID}", [
+            { kind: "prop.set", propId: "builtin:archived", value: { _tag: "bool", val: true } },
+          ]);
+        }
+        await api.editRecord("${RECORD_ID}", [
+          { kind: "prop.set", propId: "temporary", ruleId: "task", value: { _tag: "text", val: "temporary" } },
+          { kind: "prop.clear", propId: "temporary", ruleId: "task" },
+          { kind: "prop.clear", propId: "builtin:archived" },
+        ]);
+      `);
+
+        const events = yield* EventRepo.Service;
+        const db = yield* DB.Service;
+        expect(yield* events.countPending()).toBe(3);
+        expect(yield* events.findUpdatesForRecord(RECORD_ID)).toHaveLength(4);
+        expect((yield* records.getById(RECORD_ID)).content).toEqual(before.content);
+        expect(
+          yield* db.query(
+            Query.select(Tables.props.columns).pipe(
+              Query.from(Tables.props),
+              Query.where(Query.eq(Tables.props.recordId, RECORD_ID)),
+            ),
+          ),
+        ).toEqual([]);
+      }),
+    );
+  });
+
+  it("creates prop-only records with grouped values and can clear them immediately", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        yield* runTestScript(`
+        const id = await api.createRecord("created-props", [
+          { kind: "prop.set", propId: "builtin:archived", value: { _tag: "bool", val: true } },
+          { kind: "prop.set", propId: "priority", ruleId: "task", value: { _tag: "number", val: 4 } },
+        ]);
+        const [created] = await api.list({ filter: [{ _tag: "cmp", val: ["id", "=", id] }] });
+        if (created.props.groups[0].props[0].value.state.value.val !== 4) throw new Error("created prop visibility");
+        await api.editRecord(id, [
+          { kind: "prop.clear", propId: "builtin:archived" },
+          { kind: "prop.clear", propId: "priority", ruleId: "task" },
+        ]);
+        const [cleared] = await api.list({ filter: [{ _tag: "cmp", val: ["id", "=", id] }] });
+        if (cleared.props.top.length || cleared.props.groups.length) throw new Error("clear visibility");
+      `);
+
+        const records = yield* RecordRepo.Service;
+        const events = yield* EventRepo.Service;
+        const record = yield* records.getById(RecordSchema.Id.make("created-props"));
+        expect(RECORD_SCHEMA.nodeFromJSON(record.content).firstChild?.type.name).toBe("paragraph");
+        expect(record.text).toBe("");
+        expect((yield* events.findPending(10)).map((event) => event.type)).toEqual([
+          "update",
+          "date",
+          "update",
+        ]);
+      }),
+    );
+  });
+
+  it("rolls back mixed batches on self-assignment and scalar/group collisions", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
+        const records = yield* RecordRepo.Service;
+        const events = yield* EventRepo.Service;
+        const before = yield* records.getById(RECORD_ID);
+
+        for (const propOps of [
+          `{ kind: "prop.set", propId: "temporary", value: { _tag: "bool", val: true } },
+         { kind: "prop.set", propId: "${RECORD_ID}", value: { _tag: "bool", val: true } }`,
+          `{ kind: "prop.set", propId: "task", value: { _tag: "bool", val: true } },
+         { kind: "prop.set", propId: "priority", ruleId: "task", value: { _tag: "number", val: 1 } }`,
+        ]) {
+          const result = yield* runTestScript(`
+          await api.editRecord("${RECORD_ID}", [
+            { kind: "body.replace", text: "Alpha", with: "Not saved" },
+            { kind: "date.set", date: "2024-02-29" },
+            ${propOps},
+          ]);
+        `).pipe(Effect.result);
+
+          expect(Result.isFailure(result)).toBe(true);
+          expect(yield* records.getById(RECORD_ID)).toEqual(before);
+          expect(yield* events.countPending()).toBe(0);
+        }
       }),
     );
   });

@@ -5,7 +5,7 @@ import type {
   CodemodeTool,
 } from "@earendil-works/pi-codemode/portable";
 import { Console, Context, Data, Effect, Schema } from "effect";
-import type { Api } from "./execute-api";
+import { ExecuteApi, type Api } from "./execute-api";
 import { CliList } from "./list";
 import { RecordRepo } from "./record.repo";
 
@@ -136,35 +136,12 @@ function createGlobals(
   ];
 }
 
-const AppendOp = Schema.Struct({
-  kind: Schema.Literal("body.append"),
-  markdown: Schema.String,
-});
-
-const DateOp = Schema.Struct({
-  kind: Schema.Literal("date.set"),
-  date: Schema.String,
-});
-
-const ReplaceOp = Schema.Struct({
-  kind: Schema.Literal("body.replace"),
-  text: Schema.String,
-  with: Schema.String,
-  occurrence: Schema.optionalKey(
-    Schema.Union([Schema.Literal("all"), Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))]),
-  ),
-});
-
-const CreateOp = Schema.Union([AppendOp, DateOp]);
-
-const UpdateOp = Schema.Union([CreateOp, ReplaceOp]);
-
 const decodeEditRecordArgs = Schema.decodeUnknownSync(
-  Schema.Tuple([RecordSchema.Id, Schema.Array(UpdateOp)]),
+  Schema.Tuple([RecordSchema.Id, Schema.Array(ExecuteApi.UpdateOp)]),
 );
 
 const decodeCreateRecordArgs = Schema.decodeUnknownSync(
-  Schema.Tuple([Schema.NullOr(RecordSchema.Id), Schema.Array(CreateOp)]),
+  Schema.Tuple([Schema.NullOr(RecordSchema.Id), Schema.Array(ExecuteApi.CreateOp)]),
 );
 
 const decodeListArgs = Schema.decodeUnknownSync(
