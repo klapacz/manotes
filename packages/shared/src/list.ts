@@ -1,23 +1,10 @@
-import { AttrsSchema } from "./attrs.schema";
-import { DB } from "./db.service";
-import { Tables } from "./db.tables";
 import { RECORD_SCHEMA } from "./prosemirror/app-schema";
 import { MdSerialize } from "./prosemirror/md/serialize";
-import type { RecordRepo } from "./record.repo";
+import { RecordRepo } from "./record.repo";
 import { RecordSchema } from "./record.schema";
-import { RecordFilter } from "./record/filter";
 import { PlainDateString } from "./temporal.schema";
-import { DateTime, Effect, flow, identity, Schema, Struct } from "effect";
-import { Query } from "effect-qb";
+import { DateTime, Effect, Schema } from "effect";
 import { BacklinkLabels } from "./backlink-labels";
-
-export const Options = Schema.Struct({
-  filter: Schema.optionalKey(AttrsSchema.Filter),
-  sort: Schema.optionalKey(Schema.Literals(["date", "updated"])),
-  limit: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1))),
-});
-
-export type Options = typeof Options.Type;
 
 export const Item = Schema.Struct({
   id: RecordSchema.Id,
@@ -36,37 +23,11 @@ export const Format = Schema.Literals(["oneline", "short", "full"]);
 
 export type Format = typeof Format.Type;
 
-export const list = Effect.fn("CliList.list")(function* (options: Options = {}) {
-  const db = yield* DB.Service;
+export const list = Effect.fn("CliList.list")(function* (options: RecordRepo.ListOpts = {}) {
+  const records = yield* RecordRepo.Service;
+  const labels = yield* records.listLabels().pipe(Effect.map(BacklinkLabels.buildCache));
 
-  const labels = yield* Query.select(Struct.pick(Tables.records, ["id", "title", "text"])).pipe(
-    Query.from(Tables.records),
-    db.query,
-    Effect.map(BacklinkLabels.buildCache),
-  );
-
-  return yield* Query.select(
-    Struct.pick(Tables.records, [
-      "id",
-      "title",
-      "text",
-      "date",
-      "createdAt",
-      "updatedAt",
-      "content",
-    ]),
-  ).pipe(
-    Query.from(Tables.records),
-    Query.where(RecordFilter.filterPredicate(options.filter ?? [])),
-    options.sort === "updated"
-      ? Query.orderBy(Tables.records.updatedAt, "desc")
-      : flow(
-          Query.orderBy(Tables.records.date, "desc"),
-          Query.orderBy(Tables.records.createdAt, "desc"),
-        ),
-    Query.orderBy(Tables.records.id, "asc"),
-    options.limit === undefined ? identity : Query.limit(options.limit),
-    db.query,
+  return yield* records.list(options).pipe(
     Effect.map((rows) => {
       return rows.map(({ content, ...row }): Item => ({
         ...row,

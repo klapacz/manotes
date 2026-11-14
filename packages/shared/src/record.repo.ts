@@ -1,6 +1,18 @@
 import { Query } from "effect-qb";
 import { RecordFilter } from "./record/filter";
-import { Array, Effect, Layer, Option, Schema, Context, Stream, Struct, type Types } from "effect";
+import {
+  Array,
+  Effect,
+  Layer,
+  Option,
+  Schema,
+  Context,
+  Stream,
+  Struct,
+  flow,
+  identity,
+  type Types,
+} from "effect";
 import { DB } from "./db.service";
 import { RecordSchema } from "./record.schema";
 import { Tables } from "./db.tables";
@@ -10,6 +22,19 @@ import { AttrsSchema } from "./attrs.schema";
 import type * as Sqlite from "effect-qb/sqlite";
 
 type QueryError = Sqlite.Executor.SqliteExecutorError | Sqlite.Errors.SqliteReadQueryError;
+
+export const ListOpts = Schema.Struct({
+  filter: Schema.optionalKey(AttrsSchema.Filter),
+  sort: Schema.optionalKey(Schema.Literals(["date", "updated"])),
+  limit: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1))),
+});
+
+export type ListOpts = typeof ListOpts.Type;
+
+export type ListRecord = Pick<
+  Tables.Record,
+  "id" | "title" | "text" | "date" | "createdAt" | "updatedAt" | "content"
+>;
 
 export class Service extends Context.Service<Service>()("RecordRepo.Service", {
   make: Effect.gen(function* () {
@@ -152,6 +177,44 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
       );
     });
 
+    const list = Effect.fn("RecordRepo.list")(function* (
+      opts: ListOpts = {},
+    ): Effect.fn.Return<readonly ListRecord[], QueryError> {
+      return yield* Query.select(
+        Struct.pick(Tables.records, [
+          "id",
+          "title",
+          "text",
+          "date",
+          "createdAt",
+          "updatedAt",
+          "content",
+        ]),
+      ).pipe(
+        Query.from(Tables.records),
+        Query.where(RecordFilter.filterPredicate(opts.filter ?? [])),
+        opts.sort === "updated"
+          ? Query.orderBy(Tables.records.updatedAt, "desc")
+          : flow(
+              Query.orderBy(Tables.records.date, "desc"),
+              Query.orderBy(Tables.records.createdAt, "desc"),
+            ),
+        Query.orderBy(Tables.records.id, "asc"),
+        opts.limit === undefined ? identity : Query.limit(opts.limit),
+        db.query,
+      );
+    });
+
+    const listLabels = Effect.fn("RecordRepo.listLabels")(function* (): Effect.fn.Return<
+      readonly Pick<Tables.Record, "id" | "title" | "text">[],
+      QueryError
+    > {
+      return yield* Query.select(Struct.pick(Tables.records, ["id", "title", "text"])).pipe(
+        Query.from(Tables.records),
+        db.query,
+      );
+    });
+
     const reactiveNotes = Effect.fn("RecordRepo.reactiveNotes")(function* (): Effect.fn.Return<
       Stream.Stream<ReadonlyArray<Record>, QueryError>
     > {
@@ -223,6 +286,8 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
       findByIdWithBacklinks,
       findBootById,
       findAllNotes,
+      list,
+      listLabels,
       reactiveNotes,
       reactiveStreamList,
       reactiveFindPreview,

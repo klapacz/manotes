@@ -22,7 +22,7 @@ export type CreateOp = Extract<UpdateOp, { readonly kind: "body.append" | "date.
 
 export type Api = {
   readonly list: (
-    options?: CliList.Options,
+    options?: RecordRepo.ListOpts,
     signal?: AbortSignal,
   ) => Promise<ReadonlyArray<CliList.Item>>;
   readonly editRecord: (
@@ -159,7 +159,10 @@ export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
       return Effect.runPromise(
         materializer
           .catchUp()
-          .pipe(Effect.andThen(CliList.list(options)), Effect.provideService(DB.Service, db)),
+          .pipe(
+            Effect.andThen(CliList.list(options)),
+            Effect.provideService(RecordRepo.Service, recordRepo),
+          ),
         { signal },
       );
     },
