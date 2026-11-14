@@ -20,6 +20,7 @@ export {
   Link as LinkIcon,
   Key as KeyIcon,
   Lock as LockIcon,
+  Palette as PaletteIcon,
   PanelLeftClose as PanelLeftCloseIcon,
   PanelLeftOpen as PanelLeftOpenIcon,
   Plus as PlusIcon,

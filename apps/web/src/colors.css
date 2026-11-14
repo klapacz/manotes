@@ -1,4 +1,5 @@
-@theme {
+/* Keep palettes available for the primary color selected at runtime. */
+@theme static {
   --color-*: initial;
   --color-amber-1: oklch(0.994 0.003 84.559);
   --color-amber-2: oklch(0.986 0.024 99.096);

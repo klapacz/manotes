@@ -1,6 +1,6 @@
 import type { DropdownMenuTriggerProps } from "@kobalte/core/dropdown-menu";
 import { Effect, Exit } from "effect";
-import { Show } from "solid-js";
+import { For, Show } from "solid-js";
 import { toast } from "somoto";
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { bindRt } from "../lib";
@@ -9,6 +9,7 @@ import { KeyStore } from "../lib/graph-access/key-store/service";
 import { LocalRegistry } from "../lib/graph-access/local-registry";
 import { GraphBackupFile } from "../lib/graph-backup/file";
 import { GraphBackupService } from "../lib/graph-backup/service";
+import { PrimaryColor } from "../lib/primary-color";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,10 +18,22 @@ import {
   DropdownMenuItem,
   DropdownMenuItemLink,
   DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { ChevronLeftIcon, ChevronsUpDownIcon, DownloadIcon, LockIcon, TerminalIcon } from "./icons";
+import {
+  ChevronLeftIcon,
+  ChevronsUpDownIcon,
+  DownloadIcon,
+  LockIcon,
+  PaletteIcon,
+  TerminalIcon,
+} from "./icons";
 import { GraphAccessRuntime } from "../lib/graph-access/runtime";
 import { useAtom } from "@effect/atom-solid";
 import { Button } from "./ui/button";
@@ -125,6 +138,42 @@ export const GraphMenu = () => {
               Export backup
             </DropdownMenuItem>
             <OpenAIKeyModal.Root />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <PaletteIcon class="size-4 text-fg-subtle" />
+                <span class="flex flex-1 items-baseline justify-between gap-2">
+                  <span>Primary color</span>
+                  <span class="text-xs text-fg-subtle">This device</span>
+                </span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent class="max-h-[min(24rem,var(--kb-popper-content-available-height))] overflow-y-auto">
+                  <DropdownMenuRadioGroup
+                    aria-label="Primary color"
+                    value={graph().primaryColor.color()}
+                    onChange={(color) => graph().primaryColor.setColor(color)}
+                  >
+                    <For each={PrimaryColor.colors}>
+                      {(color) => (
+                        <DropdownMenuRadioItem value={color} class="capitalize">
+                          <span
+                            aria-hidden="true"
+                            class="size-4 rounded-full"
+                            style={{ "background-color": `var(--color-${color}-9)` }}
+                          />
+                          <span class="flex flex-1 items-baseline justify-between gap-2">
+                            <span>{color}</span>
+                            <Show when={color === "green"}>
+                              <span class="text-xs text-fg-subtle">Default</span>
+                            </Show>
+                          </span>
+                        </DropdownMenuRadioItem>
+                      )}
+                    </For>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
             <Show when={cloudGraph()}>
               {(cloudGraph) => (
                 <>

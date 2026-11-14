@@ -29,18 +29,19 @@
   --color-fg: var(--color-sand-12);
   --color-fg-solid: oklch(1 0 0);
 
-  --color-primary-bg: var(--color-green-1);
-  --color-primary-bg-subtle: var(--color-green-2);
-  --color-primary-control: var(--color-green-3);
-  --color-primary-control-hover: var(--color-green-4);
-  --color-primary-control-active: var(--color-green-5);
-  --color-primary-border-subtle: var(--color-green-6);
-  --color-primary-border: var(--color-green-7);
-  --color-primary-border-hover: var(--color-green-8);
-  --color-primary-solid: var(--color-green-9);
-  --color-primary-solid-hover: var(--color-green-10);
-  --color-primary-fg-subtle: var(--color-green-11);
-  --color-primary-fg: var(--color-green-12);
+  /* Green works without JavaScript; the saved preference overrides --primary-*. */
+  --color-primary-bg: var(--primary-1, var(--color-green-1));
+  --color-primary-bg-subtle: var(--primary-2, var(--color-green-2));
+  --color-primary-control: var(--primary-3, var(--color-green-3));
+  --color-primary-control-hover: var(--primary-4, var(--color-green-4));
+  --color-primary-control-active: var(--primary-5, var(--color-green-5));
+  --color-primary-border-subtle: var(--primary-6, var(--color-green-6));
+  --color-primary-border: var(--primary-7, var(--color-green-7));
+  --color-primary-border-hover: var(--primary-8, var(--color-green-8));
+  --color-primary-solid: var(--primary-9, var(--color-green-9));
+  --color-primary-solid-hover: var(--primary-10, var(--color-green-10));
+  --color-primary-fg-subtle: var(--primary-11, var(--color-green-11));
+  --color-primary-fg: var(--primary-12, var(--color-green-12));
   --color-primary-fg-solid: oklch(1 0 0);
 
   --color-success-bg: var(--color-green-1);
