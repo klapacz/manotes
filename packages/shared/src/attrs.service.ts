@@ -173,7 +173,7 @@ function watchSavedProps(opts: {
   );
 }
 
-function watchProp(opts: {
+export function watchProp(opts: {
   readonly value: AttrsSchema.PropVal;
   readonly def: Option.Option<PropRecordRepo.Def>;
 }) {

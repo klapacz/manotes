@@ -48,4 +48,18 @@ export function watchEntries(opts: {
   );
 }
 
+export function valueState(opts: {
+  readonly type: AttrsSchema.PropValTag;
+  readonly value: Option.Option<AttrsSchema.PropVal>;
+}): Attrs.ValueState<AttrsSchema.PropVal> {
+  return opts.value.pipe(
+    Option.map((value) => {
+      if (AttrsSchema.PropVal.guards[opts.type](value)) return Attrs.ValueState.Valid({ value });
+
+      return Attrs.ValueState.Invalid({ value });
+    }),
+    Option.getOrElse(() => Attrs.ValueState.Unset()),
+  );
+}
+
 export * as PropValidation from "./prop-validation";

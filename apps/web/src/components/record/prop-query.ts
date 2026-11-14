@@ -1,3 +1,4 @@
+import { RecordFormat } from "@manotes/shared/record/format";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import type { PropRecordRepo } from "@manotes/shared/prop-record.repo";
@@ -76,7 +77,7 @@ export function enumQuery(opts: {
     ).pipe(
       Stream.map((options) => {
         return options.flatMap((option) => {
-          const label = RecordQuery.label(option, request.text);
+          const label = RecordFormat.queryLabel(option, request.text);
           const score = QueryEngine.score({ text: request.text, label });
 
           if (!score) return [];
@@ -124,7 +125,7 @@ export function boolQuery(opts: {
   return MenuQuery.choices(() => {
     return [true, false].map((val) => {
       const propVal = AttrsSchema.PropVal.cases.bool.make({ val });
-      const label = valueLabel(propVal);
+      const label = RecordFormat.propValueLabel(propVal);
       const isDefault = opts.defaultValue.pipe(Option.contains(propVal));
 
       return {
@@ -148,7 +149,7 @@ export function numberQuery(opts: {
         Option.liftPredicate(String.isNonEmpty),
         Option.match({ onNone: () => opts.defaultValue, onSome: parseNumber }),
         Option.map((propVal) => {
-          const label = valueLabel(propVal);
+          const label = RecordFormat.propValueLabel(propVal);
           const isDefault = opts.defaultValue.pipe(Option.contains(propVal));
 
           return [
@@ -182,7 +183,7 @@ export function textQuery(opts: {
           onSome: (val) => Option.some(AttrsSchema.PropVal.cases.text.make({ val })),
         }),
         Option.map((propVal) => {
-          const label = valueLabel(propVal);
+          const label = RecordFormat.propValueLabel(propVal);
           const isDefault = opts.defaultValue.pipe(Option.contains(propVal));
 
           return [
@@ -213,43 +214,13 @@ export function parseNumber(text: string) {
   );
 }
 
-export function valueLabel(value: AttrsSchema.PropVal): string {
-  return Match.value(value).pipe(
-    Match.tag("bool", ({ val }) => (val ? "True" : "False")),
-    Match.tag("number", ({ val }) => val.toString()),
-    Match.tag("text", ({ val }) => {
-      if (String.isEmpty(val)) return '""';
-
-      return val;
-    }),
-    Match.tag("enum", () => "Enum option"),
-    // Reference labels are resolved reactively by PropPicker.ValueLabel.
-    Match.tag("link", () => "Reference"),
-    Match.exhaustive,
-  );
-}
-
-export function valueState(opts: {
-  type: AttrsSchema.PropValTag;
-  value: Option.Option<AttrsSchema.PropVal>;
-}): Attrs.ValueState<AttrsSchema.PropVal> {
-  return opts.value.pipe(
-    Option.map((value) => {
-      if (AttrsSchema.PropVal.guards[opts.type](value)) return Attrs.ValueState.Valid({ value });
-
-      return Attrs.ValueState.Invalid({ value });
-    }),
-    Option.getOrElse(() => Attrs.ValueState.Unset()),
-  );
-}
-
 export function stateLabel(state: Attrs.ValueState<AttrsSchema.PropVal>): string {
   return Match.value(state).pipe(
     Match.tag("Unset", () => "Choose"),
-    Match.tag("Valid", ({ value }) => valueLabel(value)),
+    Match.tag("Valid", ({ value }) => RecordFormat.propValueLabel(value)),
     Match.tag("Invalid", ({ value }) => {
       return Option.fromNullishOr(value).pipe(
-        Option.map(valueLabel),
+        Option.map(RecordFormat.propValueLabel),
         Option.map((label) => `Invalid: ${label}`),
         Option.getOrElse(() => "Invalid"),
       );

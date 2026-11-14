@@ -1,3 +1,4 @@
+import { RecordFormat } from "@manotes/shared/record/format";
 import { useAtom } from "@effect/atom-solid";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
@@ -269,7 +270,7 @@ function openChoice(entry: RecordPropsEntries.Entry): Choice {
 
   const path = RuleProps.EditorGroup.$match(entry.group, {
     Top: () => [],
-    Rule: ({ status }) => [RecordPropsEntries.ruleLabel(status)],
+    Rule: ({ status }) => [RecordFormat.ruleLabel(status)],
   });
 
   return {
@@ -305,8 +306,8 @@ function GroupLabel(props: { readonly group: RuleProps.EditorGroup }) {
               <MatchTag
                 when={group().status}
                 cases={{
-                  Matching: (status) => <>{RecordPropsEntries.ruleLabel(status())}</>,
-                  Unmatched: (status) => <>{RecordPropsEntries.ruleLabel(status())}</>,
+                  Matching: (status) => <>{RecordFormat.ruleLabel(status())}</>,
+                  Unmatched: (status) => <>{RecordFormat.ruleLabel(status())}</>,
                   Unavailable: () => <RecordLabel.Root id={group().ruleId} />,
                 }}
               />
@@ -364,7 +365,7 @@ function withGroupPath<E, R>(opts: {
     Top: () => opts.query,
     Rule: (group) => {
       return MenuQuery.nested({
-        label: RecordPropsEntries.ruleLabel(group.status),
+        label: RecordFormat.ruleLabel(group.status),
         query: opts.query,
       });
     },

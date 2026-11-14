@@ -1,3 +1,4 @@
+import { PropValidation } from "@manotes/shared/prop-validation";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { Effect, Option, Stream } from "effect";
@@ -12,17 +13,17 @@ it("formats unset, valid, and invalid property states without raw JSON", () => {
     "Invalid",
   );
 
-  const valid = PropQuery.valueState({ type: "number", value: Option.some(value) });
+  const valid = PropValidation.valueState({ type: "number", value: Option.some(value) });
   expect(valid).toEqual(Attrs.ValueState.Valid({ value }));
   expect(PropQuery.stateLabel(valid)).toBe("1234");
 
-  const invalid = PropQuery.valueState({ type: "bool", value: Option.some(value) });
+  const invalid = PropValidation.valueState({ type: "bool", value: Option.some(value) });
   expect(invalid).toEqual(Attrs.ValueState.Invalid({ value }));
   expect(PropQuery.stateLabel(invalid)).toBe("Invalid: 1234");
 
   const bool = AttrsSchema.PropVal.cases.bool.make({ val: false });
   expect(PropQuery.stateLabel(Attrs.ValueState.Valid({ value: bool }))).toBe("False");
-  expect(PropQuery.valueState({ type: "bool", value: Option.none() })).toEqual(
+  expect(PropValidation.valueState({ type: "bool", value: Option.none() })).toEqual(
     Attrs.ValueState.Unset(),
   );
 });
@@ -109,7 +110,7 @@ describe("text property choices", () => {
 
   it("keeps an empty text value distinct from unset", () => {
     const value = AttrsSchema.PropVal.cases.text.make({ val: "" });
-    expect(PropQuery.valueState({ type: "text", value: Option.some(value) })).toEqual(
+    expect(PropValidation.valueState({ type: "text", value: Option.some(value) })).toEqual(
       Attrs.ValueState.Valid({ value }),
     );
     expect(PropQuery.stateLabel(Attrs.ValueState.Valid({ value }))).toBe('""');

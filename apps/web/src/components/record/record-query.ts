@@ -1,3 +1,4 @@
+import { RecordFormat } from "@manotes/shared/record/format";
 import { Effect, Stream } from "effect";
 import { RecordRepo } from "@manotes/shared/record.repo";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
@@ -5,21 +6,6 @@ import type { RecordSchema } from "@manotes/shared/record.schema";
 import { QueryEngine } from "../../lib/query-engine";
 
 export type Result = { value: RecordSchema.Id; label: string };
-
-export function label(record: { title: string | null; text: string }, query = ""): string {
-  const text = query.trim().toLowerCase();
-
-  if (record.title && (!text || record.title.toLowerCase().includes(text))) return record.title;
-
-  return (
-    record.text
-      .split("\n")
-      .find((line) => line.toLowerCase().includes(text) && line.trim())
-      ?.trim() ||
-    record.title ||
-    "Untitled record"
-  );
-}
 
 export const query = searchQuery([]);
 
@@ -43,7 +29,7 @@ function searchQuery(filter: AttrsSchema.Filter) {
     return Stream.unwrap(search(request)).pipe(
       Stream.map((records) => {
         return records.map((record) => ({
-          value: { value: record.id, label: label(record, request.text) },
+          value: { value: record.id, label: RecordFormat.queryLabel(record, request.text) },
           // Body-only hits rank below menu actions and matching page titles.
           score: !request.text.trim()
             ? 1

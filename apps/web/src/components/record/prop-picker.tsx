@@ -1,3 +1,4 @@
+import { RecordFormat } from "@manotes/shared/record/format";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { createWritableMemo } from "@solid-primitives/memo";
@@ -38,7 +39,7 @@ export function Value(props: ValueProps) {
           })}
           initialSearch={props.search}
           selected={Match.value(props.state).pipe(
-            Match.tag("Valid", ({ value }) => PropQuery.valueLabel(value)),
+            Match.tag("Valid", ({ value }) => RecordFormat.propValueLabel(value)),
             Match.orElse(() => undefined),
           )}
           disabled={props.disabled}
@@ -256,7 +257,7 @@ export function ValueLabel(props: { value: AttrsSchema.PropVal }) {
           AttrsSchema.PropVal.guards.enum(props.value)) &&
         props.value.val
       }
-      fallback={PropQuery.valueLabel(props.value)}
+      fallback={RecordFormat.propValueLabel(props.value)}
     >
       {(id) => <RecordLabel.Root id={id()} />}
     </Show>

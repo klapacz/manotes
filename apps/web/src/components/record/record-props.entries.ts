@@ -75,14 +75,6 @@ export function label(prop: RuleProps.Prop) {
   });
 }
 
-export function ruleLabel(status: RuleProps.GroupStatus) {
-  return RuleProps.GroupStatus.$match(status, {
-    Matching: ({ rule }) => rule.title || "Untitled",
-    Unmatched: ({ rule }) => rule.title || "Untitled",
-    Unavailable: () => "Rule unavailable",
-  });
-}
-
 export function find(opts: {
   readonly groups: RuleProps.EditorGroups;
   readonly selection: Selection;

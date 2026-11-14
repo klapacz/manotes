@@ -1,3 +1,4 @@
+import { PropValidation } from "@manotes/shared/prop-validation";
 import { PaneNavigate } from "../../lib/record/pane.navigate";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
@@ -63,7 +64,7 @@ export function Root(props: {
 
   const validation = PropState.use({
     state: () => {
-      return PropQuery.valueState({
+      return PropValidation.valueState({
         type: props.attrs.prop_type,
         value: Option.fromNullishOr(props.attrs.prop_default),
       });

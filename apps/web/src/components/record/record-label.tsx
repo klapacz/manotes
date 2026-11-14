@@ -1,7 +1,7 @@
+import { RecordFormat } from "@manotes/shared/record/format";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { Match, Option, Stream } from "effect";
 import { RecordCache, bindRt, createAtomResultStore, createSyncedAtom } from "../../lib";
-import { RecordQuery } from "./record-query";
 
 export function Root(props: { id: RecordSchema.Id }) {
   const idAtom = createSyncedAtom(() => props.id);
@@ -29,7 +29,7 @@ export function Root(props: { id: RecordSchema.Id }) {
 
         return Option.match(value.record, {
           onNone: () => "Unavailable record",
-          onSome: RecordQuery.label,
+          onSome: RecordFormat.queryLabel,
         });
       }),
       Match.exhaustive,

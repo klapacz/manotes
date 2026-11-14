@@ -1,3 +1,4 @@
+import { RecordFormat } from "@manotes/shared/record/format";
 import { PaneNavigate } from "../../lib/record/pane.navigate";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
@@ -83,8 +84,8 @@ function RuleHeading(props: { readonly group: Types.ExtractTag<RuleProps.EditorG
         <MatchTag
           when={props.group.status}
           cases={{
-            Matching: (status) => <>{RecordPropsEntries.ruleLabel(status())}</>,
-            Unmatched: (status) => <>{RecordPropsEntries.ruleLabel(status())}</>,
+            Matching: (status) => <>{RecordFormat.ruleLabel(status())}</>,
+            Unmatched: (status) => <>{RecordFormat.ruleLabel(status())}</>,
             Unavailable: () => <RecordLabel.Root id={props.group.ruleId} />,
           }}
         />
