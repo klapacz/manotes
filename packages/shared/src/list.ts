@@ -208,17 +208,18 @@ function formatWithBody(item: Item, body: string, settings = ""): string {
   const content = pipe(
     [body, settings, formatProps(item.props)],
     Array.filter((section) => section.length > 0),
+    Array.map((section) => {
+      return section
+        .split("\n")
+        .map((line) => `  ${line}`)
+        .join("\n");
+    }),
     Array.join("\n\n"),
   );
 
   if (content.length === 0) return header;
 
-  const indented = content
-    .split("\n")
-    .map((line) => `  ${line}`)
-    .join("\n");
-
-  return `${header}\n\n${indented}`;
+  return `${header}\n\n${content}`;
 }
 
 function formatProps(props: ExecuteProps.Groups): string {

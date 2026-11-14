@@ -8,11 +8,17 @@ const mockMakeApi = vi.fn();
 
 const mockRun = vi.fn();
 
-vi.mock("@manotes/shared/execute-api", () => ({
-  ExecuteApi: {
-    makeApi: (...args: unknown[]) => mockMakeApi(...args),
-  },
-}));
+vi.mock("@manotes/shared/execute-api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@manotes/shared/execute-api")>();
+
+  return {
+    ...actual,
+    ExecuteApi: {
+      ...actual.ExecuteApi,
+      makeApi: (...args: unknown[]) => mockMakeApi(...args),
+    },
+  };
+});
 
 vi.mock("@manotes/shared/execute-script", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@manotes/shared/execute-script")>();

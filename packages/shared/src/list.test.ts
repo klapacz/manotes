@@ -148,7 +148,7 @@ describe("CliList.format", () => {
 
     expect(CliList.format("full", [record])).toBe(`${header}\n\n  Props:\n    Flag [flag]: False`);
     expect(CliList.format("full", [{ ...record, markdown: "Body.\n" }])).toBe(
-      `${header}\n\n  Body.\n  \n  \n  Props:\n    Flag [flag]: False`,
+      `${header}\n\n  Body.\n  \n\n  Props:\n    Flag [flag]: False`,
     );
   });
 
@@ -268,7 +268,7 @@ describe("CliList.format", () => {
         "  Prop def:",
         "    Type: link",
         "    Default: unset",
-        '    Targets: [{"_tag":"cmp","val":["_tag","=","note"]}]',
+        `    Targets: ${JSON.stringify(record.prop_targets)}`,
         "",
         "  Props:",
         "    Flag [flag]: False",
@@ -339,7 +339,7 @@ describe("CliList.format", () => {
     ).toBe(`${header}\n\n  Rule def:\n    Storage: unset\n    Targets: unset\n    Expects: none`);
     const targets = [AttrsSchema.makeTargetFilterExpr.cmp({ val: ["id", "=", propId] })];
     expect(CliList.format("full", [{ ...record, rule_targets: targets }])).toContain(
-      'Targets: [{"_tag":"cmp","val":["id","=","flag"]}]',
+      `Targets: ${JSON.stringify(targets)}`,
     );
   });
 });
