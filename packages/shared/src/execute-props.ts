@@ -8,7 +8,6 @@ import { RecordSchema } from "./record.schema";
 import { RecordFormat } from "./record/format";
 import { RuleMatches } from "./rule-matches";
 import { RuleProps } from "./rule-props";
-import { RuleRecord } from "./rule-record.service";
 import type * as Y from "yjs";
 
 export const SetOp = Schema.Struct({
@@ -166,49 +165,6 @@ export const readSaved = Effect.fn("ExecuteProps.readSaved")(function* (opts: {
       }),
     ),
   } satisfies RuleProps.Saved;
-});
-
-export const readRules = Effect.fn("ExecuteProps.readRules")(function* (
-  recordIds: readonly RecordSchema.Id[],
-) {
-  const ruleRecords = yield* RuleRecord.Service;
-  const records = yield* RecordRepo.Service;
-
-  const rules = yield* ruleRecords
-    .reactiveRules()
-    .pipe(Effect.flatMap(Stream.runHead), Effect.flatMap(Effect.fromOption));
-
-  const recordIdsFilter = AttrsSchema.makeFilterExpr.or({
-    val: Array.map(recordIds, (id) => AttrsSchema.makeFilterExpr.cmp({ val: ["id", "=", id] })),
-  });
-
-  const matches = yield* pipe(
-    rules,
-    Record.map((rule) => {
-      // Match this rule's targets only among the requested records.
-      return records
-        .listIds([...rule.rule_targets, recordIdsFilter])
-        .pipe(Effect.map((ids) => ({ rule, ids: new Set(ids) })));
-    }),
-    Effect.all,
-  );
-
-  // Index rule states by record for the existing prop resolver.
-  return Record.fromEntries(
-    Array.map(recordIds, (recordId) => {
-      return [
-        recordId,
-        Record.map(matches, (match): RuleMatches.Rule => ({
-          ...match.rule,
-          // Keep unmatched owners so saved groups aren't treated as unavailable.
-          // The resolver omits unmatched groups without saved assignments.
-          status: match.ids.has(recordId)
-            ? RuleMatches.MatchStatus.Matching()
-            : RuleMatches.MatchStatus.Unmatched(),
-        })),
-      ] as const;
-    }),
-  );
 });
 
 export const readGroups = Effect.fn("ExecuteProps.readGroups")(function* (opts: {

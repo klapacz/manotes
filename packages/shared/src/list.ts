@@ -9,7 +9,6 @@ import {
   DateTime,
   Effect,
   Match,
-  Option,
   Predicate,
   Record,
   Result,
@@ -21,6 +20,8 @@ import { BacklinkLabels } from "./backlink-labels";
 import { ExecuteProps } from "./execute-props";
 import { PropDef } from "./prop-def.service";
 import { RecordFormat } from "./record/format";
+import { RuleMatches } from "./rule-matches";
+import { RuleRecord } from "./rule-record.service";
 
 const commonFields = {
   id: RecordSchema.Id,
@@ -75,8 +76,10 @@ export const Format = Schema.Literals(["oneline", "short", "full"]);
 export type Format = typeof Format.Type;
 
 export const list = Effect.fn("CliList.list")(function* (opts: RecordRepo.ListOpts = {}) {
+  const ruleRecords = yield* RuleRecord.Service;
   const records = yield* RecordRepo.Service;
-  const rows = yield* records.list(opts);
+  const rules = yield* ruleRecords.list();
+  const rows = yield* records.list(opts, rules);
 
   if (rows.length === 0) return [];
 
@@ -98,12 +101,33 @@ export const list = Effect.fn("CliList.list")(function* (opts: RecordRepo.ListOp
 
   // Markdown keeps the same labels as exported files and literal body edits.
   const backlinkLabels = BacklinkLabels.buildCache(labelRows);
-  const rulesByRecord = yield* ExecuteProps.readRules(Array.map(rows, (row) => row.id));
 
   return yield* Effect.forEach(rows, (row) => {
     return Effect.gen(function* () {
-      const rules = Record.get(rulesByRecord, row.id).pipe(Option.getOrElse(() => ({})));
-      const props = yield* ExecuteProps.readGroups({ rows: row.props, defs, rules, labels });
+      const matchedRuleIds = pipe(
+        row.rulesMatched,
+        Array.map((rule) => rule.id),
+        (ids) => new Set(ids),
+      );
+
+      const rulesForRecord = pipe(
+        rules,
+        Array.map((rule): RuleMatches.Rule => ({
+          ...rule,
+          // Saved groups still need their rule metadata when the rule no longer matches.
+          status: matchedRuleIds.has(rule.id)
+            ? RuleMatches.MatchStatus.Matching()
+            : RuleMatches.MatchStatus.Unmatched(),
+        })),
+        Record.fromIterableBy((rule) => rule.id),
+      );
+
+      const props = yield* ExecuteProps.readGroups({
+        rows: row.props,
+        defs,
+        rules: rulesForRecord,
+        labels,
+      });
 
       return yield* readItem({ row, props, labels, backlinkLabels });
     });

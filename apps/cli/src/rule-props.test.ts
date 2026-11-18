@@ -21,6 +21,7 @@ import {
   type Scope,
 } from "effect";
 import { Reactivity } from "effect/reactivity";
+import { SqlClient } from "effect/sql";
 import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
 import { CliRuntime } from "./cli.runtime";
@@ -36,6 +37,63 @@ const recordId = AttrsSchema.RecordId.make("record_id:issue");
 const required = AttrsSchema.RuleExpectation.cases.required.make({});
 
 describe("reactive rule props pipeline", () => {
+  it("loads rule expectations and the limited list with matches in two queries", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        const attrs = yield* Attrs.Service;
+        const records = yield* RecordRepo.Service;
+        const ruleRecords = yield* RuleRecord.Service;
+        const sql = yield* SqlClient.SqlClient;
+        const otherId = AttrsSchema.RecordId.make("record_id:other");
+        const otherRuleId = AttrsSchema.RecordId.make("rule_id:other");
+
+        yield* save(yield* makeDoc(), recordId);
+        yield* save(yield* makeDoc(), otherId);
+
+        const rule = yield* makeDoc();
+        yield* attrs.initializeRule({
+          doc: rule,
+          targets: [AttrsSchema.makeTargetFilterExpr.cmp({ val: ["id", "=", recordId] })],
+        });
+        yield* attrs.setRuleExpectation({ doc: rule, propId: priority, value: required });
+        yield* save(rule, task);
+
+        const other = yield* makeDoc();
+        yield* attrs.initializeRule({
+          doc: other,
+          targets: [AttrsSchema.makeTargetFilterExpr.cmp({ val: ["id", "=", otherId] })],
+        });
+        yield* save(other, otherRuleId);
+
+        const query = vi.spyOn(sql, "unsafe");
+        const rules = yield* ruleRecords.list();
+
+        const rows = yield* records.list({ filter: recordsFilter(), limit: 1 }, rules);
+
+        const reads = query.mock.calls.filter(([statement]) => statement.includes('"records"'));
+        query.mockRestore();
+
+        expect(reads).toHaveLength(2);
+        expect(rules.find((rule) => rule.id === task)?.expects[priority]).toEqual(required);
+        expect(rows.map(({ id, rulesMatched }) => ({ id, rulesMatched }))).toEqual([
+          { id: recordId, rulesMatched: [{ id: task }] },
+        ]);
+
+        const manyRules = Array.from({ length: 1001 }, (_, index) => ({
+          id: AttrsSchema.RecordId.make(`unused-rule:${index}`),
+          rule_targets: [],
+        }));
+
+        const large = yield* records.list({ filter: recordsFilter(), limit: 1 }, [
+          ...manyRules,
+          ...rules,
+        ]);
+
+        expect(large[0]?.rulesMatched).toEqual([{ id: task }]);
+      }),
+    );
+  });
+
   it("follows saved Yjs values, target edits, expectations and rule availability without writing attrs", async () => {
     const root = new Y.Doc();
     const observe = vi.spyOn(root.getMap("attrs"), "observeDeep");
@@ -290,6 +348,7 @@ type Services =
   | RecordRepo.Service
   | PropDef.Service
   | RuleRecord.Service
+  | SqlClient.SqlClient
   | Reactivity.Reactivity
   | Scope.Scope;
 

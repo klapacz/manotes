@@ -13,6 +13,17 @@ export class Service extends Context.Service<Service>()("RuleRecord.Service", {
     const records = yield* RuleRecordRepo.Service;
     const expectations = yield* RuleExpectRepo.Service;
 
+    const list = Effect.fn("RuleRecord.list")(function* () {
+      return yield* records.list().pipe(
+        Effect.map(
+          Array.map(({ expectations, ...rule }): Rule => ({
+            ...rule,
+            expects: RuleExpect.reduceExpects(expectations),
+          })),
+        ),
+      );
+    });
+
     const reactiveRules = Effect.fn("RuleRecord.reactiveRules")(function* () {
       const rules = yield* records.reactiveRules();
       const expects = yield* expectations.reactiveAll();
@@ -32,7 +43,7 @@ export class Service extends Context.Service<Service>()("RuleRecord.Service", {
       });
     });
 
-    return { reactiveRules };
+    return { list, reactiveRules };
   }),
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(

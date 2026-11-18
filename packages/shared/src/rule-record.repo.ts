@@ -4,6 +4,7 @@ import { AttrsSchema } from "./attrs.schema";
 import { DB } from "./db.service";
 import { Tables } from "./db.tables";
 import { RecordSchema } from "./record.schema";
+import type { RuleExpect } from "./rule-expect";
 
 export const Rule = Schema.Struct({
   id: RecordSchema.Id,
@@ -20,9 +21,49 @@ export type Rule = typeof Rule.Type;
 
 const decodeRules = Schema.decodeEffect(Schema.Array(Rule));
 
+const decodeRule = Schema.decodeEffect(Rule);
+
+type RuleWithExpectations = Rule & { readonly expectations: readonly RuleExpect.Expect[] };
+
 export class Service extends Context.Service<Service>()("RuleRecordRepo.Service", {
   make: Effect.gen(function* () {
     const db = yield* DB.Service;
+
+    const list = Effect.fn("RuleRecordRepo.list")(function* () {
+      return yield* Query.select({
+        ...ruleColumns,
+        expectations: Query.select({
+          ruleId: Tables.ruleExpects.ruleId,
+          propId: Tables.ruleExpects.propId,
+          expectation: Tables.ruleExpects.value,
+        }).pipe(
+          Query.from(Tables.ruleExpects),
+          Query.where(
+            Query.and(
+              Query.eq(Tables.ruleExpects.ruleId, Tables.records.id),
+              Query.isNotNull(Tables.ruleExpects.value),
+            ),
+          ),
+          Query.orderBy(Tables.ruleExpects.propId),
+          db.jsonArrayFrom,
+        ),
+      }).pipe(
+        Query.from(Tables.records),
+        Query.where(
+          Query.and(Query.eq(Tables.records._tag, "rule"), Query.eq(Tables.records.attrs_valid, 1)),
+        ),
+        Query.orderBy(Tables.records.title),
+        Query.orderBy(Tables.records.id),
+        db.query,
+        Effect.flatMap(
+          Effect.forEach(({ expectations, ...row }) => {
+            return decodeRule(row).pipe(
+              Effect.map((rule): RuleWithExpectations => ({ ...rule, expectations })),
+            );
+          }),
+        ),
+      );
+    });
 
     const reactiveRules = Effect.fn("RuleRecordRepo.reactiveRules")(function* () {
       const rules = yield* db.reactiveQuery(
@@ -42,7 +83,7 @@ export class Service extends Context.Service<Service>()("RuleRecordRepo.Service"
       return rules.pipe(Stream.mapEffect((rows) => decodeRules(rows)));
     });
 
-    return { reactiveRules };
+    return { list, reactiveRules };
   }),
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));

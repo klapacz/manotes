@@ -1,4 +1,4 @@
-import { Query } from "effect-qb";
+import { Query, Table } from "effect-qb";
 import { RecordFilter } from "./record/filter";
 import {
   Array,
@@ -11,9 +11,11 @@ import {
   Struct,
   flow,
   identity,
+  pipe,
   type Types,
 } from "effect";
 import { DB } from "./db.service";
+import { DBPredicates } from "./db.predicates.internal";
 import { RecordSchema } from "./record.schema";
 import { Tables } from "./db.tables";
 import { nanoid } from "nanoid";
@@ -31,11 +33,17 @@ export const ListOpts = Schema.Struct({
 
 export type ListOpts = typeof ListOpts.Type;
 
+type RuleTarget = {
+  readonly id: RecordSchema.Id;
+  readonly rule_targets: AttrsSchema.TargetFilter;
+};
+
 export type ListRecord = Types.MergeRight<
   Omit<Tables.Record, "materializedYUpdate" | "lastEventLocalSeq" | "attrs_valid">,
   {
     readonly props: readonly Pick<Tables.Prop, "path" | "propId" | "value">[];
     readonly rule_expects: readonly Pick<Tables.RuleExpect, "propId" | "value">[];
+    readonly rulesMatched: readonly { readonly id: RecordSchema.Id }[];
   }
 >;
 
@@ -182,7 +190,19 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
 
     const list = Effect.fn("RecordRepo.list")(function* (
       opts: ListOpts = {},
+      rules: readonly RuleTarget[] = [],
     ): Effect.fn.Return<readonly ListRecord[], QueryError> {
+      const matches = pipe(
+        rules,
+        Array.map((rule) => {
+          return Query.and(
+            Query.eq(matchingRule.id, rule.id),
+            RecordFilter.filterPredicate(rule.rule_targets),
+          );
+        }),
+        DBPredicates.orAllBalanced,
+      );
+
       return yield* Query.select({
         ...Struct.pick(Tables.records, [
           "id",
@@ -215,6 +235,11 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
             Query.where(Query.eq(Tables.ruleExpects.ruleId, Tables.records.id)),
             Query.orderBy(Tables.ruleExpects.propId),
           ),
+        ),
+        rulesMatched: Query.select({ id: matchingRule.id }).pipe(
+          Query.from(matchingRule),
+          Query.where(matches),
+          db.jsonArrayFrom,
         ),
       }).pipe(
         Query.from(Tables.records),
@@ -335,6 +360,8 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
+
+const matchingRule = Table.alias(Tables.records, "matching_rule");
 
 export type Create = Types.MergeRight<
   Record,
