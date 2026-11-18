@@ -1,4 +1,5 @@
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
+import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { NestedStreamFilterEditor } from "./nested-stream-filter";
 import type { FilterMenu } from "./filter-picker";
 import { StreamDisplay } from "./stream-display";
@@ -96,6 +97,11 @@ export function PaneStreamFilter(props: {
       menu={menu()}
       onMenuChange={setMenu}
       onClose={() => focus.request(fid.pane())}
+      onOpenRecord={(id) => {
+        void navigate(
+          PaneCtx.linkOptions(ctx, PaneCursor.replaceAll(PaneSchema.make.record({ id }))),
+        );
+      }}
     >
       {(trigger, filters, hasFilters) => (
         <>

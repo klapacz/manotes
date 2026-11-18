@@ -41,6 +41,7 @@ export function FilterPicker(props: {
   onMenuChange?: (menu: FilterMenu) => void;
   onSelect: (expression: AttrsSchema.FilterExpr) => void;
   onPreset?: (settings: StreamSettings.Settings) => void;
+  onOpenRecord?: (id: AttrsSchema.RecordId) => void;
   onClose?: () => void;
   children: JSX.Element;
   class?: string;
@@ -96,6 +97,9 @@ export function FilterPicker(props: {
                   }
                 : undefined
             }
+            onOpenRecord={
+              props.onOpenRecord ? (id) => close(() => props.onOpenRecord?.(id)) : undefined
+            }
           />
         )}
       </Picker.Content>
@@ -110,6 +114,7 @@ function FilterCommands(props: {
   body?: boolean;
   onSelect: (expression: AttrsSchema.FilterExpr) => void;
   onPreset?: (settings: StreamSettings.Settings) => void;
+  onOpenRecord?: (id: AttrsSchema.RecordId) => void;
 }) {
   const [group, setGroup] = createSignal(
     props.value
@@ -205,6 +210,17 @@ function FilterCommands(props: {
           ),
         });
       }),
+      ...(props.onOpenRecord
+        ? [
+            MenuQuery.nested({
+              label: "Open record",
+              query: QueryEngine.map(RecordQuery.query, (record): MenuQuery.Action => ({
+                ...record,
+                run: () => props.onOpenRecord?.(record.value),
+              })),
+            }),
+          ]
+        : []),
     ]);
   });
 

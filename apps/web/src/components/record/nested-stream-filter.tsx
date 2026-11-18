@@ -30,6 +30,7 @@ export function NestedStreamFilterEditor(props: {
   menu: FilterMenu;
   onMenuChange: (menu: FilterMenu) => void;
   onClose: () => void;
+  onOpenRecord: (id: AttrsSchema.RecordId) => void;
   children: (trigger: JSX.Element, filters: JSX.Element, hasFilters: () => boolean) => JSX.Element;
 }) {
   const filters = useFilters();
@@ -76,6 +77,7 @@ export function NestedStreamFilterEditor(props: {
         });
       }}
       onPreset={props.onPreset}
+      onOpenRecord={props.onOpenRecord}
       onClose={props.onClose}
       triggerRef={(button) => (filterButton = button)}
       class="w-7 justify-center px-0"
