@@ -23,6 +23,16 @@ describe("simple stream-ref labels", () => {
     expect(label([])).toBe("All records");
   });
 
+  it("uses picker choice labels for direct comparisons", () => {
+    expect(
+      label([
+        expr.cmp({ val: ["_tag", "=", "note"] }),
+        expr.cmp({ val: ["_tag", "=", "owned"] }),
+        expr.cmp({ val: ["title", "exists", false] }),
+      ]),
+    ).toBe("Notes and pages · Owned records · Has no title");
+  });
+
   it("shows top-level search, links, and date comparisons", () => {
     expect(
       label([

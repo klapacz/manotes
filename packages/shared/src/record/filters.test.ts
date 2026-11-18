@@ -113,6 +113,82 @@ describe("Filters definitions and Outline operations", () => {
     );
   });
 
+  it("uses picker choice labels for comparisons by default", () => {
+    const expressions = [
+      ...AttrsSchema.RecordTag.literals.map((tag) => expr.cmp({ val: ["_tag", "=", tag] })),
+      expr.cmp({ val: ["title", "exists", true] }),
+      expr.cmp({ val: ["title", "exists", false] }),
+      expr.cmp({ val: ["owned_type", "=", "enum_option"] }),
+    ];
+
+    for (const expression of expressions) {
+      const entry = registry.cmp.find((entry) => Option.isSome(entry.selection(expression)))!;
+      const picker = entry.picker;
+
+      if (!picker || !Predicate.isTagged(picker, "Choices")) {
+        throw new Error("Expected a choice picker");
+      }
+
+      const raw = Option.getOrThrow(entry.selection(expression));
+
+      const choice = picker.groups
+        .flatMap((group) => group.choices)
+        .find((item) => item.value === raw)!;
+
+      const label = Option.getOrThrow(picker.getLabel(raw));
+      expect(Filters.renderLabel(label)).toBe(choice.label);
+      expect(entry.getLabel(expression)).toEqual(Option.some(label));
+      expect(registry.getLabel(expression)).toEqual(Option.some(label));
+      expect(entry.select(raw)).toEqual(Option.some(expression));
+    }
+  });
+
+  it("unmaps choice values for default labels and rejects unrecognized expressions", () => {
+    const entry = Filters.comparison({
+      when: [["prop", id], "=", Schema.is(AttrsSchema.PropVal.cases.bool)],
+      make: (value: AttrsSchema.PropVal) => [["prop", id], "=", value] as const,
+      picker: Filters.Picker.Choices({
+        label: "Status",
+        groups: [{ label: "Values", choices: [{ label: "Off", value: false }] }],
+        map: (val: boolean) => AttrsSchema.PropVal.cases.bool.make({ val }),
+        unmap: (value) => {
+          return Option.map(
+            Schema.decodeUnknownOption(AttrsSchema.PropVal.cases.bool)(value),
+            (value) => value.val,
+          );
+        },
+      }),
+    });
+
+    const value = AttrsSchema.PropVal.cases.bool.make({ val: false });
+    const expression = entry.make(value);
+    expect(entry.getLabel(expression)).toEqual(Option.some(Filters.Label.Literal({ val: "Off" })));
+    expect(entry.selection(expression)).toEqual(Option.some(false));
+    expect(entry.select(false)).toEqual(Option.some(expression));
+
+    for (const unknown of [
+      entry.make(AttrsSchema.PropVal.cases.bool.make({ val: true })),
+      expr.cmp({ val: [["prop", id], "=", AttrsSchema.PropVal.cases.text.make({ val: "false" })] }),
+      expr.cmp({ val: [["prop", other], "=", value] }),
+      expr.cmp({ val: [["prop", id], "exists", false] }),
+      expr.and({ val: [expression] }),
+    ]) {
+      expect(entry.getLabel(unknown)).toEqual(Option.none());
+      expect(entry.selection(unknown)).toEqual(Option.none());
+    }
+  });
+
+  it("keeps explicit contextual labels and alias precedence over choice labels", () => {
+    const expression = Filters.aliases.unarchived.make();
+    const entry = Filters.property(BuiltinAttrs.archived).entries[0]!;
+    expect(Filters.renderLabel(Option.getOrThrow(entry.getLabel(expression)))).toBe(
+      "Archived is False",
+    );
+    expect(Filters.renderLabel(Option.getOrThrow(registry.getLabel(expression)))).toBe(
+      "Unarchived",
+    );
+  });
+
   it("removes only the selected expression, drops empty groups and unwraps single children", () => {
     const notes = Filters.namedTypes.notes.make();
     const archived = Filters.aliases.unarchived.make();

@@ -84,6 +84,7 @@ type PickerKind = Data.TaggedEnum<{
   Record: { filter: AttrsSchema.TargetFilter };
   Choices: {
     groups: readonly { label: string; choices: readonly { label: string; value: PickerValue }[] }[];
+    getLabel: (raw: PickerValue) => Option.Option<Label>;
   };
 }>;
 
@@ -131,7 +132,7 @@ type Pattern = Match.Types.PatternBase<AttrsSchema.FilterCmp>;
 export function comparison<Value, Cmp extends AttrsSchema.TargetFilterCmp>(opts: {
   when: Pattern;
   make: (value: Value) => Cmp;
-  getLabel: (cmp: Cmp) => Label;
+  getLabel?: (cmp: Cmp) => Label;
   getValue?: (cmp: Cmp) => FilterValue;
   picker: Picker<Value>;
 }) {
@@ -149,6 +150,12 @@ export function comparison<Value, Cmp extends AttrsSchema.TargetFilterCmp>(opts:
 
   const make = (value: Value) => AttrsSchema.makeTargetFilterExpr.cmp({ val: opts.make(value) });
 
+  const selection = (expression: AttrsSchema.FilterExpr) => {
+    return Option.flatMap(match(expression), (cmp) => {
+      return opts.picker.unmap(opts.getValue ? opts.getValue(cmp) : cmp[2]);
+    });
+  };
+
   return {
     ...entryTag.Comparison(),
     picker: opts.picker,
@@ -156,12 +163,14 @@ export function comparison<Value, Cmp extends AttrsSchema.TargetFilterCmp>(opts:
     select: (raw: PickerValue) => {
       return Option.map(opts.picker.map(raw), make);
     },
-    getLabel: (expression: AttrsSchema.FilterExpr) => Option.map(match(expression), opts.getLabel),
-    selection: (expression: AttrsSchema.FilterExpr) => {
-      return Option.flatMap(match(expression), (cmp) => {
-        return opts.picker.unmap(opts.getValue ? opts.getValue(cmp) : cmp[2]);
-      });
+    getLabel: (expression: AttrsSchema.FilterExpr) => {
+      if (opts.getLabel) return Option.map(match(expression), opts.getLabel);
+
+      return Predicate.isTagged(opts.picker, "Choices")
+        ? Option.flatMap(selection(expression), opts.picker.getLabel)
+        : Option.none();
     },
+    selection,
   };
 }
 
@@ -378,7 +387,10 @@ function choicesPicker<Raw extends PickerValue, Value = Raw>(
   };
 
   return {
-    ...pickerKind.Choices({ groups: opts.groups }),
+    ...pickerKind.Choices({
+      groups: opts.groups,
+      getLabel: (raw) => Option.map(find(raw), (choice) => Label.Literal({ val: choice.label })),
+    }),
     ...opts,
     map: (raw: PickerValue) => Option.map(find(raw), (choice) => opts.map(choice.value)),
     unmap: (value: FilterValue) => {

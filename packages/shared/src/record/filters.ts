@@ -268,7 +268,6 @@ export const date = comparison({
 const kind = comparison({
   when: ["_tag", "=", Schema.is(AttrsSchema.RecordTag)],
   make: (value: AttrsSchema.RecordTag) => ["_tag", "=", value] as const,
-  getLabel: ([, , value]) => Label.Literal({ val: value }),
   picker: Picker.Choices<AttrsSchema.RecordTag>({
     label: "Record kind",
     map: identity,
@@ -290,7 +289,6 @@ const kind = comparison({
 const title = comparison({
   when: ["title", "exists", Match.boolean],
   make: (value: boolean) => ["title", "exists", value] as const,
-  getLabel: ([, , value]) => Label.Literal({ val: value ? "Has a title" : "Has no title" }),
   picker: Picker.Choices({
     label: "Title",
     map: identity,
@@ -330,7 +328,6 @@ const links = (["->", "<-"] as const).map((direction) => {
 const ownedType = comparison({
   when: ["owned_type", "=", "enum_option"],
   make: (value: "enum_option") => ["owned_type", "=", value] as const,
-  getLabel: () => Label.Literal({ val: "Enum option" }),
   picker: Picker.Choices({
     label: "Owned type",
     map: identity,
