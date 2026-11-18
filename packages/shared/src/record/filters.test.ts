@@ -116,8 +116,6 @@ describe("Filters definitions and Outline operations", () => {
   it("uses picker choice labels for comparisons by default", () => {
     const expressions = [
       ...AttrsSchema.RecordTag.literals.map((tag) => expr.cmp({ val: ["_tag", "=", tag] })),
-      expr.cmp({ val: ["title", "exists", true] }),
-      expr.cmp({ val: ["title", "exists", false] }),
       expr.cmp({ val: ["owned_type", "=", "enum_option"] }),
     ];
 
@@ -187,6 +185,38 @@ describe("Filters definitions and Outline operations", () => {
     expect(Filters.renderLabel(Option.getOrThrow(registry.getLabel(expression)))).toBe(
       "Unarchived",
     );
+  });
+
+  it("keeps set and unset as presence comparisons for every property kind and Title", () => {
+    const definitions = [
+      BuiltinAttrs.archived,
+      { id, title: "Text", prop_type: "text" as const, prop_default: null },
+      { id, title: "Number", prop_type: "number" as const, prop_default: null },
+      { id, title: "Link", prop_type: "link" as const, prop_default: null, prop_targets: [] },
+      { id, title: "Enum", prop_type: "enum" as const, prop_default: null },
+    ];
+
+    for (const definition of definitions) {
+      const entry = Filters.property(definition).entries[1]!;
+
+      for (const value of [true, false]) {
+        const expression = expr.cmp({ val: [["prop", definition.id], "exists", value] });
+        expect(entry.select(value)).toEqual(Option.some(expression));
+        expect(entry.selection(expression)).toEqual(Option.some(value));
+        expect(
+          Filters.renderLabel(Option.getOrThrow(entry.getLabel(expression)), () => "Field"),
+        ).toBe(
+          `${definition.id === BuiltinAttrs.archivedId ? "Archived" : "Field"} is ${value ? "set" : "unset"}`,
+        );
+      }
+    }
+
+    for (const value of [true, false]) {
+      const expression = expr.cmp({ val: ["title", "exists", value] });
+      expect(Filters.renderLabel(Option.getOrThrow(registry.getLabel(expression)))).toBe(
+        `Title is ${value ? "set" : "unset"}`,
+      );
+    }
   });
 
   it("removes only the selected expression, drops empty groups and unwraps single children", () => {

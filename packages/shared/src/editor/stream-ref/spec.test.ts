@@ -30,7 +30,7 @@ describe("simple stream-ref labels", () => {
         expr.cmp({ val: ["_tag", "=", "owned"] }),
         expr.cmp({ val: ["title", "exists", false] }),
       ]),
-    ).toBe("Documents · Owned records · Has no title");
+    ).toBe("Documents · Owned records · Title is unset");
   });
 
   it("shows top-level search, links, and date comparisons", () => {

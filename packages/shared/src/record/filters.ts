@@ -221,19 +221,19 @@ export function property(definition: PropRecordRepo.Def): Group {
     make: (value: boolean) => [["prop", definition.id], "exists", value] as const,
     getLabel: ([, , value]) => {
       return Label.Parts({
-        val: [label, Label.Literal({ val: value ? " has a value" : " has no value" })],
+        val: [label, Label.Literal({ val: value ? " is set" : " is unset" })],
       });
     },
     picker: Picker.Choices({
-      label: "Has a value",
+      label: "Presence",
       map: identity,
       unmap: Schema.decodeUnknownOption(Schema.Boolean),
       groups: [
         {
-          label: "Presence",
+          label: "",
           choices: [
-            { label: "Has a value", value: true },
-            { label: "Has no value", value: false },
+            { label: "Is set", value: true },
+            { label: "Is unset", value: false },
           ],
         },
       ],
@@ -289,6 +289,7 @@ const kind = comparison({
 const title = comparison({
   when: ["title", "exists", Match.boolean],
   make: (value: boolean) => ["title", "exists", value] as const,
+  getLabel: ([, , value]) => Label.Literal({ val: value ? "Title is set" : "Title is unset" }),
   picker: Picker.Choices({
     label: "Title",
     map: identity,
@@ -297,8 +298,8 @@ const title = comparison({
       {
         label: "Title",
         choices: [
-          { label: "Has a title", value: true },
-          { label: "Has no title", value: false },
+          { label: "Is set", value: true },
+          { label: "Is unset", value: false },
         ],
       },
     ],

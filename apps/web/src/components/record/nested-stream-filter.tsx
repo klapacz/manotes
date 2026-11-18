@@ -177,6 +177,7 @@ function GroupRows(props: GroupRowsProps) {
               filters={props.filters}
               value={expr[props.operator]({ val: props.expressions })}
               onSelect={(next) => props.onEdit?.(next)}
+              onClear={props.onRemoveGroup}
               variant="ghost"
               class="w-7 justify-center px-0"
             >
@@ -358,6 +359,7 @@ function ExpressionRow(props: {
                 filters={props.filters}
                 value={props.expression}
                 onSelect={props.onReplace}
+                onClear={props.onRemove}
                 class="h-full min-w-0 shrink rounded-none border-0 bg-transparent px-2 shadow-none"
               >
                 <FilterLabel label={title()} />

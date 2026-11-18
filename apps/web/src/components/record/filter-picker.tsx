@@ -9,6 +9,7 @@ import { Filters } from "@manotes/shared/record/filters";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { Array, Equal, Match, Option, Predicate, Result, Stream } from "effect";
 import { Show, createMemo, createSignal, type JSX } from "solid-js";
+import { CircleCheck, CircleDashed } from "lucide-solid";
 import { DateSuggestions } from "../../lib/date-suggestions";
 import { MenuQuery } from "../../lib/menu-query";
 import { QueryEngine } from "../../lib/query-engine";
@@ -42,6 +43,7 @@ export function FilterPicker(props: {
   onSelect: (expression: AttrsSchema.FilterExpr) => void;
   onPreset?: (settings: StreamSettings.Settings) => void;
   onOpenRecord?: (id: AttrsSchema.RecordId) => void;
+  onClear?: () => void;
   onClose?: () => void;
   children: JSX.Element;
   class?: string;
@@ -100,6 +102,7 @@ export function FilterPicker(props: {
             onOpenRecord={
               props.onOpenRecord ? (id) => close(() => props.onOpenRecord?.(id)) : undefined
             }
+            onClear={props.onClear ? () => close(props.onClear) : undefined}
           />
         )}
       </Picker.Content>
@@ -115,6 +118,7 @@ function FilterCommands(props: {
   onSelect: (expression: AttrsSchema.FilterExpr) => void;
   onPreset?: (settings: StreamSettings.Settings) => void;
   onOpenRecord?: (id: AttrsSchema.RecordId) => void;
+  onClear?: () => void;
 }) {
   const [group, setGroup] = createSignal(
     props.value
@@ -246,11 +250,18 @@ function FilterCommands(props: {
       <Show
         when={group()}
         fallback={
-          <Picker.Query
-            label="Search filters"
-            query={query()}
-            onSelect={(action) => action.run()}
-          />
+          <Picker.Query label="Search filters" query={query()} onSelect={(action) => action.run()}>
+            {(items) => (
+              <CommandList>
+                <CommandScroll>{items}</CommandScroll>
+                <Show when={props.onClear}>
+                  <Picker.Footer>
+                    <Picker.Clear onSelect={props.onClear} />
+                  </Picker.Footer>
+                </Show>
+              </CommandList>
+            )}
+          </Picker.Query>
         }
       >
         {(group) => (
@@ -259,6 +270,7 @@ function FilterCommands(props: {
             search={groupSearch()}
             value={currentValue()}
             onSelect={props.onSelect}
+            onClear={props.onClear}
             onBack={() => setGroup(undefined)}
           />
         )}
@@ -277,6 +289,7 @@ function GroupCommands(props: {
   value?: AttrsSchema.FilterExpr;
   onSelect: (expression: AttrsSchema.FilterExpr) => void;
   onBack: () => void;
+  onClear?: () => void;
 }) {
   const labels = createFilterLabels(() => {
     return [
@@ -363,6 +376,9 @@ function GroupCommands(props: {
             <CommandList>
               <CommandScroll>{items}</CommandScroll>
               <Picker.Footer>
+                <Show when={props.onClear}>
+                  <Picker.Clear onSelect={props.onClear} />
+                </Show>
                 <Picker.Back onSelect={props.onBack} />
               </Picker.Footer>
             </CommandList>
@@ -381,6 +397,7 @@ function GroupCommands(props: {
           search={parameter().search}
           onSelect={props.onSelect}
           onBack={() => setParameter(undefined)}
+          onClear={props.onClear}
         />
       )}
     </Show>
@@ -433,7 +450,7 @@ function entryQuery(
           return group.choices.map((item) => ({
             ...choice(item.value, item.label),
             group: `${index}:${group.label}`,
-            groupLabel: () => group.label,
+            groupLabel: group.label ? () => group.label : undefined,
           }));
         });
       });
@@ -489,7 +506,20 @@ function entryQuery(
           return Result.fromOption(
             Option.map(entry.select(match.value.raw), (expression) => ({
               ...match,
-              value: { ...match.value, expression },
+              value: {
+                ...match.value,
+                expression,
+                icon:
+                  Predicate.isTagged(expression, "cmp") &&
+                  expression.val[1] === "exists" &&
+                  Predicate.isBoolean(match.value.raw) ? (
+                    match.value.raw ? (
+                      <CircleCheck aria-hidden="true" />
+                    ) : (
+                      <CircleDashed aria-hidden="true" />
+                    )
+                  ) : undefined,
+              },
             })),
             () => undefined,
           );
