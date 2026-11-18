@@ -347,19 +347,6 @@ function GroupCommands(props: {
             <CommandList>
               <CommandScroll>{items}</CommandScroll>
               <Picker.Footer>
-                <Show when={props.value}>
-                  {(value) => (
-                    <div class="px-2 py-1.5 text-xs text-fg-subtle">
-                      Current:{" "}
-                      <FilterLabel
-                        label={Option.getOrElse(
-                          Array.findFirst(props.group.entries, (entry) => entry.getLabel(value())),
-                          () => Filters.Label.Literal({ val: "Unavailable" }),
-                        )}
-                      />
-                    </div>
-                  )}
-                </Show>
                 <Picker.Back onSelect={props.onBack} />
               </Picker.Footer>
             </CommandList>
