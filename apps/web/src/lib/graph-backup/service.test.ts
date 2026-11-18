@@ -40,6 +40,7 @@ describe("graph backup service", () => {
     const encoded = await Effect.runPromise(GraphBackupSchema.encodeBundle(backup));
     const decoded = await Effect.runPromise(GraphBackupSchema.decodeBundle(encoded));
 
+    expect(encoded.version).toBe(2);
     expect(encoded.events).toEqual([
       {
         recordId: "record-a",
@@ -80,7 +81,7 @@ describe("graph backup service", () => {
     await expect(
       Effect.runPromise(
         GraphBackupSchema.decodeBundle({
-          version: 2,
+          version: 1,
           exportedAt: "2026-04-01T12:00:00.000Z",
           sourceGraphDisplayName: "Work",
           events: [],
@@ -92,7 +93,7 @@ describe("graph backup service", () => {
   it("falls back to the filename stem when backup metadata has no name", async () => {
     const backup = await Effect.runPromise(
       GraphBackupSchema.decodeBundle({
-        version: 1,
+        version: 2,
         exportedAt: "2026-04-01T12:00:00.000Z",
         sourceGraphDisplayName: "   ",
         events: [],

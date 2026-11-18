@@ -77,7 +77,7 @@ for (const entry of ENTRIES) {
 events.sort((a, b) => DateTime.toEpochMillis(a.createdAt) - DateTime.toEpochMillis(b.createdAt));
 
 export const bundle: GraphBackupSchema.Bundle = {
-  version: 1,
+  version: 2,
   exportedAt: now,
   sourceGraphDisplayName: SOURCE_GRAPH_DISPLAY_NAME,
   events,

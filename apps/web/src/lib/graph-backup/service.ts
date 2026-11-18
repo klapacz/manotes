@@ -13,7 +13,7 @@ export function createBackup({
   events: ReadonlyArray<EventRepo.Record>;
 }): GraphBackupSchema.Bundle {
   return {
-    version: 1,
+    version: 2,
     exportedAt,
     sourceGraphDisplayName,
     events: Array.map(events, Struct.omit(["localSeq", "commitSeq"])),

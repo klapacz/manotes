@@ -13,7 +13,7 @@ export const Record = Schema.Struct({
 export type Record = typeof Record.Type;
 
 export const Bundle = Schema.Struct({
-  version: Schema.Literal(1),
+  version: Schema.Literal(2),
   exportedAt: Schema.DateTimeUtcFromString,
   sourceGraphDisplayName: Schema.String,
   events: Schema.Array(Record),
