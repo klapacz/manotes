@@ -3,7 +3,7 @@ import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
-import { Effect, Equal, Exit, Predicate, Schema } from "effect";
+import { Effect, Exit, Predicate, Schema } from "effect";
 import { AsyncResult } from "effect/reactivity";
 import { createMemo, Show } from "solid-js";
 import type * as Y from "yjs";
@@ -73,7 +73,7 @@ export function Header(props: {
   const savedFilter = () => definition()?.targets ?? [];
 
   const modified = () => {
-    return !Equal.equals(props.filter, savedFilter());
+    return !Schema.toEquivalence(AttrsSchema.Filter)(props.filter, savedFilter());
   };
 
   const saveChanges = () => {

@@ -3,7 +3,7 @@ import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
-import { Effect, Equal, Match, Schema } from "effect";
+import { Effect, Match, Schema } from "effect";
 import { AsyncResult } from "effect/reactivity";
 import { createMemo, Show } from "solid-js";
 import type * as Y from "yjs";
@@ -76,9 +76,9 @@ export function Header(props: {
 
   const savedFilter = () => rule()?.targets ?? [];
 
-  // Compare persisted expressions so omitted/default pane fields do not mark edits.
+  // Compare schema fields without Solid store internals or cached object comparisons.
   const modified = () => {
-    return !Equal.equals(props.filter, savedFilter());
+    return !Schema.toEquivalence(AttrsSchema.Filter)(props.filter, savedFilter());
   };
 
   const saveChanges = () => {
