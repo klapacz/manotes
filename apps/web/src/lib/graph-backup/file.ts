@@ -1,10 +1,11 @@
 import { Effect } from "effect";
 import { GraphBackupSchema } from "@manotes/shared/graph-backup/schema";
+import { GraphBackupSand } from "./sand";
 
 export const readBackupFile = Effect.fn("GraphBackupFile.readBackupFile")(function* (file: File) {
   const text = yield* Effect.tryPromise(() => file.text());
 
-  return yield* GraphBackupSchema.decodeFile(text);
+  return yield* GraphBackupSand.decodeFile(text);
 });
 
 export const downloadBackupFile = Effect.fn("GraphBackupFile.downloadBackupFile")(function* (
