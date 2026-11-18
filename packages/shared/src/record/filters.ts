@@ -276,7 +276,7 @@ const kind = comparison({
       {
         label: "Record kinds",
         choices: [
-          { label: "Notes and pages", value: "note" },
+          { label: "Documents", value: "note" },
           { label: "Properties", value: "prop" },
           { label: "Owned records", value: "owned" },
           { label: "Rules", value: "rule" },
