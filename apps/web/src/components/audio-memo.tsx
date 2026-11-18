@@ -81,7 +81,17 @@ const activePathAtom = bindRt((rt) => {
 
 export function RecordingsLink() {
   const recordings = useAtomValue(recordingsAtom);
-  const panes = route.useSearch({ select: (search) => search.panes });
+  // The shared navbar outlives Records, so its pane stack is optional.
+  const panes = route.useSearch({ shouldThrow: false, select: (search) => search.panes });
+
+  const nextPanes = (): PaneCursor.InputStack => {
+    const stack = panes();
+    const recording = PaneSchema.make.recordings({});
+
+    if (!stack) return [recording];
+
+    return PaneCursor.openNext(recording)({ stack, index: stack.length - 1 });
+  };
 
   const hasRecordings = () => {
     const result = recordings();
@@ -92,14 +102,9 @@ export function RecordingsLink() {
   return (
     <Show when={hasRecordings()}>
       <Link
-        from="/$graph/"
+        from="/$graph"
         to="/$graph"
-        search={{
-          panes: PaneCursor.openNext(PaneSchema.make.recordings({}))({
-            stack: panes(),
-            index: panes().length - 1,
-          }),
-        }}
+        search={{ panes: nextPanes() }}
         resetScroll={false}
         class={buttonVariants({ variant: "ghost", size: "sm" })}
       >

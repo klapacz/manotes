@@ -19,9 +19,7 @@ export function GraphNavbar() {
       <div class="flex flex-wrap items-center gap-2 px-4 py-2">
         <GraphMenu />
         <div class="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <Show when={!onStudio()}>
-            <AudioMemo.RecordingsLink />
-          </Show>
+          <AudioMemo.RecordingsLink />
           <SyncStatusIndicator />
           <WorkerHealthBanner />
           <Show
