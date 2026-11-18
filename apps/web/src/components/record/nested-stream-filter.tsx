@@ -114,7 +114,7 @@ export function NestedStreamFilterEditor(props: {
                 ref={(button) => (detailsButton = button)}
                 variant="ghost"
                 size={expanded() ? "xs" : "icon-xs"}
-                class="min-w-0 justify-start px-0 font-medium"
+                class="min-w-0 font-medium"
                 aria-label={expanded() ? "Collapse filter details" : "Expand filter details"}
                 aria-expanded={expanded()}
                 aria-controls={treeId}
