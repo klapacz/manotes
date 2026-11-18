@@ -21,6 +21,7 @@ import { Tables } from "./db.tables";
 import { nanoid } from "nanoid";
 import { EffectOption } from "./effect/effect-option";
 import { AttrsSchema } from "./attrs.schema";
+import type { RuleRecord } from "./rule-record.service";
 import type * as Sqlite from "effect-qb/sqlite";
 
 type QueryError = Sqlite.Executor.SqliteExecutorError | Sqlite.Errors.SqliteReadQueryError;
@@ -32,11 +33,6 @@ export const ListOpts = Schema.Struct({
 });
 
 export type ListOpts = typeof ListOpts.Type;
-
-type RuleTarget = {
-  readonly id: RecordSchema.Id;
-  readonly rule_targets: AttrsSchema.TargetFilter;
-};
 
 export type ListRecord = Types.MergeRight<
   Omit<Tables.Record, "materializedYUpdate" | "lastEventLocalSeq" | "attrs_valid">,
@@ -190,7 +186,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
 
     const list = Effect.fn("RecordRepo.list")(function* (
       opts: ListOpts = {},
-      rules: readonly RuleTarget[] = [],
+      rules: readonly RuleRecord.Rule[] = [],
     ): Effect.fn.Return<readonly ListRecord[], QueryError> {
       const matches = pipe(
         rules,
@@ -243,7 +239,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
         ),
       }).pipe(
         Query.from(Tables.records),
-        Query.where(RecordFilter.filterPredicate(opts.filter ?? [])),
+        Query.where(RecordFilter.filterPredicate(opts.filter ?? [], rules)),
         opts.sort === "updated"
           ? Query.orderBy(Tables.records.updatedAt, "desc")
           : flow(

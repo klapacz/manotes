@@ -32,6 +32,7 @@ type PropValue =
   | { _tag: "link"; val: RecordId };
 
 type PropTarget = ["prop", RecordId];
+type RuleTarget = ["rule", RecordId];
 type LinkTarget = ["link", "->" | "<-", RecordId];
 
 type Cmp =
@@ -46,7 +47,8 @@ type Cmp =
   | [LinkTarget, "exists", true] // -> links to ID; <- is linked from ID.
   | [PropTarget, "=", PropValue] // Uses the definition's default when unset.
   | [PropTarget, "exists", boolean] // Explicit assignments; defaults do not count.
-  | [PropTarget, "invalid", boolean]; // Not implemented; currently matches nothing.
+  | [PropTarget, "invalid", boolean] // Not implemented; currently matches nothing.
+  | [RuleTarget, "invalid", true]; // Rule applies and a required property is unset at its storage path.
 
 type FilterExpr =
   | { _tag: "cmp"; val: Cmp }
@@ -55,7 +57,7 @@ type FilterExpr =
 type Filter = readonly FilterExpr[]; // Root is AND. [] matches everything.
 
 type TargetFilterExpr =
-  | { _tag: "cmp"; val: Exclude<Cmp, [PropTarget, "invalid", boolean]> }
+  | { _tag: "cmp"; val: Exclude<Cmp, [PropTarget, "invalid", boolean] | [RuleTarget, "invalid", true]> }
   | { _tag: "and" | "or"; val: readonly TargetFilterExpr[] };
 
 type TargetFilter = readonly TargetFilterExpr[];

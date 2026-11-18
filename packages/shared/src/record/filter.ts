@@ -1,9 +1,11 @@
 import type { RecordSchema } from "../record.schema";
-import { Array, Equal, Match, Option, Schema } from "effect";
+import { Array, Equal, Match, Option, Record, Schema, pipe } from "effect";
 import { Cast, Fragment, Json, Query, Scalar, Table, Type } from "effect-qb";
 import { Tables } from "../db.tables";
 import { AttrsSchema } from "../attrs.schema";
 import { BuiltinAttrs } from "../builtin-attrs";
+import { DBPredicates } from "../db.predicates.internal";
+import type { RuleRecord } from "../rule-record.service";
 
 // Required for declaration output: QB's inferred return exposes private types and exceeds TS's size limit.
 type RecordPredicate = Scalar.Scalar<
@@ -17,13 +19,16 @@ type RecordPredicate = Scalar.Scalar<
 
 const def = Table.alias(Tables.records, "prop_def");
 
-export function filterPredicate(filter: AttrsSchema.Filter): RecordPredicate {
+export function filterPredicate(
+  filter: AttrsSchema.Filter,
+  rules: readonly RuleRecord.Rule[] = [],
+): RecordPredicate {
   // The root array is an implicit AND; an empty filter matches everything.
   return Array.reduce<AttrsSchema.FilterExpr, RecordPredicate>(
     filter,
     Query.literal(true),
     (predicate, expression) => {
-      return Query.and(predicate, expressionPredicate(expression));
+      return Query.and(predicate, expressionPredicate(expression, rules));
     },
   );
 }
@@ -143,24 +148,30 @@ export function propertyPredicate(
   return Query.exists(matching);
 }
 
-function expressionPredicate(expression: AttrsSchema.FilterExpr): RecordPredicate {
+function expressionPredicate(
+  expression: AttrsSchema.FilterExpr,
+  rules: readonly RuleRecord.Rule[],
+): RecordPredicate {
   return Match.value(expression).pipe(
-    Match.tag("and", ({ val }) => filterPredicate(val)),
+    Match.tag("and", ({ val }) => filterPredicate(val, rules)),
     Match.tag("or", ({ val }) => {
       return Array.reduce<AttrsSchema.FilterExpr, RecordPredicate>(
         val,
         Query.literal(false),
         (predicate, child) => {
-          return Query.or(predicate, expressionPredicate(child));
+          return Query.or(predicate, expressionPredicate(child, rules));
         },
       );
     }),
-    Match.tag("cmp", ({ val }) => comparisonPredicate(val)),
+    Match.tag("cmp", ({ val }) => comparisonPredicate(val, rules)),
     Match.exhaustive,
   );
 }
 
-function comparisonPredicate(comparison: AttrsSchema.FilterCmp): RecordPredicate {
+function comparisonPredicate(
+  comparison: AttrsSchema.FilterCmp,
+  rules: readonly RuleRecord.Rule[],
+): RecordPredicate {
   return Match.value(comparison).pipe(
     Match.when(["id", "=", Schema.is(AttrsSchema.RecordId)], ([, , id]) => {
       return Query.eq(Tables.records.id, id);
@@ -199,11 +210,57 @@ function comparisonPredicate(comparison: AttrsSchema.FilterCmp): RecordPredicate
         return Query.eq(propertyExistsPredicate(id), exists);
       },
     ),
-    // Validation comparisons stay in the schema but are not implemented yet.
+    // Property value validation is not implemented yet.
     Match.when([["prop", Schema.is(AttrsSchema.RecordId)], "invalid", Match.boolean], () => {
       return Query.literal(false);
     }),
+    Match.when([["rule", Schema.is(AttrsSchema.RecordId)], "invalid", true], ([[, ruleId]]) => {
+      return pipe(
+        rules,
+        Array.findFirst((rule) => rule.id === ruleId),
+        Option.match({
+          onNone: () => Query.literal(false),
+          onSome: (rule) => {
+            return Query.and(filterPredicate(rule.rule_targets), missingRequiredProps(rule));
+          },
+        }),
+      );
+    }),
     Match.exhaustive,
+  );
+}
+
+function missingRequiredProps(rule: RuleRecord.Rule): RecordPredicate {
+  const pathMatches = Match.value(rule.rule_storage).pipe(
+    Match.tag("top", () => Tables.props.path.pipe(Json.pathExists(Json.index(0)), Query.not)),
+    Match.tag("group", () => {
+      return Query.and(
+        Query.eq(Tables.props.path.pipe(Json.index(0), Json.text), rule.id),
+        Tables.props.path.pipe(Json.pathExists(Json.index(1)), Query.not),
+      );
+    }),
+    Match.exhaustive,
+  );
+
+  return pipe(
+    rule.expects,
+    Record.filter(AttrsSchema.RuleExpectation.guards.required),
+    Record.keys,
+    Array.map((propId) => {
+      return Query.select({ id: Tables.props.recordId }).pipe(
+        Query.from(Tables.props),
+        Query.where(
+          Query.and(
+            Query.eq(Tables.props.recordId, Tables.records.id),
+            Query.eq(Tables.props.propId, propId),
+            pathMatches,
+          ),
+        ),
+        (plan) => Query.exists(plan),
+        Query.not,
+      );
+    }),
+    DBPredicates.orAllBalanced,
   );
 }
 

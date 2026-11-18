@@ -74,9 +74,14 @@ describe("canonical stream settings", () => {
   });
 
   it("retains invalid in stream filters but rejects it in saved target filters", () => {
-    const filter = [expr.and({ val: [expr.cmp({ val: [["prop", parent], "invalid", true] })] })];
-    expect(Schema.decodeSync(AttrsSchema.Filter)(filter)).toEqual(filter);
-    expect(() => Schema.decodeUnknownSync(AttrsSchema.TargetFilter)(filter)).toThrow();
+    for (const target of [
+      ["prop", parent],
+      ["rule", parent],
+    ] as const) {
+      const filter = [expr.and({ val: [expr.cmp({ val: [target, "invalid", true] })] })];
+      expect(Schema.decodeSync(AttrsSchema.Filter)(filter)).toEqual(filter);
+      expect(() => Schema.decodeUnknownSync(AttrsSchema.TargetFilter)(filter)).toThrow();
+    }
   });
 
   it("reads the first required values and skips OR branches", () => {

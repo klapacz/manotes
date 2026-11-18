@@ -79,6 +79,8 @@ export type RecordTag = typeof RecordTag.Type;
  */
 const PropTarget = Schema.Tuple([Schema.Literal("prop"), RecordId]);
 
+const RuleTarget = Schema.Tuple([Schema.Literal("rule"), RecordId]);
+
 export const LinkTarget = Schema.Tuple([
   Schema.Literal("link"),
   Schema.Literals(["->", "<-"]),
@@ -105,6 +107,7 @@ export type TargetFilterCmp = typeof TargetFilterCmp.Type;
 export const FilterCmp = Schema.Union([
   ...TargetFilterCmp.members,
   Schema.Tuple([PropTarget, Schema.Literal("invalid"), Schema.Boolean]),
+  Schema.Tuple([RuleTarget, Schema.Literal("invalid"), Schema.Literal(true)]),
 ]);
 
 export type FilterCmp = typeof FilterCmp.Type;

@@ -3,10 +3,12 @@ import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { DB } from "@manotes/shared/db.service";
 import { EventRepo } from "@manotes/shared/event.repo";
+import { CliList } from "@manotes/shared/list";
 import { Materializer } from "@manotes/shared/materializer.service";
 import { RecordRepo } from "@manotes/shared/record.repo";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { PropDef } from "@manotes/shared/prop-def.service";
+import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
 import { RuleProps } from "@manotes/shared/rule-props";
 import { RuleRecord } from "@manotes/shared/rule-record.service";
 import {
@@ -81,7 +83,10 @@ describe("reactive rule props pipeline", () => {
 
         const manyRules = Array.from({ length: 1001 }, (_, index) => ({
           id: AttrsSchema.RecordId.make(`unused-rule:${index}`),
+          title: null,
+          rule_storage: AttrsSchema.RuleStorage.cases.top.make({}),
           rule_targets: [],
+          expects: {},
         }));
 
         const large = yield* records.list({ filter: recordsFilter(), limit: 1 }, [
@@ -90,6 +95,86 @@ describe("reactive rule props pipeline", () => {
         ]);
 
         expect(large[0]?.rulesMatched).toEqual([{ id: task }]);
+      }),
+    );
+  });
+
+  it("lists records missing required assignments within a rule's scope before applying the limit", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        const attrs = yield* Attrs.Service;
+        const outside = AttrsSchema.RecordId.make("record_id:aaa-outside");
+        const complete = AttrsSchema.RecordId.make("record_id:complete");
+        const value = AttrsSchema.PropVal.cases.number.make({ val: 1 });
+        const definition = yield* makeDoc();
+        yield* attrs.initializeProp({ doc: definition, defaultValue: value });
+        yield* save(definition, priority);
+
+        const rule = yield* makeDoc();
+        const target = AttrsSchema.makeTargetFilterExpr;
+        yield* attrs.initializeRule({
+          doc: rule,
+          targets: [
+            target.or({
+              val: [
+                target.cmp({ val: ["id", "=", complete] }),
+                target.cmp({ val: ["id", "=", recordId] }),
+              ],
+            }),
+          ],
+        });
+        yield* attrs.setRuleStorage({
+          doc: rule,
+          storage: AttrsSchema.RuleStorage.cases.group.make({}),
+        });
+        yield* attrs.setRuleExpectation({ doc: rule, propId: priority, value: required });
+        yield* attrs.setRuleExpectation({
+          doc: rule,
+          propId: cycle,
+          value: AttrsSchema.RuleExpectation.cases.optional.make({}),
+        });
+        yield* save(rule, task);
+        yield* save(yield* makeNote(), outside);
+
+        const completeDoc = yield* makeNote();
+        yield* attrs.setGroupProp({
+          doc: completeDoc,
+          recordId: complete,
+          ruleId: task,
+          propId: priority,
+          value,
+        });
+        yield* save(completeDoc, complete);
+
+        const doc = yield* makeNote();
+        yield* save(doc, recordId);
+
+        const expr = AttrsSchema.makeFilterExpr;
+
+        const listInvalid = (ruleId: AttrsSchema.RecordId) => {
+          return CliList.list({
+            filter: [
+              expr.and({
+                val: [expr.or({ val: [expr.cmp({ val: [["rule", ruleId], "invalid", true] })] })],
+              }),
+            ],
+            limit: 1,
+          }).pipe(Effect.map((rows) => rows.map((row) => row.id)));
+        };
+
+        // The default does not supply an assignment at the rule's path.
+        expect(yield* listInvalid(task)).toEqual([recordId]);
+        yield* attrs.setProp({ doc, recordId, propId: priority, value });
+        yield* save(doc, recordId);
+        expect(yield* listInvalid(task)).toEqual([recordId]);
+
+        yield* attrs.setRuleStorage({
+          doc: rule,
+          storage: AttrsSchema.RuleStorage.cases.top.make({}),
+        });
+        yield* save(rule, task);
+        expect(yield* listInvalid(task)).toEqual([complete]);
+        expect(yield* listInvalid(outside)).toEqual([]);
       }),
     );
   });
@@ -273,6 +358,16 @@ function makeDoc() {
   return Effect.acquireRelease(
     Effect.sync(() => new Y.Doc()),
     (doc) => Effect.sync(() => doc.destroy()),
+  );
+}
+
+function makeNote() {
+  return makeDoc().pipe(
+    Effect.map((doc) => {
+      getProsemirrorXmlFragment(doc).insert(0, [new Y.XmlElement("paragraph")]);
+
+      return doc;
+    }),
   );
 }
 
