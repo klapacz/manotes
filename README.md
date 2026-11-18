@@ -3,6 +3,32 @@
 Manotes is a local-first note-taking app with E2EE sync. Read [the blog
 post](https://klapacz.dev/blog/0004-building-manotes-a-local-first-note-taking-app-with-e2ee-sync/) to learn more.
 
+## CLI with npm
+
+Install Node 24, then install a CLI tarball with npm. Node and `zk` are not bundled;
+the CLI does not need `zk`. npm downloads the sandbox and WebSocket dependencies.
+
+```powershell
+npm.cmd install -g ./manotes-cli.tgz
+manotes.cmd --help
+```
+
+On macOS and Linux, use `npm` and `manotes` without the `.cmd` suffix. On Windows,
+use PowerShell and run the app's generated init command with `manotes.cmd` if
+execution policy blocks npm's PowerShell wrapper.
+
+Build a tarball from a checkout with dependencies installed:
+
+```sh
+scripts/nix-develop -c node apps/cli/bin/pack.mjs
+```
+
+The output is `apps/cli/dist/manotes-cli.tgz`. The Windows workflow builds it and
+checks installation, SQLite migrations, sandboxed scripts, Unicode, and paths
+with spaces. Attach the validated tarball to a GitHub release and use that asset's
+URL with `npm.cmd install -g <tarball-url>`. The existing `cli-v0.1.0` release is
+for the previous CLI.
+
 ## CLI with Nix
 
 Run the CLI with `nix run github:klapacz/manotes/dune -- --help`, or install it with

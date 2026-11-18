@@ -6,17 +6,26 @@ import path from "node:path";
 
 const executable = path.resolve(process.argv[2]);
 
-const directory = mkdtempSync(path.join(tmpdir(), "manotes-package-"));
+const npmInstall = process.argv[3] === "--npm";
+
+const directory = mkdtempSync(path.join(tmpdir(), "manotes package Żółw "));
 
 try {
   const run = (args, input) => {
-    const result = spawnSync(executable, args, {
-      cwd: directory,
-      // Neither Node nor any checkout-provided command can be found through PATH.
-      env: { HOME: directory, TMPDIR: directory, PATH: "/nonexistent" },
-      encoding: "utf8",
-      input,
-    });
+    const result = spawnSync(
+      npmInstall ? process.execPath : executable,
+      npmInstall ? [executable, ...args] : args,
+      {
+        cwd: directory,
+        // Nix includes Node; npm installations use the user's Node.
+        env: npmInstall
+          ? process.env
+          : { HOME: directory, TMPDIR: directory, PATH: "/nonexistent" },
+        encoding: "utf8",
+        input,
+        timeout: 20_000,
+      },
+    );
 
     assert.ifError(result.error);
     assert.equal(result.status, 0, `${args.join(" ")}\n${result.stdout}\n${result.stderr}`);
@@ -39,18 +48,18 @@ try {
   assert.match(run(["status"]), /Pending publication: 0 changes/);
   run(
     ["execute"],
-    'await api.createRecord("smoke", [{ kind: "body.append", markdown: "# Packaged CLI\\n\\nCreated outside the checkout." }]);',
+    'await api.createRecord("smoke", [{ kind: "body.append", markdown: "# Packaged CLI\\n\\nCreated outside the checkout. Żółw 🐢." }]);',
   );
   assert.match(
     readFileSync(path.join(directory, "smoke.md"), "utf8"),
-    /Created outside the checkout/,
+    /Created outside the checkout\. Żółw 🐢\./,
   );
 
   writeFileSync(
-    path.join(directory, "edit.js"),
+    path.join(directory, "edit with spaces.js"),
     'await api.editRecord("smoke", [{ kind: "body.replace", text: "Created outside the checkout.", with: "Updated by the installed CLI." }]);',
   );
-  run(["execute", path.join(directory, "edit.js")]);
+  run(["execute", path.join(directory, "edit with spaces.js")]);
   assert.match(
     readFileSync(path.join(directory, "smoke.md"), "utf8"),
     /Updated by the installed CLI/,
