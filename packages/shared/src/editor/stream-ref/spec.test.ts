@@ -23,6 +23,17 @@ describe("simple stream-ref labels", () => {
     expect(label([])).toBe("All records");
   });
 
+  it("preserves property invalid labels and record dependencies in saved stream settings", () => {
+    const settings = StreamRefSpec.decodeAttrs({
+      ...StreamSettings.defaultDisplay,
+      filter: [Filters.propertyInvalid.make(project)],
+    });
+
+    const labels = StreamRefSpec.labels(settings);
+    expect(StreamRefSpec.renderLabels(labels, () => "Priority")).toBe("Priority is invalid");
+    expect(labels.flatMap(Filters.labelRecords)).toEqual([project]);
+  });
+
   it("uses picker choice labels for direct comparisons", () => {
     expect(
       label([

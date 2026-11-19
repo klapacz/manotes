@@ -15,6 +15,27 @@ const id = AttrsSchema.RecordId.make("priority");
 const other = AttrsSchema.RecordId.make("other");
 
 describe("Filters definitions and Outline operations", () => {
+  it("offers property invalid only in stream registries and labels built-in and custom properties", () => {
+    const streams = Filters.forStreams(registry);
+
+    for (const propId of [id, BuiltinAttrs.archivedId]) {
+      const expression = Filters.propertyInvalid.make(propId);
+      expect(expression).toEqual(expr.cmp({ val: [["prop", propId], "invalid", true] }));
+      expect(Filters.propertyInvalid.select(propId)).toEqual(Option.some(expression));
+      expect(Filters.propertyInvalid.selection(expression)).toEqual(Option.some(propId));
+      expect(Option.isSome(streams.findGroup(expression))).toBe(true);
+      expect(registry.findGroup(expression)).toEqual(Option.none());
+      const label = Option.getOrThrow(streams.getLabel(expression));
+      const rendered = Filters.renderLabel(label, () => "Priority");
+
+      if (propId === BuiltinAttrs.archivedId) expect(rendered).toBe("Archived is invalid");
+      else expect(rendered).toBe("Priority is invalid");
+    }
+
+    expect(Filters.propertyInvalid.picker._tag).toBe("Property");
+    expect(Filters.propertyInvalid.select(false)).toEqual(Option.none());
+  });
+
   it("uses distinct family tokens even when their labels match", () => {
     expect(Filters.family("recordType")).not.toBe(Filters.family("recordType"));
     expectTypeOf<string>().not.toMatchTypeOf<NonNullable<Filters.Named["family"]>>();

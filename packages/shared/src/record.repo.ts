@@ -21,7 +21,6 @@ import { Tables } from "./db.tables";
 import { nanoid } from "nanoid";
 import { EffectOption } from "./effect/effect-option";
 import { AttrsSchema } from "./attrs.schema";
-import type { RuleRecord } from "./rule-record.service";
 import type * as Sqlite from "effect-qb/sqlite";
 
 type QueryError = Sqlite.Executor.SqliteExecutorError | Sqlite.Errors.SqliteReadQueryError;
@@ -288,11 +287,11 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
 
     const reactiveStreamList = Effect.fn("RecordRepo.reactiveStreamList")(function* (
       query: StreamListQuery,
-      rules: readonly RuleRecord.Rule[] = [],
+      metadata: RecordFilter.Metadata = {},
     ) {
       const plan = streamSelect.pipe(
         Query.from(Tables.records),
-        Query.where(RecordFilter.filterPredicate(query.filter, { rules })),
+        Query.where(RecordFilter.filterPredicate(query.filter, metadata)),
       );
 
       const ordered =

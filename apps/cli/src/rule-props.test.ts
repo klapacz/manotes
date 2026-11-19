@@ -371,7 +371,7 @@ describe("reactive rule props pipeline", () => {
         const rules = yield* ruleRecords.reactiveList();
         yield* rules.pipe(
           Stream.changes,
-          Stream.switchMap((rules) => Stream.unwrap(records.reactiveStreamList(query, rules))),
+          Stream.switchMap((rules) => Stream.unwrap(records.reactiveStreamList(query, { rules }))),
           Stream.map(EffectArray.map((row) => row.id)),
           Stream.runForEach((ids) => SubscriptionRef.set(latest, ids)),
           Effect.forkChild,

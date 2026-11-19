@@ -134,6 +134,20 @@ export const ruleInvalid = comparison({
   }),
 });
 
+export const propertyInvalid = comparison({
+  when: [["prop", Schema.is(AttrsSchema.RecordId)], "invalid", true],
+  make: (id: AttrsSchema.RecordId) => [["prop", id], "invalid", true] as const,
+  getValue: ([[, id]]) => id,
+  getLabel: ([[, id]]) => {
+    return Label.Record({ id, val: (name) => `${name} is invalid` });
+  },
+  picker: Picker.Property({
+    label: "Property invalid",
+    map: identity,
+    unmap: Schema.decodeUnknownOption(AttrsSchema.RecordId),
+  }),
+});
+
 export function property(definition: PropRecordRepo.Def): Group {
   const label = Label.Record({ id: definition.id, val: identity });
 
@@ -415,7 +429,10 @@ export const builtin = fromDefinitions(BuiltinAttrs.defs);
 
 export function forStreams(registry: Registry) {
   return create({
-    groups: Array.append(registry.groups, ruleInvalidGroup),
+    groups: Array.appendAll(registry.groups, [
+      ruleInvalidGroup,
+      group({ label: propertyInvalid.picker.label, entries: [propertyInvalid] }),
+    ]),
     aliases: [aliases.unarchived],
   });
 }
