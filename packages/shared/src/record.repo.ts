@@ -186,8 +186,10 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
 
     const list = Effect.fn("RecordRepo.list")(function* (
       opts: ListOpts = {},
-      rules: readonly RuleRecord.Rule[] = [],
+      metadata: RecordFilter.Metadata = {},
     ): Effect.fn.Return<readonly ListRecord[], QueryError> {
+      const rules = metadata.rules ?? [];
+
       const matches = pipe(
         rules,
         Array.map((rule) => {
@@ -239,7 +241,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
         ),
       }).pipe(
         Query.from(Tables.records),
-        Query.where(RecordFilter.filterPredicate(opts.filter ?? [], rules)),
+        Query.where(RecordFilter.filterPredicate(opts.filter ?? [], metadata)),
         opts.sort === "updated"
           ? Query.orderBy(Tables.records.updatedAt, "desc")
           : flow(
@@ -290,7 +292,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
     ) {
       const plan = streamSelect.pipe(
         Query.from(Tables.records),
-        Query.where(RecordFilter.filterPredicate(query.filter, rules)),
+        Query.where(RecordFilter.filterPredicate(query.filter, { rules })),
       );
 
       const ordered =

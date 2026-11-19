@@ -6,6 +6,14 @@ import { AttrsSchema } from "../attrs.schema";
 import { BuiltinAttrs } from "../builtin-attrs";
 import { DBPredicates } from "../db.predicates.internal";
 import type { RuleRecord } from "../rule-record.service";
+import type { Attrs } from "../attrs.service";
+import type { PropRecordRepo } from "../prop-record.repo";
+import { Filters } from "./filters";
+
+export type Metadata = {
+  readonly rules?: readonly RuleRecord.Rule[];
+  readonly defs?: Attrs.Defs;
+};
 
 // Required for declaration output: QB's inferred return exposes private types and exceeds TS's size limit.
 type RecordPredicate = Scalar.Scalar<
@@ -19,16 +27,18 @@ type RecordPredicate = Scalar.Scalar<
 
 const def = Table.alias(Tables.records, "prop_def");
 
+const saved = Table.alias(Tables.props, "saved_prop");
+
 export function filterPredicate(
   filter: AttrsSchema.Filter,
-  rules: readonly RuleRecord.Rule[] = [],
+  metadata: Metadata = {},
 ): RecordPredicate {
   // The root array is an implicit AND; an empty filter matches everything.
   return Array.reduce<AttrsSchema.FilterExpr, RecordPredicate>(
     filter,
     Query.literal(true),
     (predicate, expression) => {
-      return Query.and(predicate, expressionPredicate(expression, rules));
+      return Query.and(predicate, expressionPredicate(expression, metadata));
     },
   );
 }
@@ -150,27 +160,27 @@ export function propertyPredicate(
 
 function expressionPredicate(
   expression: AttrsSchema.FilterExpr,
-  rules: readonly RuleRecord.Rule[],
+  metadata: Metadata,
 ): RecordPredicate {
   return Match.value(expression).pipe(
-    Match.tag("and", ({ val }) => filterPredicate(val, rules)),
+    Match.tag("and", ({ val }) => filterPredicate(val, metadata)),
     Match.tag("or", ({ val }) => {
       return Array.reduce<AttrsSchema.FilterExpr, RecordPredicate>(
         val,
         Query.literal(false),
         (predicate, child) => {
-          return Query.or(predicate, expressionPredicate(child, rules));
+          return Query.or(predicate, expressionPredicate(child, metadata));
         },
       );
     }),
-    Match.tag("cmp", ({ val }) => comparisonPredicate(val, rules)),
+    Match.tag("cmp", ({ val }) => comparisonPredicate(val, metadata)),
     Match.exhaustive,
   );
 }
 
 function comparisonPredicate(
   comparison: AttrsSchema.FilterCmp,
-  rules: readonly RuleRecord.Rule[],
+  metadata: Metadata,
 ): RecordPredicate {
   return Match.value(comparison).pipe(
     Match.when(["id", "=", Schema.is(AttrsSchema.RecordId)], ([, , id]) => {
@@ -210,13 +220,18 @@ function comparisonPredicate(
         return Query.eq(propertyExistsPredicate(id), exists);
       },
     ),
-    // Property value validation is not implemented yet.
-    Match.when([["prop", Schema.is(AttrsSchema.RecordId)], "invalid", Match.boolean], () => {
-      return Query.literal(false);
+    Match.when([["prop", Schema.is(AttrsSchema.RecordId)], "invalid", true], ([[, propId]]) => {
+      if (metadata.defs === undefined) return Query.literal(false);
+
+      const def = Record.get(metadata.defs, propId);
+
+      if (Option.isNone(def)) return Query.literal(false);
+
+      return propertyInvalidPredicate(propId, def.value);
     }),
     Match.when([["rule", Schema.is(AttrsSchema.RecordId)], "invalid", true], ([[, ruleId]]) => {
       return pipe(
-        rules,
+        metadata.rules ?? [],
         Array.findFirst((rule) => rule.id === ruleId),
         Option.match({
           onNone: () => Query.literal(false),
@@ -228,6 +243,43 @@ function comparisonPredicate(
     }),
     Match.exhaustive,
   );
+}
+
+function propertyInvalidPredicate(
+  propId: RecordSchema.Id,
+  def: PropRecordRepo.Def,
+): RecordPredicate {
+  const recordsWithInvalidProp = Query.select({ id: saved.recordId }).pipe(
+    Query.from(saved),
+    Query.where(Query.eq(saved.propId, propId)),
+    Query.where(savedValueIsInvalid(def)),
+  );
+
+  // IN lets SQLite start from the property index instead of checking assignments for every record.
+  return Query.inSubquery(Tables.records.id, recordsWithInvalidProp);
+}
+
+function savedValueIsInvalid(def: PropRecordRepo.Def) {
+  const wrongType = Query.isDistinctFrom(saved.value._tag.pipe(Json.text), def.prop_type);
+
+  const targets = Match.value(def).pipe(
+    Match.when({ prop_type: "link" }, (def) => Option.some(def.prop_targets ?? [])),
+    Match.when({ prop_type: "enum" }, (def) => {
+      return Option.some([Filters.enumOptions.make(def.id), Filters.aliases.unarchived.make()]);
+    }),
+    Match.when({ prop_type: Match.is("text", "number", "bool") }, () => Option.none()),
+    Match.exhaustive,
+  );
+
+  if (Option.isNone(targets)) return wrongType;
+
+  const validTarget = Query.select({ id: Tables.records.id }).pipe(
+    Query.from(Tables.records),
+    Query.where(Query.eq(Tables.records.id, saved.value.val.pipe(Json.text))),
+    Query.where(filterPredicate(targets.value)),
+  );
+
+  return Query.or(wrongType, Query.not(Query.exists(validTarget)));
 }
 
 function missingRequiredProps(rule: RuleRecord.Rule): RecordPredicate {

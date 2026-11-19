@@ -73,7 +73,7 @@ describe("reactive rule props pipeline", () => {
         const query = vi.spyOn(sql, "unsafe");
         const rules = yield* ruleRecords.list();
 
-        const rows = yield* records.list({ filter: recordsFilter(), limit: 1 }, rules);
+        const rows = yield* records.list({ filter: recordsFilter(), limit: 1 }, { rules });
 
         const reads = query.mock.calls.filter(([statement]) => statement.includes('"records"'));
         query.mockRestore();
@@ -92,10 +92,10 @@ describe("reactive rule props pipeline", () => {
           expects: {},
         }));
 
-        const large = yield* records.list({ filter: recordsFilter(), limit: 1 }, [
-          ...manyRules,
-          ...rules,
-        ]);
+        const large = yield* records.list(
+          { filter: recordsFilter(), limit: 1 },
+          { rules: [...manyRules, ...rules] },
+        );
 
         expect(large[0]?.rulesMatched).toEqual([{ id: task }]);
       }),
@@ -178,6 +178,168 @@ describe("reactive rule props pipeline", () => {
         yield* save(rule, task);
         expect(yield* listInvalid(task)).toEqual([complete]);
         expect(yield* listInvalid(outside)).toEqual([]);
+      }),
+    );
+  });
+
+  it("filters invalid saved property values across paths before applying the limit", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        const attrs = yield* Attrs.Service;
+        const records = yield* RecordRepo.Service;
+        const definition = yield* makeDoc();
+        yield* attrs.initializeProp({
+          doc: definition,
+          defaultValue: AttrsSchema.PropVal.cases.number.make({ val: 0 }),
+        });
+        yield* save(definition, priority);
+
+        const valid = AttrsSchema.RecordId.make("record_id:aaa-valid");
+        const missing = AttrsSchema.RecordId.make("record_id:bbb-unset");
+        const grouped = AttrsSchema.RecordId.make("record_id:zzz-grouped");
+        const unavailable = AttrsSchema.RecordId.make("prop_id:unavailable");
+        const zero = AttrsSchema.PropVal.cases.number.make({ val: 0 });
+        const wrong = AttrsSchema.PropVal.cases.text.make({ val: "old type" });
+        const validDoc = yield* makeNote();
+        yield* attrs.setProp({ doc: validDoc, recordId: valid, propId: priority, value: zero });
+        yield* save(validDoc, valid);
+        yield* save(yield* makeNote(), missing);
+        const doc = yield* makeNote();
+        yield* attrs.setProp({ doc, recordId, propId: priority, value: wrong });
+        yield* attrs.setProp({ doc, recordId, propId: unavailable, value: zero });
+        yield* attrs.setProp({
+          doc,
+          recordId,
+          propId: BuiltinAttrs.archivedId,
+          value: wrong,
+        });
+        yield* save(doc, recordId);
+        const group = yield* makeNote();
+        yield* attrs.setProp({ doc: group, recordId: grouped, propId: priority, value: zero });
+        yield* attrs.setGroupProp({
+          doc: group,
+          recordId: grouped,
+          ruleId: task,
+          propId: priority,
+          value: wrong,
+        });
+        yield* save(group, grouped);
+
+        const expr = AttrsSchema.makeFilterExpr;
+
+        const invalid = (propId: AttrsSchema.RecordId) => {
+          return expr.cmp({ val: [["prop", propId], "invalid", true] });
+        };
+
+        const filter = [
+          expr.and({
+            val: [expr.or({ val: [invalid(priority), invalid(BuiltinAttrs.archivedId)] })],
+          }),
+        ];
+
+        const rows = yield* CliList.list({ filter });
+        expect(rows.map((row) => row.id)).toEqual([recordId, grouped]);
+        expect((yield* CliList.list({ filter, limit: 1 })).map((row) => row.id)).toEqual([
+          recordId,
+        ]);
+        expect(yield* CliList.list({ filter: [invalid(unavailable)] })).toEqual([]);
+        expect(
+          (yield* CliList.list({
+            filter: [expr.cmp({ val: [["prop", unavailable], "exists", true] })],
+          })).map((row) => row.id),
+        ).toEqual([recordId]);
+        expect(yield* records.list({ filter: [invalid(priority)] })).toEqual([]);
+      }),
+    );
+  });
+
+  it("requires scoped link targets and existing unarchived options of the selected enum", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        const attrs = yield* Attrs.Service;
+        const assignee = AttrsSchema.RecordId.make("prop_id:assignee");
+        const status = AttrsSchema.RecordId.make("prop_id:status");
+        const target = AttrsSchema.RecordId.make("record_id:person");
+        const active = AttrsSchema.RecordId.make("option_id:active");
+        const archived = AttrsSchema.RecordId.make("option_id:archived");
+        const foreign = AttrsSchema.RecordId.make("option_id:foreign");
+        const absent = AttrsSchema.RecordId.make("record_id:absent");
+        const link = yield* makeDoc();
+        yield* attrs.initializeProp({ doc: link });
+        yield* attrs.setPropType({ doc: link, type: "link" });
+        yield* attrs.setPropTargets({
+          doc: link,
+          targets: [AttrsSchema.makeTargetFilterExpr.cmp({ val: ["id", "=", target] })],
+        });
+        yield* save(link, assignee);
+        const enumeration = yield* makeDoc();
+        yield* attrs.initializeProp({ doc: enumeration });
+        yield* attrs.setPropType({ doc: enumeration, type: "enum" });
+        yield* save(enumeration, status);
+        yield* save(yield* makeNote(), target);
+
+        for (const { id, parent } of [
+          { id: active, parent: status },
+          { id: archived, parent: status },
+          { id: foreign, parent: priority },
+        ]) {
+          const doc = yield* makeDoc();
+          yield* attrs.initializeEnumOption({ doc, enum_parent: parent });
+
+          if (id === archived) {
+            yield* attrs.setProp({
+              doc,
+              recordId: id,
+              propId: BuiltinAttrs.archivedId,
+              value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+            });
+          }
+
+          yield* save(doc, id);
+        }
+
+        const assignments = [
+          { name: "active", link: target, option: active },
+          { name: "archived", link: active, option: archived },
+          { name: "foreign", link: absent, option: foreign },
+          { name: "missing", link: target, option: absent },
+          { name: "wrong-kind", link: target, option: target },
+        ];
+
+        for (const input of assignments) {
+          const id = AttrsSchema.RecordId.make(input.name);
+          const doc = yield* makeNote();
+          yield* attrs.setProp({
+            doc,
+            recordId: id,
+            propId: assignee,
+            value: AttrsSchema.PropVal.cases.link.make({ val: input.link }),
+          });
+          yield* attrs.setProp({
+            doc,
+            recordId: id,
+            propId: status,
+            value: AttrsSchema.PropVal.cases.enum.make({ val: input.option }),
+          });
+          yield* save(doc, id);
+        }
+
+        const listInvalid = (propId: AttrsSchema.RecordId) => {
+          return CliList.list({
+            filter: [AttrsSchema.makeFilterExpr.cmp({ val: [["prop", propId], "invalid", true] })],
+          }).pipe(Effect.map((rows) => rows.map((row) => row.id)));
+        };
+
+        expect(yield* listInvalid(assignee)).toEqual(["archived", "foreign"]);
+        expect(yield* listInvalid(status)).toEqual([
+          "archived",
+          "foreign",
+          "missing",
+          "wrong-kind",
+        ]);
+        yield* attrs.setPropTargets({ doc: link, targets: undefined });
+        yield* save(link, assignee);
+        expect(yield* listInvalid(assignee)).toEqual(["foreign"]);
       }),
     );
   });

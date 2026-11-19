@@ -78,20 +78,25 @@ export type Format = typeof Format.Type;
 export const list = Effect.fn("CliList.list")(function* (opts: RecordRepo.ListOpts = {}) {
   const ruleRecords = yield* RuleRecord.Service;
   const records = yield* RecordRepo.Service;
-  const rules = yield* ruleRecords.list();
-  const rows = yield* records.list(opts, rules);
+  const definitions = yield* PropDef.Service;
+
+  const { rules, defs } = yield* Effect.all(
+    {
+      rules: ruleRecords.list(),
+      defs: definitions
+        .reactiveDefs()
+        .pipe(
+          Effect.flatMap(Stream.runHead),
+          Effect.flatMap(Effect.fromOption),
+          Effect.map(PropDef.asRecord),
+        ),
+    },
+    { concurrency: "unbounded" },
+  );
+
+  const rows = yield* records.list(opts, { rules, defs });
 
   if (rows.length === 0) return [];
-
-  const def = yield* PropDef.Service;
-
-  const defs = yield* def
-    .reactiveDefs()
-    .pipe(
-      Effect.flatMap(Stream.runHead),
-      Effect.flatMap(Effect.fromOption),
-      Effect.map(PropDef.asRecord),
-    );
 
   const labelRows = yield* records.listLabels();
 

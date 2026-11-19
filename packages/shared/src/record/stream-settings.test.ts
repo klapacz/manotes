@@ -81,6 +81,7 @@ describe("canonical stream settings", () => {
       const filter = [expr.and({ val: [expr.cmp({ val: [target, "invalid", true] })] })];
       expect(Schema.decodeSync(AttrsSchema.Filter)(filter)).toEqual(filter);
       expect(() => Schema.decodeUnknownSync(AttrsSchema.TargetFilter)(filter)).toThrow();
+      expect(Schema.is(AttrsSchema.FilterCmp)([target, "invalid", false])).toBe(false);
     }
   });
 

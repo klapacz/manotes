@@ -73,11 +73,9 @@ describe("record filter expressions", () => {
         ]),
       ).toEqual([]);
 
-      for (const invalid of [true, false]) {
-        expect(
-          await findIds(executor, [expr.cmp({ val: [["prop", id("flag")], "invalid", invalid] })]),
-        ).toEqual([]);
-      }
+      expect(
+        await findIds(executor, [expr.cmp({ val: [["prop", id("flag")], "invalid", true] })]),
+      ).toEqual([]);
 
       database.prepare("UPDATE records SET attrs_valid = 0 WHERE id = 'flag'").run();
       expect(await findIds(executor, [eq])).toEqual([]);
