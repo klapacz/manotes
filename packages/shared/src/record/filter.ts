@@ -246,6 +246,28 @@ function comparisonPredicate(
         DBPredicates.orAllBalanced,
       );
     }),
+    Match.when(["props", "violation", true], () => {
+      return pipe(
+        metadata.defs ?? {},
+        Record.values,
+        Array.map((def) => {
+          const violation = propertyViolationPredicate(def.id, def);
+
+          // Built-ins have no stored definition record to archive.
+          if (Option.isSome(BuiltinAttrs.find(def.id))) return violation;
+
+          // Metadata includes archived definitions, so check this definition's archive flag in SQL.
+          const unarchived = Query.select({ id: Tables.records.id }).pipe(
+            Query.from(Tables.records),
+            Query.where(Query.eq(Tables.records.id, def.id)),
+            Query.where(filterPredicate([Filters.aliases.unarchived.make()])),
+          );
+
+          return Query.and(Query.exists(unarchived), violation);
+        }),
+        DBPredicates.orAllBalanced,
+      );
+    }),
     Match.exhaustive,
   );
 }

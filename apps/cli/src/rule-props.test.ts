@@ -302,6 +302,29 @@ describe("reactive rule props pipeline", () => {
           })).map((row) => row.id),
         ).toEqual([recordId]);
         expect(yield* records.list({ filter: [invalid(priority)] })).toEqual([]);
+
+        const allProps = [expr.cmp({ val: ["props", "violation", true] })];
+        expect((yield* CliList.list({ filter: allProps })).map((row) => row.id)).toEqual([
+          recordId,
+          grouped,
+        ]);
+        expect((yield* CliList.list({ filter: allProps, limit: 1 })).map((row) => row.id)).toEqual([
+          recordId,
+        ]);
+        expect(yield* records.list({ filter: allProps })).toEqual([]);
+
+        yield* attrs.setProp({
+          doc: definition,
+          recordId: priority,
+          propId: BuiltinAttrs.archivedId,
+          value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+        });
+        yield* save(definition, priority);
+
+        // The archived custom property stops matching; the invalid built-in value still matches.
+        expect((yield* CliList.list({ filter: allProps })).map((row) => row.id)).toEqual([
+          recordId,
+        ]);
       }),
     );
   });

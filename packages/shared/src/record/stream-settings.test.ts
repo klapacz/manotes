@@ -74,7 +74,7 @@ describe("canonical stream settings", () => {
   });
 
   it("retains violation in stream filters but rejects it in saved target filters", () => {
-    for (const target of ["rules", ["prop", parent], ["rule", parent]] as const) {
+    for (const target of ["rules", "props", ["prop", parent], ["rule", parent]] as const) {
       const filter = [expr.and({ val: [expr.cmp({ val: [target, "violation", true] })] })];
       expect(Schema.decodeSync(AttrsSchema.Filter)(filter)).toEqual(filter);
       expect(() => Schema.decodeUnknownSync(AttrsSchema.TargetFilter)(filter)).toThrow();
