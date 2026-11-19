@@ -122,8 +122,8 @@ export function Root(props: { recordId: AttrsSchema.RecordId; doc: Y.Doc; attrs:
           </DescriptionList.Row>
           <DescriptionList.Row>
             <DescriptionList.Term>Matches</DescriptionList.Term>
-            <DescriptionList.Details>
-              <RuleTargets.Link ruleId={props.recordId} targets={props.attrs.rule_targets} />
+            <DescriptionList.Details class="flex flex-wrap gap-1">
+              <RuleTargets.Links ruleId={props.recordId} targets={props.attrs.rule_targets} />
             </DescriptionList.Details>
           </DescriptionList.Row>
           <DescriptionList.Row>

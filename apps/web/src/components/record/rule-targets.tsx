@@ -1,6 +1,7 @@
 import { useAtom } from "@effect/atom-solid";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
+import { Filters } from "@manotes/shared/record/filters";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { Effect, Match, Schema } from "effect";
@@ -18,7 +19,7 @@ import { RecordLabel } from "./record-label";
 
 import { PaneNavigate } from "../../lib/record/pane.navigate";
 
-export function Link(props: {
+export function Links(props: {
   ruleId: AttrsSchema.RecordId;
   targets: AttrsSchema.TargetFilter | undefined;
 }) {
@@ -40,11 +41,31 @@ export function Link(props: {
     );
   };
 
+  const openInvalid = () => {
+    openNext(
+      PaneSchema.make.stream({
+        ...StreamSettings.defaultDisplay,
+        filter: [Filters.ruleInvalid.make(props.ruleId)],
+      }),
+    );
+  };
+
   return (
-    <Button variant="ghost" size="xs" onClick={open}>
-      {label()}
-      <ArrowUpRightIcon />
-    </Button>
+    <>
+      <Button variant="ghost" size="xs" onClick={open}>
+        {label()}
+        <ArrowUpRightIcon />
+      </Button>
+      <Button
+        variant="ghost"
+        size="xs"
+        class="ml-auto text-fg-subtle hover:text-fg"
+        onClick={openInvalid}
+      >
+        Invalid
+        <ArrowUpRightIcon />
+      </Button>
+    </>
   );
 }
 
