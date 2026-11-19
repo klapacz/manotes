@@ -14,14 +14,13 @@ export class Service extends Context.Service<Service>()("RuleRecord.Service", {
     const expectations = yield* RuleExpectRepo.Service;
 
     const list = Effect.fn("RuleRecord.list")(function* () {
-      return yield* records.list().pipe(
-        Effect.map(
-          Array.map(({ expectations, ...rule }): Rule => ({
-            ...rule,
-            expects: RuleExpect.reduceExpects(expectations),
-          })),
-        ),
-      );
+      return yield* records.list().pipe(Effect.map(toRules));
+    });
+
+    const reactiveList = Effect.fn("RuleRecord.reactiveList")(function* () {
+      const rules = yield* records.reactiveList();
+
+      return rules.pipe(Stream.map(toRules));
     });
 
     const reactiveRules = Effect.fn("RuleRecord.reactiveRules")(function* () {
@@ -43,13 +42,20 @@ export class Service extends Context.Service<Service>()("RuleRecord.Service", {
       });
     });
 
-    return { list, reactiveRules };
+    return { list, reactiveList, reactiveRules };
   }),
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(
     Layer.provide([RuleRecordRepo.Service.layer, RuleExpectRepo.Service.layer]),
   );
 }
+
+const toRules = Array.map(
+  ({ expectations, ...rule }: RuleRecordRepo.RuleWithExpectations): Rule => ({
+    ...rule,
+    expects: RuleExpect.reduceExpects(expectations),
+  }),
+);
 
 function expectsForRule(opts: {
   readonly ruleId: RecordSchema.Id;

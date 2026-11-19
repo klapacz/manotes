@@ -114,7 +114,7 @@ export const Picker = {
 type EntryPicker = PickerKind & PickerOptions;
 
 type EntryFields = {
-  select: (raw: PickerValue) => Option.Option<AttrsSchema.TargetFilterExpr>;
+  select: (raw: PickerValue) => Option.Option<AttrsSchema.FilterExpr>;
   getLabel: (expression: AttrsSchema.FilterExpr) => Option.Option<Label>;
   selection: (expression: AttrsSchema.FilterExpr) => Option.Option<PickerValue>;
 };
@@ -129,7 +129,7 @@ const entryTag = Data.taggedEnum<Data.TaggedEnum<{ Comparison: {}; Named: {} }>>
 
 type Pattern = Match.Types.PatternBase<AttrsSchema.FilterCmp>;
 
-export function comparison<Value, Cmp extends AttrsSchema.TargetFilterCmp>(opts: {
+export function comparison<Value, Cmp extends AttrsSchema.FilterCmp>(opts: {
   when: Pattern;
   make: (value: Value) => Cmp;
   getLabel?: (cmp: Cmp) => Label;
@@ -148,7 +148,7 @@ export function comparison<Value, Cmp extends AttrsSchema.TargetFilterCmp>(opts:
     return matched as Option.Option<Cmp>;
   };
 
-  const make = (value: Value) => AttrsSchema.makeTargetFilterExpr.cmp({ val: opts.make(value) });
+  const make = (value: Value) => ({ _tag: "cmp" as const, val: opts.make(value) });
 
   const selection = (expression: AttrsSchema.FilterExpr) => {
     return Option.flatMap(match(expression), (cmp) => {

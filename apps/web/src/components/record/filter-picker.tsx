@@ -279,7 +279,7 @@ function FilterCommands(props: {
   );
 }
 
-type Choice = Picker.Choice & { expression: AttrsSchema.TargetFilterExpr };
+type Choice = Picker.Choice & { expression: AttrsSchema.FilterExpr };
 
 type Candidate = Picker.Choice & { raw: Filters.PickerValue };
 

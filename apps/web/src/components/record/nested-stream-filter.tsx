@@ -9,7 +9,7 @@ import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Filters } from "@manotes/shared/record/filters";
 import type { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { Option, Predicate } from "effect";
-import { Index, Show, createSignal, createUniqueId, type JSX } from "solid-js";
+import { Index, Show, createMemo, createSignal, createUniqueId, type JSX } from "solid-js";
 import { ChevronDown, ChevronRight, FunnelPlus, ListPlus, Pencil, Plus, X } from "lucide-solid";
 import { useFilters } from "../../lib/filters";
 import { cx } from "../../lib/cva";
@@ -25,6 +25,7 @@ const expr = AttrsSchema.makeFilterExpr;
 
 export function NestedStreamFilterEditor(props: {
   filter: Filter;
+  targetOnly: boolean;
   onChange: (filter: Filter) => void;
   onPreset: (settings: StreamSettings.Settings) => void;
   menu: FilterMenu;
@@ -33,7 +34,14 @@ export function NestedStreamFilterEditor(props: {
   onOpenRecord: (id: AttrsSchema.RecordId) => void;
   children: (trigger: JSX.Element, filters: JSX.Element, hasFilters: () => boolean) => JSX.Element;
 }) {
-  const filters = useFilters();
+  const registry = useFilters();
+
+  const filters = createMemo(() => {
+    if (props.targetOnly) return Filters.forTargets(registry());
+
+    return registry();
+  });
+
   const [expanded, setExpanded] = createSignal(false);
   const treeId = createUniqueId();
   let filterButton: HTMLButtonElement | undefined;

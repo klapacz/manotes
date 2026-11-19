@@ -286,10 +286,11 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
 
     const reactiveStreamList = Effect.fn("RecordRepo.reactiveStreamList")(function* (
       query: StreamListQuery,
+      rules: readonly RuleRecord.Rule[] = [],
     ) {
       const plan = streamSelect.pipe(
         Query.from(Tables.records),
-        Query.where(RecordFilter.filterPredicate(query.filter)),
+        Query.where(RecordFilter.filterPredicate(query.filter, rules)),
       );
 
       const ordered =

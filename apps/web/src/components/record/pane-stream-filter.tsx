@@ -92,6 +92,7 @@ export function PaneStreamFilter(props: {
   return (
     <NestedStreamFilterEditor
       filter={pane().filter}
+      targetOnly={pane().source !== undefined}
       onChange={changeFilter}
       onPreset={changeSettings}
       menu={menu()}

@@ -1,6 +1,7 @@
 import { NodeServices } from "@effect/platform-node";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
+import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
 import { DB } from "@manotes/shared/db.service";
 import { EventRepo } from "@manotes/shared/event.repo";
 import { CliList } from "@manotes/shared/list";
@@ -12,8 +13,10 @@ import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
 import { RuleProps } from "@manotes/shared/rule-props";
 import { RuleRecord } from "@manotes/shared/rule-record.service";
 import {
+  Array as EffectArray,
   DateTime,
   Effect,
+  Equal,
   Layer,
   Option,
   Predicate,
@@ -175,6 +178,69 @@ describe("reactive rule props pipeline", () => {
         yield* save(rule, task);
         expect(yield* listInvalid(task)).toEqual([complete]);
         expect(yield* listInvalid(outside)).toEqual([]);
+      }),
+    );
+  });
+
+  it("excludes archived rules from CLI and live stream invalid filters until restored", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        const attrs = yield* Attrs.Service;
+        const records = yield* RecordRepo.Service;
+        const ruleRecords = yield* RuleRecord.Service;
+        const rule = yield* makeDoc();
+        yield* attrs.initializeRule({
+          doc: rule,
+          targets: [AttrsSchema.makeTargetFilterExpr.cmp({ val: ["id", "=", recordId] })],
+        });
+        yield* attrs.setRuleExpectation({ doc: rule, propId: priority, value: required });
+        yield* save(rule, task);
+        yield* save(yield* makeNote(), recordId);
+
+        const query: RecordRepo.StreamListQuery = {
+          filter: [AttrsSchema.makeFilterExpr.cmp({ val: [["rule", task], "invalid", true] })],
+          sort: "updated",
+        };
+
+        const latest = yield* SubscriptionRef.make<readonly AttrsSchema.RecordId[] | undefined>(
+          undefined,
+        );
+
+        const rules = yield* ruleRecords.reactiveList();
+        yield* rules.pipe(
+          Stream.changes,
+          Stream.switchMap((rules) => Stream.unwrap(records.reactiveStreamList(query, rules))),
+          Stream.map(EffectArray.map((row) => row.id)),
+          Stream.runForEach((ids) => SubscriptionRef.set(latest, ids)),
+          Effect.forkChild,
+        );
+
+        const expectIds = (ids: readonly AttrsSchema.RecordId[]) => {
+          return Effect.gen(function* () {
+            yield* SubscriptionRef.changes(latest).pipe(
+              Stream.filter(Equal.equals(ids)),
+              Stream.runHead,
+              Effect.flatMap(Effect.fromOption),
+              Effect.timeout("5 seconds"),
+            );
+            const rows = yield* CliList.list(query);
+            expect(EffectArray.map(rows, (row) => row.id)).toEqual(ids);
+          });
+        };
+
+        yield* expectIds([recordId]);
+        yield* attrs.setProp({
+          doc: rule,
+          recordId: task,
+          propId: BuiltinAttrs.archivedId,
+          value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+        });
+        yield* save(rule, task);
+        yield* expectIds([]);
+
+        yield* attrs.clearProp({ doc: rule, propId: BuiltinAttrs.archivedId });
+        yield* save(rule, task);
+        yield* expectIds([recordId]);
       }),
     );
   });

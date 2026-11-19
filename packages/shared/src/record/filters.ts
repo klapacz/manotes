@@ -5,6 +5,7 @@ import type { PropRecordRepo } from "../prop-record.repo";
 import { PlainDateString } from "../temporal.schema";
 import {
   type Group,
+  type Registry,
   Label,
   Picker,
   comparison,
@@ -117,6 +118,21 @@ export const aliases = {
     getLabel: () => Label.Literal({ val: "Unarchived" }),
   }),
 };
+
+export const ruleInvalid = comparison({
+  when: [["rule", Schema.is(AttrsSchema.RecordId)], "invalid", true],
+  make: (id: AttrsSchema.RecordId) => [["rule", id], "invalid", true] as const,
+  getValue: ([[, id]]) => id,
+  getLabel: ([[, id]]) => {
+    return Label.Record({ id, val: (name) => `Missing required properties for ${name}` });
+  },
+  picker: Picker.Record({
+    label: "Rule invalid",
+    filter: [namedTypes.rules.make(), aliases.unarchived.make()],
+    map: identity,
+    unmap: Schema.decodeUnknownOption(AttrsSchema.RecordId),
+  }),
+});
 
 export function property(definition: PropRecordRepo.Def): Group {
   const label = Label.Record({ id: definition.id, val: identity });
@@ -368,6 +384,8 @@ const propType = comparison({
   }),
 });
 
+const ruleInvalidGroup = group({ label: "Rule invalid", entries: [ruleInvalid] });
+
 export const groups = [
   group({
     label: "Type",
@@ -383,6 +401,7 @@ export const groups = [
   group({ label: "Body", entries: [body] }),
   group({ label: "Date", entries: [date] }),
   group({ label: "Title", entries: [title] }),
+  ruleInvalidGroup,
   ...[ownedType, ownedParent, propType].map((entry) => {
     return group({ label: entry.picker.label, entries: [entry] });
   }),
@@ -394,6 +413,13 @@ export function fromDefinitions(defs: readonly PropRecordRepo.Def[]) {
 }
 
 export const builtin = fromDefinitions(BuiltinAttrs.defs);
+
+export function forTargets(registry: Registry) {
+  return create({
+    groups: Array.filter(registry.groups, (group) => group !== ruleInvalidGroup),
+    aliases: [aliases.unarchived],
+  });
+}
 
 export * from "./filters.internal";
 
