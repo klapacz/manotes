@@ -1,4 +1,5 @@
 import { RecordSchema } from "@manotes/shared/record.schema";
+import { Filters } from "@manotes/shared/record/filters";
 import { Link } from "@tanstack/solid-router";
 import { Option, Stream } from "effect";
 import { createFilterLabels, useFilters } from "../../filters";
@@ -18,7 +19,8 @@ export function defineStreamRefRuntime() {
 }
 
 export function createStreamRefLabel(attrs: () => StreamRefSpec.Attrs) {
-  const filters = useFilters();
+  const registry = useFilters();
+  const filters = createMemo(() => Filters.forStreams(registry()));
   const labels = createFilterLabels(() => StreamRefSpec.labels(attrs(), filters()));
 
   return () => labels().join(" · ");

@@ -37,9 +37,9 @@ export function NestedStreamFilterEditor(props: {
   const registry = useFilters();
 
   const filters = createMemo(() => {
-    if (props.targetOnly) return Filters.forTargets(registry());
+    if (props.targetOnly) return registry();
 
-    return registry();
+    return Filters.forStreams(registry());
   });
 
   const [expanded, setExpanded] = createSignal(false);

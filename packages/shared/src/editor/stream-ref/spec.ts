@@ -22,6 +22,8 @@ export const decodeAttrs = Schema.decodeUnknownSync(Attrs);
 
 const decodeJson = Schema.decodeUnknownOption(Schema.fromJsonString(Attrs));
 
+const builtinStreamFilters = Filters.forStreams(Filters.builtin);
+
 export function define() {
   return defineNodeSpec<"streamRef", Attrs>({
     name: "streamRef",
@@ -69,7 +71,7 @@ export function defineCommands() {
 
 export function labels(
   settings: Attrs,
-  registry: Filters.Registry = Filters.builtin,
+  registry: Filters.Registry = builtinStreamFilters,
 ): readonly Label[] {
   const [recognized, otherFilters] = Array.partition(settings.filter, (expression) => {
     return expressionLabel(expression, registry);
@@ -106,7 +108,7 @@ export function renderLabels(
 
 export function expressionLabel(
   expression: AttrsSchema.FilterExpr,
-  registry: Filters.Registry = Filters.builtin,
+  registry: Filters.Registry = builtinStreamFilters,
 ): Result.Result<Label, AttrsSchema.FilterExpr> {
   return Result.fromOption(registry.getLabel(expression), () => expression);
 }

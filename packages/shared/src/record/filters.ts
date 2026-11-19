@@ -401,7 +401,6 @@ export const groups = [
   group({ label: "Body", entries: [body] }),
   group({ label: "Date", entries: [date] }),
   group({ label: "Title", entries: [title] }),
-  ruleInvalidGroup,
   ...[ownedType, ownedParent, propType].map((entry) => {
     return group({ label: entry.picker.label, entries: [entry] });
   }),
@@ -414,9 +413,9 @@ export function fromDefinitions(defs: readonly PropRecordRepo.Def[]) {
 
 export const builtin = fromDefinitions(BuiltinAttrs.defs);
 
-export function forTargets(registry: Registry) {
+export function forStreams(registry: Registry) {
   return create({
-    groups: Array.filter(registry.groups, (group) => group !== ruleInvalidGroup),
+    groups: Array.append(registry.groups, ruleInvalidGroup),
     aliases: [aliases.unarchived],
   });
 }
