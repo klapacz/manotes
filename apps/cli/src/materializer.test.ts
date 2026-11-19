@@ -50,7 +50,7 @@ describe("attrs materialization", () => {
           AttrsSchema.FilterExpr.make({
             // oxlint-disable-next-line anti-slop-effect/no-manual-tagged-construction -- The recursive FilterExpr codec's make validates this general-stream predicate.
             _tag: "cmp",
-            val: [["prop", AttrsSchema.RecordId.make("priority")], "invalid", true],
+            val: [["prop", AttrsSchema.RecordId.make("priority")], "violation", true],
           }),
         ]);
         attrs.set("owned_type", "enum_option");

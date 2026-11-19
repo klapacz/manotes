@@ -162,7 +162,7 @@ describe("YSchema bound selections", () => {
 
       const invalid: AttrsSchema.Filter = [
         Schema.TaggedStruct("cmp", { val: AttrsSchema.FilterCmp }).make({
-          val: [["prop", AttrsSchema.RecordId.make("priority")], "invalid", true],
+          val: [["prop", AttrsSchema.RecordId.make("priority")], "violation", true],
         }),
       ];
 
@@ -183,7 +183,7 @@ describe("YSchema bound selections", () => {
     const cmp = Schema.TaggedStruct("cmp", { val: AttrsSchema.FilterCmp });
     const and = Schema.TaggedStruct("and", { val: AttrsSchema.Filter });
     const or = Schema.TaggedStruct("or", { val: AttrsSchema.Filter });
-    const invalid = cmp.make({ val: [["prop", id], "invalid", true] });
+    const invalid = cmp.make({ val: [["prop", id], "violation", true] });
     const exists = cmp.make({ val: [["prop", id], "exists", true] });
     const valid = [and.make({ val: [or.make({ val: [exists] })] })];
 
@@ -740,7 +740,7 @@ function typeChecks(attrs: YSchema.Cursor<AttrsSchema.Attrs, typeof AttrsSchema.
   rule.pipe(YSchema.set("rule_targets", validTarget));
 
   const invalid = Schema.TaggedStruct("cmp", { val: AttrsSchema.FilterCmp }).make({
-    val: [["prop", AttrsSchema.RecordId.make("priority")], "invalid", true],
+    val: [["prop", AttrsSchema.RecordId.make("priority")], "violation", true],
   });
 
   // @ts-expect-error invalid comparisons cannot be used as property targets

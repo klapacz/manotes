@@ -15,25 +15,28 @@ const id = AttrsSchema.RecordId.make("priority");
 const other = AttrsSchema.RecordId.make("other");
 
 describe("Filters definitions and Outline operations", () => {
-  it("offers property invalid only in stream registries and labels built-in and custom properties", () => {
+  it("offers property violations only in stream registries and labels built-in and custom properties", () => {
     const streams = Filters.forStreams(registry);
 
     for (const propId of [id, BuiltinAttrs.archivedId]) {
-      const expression = Filters.propertyInvalid.make(propId);
-      expect(expression).toEqual(expr.cmp({ val: [["prop", propId], "invalid", true] }));
-      expect(Filters.propertyInvalid.select(propId)).toEqual(Option.some(expression));
-      expect(Filters.propertyInvalid.selection(expression)).toEqual(Option.some(propId));
+      const expression = Filters.propertyViolation.make(propId);
+      expect(expression).toEqual(expr.cmp({ val: [["prop", propId], "violation", true] }));
+      expect(Filters.propertyViolation.select(propId)).toEqual(Option.some(expression));
+      expect(Filters.propertyViolation.selection(expression)).toEqual(Option.some(propId));
       expect(Option.isSome(streams.findGroup(expression))).toBe(true);
       expect(registry.findGroup(expression)).toEqual(Option.none());
       const label = Option.getOrThrow(streams.getLabel(expression));
       const rendered = Filters.renderLabel(label, () => "Priority");
 
-      if (propId === BuiltinAttrs.archivedId) expect(rendered).toBe("Archived is invalid");
-      else expect(rendered).toBe("Priority is invalid");
+      if (propId === BuiltinAttrs.archivedId) {
+        expect(rendered).toBe('Property "Archived" violations');
+      } else expect(rendered).toBe('Property "Priority" violations');
     }
 
-    expect(Filters.propertyInvalid.picker._tag).toBe("Property");
-    expect(Filters.propertyInvalid.select(false)).toEqual(Option.none());
+    expect(Filters.propertyViolation.picker._tag).toBe("Property");
+    expect(Filters.propertyViolation.picker.label).toBe("Property violations");
+    expect(Filters.ruleViolation.picker.label).toBe("Rule violations");
+    expect(Filters.propertyViolation.select(false)).toEqual(Option.none());
   });
 
   it("uses distinct family tokens even when their labels match", () => {

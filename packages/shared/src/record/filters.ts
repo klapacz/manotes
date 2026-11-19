@@ -119,30 +119,30 @@ export const aliases = {
   }),
 };
 
-export const ruleInvalid = comparison({
-  when: [["rule", Schema.is(AttrsSchema.RecordId)], "invalid", true],
-  make: (id: AttrsSchema.RecordId) => [["rule", id], "invalid", true] as const,
+export const ruleViolation = comparison({
+  when: [["rule", Schema.is(AttrsSchema.RecordId)], "violation", true],
+  make: (id: AttrsSchema.RecordId) => [["rule", id], "violation", true] as const,
   getValue: ([[, id]]) => id,
   getLabel: ([[, id]]) => {
-    return Label.Record({ id, val: (name) => `Missing required properties for ${name}` });
+    return Label.Record({ id, val: (name) => `Rule "${name}" violations` });
   },
   picker: Picker.Record({
-    label: "Rule invalid",
+    label: "Rule violations",
     filter: [namedTypes.rules.make(), aliases.unarchived.make()],
     map: identity,
     unmap: Schema.decodeUnknownOption(AttrsSchema.RecordId),
   }),
 });
 
-export const propertyInvalid = comparison({
-  when: [["prop", Schema.is(AttrsSchema.RecordId)], "invalid", true],
-  make: (id: AttrsSchema.RecordId) => [["prop", id], "invalid", true] as const,
+export const propertyViolation = comparison({
+  when: [["prop", Schema.is(AttrsSchema.RecordId)], "violation", true],
+  make: (id: AttrsSchema.RecordId) => [["prop", id], "violation", true] as const,
   getValue: ([[, id]]) => id,
   getLabel: ([[, id]]) => {
-    return Label.Record({ id, val: (name) => `${name} is invalid` });
+    return Label.Record({ id, val: (name) => `Property "${name}" violations` });
   },
   picker: Picker.Property({
-    label: "Property invalid",
+    label: "Property violations",
     map: identity,
     unmap: Schema.decodeUnknownOption(AttrsSchema.RecordId),
   }),
@@ -398,7 +398,7 @@ const propType = comparison({
   }),
 });
 
-const ruleInvalidGroup = group({ label: "Rule invalid", entries: [ruleInvalid] });
+const ruleViolationGroup = group({ label: "Rule violations", entries: [ruleViolation] });
 
 export const groups = [
   group({
@@ -430,8 +430,8 @@ export const builtin = fromDefinitions(BuiltinAttrs.defs);
 export function forStreams(registry: Registry) {
   return create({
     groups: Array.appendAll(registry.groups, [
-      ruleInvalidGroup,
-      group({ label: propertyInvalid.picker.label, entries: [propertyInvalid] }),
+      ruleViolationGroup,
+      group({ label: propertyViolation.picker.label, entries: [propertyViolation] }),
     ]),
     aliases: [aliases.unarchived],
   });

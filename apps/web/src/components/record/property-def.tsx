@@ -95,7 +95,7 @@ export function Root(props: {
     openNext(
       PaneSchema.make.stream({
         ...StreamSettings.defaultDisplay,
-        filter: [Filters.propertyInvalid.make(props.recordId)],
+        filter: [Filters.propertyViolation.make(props.recordId)],
       }),
     );
   };

@@ -73,15 +73,16 @@ describe("canonical stream settings", () => {
     ]);
   });
 
-  it("retains invalid in stream filters but rejects it in saved target filters", () => {
+  it("retains violation in stream filters but rejects it in saved target filters", () => {
     for (const target of [
       ["prop", parent],
       ["rule", parent],
     ] as const) {
-      const filter = [expr.and({ val: [expr.cmp({ val: [target, "invalid", true] })] })];
+      const filter = [expr.and({ val: [expr.cmp({ val: [target, "violation", true] })] })];
       expect(Schema.decodeSync(AttrsSchema.Filter)(filter)).toEqual(filter);
       expect(() => Schema.decodeUnknownSync(AttrsSchema.TargetFilter)(filter)).toThrow();
-      expect(Schema.is(AttrsSchema.FilterCmp)([target, "invalid", false])).toBe(false);
+      expect(Schema.is(AttrsSchema.FilterCmp)([target, "violation", false])).toBe(false);
+      expect(Schema.is(AttrsSchema.FilterCmp)([target, "invalid", true])).toBe(false);
     }
   });
 

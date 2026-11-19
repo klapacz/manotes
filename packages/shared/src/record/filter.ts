@@ -220,16 +220,16 @@ function comparisonPredicate(
         return Query.eq(propertyExistsPredicate(id), exists);
       },
     ),
-    Match.when([["prop", Schema.is(AttrsSchema.RecordId)], "invalid", true], ([[, propId]]) => {
+    Match.when([["prop", Schema.is(AttrsSchema.RecordId)], "violation", true], ([[, propId]]) => {
       if (metadata.defs === undefined) return Query.literal(false);
 
       const def = Record.get(metadata.defs, propId);
 
       if (Option.isNone(def)) return Query.literal(false);
 
-      return propertyInvalidPredicate(propId, def.value);
+      return propertyViolationPredicate(propId, def.value);
     }),
-    Match.when([["rule", Schema.is(AttrsSchema.RecordId)], "invalid", true], ([[, ruleId]]) => {
+    Match.when([["rule", Schema.is(AttrsSchema.RecordId)], "violation", true], ([[, ruleId]]) => {
       return pipe(
         metadata.rules ?? [],
         Array.findFirst((rule) => rule.id === ruleId),
@@ -245,7 +245,7 @@ function comparisonPredicate(
   );
 }
 
-function propertyInvalidPredicate(
+function propertyViolationPredicate(
   propId: RecordSchema.Id,
   def: PropRecordRepo.Def,
 ): RecordPredicate {

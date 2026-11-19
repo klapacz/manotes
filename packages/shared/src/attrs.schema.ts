@@ -106,8 +106,8 @@ export type TargetFilterCmp = typeof TargetFilterCmp.Type;
 // Only general stream filters can depend on validation; target filters cannot.
 export const FilterCmp = Schema.Union([
   ...TargetFilterCmp.members,
-  Schema.Tuple([PropTarget, Schema.Literal("invalid"), Schema.Literal(true)]),
-  Schema.Tuple([RuleTarget, Schema.Literal("invalid"), Schema.Literal(true)]),
+  Schema.Tuple([PropTarget, Schema.Literal("violation"), Schema.Literal(true)]),
+  Schema.Tuple([RuleTarget, Schema.Literal("violation"), Schema.Literal(true)]),
 ]);
 
 export type FilterCmp = typeof FilterCmp.Type;
@@ -252,7 +252,7 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *       readonly _tag: "prop";
  *       readonly prop_type: "link";
  *       readonly prop_default?: { readonly _tag: "link"; readonly val: RecordId };
- *       readonly prop_targets?: TargetFilter; // Atomic JSON; invalid predicates are forbidden.
+ *       readonly prop_targets?: TargetFilter; // Atomic JSON; violation predicates are forbidden.
  *       // Shared
  *       readonly props: Props; // Y.Map; scalar entries are atomic JSON, groups are nested Y.Maps.
  *     }
@@ -266,7 +266,7 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  *   | {
  *       readonly _tag: "rule";
  *       readonly rule_storage: { readonly _tag: "top" } | { readonly _tag: "group" }; // Atomic JSON.
- *       readonly rule_targets: TargetFilter; // Atomic JSON; invalid predicates are forbidden.
+ *       readonly rule_targets: TargetFilter; // Atomic JSON; violation predicates are forbidden.
  *       readonly rule_expects: Readonly<Record<RecordId, // Y.Map in live Yjs; each entry is atomic JSON.
  *         { readonly _tag: "required" } | { readonly _tag: "optional" }
  *       >>;
@@ -276,7 +276,7 @@ function propAttrs<const Tag extends PropValTag, const Value extends Schema.Cons
  * ```
  *
  * RecordId is the shared branded record ID; numeric values must be finite. Dates use
- * PlainDateString. Target filters reject invalid predicates at every nesting level.
+ * PlainDateString. Target filters reject violation predicates at every nesting level.
  */
 export const Attrs = Schema.Union([
   records.cases.note.mapFields((fields) => ({

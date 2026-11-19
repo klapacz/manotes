@@ -45,7 +45,7 @@ export function Links(props: {
     openNext(
       PaneSchema.make.stream({
         ...StreamSettings.defaultDisplay,
-        filter: [Filters.ruleInvalid.make(props.ruleId)],
+        filter: [Filters.ruleViolation.make(props.ruleId)],
       }),
     );
   };

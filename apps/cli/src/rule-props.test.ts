@@ -158,7 +158,7 @@ describe("reactive rule props pipeline", () => {
           return CliList.list({
             filter: [
               expr.and({
-                val: [expr.or({ val: [expr.cmp({ val: [["rule", ruleId], "invalid", true] })] })],
+                val: [expr.or({ val: [expr.cmp({ val: [["rule", ruleId], "violation", true] })] })],
               }),
             ],
             limit: 1,
@@ -228,7 +228,7 @@ describe("reactive rule props pipeline", () => {
         const expr = AttrsSchema.makeFilterExpr;
 
         const invalid = (propId: AttrsSchema.RecordId) => {
-          return expr.cmp({ val: [["prop", propId], "invalid", true] });
+          return expr.cmp({ val: [["prop", propId], "violation", true] });
         };
 
         const filter = [
@@ -326,7 +326,9 @@ describe("reactive rule props pipeline", () => {
 
         const listInvalid = (propId: AttrsSchema.RecordId) => {
           return CliList.list({
-            filter: [AttrsSchema.makeFilterExpr.cmp({ val: [["prop", propId], "invalid", true] })],
+            filter: [
+              AttrsSchema.makeFilterExpr.cmp({ val: [["prop", propId], "violation", true] }),
+            ],
           }).pipe(Effect.map((rows) => rows.map((row) => row.id)));
         };
 
@@ -360,7 +362,7 @@ describe("reactive rule props pipeline", () => {
         yield* save(yield* makeNote(), recordId);
 
         const query: RecordRepo.StreamListQuery = {
-          filter: [AttrsSchema.makeFilterExpr.cmp({ val: [["rule", task], "invalid", true] })],
+          filter: [AttrsSchema.makeFilterExpr.cmp({ val: [["rule", task], "violation", true] })],
           sort: "updated",
         };
 
