@@ -235,14 +235,23 @@ function comparisonPredicate(
         Array.findFirst((rule) => rule.id === ruleId),
         Option.match({
           onNone: () => Query.literal(false),
-          onSome: (rule) => {
-            return Query.and(filterPredicate(rule.rule_targets), missingRequiredProps(rule));
-          },
+          onSome: ruleViolationPredicate,
         }),
+      );
+    }),
+    Match.when(["rules", "violation", true], () => {
+      return pipe(
+        metadata.rules ?? [],
+        Array.map(ruleViolationPredicate),
+        DBPredicates.orAllBalanced,
       );
     }),
     Match.exhaustive,
   );
+}
+
+function ruleViolationPredicate(rule: RuleRecord.Rule): RecordPredicate {
+  return Query.and(filterPredicate(rule.rule_targets), missingRequiredProps(rule));
 }
 
 function propertyViolationPredicate(

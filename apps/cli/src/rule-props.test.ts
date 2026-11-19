@@ -182,6 +182,59 @@ describe("reactive rule props pipeline", () => {
     );
   });
 
+  it("lists violations of any unarchived rule and matches nothing without rules", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        const attrs = yield* Attrs.Service;
+        const otherRecord = AttrsSchema.RecordId.make("record_id:other");
+        const otherRule = AttrsSchema.RecordId.make("rule_id:other");
+        const filter = [AttrsSchema.makeFilterExpr.cmp({ val: ["rules", "violation", true] })];
+
+        const listViolations = () => {
+          return CliList.list({ filter }).pipe(Effect.map((rows) => rows.map((row) => row.id)));
+        };
+
+        expect(yield* listViolations()).toEqual([]);
+
+        const rules = yield* Effect.forEach(
+          [
+            [task, recordId],
+            [otherRule, otherRecord],
+          ] as const,
+          ([ruleId, targetId]) => {
+            return Effect.gen(function* () {
+              yield* save(yield* makeNote(), targetId);
+              const doc = yield* makeDoc();
+              yield* attrs.initializeRule({
+                doc,
+                targets: [AttrsSchema.makeTargetFilterExpr.cmp({ val: ["id", "=", targetId] })],
+              });
+              yield* attrs.setRuleExpectation({ doc, propId: priority, value: required });
+              yield* save(doc, ruleId);
+
+              return { doc, ruleId, targetId };
+            });
+          },
+        );
+
+        expect(new Set(yield* listViolations())).toEqual(new Set([recordId, otherRecord]));
+
+        for (const { doc, ruleId, targetId } of rules) {
+          yield* attrs.setProp({
+            doc,
+            recordId: ruleId,
+            propId: BuiltinAttrs.archivedId,
+            value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+          });
+          yield* save(doc, ruleId);
+          expect(yield* listViolations()).not.toContain(targetId);
+        }
+
+        expect(yield* listViolations()).toEqual([]);
+      }),
+    );
+  });
+
   it("filters invalid saved property values across paths before applying the limit", async () => {
     await runIntegration(
       Effect.gen(function* () {

@@ -108,6 +108,7 @@ export const FilterCmp = Schema.Union([
   ...TargetFilterCmp.members,
   Schema.Tuple([PropTarget, Schema.Literal("violation"), Schema.Literal(true)]),
   Schema.Tuple([RuleTarget, Schema.Literal("violation"), Schema.Literal(true)]),
+  Schema.Tuple([Schema.Literal("rules"), Schema.Literal("violation"), Schema.Literal(true)]),
 ]);
 
 export type FilterCmp = typeof FilterCmp.Type;
