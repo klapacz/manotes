@@ -2,6 +2,7 @@ import { PropValidation } from "@manotes/shared/prop-validation";
 import { PaneNavigate } from "../../lib/record/pane.navigate";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
+import { Filters } from "@manotes/shared/record/filters";
 import { useAtom } from "@effect/atom-solid";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
@@ -90,6 +91,15 @@ export function Root(props: {
     return openNext(PaneSchema.make.stream(StreamSettings.enumOptionsPreset(props.recordId)));
   };
 
+  const openInvalid = () => {
+    openNext(
+      PaneSchema.make.stream({
+        ...StreamSettings.defaultDisplay,
+        filter: [Filters.propertyInvalid.make(props.recordId)],
+      }),
+    );
+  };
+
   return (
     <div class="px-4 pb-4">
       <Surface.Root highlighted={focus.highlightWithin()}>
@@ -97,7 +107,7 @@ export function Root(props: {
         <DescriptionList.Root>
           <DescriptionList.Row>
             <DescriptionList.Term>Value kind</DescriptionList.Term>
-            <DescriptionList.Details>
+            <DescriptionList.Details class="flex flex-wrap gap-1">
               <Picker.Root label="Value kind">
                 <Picker.Trigger variant="ghost" size="xs" disabled={mutation().waiting}>
                   {typeLabels[props.attrs.prop_type]}
@@ -116,6 +126,15 @@ export function Root(props: {
                   )}
                 </Picker.Content>
               </Picker.Root>
+              <Button
+                variant="ghost"
+                size="xs"
+                class="ml-auto text-fg-subtle hover:text-fg"
+                onClick={openInvalid}
+              >
+                Invalid
+                <ArrowUpRightIcon />
+              </Button>
             </DescriptionList.Details>
           </DescriptionList.Row>
           <DescriptionList.Row>
