@@ -52,6 +52,10 @@ if [ "$workspace_root" != "$project_root" ]; then
     fail 'The workspace does not share the main JJ repository.'
 fi
 
+mkdir -p apps/web/vendor
+nix build .#solid-form-vendor --out-link apps/web/vendor/form
+nix build .#virtua-vendor --out-link apps/web/vendor/virtua
+
 # The extension's postinstall imports shared package outputs.
 vp install --frozen-lockfile --ignore-scripts
 vp run @manotes/effect-db-sqlite#build

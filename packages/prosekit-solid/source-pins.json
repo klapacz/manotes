@@ -1,0 +1,38 @@
+[
+  {
+    "package": "@prosekit/solid",
+    "version": "0.8.3",
+    "path": "dist/index.js",
+    "sha256": "05bdbcb04408d3c6a4ecf62fad74fed4c71bfdf15992ceb1090d1b18b5437950"
+  },
+  {
+    "package": "@prosekit/solid",
+    "version": "0.8.3",
+    "path": "dist/autocomplete.js",
+    "sha256": "6a342fe702fc7638c9fd87e4df3e758e16492c57d31417b0e4ca42668e9106d3"
+  },
+  {
+    "package": "@prosekit/solid",
+    "version": "0.8.3",
+    "path": "dist/inline-popover.js",
+    "sha256": "a784c0b2fbdefd433f5f383effc709bcc0fe1caae52b99231908568e34b064e7"
+  },
+  {
+    "package": "@prosekit/solid",
+    "version": "0.8.3",
+    "path": "dist/table-handle.js",
+    "sha256": "c620263e404cb7580bb35313b7595254d907a8b9612f29107a455c6b00ddde8c"
+  },
+  {
+    "package": "@prosekit/solid",
+    "version": "0.8.3",
+    "path": "dist/menu.js",
+    "sha256": "13e511291c27a7c8d3418aff24ce077259786aeb1ee440f40c9bfb9e9acd49a4"
+  },
+  {
+    "package": "@prosemirror-adapter/solid",
+    "version": "0.5.5",
+    "path": "dist/index.js",
+    "sha256": "8660f80f6ec531f7b72a9d4b9954e9767a938fbbe22dfe21ca100a09ffbb7a46"
+  }
+]

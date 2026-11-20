@@ -29,6 +29,8 @@
         { pkgs }:
         rec {
           manotes = pkgs.callPackage ./nix/package.nix { };
+          solid-form-vendor = pkgs.callPackage ./apps/web/nix/form/vendor.nix { };
+          virtua-vendor = pkgs.callPackage ./apps/web/nix/virtua.nix { };
           default = manotes;
         }
       );

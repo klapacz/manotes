@@ -21,3 +21,6 @@ sandbox
 .dev.vars*
 .tasks
 .dev
+
+/apps/web/vendor/form
+/apps/web/vendor/virtua

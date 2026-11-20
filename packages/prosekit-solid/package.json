@@ -1,0 +1,26 @@
+{
+  "name": "@manotes/prosekit-solid",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/editor.tsx",
+    "./autocomplete": "./src/autocomplete.tsx",
+    "./inline-popover": "./src/inline-popover.tsx",
+    "./menu": "./src/menu.tsx",
+    "./table-handle": "./src/table-handle.tsx"
+  },
+  "dependencies": {
+    "@prosemirror-adapter/core": "0.5.5"
+  },
+  "devDependencies": {
+    "@solidjs/web": "2.0.3",
+    "prosekit": "^0.22.3",
+    "solid-js": "2.0.3"
+  },
+  "peerDependencies": {
+    "@solidjs/web": "2.0.3",
+    "prosekit": "^0.22.3",
+    "solid-js": "2.0.3"
+  }
+}
