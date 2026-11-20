@@ -1,12 +1,12 @@
 import { Match } from "effect";
 import type { Editor } from "prosekit/core";
-import { onCleanup, onMount } from "solid-js";
+import { onSettled } from "solid-js";
 import type { AppExtension } from "../../editor.extension";
 
 // The listbox navigates on ArrowDown/ArrowUp keydown events forwarded through
 // ProseMirror. Alias Ctrl-N / Ctrl-P to those keys while the popover is open.
 export function useArrowKeyAliases(editor: () => Editor<AppExtension>, isOpen: () => boolean) {
-  onMount(() => {
+  onSettled(() => {
     const dom = editor().view.dom;
 
     const handler = (event: KeyboardEvent) => {
@@ -27,6 +27,7 @@ export function useArrowKeyAliases(editor: () => Editor<AppExtension>, isOpen: (
     };
 
     dom.addEventListener("keydown", handler, { capture: true });
-    onCleanup(() => dom.removeEventListener("keydown", handler, { capture: true }));
+
+    return () => dom.removeEventListener("keydown", handler, { capture: true });
   });
 }

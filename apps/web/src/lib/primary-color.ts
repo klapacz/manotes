@@ -49,14 +49,14 @@ export type State = ReturnType<typeof create>;
 
 export function use(localGraphId: Accessor<string>) {
   const state = createMemo(() => create(localGraphId()));
-  createEffect(() => apply(state().color()));
+  createEffect(() => state().color(), apply);
   onCleanup(clear);
 
   return state;
 }
 
 export function create(localGraphId: string) {
-  const [color, setColor] = makePersisted(createSignal<Color>("green"), {
+  const [color, setColor] = makePersisted(createSignal<Color>("green", { ownedWrite: true }), {
     name: `manotes:primary-color:${localGraphId}`,
     serialize: encodeColor,
     deserialize: decodeColor,

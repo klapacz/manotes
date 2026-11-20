@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 /**
  * Only the public API was checked. The implementation has not been carefully reviewed.
  * AI agents must notify the user of this review gap before working on this file.
@@ -9,8 +10,8 @@ import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Filters } from "@manotes/shared/record/filters";
 import type { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { Option, Predicate } from "effect";
-import { Index, Show, createMemo, createSignal, createUniqueId, type JSX } from "solid-js";
-import { ChevronDown, ChevronRight, FunnelPlus, ListPlus, Pencil, Plus, X } from "lucide-solid";
+import { For, Show, createMemo, createSignal, createUniqueId } from "solid-js";
+import { ChevronDown, ChevronRight, FunnelPlus, ListPlus, Pencil, Plus, X } from "@lucide/solid";
 import { useFilters } from "../../lib/filters";
 import { cx } from "../../lib/cva";
 import { Button } from "../ui/button";
@@ -126,7 +127,7 @@ export function NestedStreamFilterEditor(props: {
                 size={expanded() ? "xs" : "icon-xs"}
                 class="min-w-0 font-medium"
                 aria-label={expanded() ? "Collapse filter details" : "Expand filter details"}
-                aria-expanded={expanded()}
+                aria-expanded={expanded() ? "true" : "false"}
                 aria-controls={treeId}
                 onClick={() => setExpanded((value) => !value)}
               >
@@ -218,7 +219,7 @@ function GroupRows(props: GroupRowsProps) {
               : "flex min-w-0 flex-wrap items-center gap-2"
           }
         >
-          <Index each={props.expressions}>
+          <For keyed={false} each={props.expressions}>
             {(expression, index) => (
               <ExpressionRow
                 expression={expression()}
@@ -249,7 +250,7 @@ function GroupRows(props: GroupRowsProps) {
                 onFocusFilter={props.onFocusFilter}
               />
             )}
-          </Index>
+          </For>
         </div>
         <Show when={detailed()}>
           <div

@@ -1,5 +1,5 @@
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
-import { useAtomSubscribe } from "@effect/atom-solid";
+import { useAtomSubscribe } from "../../lib/atom-solid";
 import { DateTime, Effect, Option, Stream } from "effect";
 import { AsyncResult } from "effect/reactivity";
 import { nanoid } from "nanoid";

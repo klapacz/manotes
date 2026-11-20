@@ -1,64 +1,53 @@
-import { createSignal, onCleanup, onMount, splitProps } from "solid-js";
-import { CircleCheck, Info, LoaderCircle, OctagonX, TriangleAlert } from "lucide-solid";
-import { Toaster as Sonner, type ToasterProps } from "somoto";
+import {
+  ToastRegion,
+  Toast,
+  ToastTitle,
+  ToastDescription,
+  ToastAction,
+  createToaster,
+} from "@ui-sdk/solid/toast";
+import { CircleCheck, Info, LoaderCircle, OctagonX, TriangleAlert } from "@lucide/solid";
+import { Show, Switch, Match } from "solid-js";
+import type { ComponentProps } from "@solidjs/web";
+import { buttonVariants } from "./button";
 
-// Adapted from shadcn-solid using @kobalte/core 0.13.11 / solid-js 1.9.10 / somoto 0.0.2.
-// Source: .reference/shadcn-solid/apps/docs/src/registry/ui/sonner.tsx
-// Why: this repo was missing the shared shadcn-solid toast/toaster wrapper.
-// Modifications: replaced Kobalte color-mode usage with the app's existing data-kb-theme tracking, enabled richColors by default, and remapped Sonner CSS variables to Manotes design tokens.
-const readTheme = (): "light" | "dark" => {
-  return document.documentElement.dataset.kbTheme === "dark" ? "dark" : "light";
-};
+export const toast = createToaster();
 
-export const Toaster = (props: ToasterProps) => {
-  const [local, rest] = splitProps(props, ["style", "theme"]);
-  const [theme, setTheme] = createSignal<"light" | "dark">("light");
-
-  onMount(() => {
-    const syncTheme = () => setTheme(readTheme());
-
-    syncTheme();
-
-    const observer = new MutationObserver(syncTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-kb-theme"],
-    });
-
-    onCleanup(() => observer.disconnect());
-  });
-
+export function Toaster(props: ComponentProps<typeof ToastRegion>) {
   return (
-    <Sonner
-      richColors
-      theme={local.theme ?? theme()}
-      icons={{
-        success: <CircleCheck class="size-4" />,
-        info: <Info class="size-4" />,
-        warning: <TriangleAlert class="size-4" />,
-        error: <OctagonX class="size-4" />,
-        loading: <LoaderCircle class="size-4 animate-spin" />,
-      }}
-      style={{
-        "--normal-bg": "var(--color-bg-subtle)",
-        "--normal-text": "var(--color-fg)",
-        "--normal-border": "var(--color-border-subtle)",
-        "--success-bg": "var(--color-success-bg-subtle)",
-        "--success-border": "var(--color-success-border-subtle)",
-        "--success-text": "var(--color-success-fg)",
-        "--info-bg": "var(--color-primary-bg-subtle)",
-        "--info-border": "var(--color-primary-border-subtle)",
-        "--info-text": "var(--color-primary-fg)",
-        "--warning-bg": "var(--color-warning-bg-subtle)",
-        "--warning-border": "var(--color-warning-border-subtle)",
-        "--warning-text": "var(--color-warning-fg)",
-        "--error-bg": "var(--color-error-bg-subtle)",
-        "--error-border": "var(--color-error-border-subtle)",
-        "--error-text": "var(--color-error-fg)",
-        "--border-radius": "var(--radius)",
-        ...local.style,
-      }}
-      {...rest}
-    />
+    <ToastRegion
+      toaster={toast}
+      expanded
+      {...props}
+      class="fixed right-4 bottom-4 z-100 w-89 max-w-[calc(100vw-2rem)] [&>ol]:flex [&>ol]:flex-col-reverse [&>ol]:gap-2"
+    >
+      {(item) => (
+        <Toast class="flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-subtle p-4 text-[13px] text-fg shadow-md select-none [translate:var(--toast-swipe-x,0px)_var(--toast-swipe-y,0px)] data-[type=success]:border-success-border-subtle data-[type=success]:bg-success-bg-subtle data-[type=success]:text-success-fg data-[type=error]:border-error-border-subtle data-[type=error]:bg-error-bg-subtle data-[type=error]:text-error-fg data-[type=warning]:border-warning-border-subtle data-[type=warning]:bg-warning-bg-subtle data-[type=warning]:text-warning-fg data-[type=info]:border-primary-border-subtle data-[type=info]:bg-primary-bg-subtle data-[type=info]:text-primary-fg">
+          <span class="shrink-0">
+            <Switch fallback={<Info class="size-4" />}>
+              <Match when={item.type === "success"}>
+                <CircleCheck class="size-4" />
+              </Match>
+              <Match when={item.type === "error"}>
+                <OctagonX class="size-4" />
+              </Match>
+              <Match when={item.type === "warning"}>
+                <TriangleAlert class="size-4" />
+              </Match>
+              <Match when={item.type === "loading"}>
+                <LoaderCircle class="size-4 animate-spin" />
+              </Match>
+            </Switch>
+          </span>
+          <div class="grid flex-1 gap-1">
+            <ToastTitle class="font-medium" />
+            <ToastDescription class="text-xs" />
+          </div>
+          <Show when={item.action}>
+            <ToastAction class={buttonVariants({ size: "xs" })} />
+          </Show>
+        </Toast>
+      )}
+    </ToastRegion>
   );
-};
+}

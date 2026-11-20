@@ -1,8 +1,8 @@
-import { useAtom, useAtomValue } from "@effect/atom-solid";
+import { useAtom, useAtomValue } from "../lib/atom-solid";
 import { createFileRoute, redirect, Navigate } from "@tanstack/solid-router";
 import { Match, Schema } from "effect";
 import { Alert, AlertDescription } from "../components/ui/alert";
-import { AppForm, useAppForm } from "../components/ui/form";
+import { AppForm, useAppForm, afterSubmit } from "../components/ui/form";
 import { MatchAsyncResult, MatchTag, createSyncedAtom } from "../lib";
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { GraphAccessCommands } from "../lib/graph-access/commands";
@@ -60,9 +60,7 @@ function RouteComponent() {
       password: "",
       remember: false,
     },
-    validators: {
-      onDynamic: UnlockGraphFormSchema,
-    },
+    validators: [afterSubmit(UnlockGraphFormSchema)],
     async onSubmit({ value }) {
       await unlockGraph({
         graph: data().graph,
@@ -123,11 +121,11 @@ function RouteComponent() {
           )}
         />
 
-        <form.AppField name="password">
+        <form.Field name="password">
           {(field) => <field.TextField type="password" label="Password" autofocus />}
-        </form.AppField>
+        </form.Field>
 
-        <form.AppField name="remember">
+        <form.Field name="remember">
           {(field) => (
             <div class="flex items-start gap-3">
               <input
@@ -135,7 +133,7 @@ function RouteComponent() {
                 class="mt-1 size-4"
                 type="checkbox"
                 name={field().name}
-                checked={field().state.value}
+                checked={field().value}
                 aria-describedby="remember-graph-description"
                 onChange={(event) => field().handleChange(event.currentTarget.checked)}
                 onBlur={() => field().handleBlur()}
@@ -151,7 +149,7 @@ function RouteComponent() {
               </div>
             </div>
           )}
-        </form.AppField>
+        </form.Field>
 
         <form.SubmitButton>Unlock graph</form.SubmitButton>
       </AppForm>

@@ -1,4 +1,4 @@
-import { useAtomValue } from "@effect/atom-solid";
+import { useAtomValue } from "../lib/atom-solid";
 import { createFileRoute, Navigate, Outlet } from "@tanstack/solid-router";
 import { GraphNavbar } from "../components/graph-navbar";
 import { MatchAsyncResult, MatchTag, createSyncedAtom } from "../lib";

@@ -5,9 +5,13 @@ import {
   untrack,
   useContext,
   type Accessor,
-  type JSX,
 } from "solid-js";
-import { VList, type VListHandle } from "virtua/solid";
+import type { JSX } from "@solidjs/web";
+import {
+  VList,
+  type VListHandle,
+  type CustomItemComponentProps,
+} from "@manotes/virtua-solid2-source/solid";
 
 /** The enclosing row's state and actions. */
 export interface RowContext {
@@ -28,6 +32,8 @@ export function Root<Item, Key>(props: {
   retained: readonly Key[];
   children: (item: Item) => JSX.Element;
 }) {
+  // The Solid compiler assigns the component ref.
+  // oxlint-disable-next-line no-unassigned-vars
   let list: VListHandle | undefined;
   const [scrollIndex, setScrollIndex] = createSignal(0);
 
@@ -93,18 +99,17 @@ export function Root<Item, Key>(props: {
       },
     };
 
+    // SAFETY: Virtua supplies its generated callback ref; the item element here is always a div.
     return (
-      <div ref={item.ref} style={item.style}>
-        <RowContext.Provider value={context}>{props.children(row)}</RowContext.Provider>
+      <div ref={item.ref as (element: HTMLDivElement) => void} style={item.style}>
+        <RowContext value={context}>{props.children(row)}</RowContext>
       </div>
     );
   };
 
   return (
     <VList
-      ref={(value) => {
-        list = value;
-      }}
+      ref={list}
       data={props.data}
       keepMounted={retained()}
       itemSize={220}
@@ -129,10 +134,6 @@ export function useRow(): RowContext {
   return context;
 }
 
-type ItemProps = {
-  index: number;
-  style: JSX.CSSProperties;
-  ref: (element: HTMLDivElement) => void;
-};
+type ItemProps = CustomItemComponentProps;
 
 export * as VirtualList from "./virtual-list";

@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "preserve",
-    "jsxImportSource": "solid-js",
+    "jsxImportSource": "@solidjs/web",
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     // vite/client: Vite's import.meta.env and asset imports
     // vite-plugin-pwa/client: virtual:pwa-register module type

@@ -1,5 +1,5 @@
 import { RecordFormat } from "@manotes/shared/record/format";
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../../lib/atom-solid";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
@@ -105,7 +105,7 @@ export function EntryValue(props: { readonly entry: RecordPropsEntries.Entry }) 
 
   return (
     <span
-      classList={{
+      class={{
         "text-error-fg": invalid() || required(),
         "text-warning-fg": unexpected() && !invalid() && !required(),
       }}

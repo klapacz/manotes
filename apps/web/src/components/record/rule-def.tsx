@@ -1,4 +1,4 @@
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../../lib/atom-solid";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";

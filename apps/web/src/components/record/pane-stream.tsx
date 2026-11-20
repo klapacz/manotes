@@ -1,16 +1,8 @@
+import type { ComponentProps } from "@solidjs/web";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { Effect, Equal, Option, Stream, Predicate } from "effect";
 import { Atom } from "effect/reactivity";
-import {
-  Show,
-  createEffect,
-  createMemo,
-  createSignal,
-  getOwner,
-  onMount,
-  on,
-  type ComponentProps,
-} from "solid-js";
+import { Show, createEffect, createMemo, createSignal, getOwner, onSettled } from "solid-js";
 import { VirtualList } from "../../lib/virtual-list";
 import type { RecordSchema } from "@manotes/shared/record.schema";
 import {
@@ -39,7 +31,7 @@ export function PaneStream(props: ComponentProps<"section">) {
   const [refreshToken, setRefreshToken] = createSignal(0);
 
   // Display-only pane changes (the snippet view) must not restart the query.
-  const query = createMemo(() => ({ filter: pane().filter, sort: pane().sort }), undefined, {
+  const query = createMemo(() => ({ filter: pane().filter, sort: pane().sort }), {
     equals: Equal.equals,
   });
 
@@ -59,13 +51,16 @@ export function PaneStream(props: ComponentProps<"section">) {
   // refresh-gated pinned snapshot on top of the matching rows. Each successful
   // emission has already preloaded and booted the first editor slots.
   const stateAtom = bindRt((rt) => {
+    // Resolve the Solid context before Effect restarts this stream on refresh.
+    const pool = poolAtom();
+
     return rt.atom((get) => {
       const query = get(queryAtom);
       get(refreshTokenAtom);
 
       return Stream.unwrap(
         Effect.gen(function* () {
-          const pool = yield* get.result(poolAtom(), { suspendOnWaiting: true });
+          const editors = yield* get.result(pool, { suspendOnWaiting: true });
           const changes = yield* RecordStreamCache.Service.use((cache) => cache.changes(query));
 
           return changes.pipe(
@@ -73,9 +68,9 @@ export function PaneStream(props: ComponentProps<"section">) {
             // `scan` emits its initial accumulator before the first SQL result;
             // keep Success tied to real rows, after the first result is preloaded.
             Stream.drop(1),
-            Stream.map((snapshot) => ({ ...snapshot, pool })),
+            Stream.map((snapshot) => ({ ...snapshot, pool: editors })),
             Stream.mapEffect((state) => {
-              return Effect.scoped(pool.preload(preloadRecordIds(state.items))).pipe(
+              return Effect.scoped(editors.preload(preloadRecordIds(state.items))).pipe(
                 Effect.as(state),
               );
             }),
@@ -228,14 +223,12 @@ export function PaneStream(props: ComponentProps<"section">) {
   ]);
 
   createEffect(
-    on(
-      () => focus.activeId(),
-      (id) => {
-        const recordId = Focus.recordIn(pane().paneId, id);
+    () => ({ id: focus.activeId(), paneId: pane().paneId }),
+    ({ id, paneId }) => {
+      const recordId = Focus.recordIn(paneId, id);
 
-        if (recordId) setLastFocused(recordId);
-      },
-    ),
+      if (recordId) setLastFocused(recordId);
+    },
   );
 
   return (
@@ -283,7 +276,7 @@ function RevealedRows(props: {
 }) {
   const [revealed, setRevealed] = createSignal(false);
 
-  onMount(() => {
+  onSettled(() => {
     // Double rAF: the first frame commits opacity:0 (and the booted editors'
     // layout) to pixels, the second flips to opacity:1 so the CSS fade-in
     // actually animates.
@@ -292,10 +285,12 @@ function RevealedRows(props: {
 
   return (
     <div
-      class="min-h-0 flex-1 transition-opacity duration-150 ease-out"
-      classList={{
-        "opacity-0": !revealed(),
-      }}
+      class={[
+        "min-h-0 flex-1 transition-opacity duration-150 ease-out",
+        {
+          "opacity-0": !revealed(),
+        },
+      ]}
     >
       <VirtualList.Root data={props.rows} key={RecordStream.recordId} retained={props.retained}>
         {(item) => <PaneStreamRow.Root row={item} onClearDraft={props.onClearDraft} />}

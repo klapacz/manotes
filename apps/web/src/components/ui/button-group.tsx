@@ -1,4 +1,5 @@
-import { splitProps, type ComponentProps, type JSX } from "solid-js";
+import { omit } from "solid-js";
+import type { ComponentProps, JSX } from "@solidjs/web";
 import { cx } from "../../lib/cva";
 
 // Adapted from shadcn/ui at 4233ed1caded8c38f4bc14b14afe1f93ebcaf966.
@@ -6,7 +7,7 @@ import { cx } from "../../lib/cva";
 // Why: join related inputs, pickers, and action buttons into one control.
 // Modifications: ported to Solid with the local cx helper; kept horizontal grouping only.
 export function Root(props: ComponentProps<"div">): JSX.Element {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <div

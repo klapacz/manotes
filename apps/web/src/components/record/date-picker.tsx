@@ -1,5 +1,5 @@
 import { RecordSchema } from "@manotes/shared/record.schema";
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../../lib/atom-solid";
 import { DateTime, Effect, Exit } from "effect";
 import { MaterializedEventService, bindRt } from "../../lib";
 import { DateCommand } from "./date-command";

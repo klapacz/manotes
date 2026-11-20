@@ -171,7 +171,7 @@ function ValueControl(props: RowProps) {
       <Picker.Trigger
         variant="ghost"
         size="xs"
-        aria-invalid={invalid() || required()}
+        aria-invalid={invalid() || required() ? "true" : "false"}
         intent={invalid() || required() ? "error" : unexpected() ? "warning" : undefined}
       >
         <RecordProps.EntryValue entry={{ ...props.prop, group: props.group }} />

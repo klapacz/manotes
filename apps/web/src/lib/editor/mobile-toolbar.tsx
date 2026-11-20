@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import {
   Bold,
   Brackets,
@@ -10,19 +11,19 @@ import {
   List,
   Redo2,
   Undo2,
-} from "lucide-solid";
+} from "@lucide/solid";
 import { defineFocusChangeHandler } from "prosekit/core";
 import { toggleMark } from "prosekit/pm/commands";
 import type { Command } from "prosekit/pm/state";
 import type { EditorView } from "prosekit/pm/view";
-import { useEditor, useEditorDerivedValue, useExtension } from "prosekit/solid";
+import { useEditor, useEditorDerivedValue, useExtension } from "@manotes/prosekit-solid";
 import {
   createDedentListCommand,
   createIndentListCommand,
   createToggleListCommand,
 } from "prosemirror-flat-list";
-import { createEffect, createSignal, onCleanup, Show, type JSX } from "solid-js";
-import { Portal } from "solid-js/web";
+import { createEffect, createSignal, onCleanup, Show } from "solid-js";
+import { Portal } from "@solidjs/web";
 import { redoCommand, undoCommand } from "y-prosemirror";
 import type { LinkEdit } from "./link/menu";
 
@@ -64,23 +65,25 @@ function Toolbar(props: { view: EditorView; linkEdit: LinkEdit; onDismiss: () =>
   }));
 
   // The `$graph` shell sizes itself from these.
-  createEffect(() => {
-    const { height } = viewport();
-    const root = document.documentElement.style;
+  createEffect(
+    () => viewport().height,
+    (height) => {
+      const root = document.documentElement.style;
 
-    root.setProperty("--app-height", `${height}px`);
-    root.setProperty("--editor-toolbar-height", `${HEIGHT}px`);
+      root.setProperty("--app-height", `${height}px`);
+      root.setProperty("--editor-toolbar-height", `${HEIGHT}px`);
 
-    // A keyboard can pan the page; the shrunken shell needs it at the top.
-    if (window.scrollY !== 0) window.scrollTo(0, 0);
+      // A keyboard can pan the page; the shrunken shell needs it at the top.
+      if (window.scrollY !== 0) window.scrollTo(0, 0);
 
-    // Focus revealed the caret before the keyboard shrank the shell.
-    requestAnimationFrame(() => {
-      const { view } = props;
+      // Focus revealed the caret before the keyboard shrank the shell.
+      requestAnimationFrame(() => {
+        const { view } = props;
 
-      if (view.hasFocus() && !view.composing) view.dispatch(view.state.tr.scrollIntoView());
-    });
-  });
+        if (view.hasFocus() && !view.composing) view.dispatch(view.state.tr.scrollIntoView());
+      });
+    },
+  );
 
   onCleanup(() => {
     const root = document.documentElement.style;

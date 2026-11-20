@@ -1,7 +1,8 @@
-import { useAtom } from "@effect/atom-solid";
+import type { ValidComponent } from "@solidjs/web";
+import { useAtom } from "../../lib/atom-solid";
 import { Navigate } from "@tanstack/solid-router";
 import { Schema } from "effect";
-import { createSignal, splitProps, type ValidComponent } from "solid-js";
+import { createSignal, omit } from "solid-js";
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
@@ -16,7 +17,7 @@ import {
   DialogTrigger,
   type DialogTriggerProps,
 } from "../../components/ui/dialog";
-import { AppForm, useAppForm } from "../../components/ui/form";
+import { AppForm, useAppForm, afterSubmit } from "../../components/ui/form";
 import { MatchAsyncResult, MatchTag } from "../../lib";
 import { GraphAccessCommands } from "../../lib/graph-access/commands";
 import { LocalRegistry } from "../../lib/graph-access/local-registry";
@@ -37,15 +38,14 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
   });
 
   // SAFETY: Erasing the trigger's polymorphic parameter lets Solid remove graph; remaining props are forwarded unchanged to DialogTrigger.
-  const [local, triggerProps] = splitProps(props as Props, ["graph"]);
+  const local = props as Props;
+  const triggerProps = omit(local, "graph");
 
   const form = useAppForm(() => ({
     defaultValues: {
       password: "",
     },
-    validators: {
-      onDynamic: UploadGraphFormSchema,
-    },
+    validators: [afterSubmit(UploadGraphFormSchema)],
     async onSubmit({ value }) {
       await uploadGraph({
         localGraphId: props.graph.localGraphId,
@@ -109,7 +109,7 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
               )}
             />
 
-            <form.AppField name="password">
+            <form.Field name="password">
               {(field) => (
                 <field.TextField
                   type="password"
@@ -118,7 +118,7 @@ export function UploadGraphDialog<T extends ValidComponent = typeof Button>(prop
                   autofocus
                 />
               )}
-            </form.AppField>
+            </form.Field>
 
             <DialogFooter>
               <Button

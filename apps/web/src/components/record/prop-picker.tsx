@@ -1,9 +1,10 @@
+import type { JSX } from "@solidjs/web";
 import { RecordFormat } from "@manotes/shared/record/format";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { createWritableMemo } from "@solid-primitives/memo";
 import { Match, Option } from "effect";
-import { Match as Case, Show, Switch, type JSX } from "solid-js";
+import { Match as Case, Show, Switch } from "solid-js";
 import { PropQuery } from "./prop-query";
 import { Command, CommandItem, CommandList } from "../ui/command";
 import { UseDefaultIcon, ArrowUpRightIcon } from "../icons";
@@ -145,12 +146,10 @@ function NumberInput(props: ValueProps) {
   };
 
   return (
-    <Command shouldFilter={false}>
+    <Command filter={false} query={text()} onQueryChange={setText}>
       <Picker.Input
         aria-label={props.label}
         placeholder="Enter a number…"
-        value={text()}
-        onValueChange={setText}
         disabled={props.disabled}
       />
       {props.children(
@@ -194,14 +193,8 @@ function TextInput(props: ValueProps) {
   };
 
   return (
-    <Command shouldFilter={false}>
-      <Picker.Input
-        aria-label={props.label}
-        placeholder="Enter text…"
-        value={text()}
-        onValueChange={setText}
-        disabled={props.disabled}
-      />
+    <Command filter={false} query={text()} onQueryChange={setText}>
+      <Picker.Input aria-label={props.label} placeholder="Enter text…" disabled={props.disabled} />
       {props.children(
         <>
           <Picker.Apply
@@ -290,7 +283,7 @@ export function StateLabel(props: { state: Attrs.ValueState<AttrsSchema.PropVal>
 
 export function Unavailable(props: { children: JSX.Element }) {
   return (
-    <Command shouldFilter={false}>
+    <Command filter={false}>
       <CommandList>
         <p class="px-3 py-2 text-sm text-fg-subtle">Property is unavailable.</p>
         {props.children}

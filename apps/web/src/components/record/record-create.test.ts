@@ -25,7 +25,7 @@ vi.mock("../../lib", () => ({
   },
 }));
 
-vi.mock("@effect/atom-solid", () => ({
+vi.mock("../../lib/atom-solid", () => ({
   useAtom: (
     bound: () => (
       input: CreateInput,
@@ -66,7 +66,7 @@ vi.mock("@effect/atom-solid", () => ({
   },
 }));
 
-vi.mock("somoto", () => ({ toast: { promise: <T>(promise: Promise<T>) => promise } }));
+vi.mock("../ui/sonner", () => ({ toast: { promise: <T>(promise: Promise<T>) => promise } }));
 
 describe("blank record creation", () => {
   it("creates a rule with default Notes targets and an empty expectations map", () => {

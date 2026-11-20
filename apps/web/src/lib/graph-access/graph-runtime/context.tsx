@@ -1,4 +1,5 @@
-import { createContext, useContext, type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { createContext, useContext } from "solid-js";
 import { Types } from "effect";
 import type { State } from "./manager";
 import { PrimaryColor } from "../../primary-color";
@@ -13,7 +14,7 @@ export function Provider(props: { graph: () => Graph; children: JSX.Element }) {
   const primaryColor = PrimaryColor.use(() => props.graph().record.localGraphId);
   const graph = () => ({ ...props.graph(), primaryColor: primaryColor() });
 
-  return <GraphContext.Provider value={graph}>{props.children}</GraphContext.Provider>;
+  return <GraphContext value={graph}>{props.children}</GraphContext>;
 }
 
 export function use() {

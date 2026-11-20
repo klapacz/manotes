@@ -1,231 +1,79 @@
-import type { ComponentProps } from "solid-js";
-import { splitProps } from "solid-js";
-import { Command as CommandPrimitive } from "cmdk-solid";
-import { Dialog } from "@kobalte/core";
-
+import type { StyledProps } from "../../lib/cva";
+import { omit } from "solid-js";
+import type { ComponentProps } from "@solidjs/web";
+import * as SDK from "@ui-sdk/solid/command";
 import { cx } from "../../lib/cva";
 import { SearchIcon } from "../icons";
-
-export type CommandProps = ComponentProps<typeof CommandPrimitive>;
 
 export const commandSurfaceClass = "bg-bg text-fg overflow-hidden rounded-md";
 
 export const commandRootClass = `${commandSurfaceClass} flex h-full w-full flex-col`;
-
-export const commandDialogClass =
-  "bg-bg text-fg [&_[cmdk-group-heading]]:text-fg-subtle flex h-full w-full flex-col overflow-hidden rounded-md **:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5";
 
 export const commandListClass =
   "max-h-[var(--command-list-height,300px)] scroll-py-1 overflow-x-hidden overflow-y-auto";
 
 export const commandEmptyClass = "py-6 text-center text-sm";
 
-export const commandGroupHeadingClass = "text-fg-subtle px-2 py-1.5 text-xs font-medium";
-
 export const commandItemBaseClass =
-  "[&_svg:not([class*='text-'])]:text-fg-subtle relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
+  "[&_svg:not([class*='text-'])]:text-fg-subtle relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
 
 export const commandItemSelectedClass =
-  "data-[selected=true]:bg-control-hover data-[selected=true]:text-fg";
+  "data-[highlighted]:bg-control-hover data-[highlighted]:text-fg";
 
-export const Command = (props: CommandProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+export type CommandProps = StyledProps<typeof SDK.Command>;
 
-  return (
-    <CommandPrimitive
-      loop
-      data-slot="command"
-      class={cx(commandRootClass, props.class)}
-      {...rest}
-    />
-  );
-};
+export function Command(props: CommandProps) {
+  return <SDK.Command {...omit(props, "class")} loop class={cx(commandRootClass, props.class)} />;
+}
 
-export type CommandDialogProps = ComponentProps<typeof CommandPrimitive.Dialog> & {
-  title?: string;
-  description?: string;
-  onCloseAutoFocus?: (event: Event) => void;
-};
+export type CommandInputProps = StyledProps<typeof SDK.CommandInput>;
 
-export const CommandDialog = (props: CommandDialogProps) => {
-  const [, dialogProps, rest] = splitProps(
-    props,
-    ["contentClassName", "overlayClassName", "class", "container", "onCloseAutoFocus"],
-    [
-      "open",
-      "defaultOpen",
-      "onOpenChange",
-      "id",
-      "modal",
-      "preventScroll",
-      "forceMount",
-      "translations",
-    ],
-  );
-
-  // Composition from cmdk-solid@1.1.2 dist/index.jsx (Dialog), using the app's
-  // Kobalte version to expose close autofocus. Keep our existing markup and styles.
-  return (
-    <Dialog.Root {...dialogProps}>
-      <Dialog.Portal mount={props.container}>
-        <Dialog.Overlay
-          cmdk-overlay=""
-          class={cx(
-            "data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 bg-overlay fixed inset-0 z-50",
-            props.overlayClassName,
-          )}
-        />
-        <Dialog.Content
-          aria-label={props.label}
-          cmdk-dialog=""
-          onCloseAutoFocus={props.onCloseAutoFocus}
-          class={cx(
-            "bg-bg data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 data-[closed]:zoom-out-95 data-[expanded]:zoom-in-95 fixed left-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-hidden rounded-lg shadow-lg duration-200 sm:max-w-lg",
-            props.contentClassName,
-          )}
-        >
-          <CommandPrimitive
-            loop
-            data-slot="command-dialog"
-            class={cx(commandDialogClass, props.class)}
-            {...rest}
-          />
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
-  );
-};
-
-export type CommandInputProps = ComponentProps<typeof CommandPrimitive.Input>;
-
-export const CommandInput = (props: CommandInputProps) => {
-  const [, rest] = splitProps(props, ["class"]);
-
+export function CommandInput(props: CommandInputProps) {
   return (
     <div
       data-slot="command-input-wrapper"
       class="border-border flex h-9 items-center gap-2 border-b px-3"
     >
       <SearchIcon class="size-4 shrink-0 opacity-50" />
-      <CommandPrimitive.Input
-        data-slot="command-input"
+      <SDK.CommandInput
+        {...omit(props, "class")}
         class={cx(
           "placeholder:text-fg-subtle flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50",
           props.class,
         )}
-        {...rest}
       />
     </div>
   );
-};
+}
 
-export type CommandListProps = ComponentProps<typeof CommandPrimitive.List>;
-
-export const CommandList = (props: CommandListProps) => {
-  const [, rest] = splitProps(props, ["class", "children"]);
-
+export function CommandList(props: StyledProps<typeof SDK.CommandList>) {
   return (
-    <CommandPrimitive.List
-      data-slot="command-list"
+    <SDK.CommandList
+      {...omit(props, "class", "children")}
       class={cx("overflow-hidden", props.class)}
-      {...rest}
     >
       <div class="flex max-h-[var(--command-list-height,300px)] flex-col">{props.children}</div>
-    </CommandPrimitive.List>
+    </SDK.CommandList>
   );
-};
+}
 
 export function CommandScroll(props: ComponentProps<"div">) {
-  const [, rest] = splitProps(props, ["class"]);
-
   return (
     <div
       data-command-scroll=""
+      {...omit(props, "class")}
       class={cx(commandListClass, "min-h-0 p-1", props.class)}
-      {...rest}
     />
   );
 }
 
-export type CommandEmptyProps = ComponentProps<typeof CommandPrimitive.Empty>;
+export type CommandItemProps = StyledProps<typeof SDK.CommandItem>;
 
-export const CommandEmpty = (props: CommandEmptyProps) => {
-  const [, rest] = splitProps(props, ["class"]);
-
+export function CommandItem(props: CommandItemProps) {
   return (
-    <CommandPrimitive.Empty
-      data-slot="command-empty"
-      class={cx(commandEmptyClass, props.class)}
-      {...rest}
-    />
-  );
-};
-
-export type CommandLabelProps = ComponentProps<"div">;
-
-export const CommandLabel = (props: CommandLabelProps) => {
-  const [, rest] = splitProps(props, ["class"]);
-
-  return (
-    <div data-slot="command-label" class={cx(commandGroupHeadingClass, props.class)} {...rest} />
-  );
-};
-
-export type CommandGroupProps = ComponentProps<typeof CommandPrimitive.Group>;
-
-export const CommandGroup = (props: CommandGroupProps) => {
-  const [, rest] = splitProps(props, ["class"]);
-
-  return (
-    <CommandPrimitive.Group
-      data-slot="command-group"
-      class={cx(
-        "text-fg [&_[cmdk-group-heading]]:text-fg-subtle overflow-hidden p-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium",
-        props.class,
-      )}
-      {...rest}
-    />
-  );
-};
-
-export type CommandSeparatorProps = ComponentProps<typeof CommandPrimitive.Separator>;
-
-export const CommandSeparator = (props: CommandSeparatorProps) => {
-  const [, rest] = splitProps(props, ["class"]);
-
-  return (
-    <CommandPrimitive.Separator
-      data-slot="command-separator"
-      class={cx("bg-border -mx-1 h-px", props.class)}
-      {...rest}
-    />
-  );
-};
-
-export type CommandItemProps = ComponentProps<typeof CommandPrimitive.Item>;
-
-export const CommandItem = (props: CommandItemProps) => {
-  const [, rest] = splitProps(props, ["class"]);
-
-  return (
-    <CommandPrimitive.Item
-      data-slot="command-item"
+    <SDK.CommandItem
+      {...omit(props, "class")}
       class={cx(commandItemBaseClass, commandItemSelectedClass, props.class)}
-      {...rest}
     />
   );
-};
-
-export type CommandShortcutProps = ComponentProps<"span">;
-
-export const CommandShortcut = (props: CommandShortcutProps) => {
-  const [, rest] = splitProps(props, ["class"]);
-
-  return (
-    <span
-      data-slot="command-shortcut"
-      class={cx("text-fg-subtle ml-auto text-xs tracking-widest", props.class)}
-      {...rest}
-    />
-  );
-};
+}

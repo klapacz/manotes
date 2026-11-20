@@ -1,4 +1,5 @@
-import type { ComponentProps } from "solid-js";
+import type { ComponentProps } from "@solidjs/web";
+
 import { AudioMemo } from "../audio-memo";
 import { Focus } from "./focus";
 import { PaneHeader, PaneShell } from "./shared";

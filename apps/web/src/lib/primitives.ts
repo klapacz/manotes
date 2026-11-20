@@ -1,19 +1,11 @@
+import type { JSX } from "@solidjs/web";
 /* eslint-disable anti-slop/no-chained-type-assertions, anti-slop/require-safety-comment-for-type-assertion -- Solid accepts reactive accessors as JSX; generic tag dispatch needs type bridges. */
 /* eslint-disable anti-slop-effect/no-manual-tag-comparison, anti-slop-effect/no-manual-tagged-construction -- Keep direct dispatch and plain tagged states in these reactive rendering helpers. */
-import { useAtom, useAtomSet, RegistryContext } from "@effect/atom-solid";
+import { useAtom, useAtomValue, RegistryContext } from "./atom-solid";
 import { Match, Types } from "effect";
 import { AsyncResult, Atom } from "effect/reactivity";
-import {
-  createEffect,
-  createMemo,
-  on,
-  onCleanup,
-  untrack,
-  useContext,
-  type Accessor,
-  type JSX,
-} from "solid-js";
-import { createStore, reconcile } from "solid-js/store";
+import { createMemo, createProjection, untrack, useContext, type Accessor } from "solid-js";
+import { createSyncedAtom as syncAtom } from "./atom-bridge";
 
 export interface MatchTagProps<E extends { readonly _tag: string }> {
   readonly when: E;
@@ -29,11 +21,11 @@ export interface MatchTagProps<E extends { readonly _tag: string }> {
 export function MatchTag<E extends { readonly _tag: string }>(
   props: MatchTagProps<E>,
 ): JSX.Element {
-  const stateValue = createMemo(() => props.when, undefined, { name: "tagged value" });
+  const stateValue = createMemo(() => props.when, { name: "tagged value" });
 
   const state = props.keyed
     ? stateValue
-    : createMemo(stateValue, undefined, {
+    : createMemo(stateValue, {
         equals: (a, b) => a._tag === b._tag,
         name: "tagged branch",
       });
@@ -50,15 +42,17 @@ export function MatchTag<E extends { readonly _tag: string }>(
 
       // Outgoing consumers can still read during a branch change (for example,
       // a portalled graph menu while locking). Keep their value on the old tag.
-      const branchValue = createMemo((previous: E) => {
-        const next = stateValue();
+      const branchValue = createMemo(
+        (previous: E) => {
+          const next = stateValue();
 
-        return next._tag === current._tag ? next : previous;
-      }, current);
+          return next._tag === current._tag ? next : previous;
+        },
+        { loadingValue: current },
+      );
 
       return untrack(() => render(branchValue));
     },
-    undefined,
     { name: "value" },
   ) as unknown as JSX.Element;
 }
@@ -90,7 +84,6 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
         onDefect: (defect, result) => ({ _tag: "Defect" as const, defect, result }),
       });
     },
-    undefined,
     { name: "async result value" },
   );
 
@@ -106,7 +99,7 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
 
   const state = props.keyed
     ? stateValue
-    : createMemo(stateValue, undefined, {
+    : createMemo(stateValue, {
         equals: (a, b) => a._tag === b._tag,
         name: "async result branch",
       });
@@ -166,7 +159,6 @@ export function MatchAsyncResult<A, E>(props: MatchAsyncResultProps<A, E>): JSX.
         Match.exhaustive,
       );
     },
-    undefined,
     { name: "value" },
   ) as unknown as JSX.Element;
 }
@@ -175,29 +167,16 @@ export function createAtomStore<A, E>(
   atom: () => Atom.Atom<AsyncResult.AsyncResult<A, E>>,
   staticInitialValue: NoInfer<A>,
 ) {
-  const registry = useContext(RegistryContext);
-  // Keep a plain-object root so Solid Store can safely wrap it even when the
-  // atom value uses a custom prototype (Effect Option/Data/etc.). Updating the
-  // `value` property replaces the whole variant and avoids stale fields while
-  // still allowing `reconcile` to preserve nested plain-object/array structure.
-  const [store, setStore] = createStore<{ value: A }>({ value: staticInitialValue });
+  const result = useAtomValue(atom);
 
-  createEffect(() => {
-    const currentAtom = atom();
+  return createProjection<{ value: A }>(
+    () => {
+      const current = result();
 
-    const unsubscribe = registry.subscribe(
-      currentAtom,
-      (result) => {
-        if (result._tag !== "Success") return;
-        setStore("value", reconcile(result.value));
-      },
-      { immediate: true },
-    );
-
-    onCleanup(unsubscribe);
-  });
-
-  return store;
+      if (AsyncResult.isSuccess(current)) return { value: current.value };
+    },
+    { value: staticInitialValue },
+  );
 }
 
 export type AtomResultStore<A> =
@@ -206,31 +185,20 @@ export type AtomResultStore<A> =
   | { readonly _tag: "Error" };
 
 export function createAtomResultStore<A, E>(atom: () => Atom.Atom<AsyncResult.AsyncResult<A, E>>) {
-  const registry = useContext(RegistryContext);
-  const [store, setStore] = createStore<AtomResultStore<A>>({ _tag: "Loading" });
+  const result = useAtomValue(atom);
 
-  createEffect(() => {
-    const currentAtom = atom();
+  return createProjection<AtomResultStore<A>>(
+    () => {
+      const current = result();
 
-    const unsubscribe = registry.subscribe(
-      currentAtom,
-      (result) => {
-        Match.value(result).pipe(
-          Match.tag("Initial", () => setStore(reconcile({ _tag: "Loading" }))),
-          Match.tag("Success", (result) => {
-            return setStore(reconcile({ _tag: "Success", value: result.value }));
-          }),
-          Match.tag("Failure", () => setStore(reconcile({ _tag: "Error" }))),
-          Match.exhaustive,
-        );
-      },
-      { immediate: true },
-    );
-
-    onCleanup(unsubscribe);
-  });
-
-  return store;
+      return AsyncResult.match(current, {
+        onInitial: () => ({ _tag: "Loading" }),
+        onSuccess: ({ value }) => ({ _tag: "Success", value }),
+        onFailure: () => ({ _tag: "Error" }),
+      });
+    },
+    { _tag: "Loading" },
+  );
 }
 
 export function createAtomState<A>(initialValue: A) {
@@ -241,18 +209,5 @@ export function createAtomState<A>(initialValue: A) {
 }
 
 export function createSyncedAtom<A>(source: Accessor<A>) {
-  const atom = Atom.make(source());
-  const setAtom = useAtomSet(() => atom);
-
-  createEffect(
-    on(
-      source,
-      (value) => {
-        setAtom(value);
-      },
-      { defer: true },
-    ),
-  );
-
-  return atom;
+  return syncAtom(useContext(RegistryContext), source);
 }

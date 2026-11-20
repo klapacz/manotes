@@ -1,10 +1,10 @@
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../../lib/atom-solid";
 import { Link, Navigate } from "@tanstack/solid-router";
 import { GraphRegistryContract } from "@manotes/shared/graph-registry/contract";
 import { Effect, Schema } from "effect";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button, buttonVariants } from "../../components/ui/button";
-import { AppForm, useAppForm } from "../../components/ui/form";
+import { AppForm, useAppForm, afterSubmit } from "../../components/ui/form";
 import { MatchAsyncResult, MatchTag } from "../../lib";
 import { GraphAccessRuntime } from "../../lib/graph-access/runtime";
 import { GraphAccessCommandsProvision } from "../../lib/graph-access/commands/provision";
@@ -26,7 +26,7 @@ export function LocalOnlyCreateForm() {
 
   const form = useAppForm(() => ({
     defaultValues: { displayName: "" },
-    validators: { onDynamic: CreateLocalGraphFormSchema },
+    validators: [afterSubmit(CreateLocalGraphFormSchema)],
     async onSubmit({ value }) {
       await createGraph({ displayName: value.displayName });
     },
@@ -59,11 +59,11 @@ export function LocalOnlyCreateForm() {
         )}
       />
 
-      <form.AppField name="displayName">
+      <form.Field name="displayName">
         {(field) => (
           <field.TextField id="create-graph-name" label="Graph name" placeholder="work" autofocus />
         )}
-      </form.AppField>
+      </form.Field>
 
       <form.Subscribe selector={(state) => ({ isSubmitting: state.isSubmitting })}>
         {(state) => (

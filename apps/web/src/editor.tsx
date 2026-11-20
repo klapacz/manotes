@@ -1,8 +1,9 @@
+import type { JSX } from "@solidjs/web";
 import "./editor.css";
 
 import { createEditor, Priority, union, withPriority } from "prosekit/core";
-import { ProseKit } from "prosekit/solid";
-import { createEffect, createMemo, onCleanup, Show, type JSX } from "solid-js";
+import { ProseKit } from "@manotes/prosekit-solid";
+import { createEffect, createMemo, onCleanup, Show } from "solid-js";
 import * as Y from "yjs";
 import {
   defineYjsCommands,
@@ -75,13 +76,16 @@ function ReadyEditor(props: Props & { readonly doc: Y.Doc }) {
 
   const attrs = EditorAttrs.use({ doc: () => props.doc });
 
-  createEffect(() => {
-    if (!attrs.editable()) onCleanup(editor.use(defineReadonly()));
+  createEffect(attrs.editable, (editable) => {
+    if (!editable) return editor.use(defineReadonly());
   });
 
-  createEffect(() => {
-    EditorSearchHighlight.set(editor.view, props.search ?? "", props.backlinksTo);
-  });
+  createEffect(
+    () => ({ search: props.search ?? "", backlinksTo: props.backlinksTo }),
+    ({ search, backlinksTo }) => {
+      EditorSearchHighlight.set(editor.view, search, backlinksTo);
+    },
+  );
 
   const fid = Focus.useId();
 

@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/solid-router";
 import { Show } from "solid-js";
-import { useAtomValue } from "@effect/atom-solid";
+import { useAtomValue } from "../../lib/atom-solid";
 import { Button } from "../../components/ui/button";
 import { ListItem } from "../../components/ui/list";
 import { cx } from "../../lib/cva";

@@ -1,12 +1,14 @@
+import type { ComponentProps, JSX } from "@solidjs/web";
 import type { VariantProps } from "cva";
 import {
   createFormHook,
-  createFormHookContexts,
-  revalidateLogic,
+  getFormHookHelpers,
+  createValidator,
+  type FieldWithValue,
   type AnyFormApi,
 } from "@tanstack/solid-form";
-import type { Component, ComponentProps, ParentProps, JSX } from "solid-js";
-import { splitProps, Show } from "solid-js";
+import type { Component, ParentProps } from "solid-js";
+import { omit, Show } from "solid-js";
 
 import { Predicate, type Types } from "effect";
 import { cva } from "../../lib/cva";
@@ -38,7 +40,7 @@ export const formVariants = cva({
 export type FormProps = ComponentProps<"form"> & VariantProps<typeof formVariants>;
 
 export const Form = (props: FormProps) => {
-  const [, rest] = splitProps(props, ["class", "spacing"]);
+  const rest = omit(props, "class", "spacing");
 
   return (
     <form
@@ -52,29 +54,33 @@ export const Form = (props: FormProps) => {
   );
 };
 
-export const { fieldContext, formContext, useFieldContext, useFormContext } =
-  createFormHookContexts();
-
-const appValidationLogic = revalidateLogic();
+export const afterSubmit = createValidator({
+  triggers: [{ trigger: "change", when: ({ formApi }) => formApi.state.submissionAttempts > 0 }],
+});
 
 type AppTextFieldProps = Types.MergeRight<
-  Omit<TextFieldInputProps, "name" | "value" | "onInput" | "onBlur">,
-  { label: JSX.Element; description?: JSX.Element; id?: string }
+  Omit<TextFieldInputProps, "name" | "value" | "onValueChange" | "onInput" | "onBlur">,
+  {
+    field: () => FieldWithValue<string>;
+    label: JSX.Element;
+    description?: JSX.Element;
+    id?: string;
+  }
 >;
 
 function AppTextField(props: AppTextFieldProps) {
-  const field = useFieldContext<string>();
-  const messages = () => getErrorMessages(field().state.meta.errors);
-  const hasErrors = () => !field().state.meta.isValid;
-  const [, inputProps] = splitProps(props, ["label", "description", "id"]);
+  const field = props.field;
+  const messages = () => getErrorMessages(field().errors);
+  const hasErrors = () => field().meta.isInvalid;
+  const inputProps = omit(props, "field", "label", "description", "id");
 
   return (
     <TextField validationState={hasErrors() ? "invalid" : "valid"}>
       <TextFieldLabel>{props.label}</TextFieldLabel>
       <TextFieldInput
         name={field().name}
-        value={field().state.value}
-        onInput={(event) => field().handleChange(event.currentTarget.value)}
+        value={field().value}
+        onValueChange={(value) => field().handleChange(value)}
         onBlur={() => field().handleBlur()}
         {...inputProps}
       />
@@ -88,15 +94,20 @@ function AppTextField(props: AppTextFieldProps) {
 
 type AppFileFieldProps = Types.MergeRight<
   Omit<ComponentProps<"input">, "name" | "value" | "type" | "onChange" | "onBlur">,
-  { label: JSX.Element; description?: JSX.Element; id?: string }
+  {
+    field: () => FieldWithValue<File | null>;
+    label: JSX.Element;
+    description?: JSX.Element;
+    id?: string;
+  }
 >;
 
 function AppFileField(props: AppFileFieldProps) {
-  const field = useFieldContext<File | null>();
-  const messages = () => getErrorMessages(field().state.meta.errors);
-  const hasErrors = () => !field().state.meta.isValid;
+  const field = props.field;
+  const messages = () => getErrorMessages(field().errors);
+  const hasErrors = () => field().meta.isInvalid;
   const inputId = () => props.id ?? getFieldId(field().name);
-  const [, inputProps] = splitProps(props, ["label", "description", "id"]);
+  const inputProps = omit(props, "field", "label", "description", "id");
 
   return (
     <div class="grid w-full gap-2" data-invalid={hasErrors() ? "" : undefined}>
@@ -109,7 +120,7 @@ function AppFileField(props: AppFileFieldProps) {
         name={field().name}
         onChange={(event) => field().handleChange(event.currentTarget.files?.[0] ?? null)}
         onBlur={() => field().handleBlur()}
-        aria-invalid={hasErrors() || undefined}
+        aria-invalid={hasErrors() ? "true" : "false"}
         {...inputProps}
       />
       <Show when={props.description}>
@@ -126,7 +137,8 @@ type SubmitButtonProps = ButtonProps;
 
 function SubmitButton(props: SubmitButtonProps) {
   const form = useFormContext();
-  const [local, rest] = splitProps(props, ["children", "disabled"]);
+  const local = props;
+  const rest = omit(props, "children", "disabled");
 
   return (
     <form.Subscribe
@@ -145,44 +157,32 @@ function SubmitButton(props: SubmitButtonProps) {
   );
 }
 
-const appFormHook = createFormHook({
-  fieldContext,
-  formContext,
+const { fieldComponent } = getFormHookHelpers();
+
+export const { useAppForm, useFormContext } = createFormHook({
   fieldComponents: {
-    FileField: AppFileField,
-    TextField: AppTextField,
+    FileField: fieldComponent.strict(AppFileField, "field"),
+    TextField: fieldComponent.strict(AppTextField, "field"),
   },
-  formComponents: {
-    SubmitButton,
-  },
+  formComponents: { SubmitButton },
 });
-
-export const useAppForm: typeof appFormHook.useAppForm = (options) => {
-  return appFormHook.useAppForm(() => {
-    const next = options();
-
-    return {
-      ...next,
-      validationLogic: next.validationLogic ?? appValidationLogic,
-    };
-  });
-};
-
-export const withFieldGroup = appFormHook.withFieldGroup;
 
 export type AppFormProps = FormProps & {
   form: AnyFormApi;
   AppForm: Component<ParentProps>;
+  submit?: AnyFormApi["handleSubmit"];
 };
 
 export function AppForm(props: AppFormProps) {
-  const [local, rest] = splitProps(props, ["AppForm", "children", "form"]);
+  const local = props;
+  const rest = omit(props, "AppForm", "children", "form", "submit");
 
   return (
     <Form
+      novalidate
       onSubmit={(event) => {
         event.preventDefault();
-        void local.form.handleSubmit().catch((error) => {
+        void (local.submit ? local.submit() : local.form.handleSubmit()).catch((error) => {
           console.error("Failed to submit form.", error);
         });
       }}

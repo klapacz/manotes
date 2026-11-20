@@ -1,7 +1,6 @@
-import type { DropdownMenuTriggerProps } from "@kobalte/core/dropdown-menu";
 import { Effect, Exit } from "effect";
 import { For, Show } from "solid-js";
-import { toast } from "somoto";
+import { toast } from "./ui/sonner";
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { bindRt } from "../lib";
 import { GraphRuntimeContext } from "../lib/graph-access/graph-runtime/context";
@@ -35,7 +34,7 @@ import {
   TerminalIcon,
 } from "./icons";
 import { GraphAccessRuntime } from "../lib/graph-access/runtime";
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../lib/atom-solid";
 import { Button } from "./ui/button";
 import { CliSetupDialog } from "./cli-setup-dialog";
 import { OpenAIKeyModal } from "./openai-key-modal";
@@ -108,11 +107,11 @@ export const GraphMenu = () => {
   return (
     <DropdownMenu placement="bottom-start">
       <DropdownMenuTrigger
-        as={(triggerProps: DropdownMenuTriggerProps<HTMLButtonElement>) => (
+        render={(triggerProps) => (
           <Button
             {...triggerProps}
             variant="ghost"
-            class="data-expanded:bg-control-hover data-expanded:text-fg"
+            class="data-[open]:bg-control-hover data-[open]:text-fg"
           >
             <span class="truncate font-medium">{graph().record.displayName}</span>
             <ChevronsUpDownIcon class="size-3.5 text-fg-subtle" />
@@ -120,7 +119,7 @@ export const GraphMenu = () => {
         )}
       />
       <DropdownMenuPortal>
-        <DropdownMenuContent class="w-(--kb-popper-anchor-width) min-w-56 rounded-lg">
+        <DropdownMenuContent class="w-(--anchor-width) min-w-56 rounded-lg">
           <DropdownMenuGroup>
             <DropdownMenuGroupLabel class="p-0 font-normal">
               <div class="px-1 py-1.5 text-left text-sm">
@@ -147,7 +146,7 @@ export const GraphMenu = () => {
                 </span>
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
-                <DropdownMenuSubContent class="max-h-[min(24rem,var(--kb-popper-content-available-height))] overflow-y-auto">
+                <DropdownMenuSubContent class="max-h-[min(24rem,var(--available-height))] overflow-y-auto">
                   <DropdownMenuRadioGroup
                     aria-label="Primary color"
                     value={graph().primaryColor.color()}

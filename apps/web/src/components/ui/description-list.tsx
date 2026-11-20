@@ -1,14 +1,15 @@
-import { splitProps, type ComponentProps } from "solid-js";
+import { omit } from "solid-js";
+import type { ComponentProps } from "@solidjs/web";
 import { cx } from "../../lib/cva";
 
 export function Root(props: ComponentProps<"dl">) {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return <dl class={cx("divide-y divide-border-subtle", props.class)} {...rest} />;
 }
 
 export function Row(props: ComponentProps<"div">) {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <div
@@ -22,13 +23,13 @@ export function Row(props: ComponentProps<"div">) {
 }
 
 export function Term(props: ComponentProps<"dt">) {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return <dt class={cx("min-w-0 px-2 py-1 text-fg-subtle", props.class)} {...rest} />;
 }
 
 export function Details(props: ComponentProps<"dd">) {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return <dd class={cx("min-w-0", props.class)} {...rest} />;
 }

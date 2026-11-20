@@ -1,14 +1,15 @@
+import type { JSX } from "@solidjs/web";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import type { Types } from "effect";
-import { createContext, useContext, type JSX, type ParentProps } from "solid-js";
+import { createContext, useContext, type ParentProps } from "solid-js";
 
 export type RecordLinkTarget = {
   id: RecordSchema.Id;
 };
 
 export type RecordLinkProps = Types.MergeRight<
-  Omit<JSX.AnchorHTMLAttributes<HTMLAnchorElement>, "href">,
-  RecordLinkTarget
+  Omit<JSX.AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "target">,
+  RecordLinkTarget & { target?: string }
 >;
 
 export type RecordLinkRenderer = (props: RecordLinkProps) => JSX.Element;
@@ -24,5 +25,5 @@ export function RecordLink(props: RecordLinkProps): JSX.Element {
 }
 
 export function RecordLinkScope(props: ParentProps<{ render: RecordLinkRenderer }>): JSX.Element {
-  return <Context.Provider value={props.render}>{props.children}</Context.Provider>;
+  return <Context value={props.render}>{props.children}</Context>;
 }

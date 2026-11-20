@@ -1,3 +1,4 @@
+import type { ComponentProps, ValidComponent } from "@solidjs/web";
 import { createEventListener } from "@solid-primitives/event-listener";
 import { mergeRefs } from "@solid-primitives/refs";
 import { Data } from "effect";
@@ -6,17 +7,14 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  onCleanup,
-  onMount,
-  splitProps,
+  onSettled,
+  omit,
   useContext,
   type Accessor,
-  type ComponentProps,
   type ParentProps,
   type Setter,
-  type ValidComponent,
 } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { Dynamic } from "@solidjs/web";
 import { FocusDOM } from "../../lib/focus-dom";
 import { Shortcuts } from "../../lib/shortcuts";
 import type { RecordSchema } from "@manotes/shared/record.schema";
@@ -85,11 +83,14 @@ export function Provider(props: ParentProps) {
 
   // Keep the canvas target highlighted while a button or portal owns native
   // focus. This is presentation memory only; commands always use actual focus.
-  const highlightedElement = createMemo<Element | null>((previous) => {
-    const element = dom.activeElement();
+  const highlightedElement = createMemo<Element | null>(
+    (previous) => {
+      const element = dom.activeElement();
 
-    return element && scopes.get(element)?.id() ? element : previous;
-  }, null);
+      return element && scopes.get(element)?.id() ? element : previous;
+    },
+    { loadingValue: null },
+  );
 
   const isTarget = (target: EventTarget | null) => {
     return target instanceof HTMLElement && !!scopes.get(target)?.id();
@@ -134,10 +135,14 @@ export function Provider(props: ParentProps) {
   // or was removed. A moved element gets focus back; otherwise its pane is entered.
   createEventListener(document, "focusout", (event) => {
     const target = event.target;
-    // Read before the browser observation updates after this event.
-    const lost = dom.activeId();
 
-    if (event.relatedTarget !== null || !(target instanceof HTMLElement) || !lost) return;
+    if (event.relatedTarget !== null || !(target instanceof HTMLElement)) return;
+
+    // Recover registered canvas elements, not overlay inputs inside their DOM.
+    // The registry snapshot can still describe the previous native focus target.
+    const lost = scopes.get(target)?.id();
+
+    if (!lost) return;
 
     queueMicrotask(() => {
       if (document.activeElement !== document.body) return;
@@ -171,7 +176,7 @@ export function Provider(props: ParentProps) {
     dom.cancel();
   });
 
-  return <Context.Provider value={value}>{props.children}</Context.Provider>;
+  return <Context value={value}>{props.children}</Context>;
 }
 
 export function use(): ContextValue {
@@ -196,24 +201,30 @@ export function createNode(options: () => Options): Node {
     handleKeyDown: shortcuts.handle,
   };
 
-  onMount(() => setMounted(true));
-  createEffect(() => {
-    const current = element();
-    const options = resolved();
-
-    if (!mounted() || !current) return;
-    context.scopes.set(current, node);
-    onCleanup(() => context.scopes.delete(current));
-
-    if (!options.id || options.enabled === false) return;
-    onCleanup(
-      context.dom.register({
-        id: options.id,
-        element: current,
-        focus: (request) => options.focus(current, request),
-      }),
-    );
+  onSettled(() => {
+    setMounted(true);
   });
+  createEffect(
+    () => ({ current: element(), options: resolved(), mounted: mounted() }),
+    ({ current, options, mounted }) => {
+      if (!mounted || !current) return;
+      context.scopes.set(current, node);
+
+      const unregister =
+        options.id && options.enabled !== false
+          ? context.dom.register({
+              id: options.id,
+              element: current,
+              focus: (request) => options.focus(current, request),
+            })
+          : undefined;
+
+      return () => {
+        context.scopes.delete(current);
+        unregister?.();
+      };
+    },
+  );
 
   return node;
 }
@@ -242,7 +253,7 @@ export function createRecordNode(
 }
 
 export function NodeProvider(props: ParentProps<{ node: Node }>) {
-  return <NodeContext.Provider value={props.node}>{props.children}</NodeContext.Provider>;
+  return <NodeContext value={props.node}>{props.children}</NodeContext>;
 }
 
 export function useNode(): Node {
@@ -255,7 +266,8 @@ export function useNode(): Node {
 
 export function Element<T extends ValidComponent = "div">(props: ComponentProps<T> & { as?: T }) {
   const node = useNode();
-  const [local, rest] = splitProps(props, ["as", "ref", "tabIndex"]);
+  const local = props;
+  const rest = omit(props, "as", "ref", "tabIndex");
 
   return (
     <Dynamic

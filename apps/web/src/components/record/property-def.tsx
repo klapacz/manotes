@@ -3,7 +3,7 @@ import { PaneNavigate } from "../../lib/record/pane.navigate";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { Filters } from "@manotes/shared/record/filters";
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../../lib/atom-solid";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { Data, Effect, Match, Option } from "effect";
@@ -145,7 +145,9 @@ export function Root(props: {
                   <Picker.Trigger
                     variant="ghost"
                     size="xs"
-                    aria-invalid={Attrs.ValueState.$is("Invalid")(defaultState())}
+                    aria-invalid={
+                      Attrs.ValueState.$is("Invalid")(defaultState()) ? "true" : "false"
+                    }
                     intent={Attrs.ValueState.$is("Invalid")(defaultState()) ? "error" : undefined}
                     disabled={!editableType() || mutation().waiting}
                   >

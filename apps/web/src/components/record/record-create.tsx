@@ -1,9 +1,9 @@
 import { RecordSchema } from "@manotes/shared/record.schema";
 import type { RecordRepo } from "@manotes/shared/record.repo";
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../../lib/atom-solid";
 import { Array, DateTime, Effect, Match, Option, Result } from "effect";
 import { nanoid } from "nanoid";
-import { toast } from "somoto";
+import { toast } from "../ui/sonner";
 import { MaterializedEventService, bindRt } from "../../lib";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { Filters } from "@manotes/shared/record/filters";

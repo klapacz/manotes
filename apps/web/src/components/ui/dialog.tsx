@@ -1,73 +1,81 @@
-import type { ComponentProps, ValidComponent } from "solid-js";
-import { Show, mergeProps, splitProps } from "solid-js";
-import { Dialog as DialogPrimitive } from "@kobalte/core/dialog";
+import type { StyledProps } from "../../lib/cva";
+import { Portal, Dynamic, type ValidComponent, type ComponentProps } from "@solidjs/web";
+import { Show, merge, omit } from "solid-js";
+import * as SDK from "@ui-sdk/solid/dialog";
 
 import { cx } from "../../lib/cva";
 import { XIcon } from "../icons";
 
-export const DialogPortal = DialogPrimitive.Portal;
+export function DialogPortal(props: { children?: import("@solidjs/web").JSX.Element }) {
+  return <Portal>{props.children}</Portal>;
+}
 
-export type DialogProps = ComponentProps<typeof DialogPrimitive>;
+export type DialogProps = StyledProps<typeof SDK.Dialog>;
 
 export const Dialog = (props: DialogProps) => {
-  return <DialogPrimitive data-slot="dialog" {...props} />;
+  return <SDK.Dialog data-slot="dialog" {...props} />;
 };
 
-export type DialogTriggerProps<T extends ValidComponent = "button"> = ComponentProps<
-  typeof DialogPrimitive.Trigger<T>
->;
+export type DialogTriggerProps<T extends ValidComponent = ValidComponent> = StyledProps<
+  typeof SDK.DialogTrigger
+> &
+  Partial<import("./button").ButtonProps> & {
+    as?: T;
+    closeOnSelect?: boolean;
+  };
 
-export const DialogTrigger = <T extends ValidComponent = "button">(
-  props: DialogTriggerProps<T>,
-) => {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
+export const DialogTrigger = (props: DialogTriggerProps) => {
+  return (
+    <SDK.DialogTrigger
+      {...omit(props, "as", "closeOnSelect")}
+      render={
+        props.as
+          ? (part) => <Dynamic component={props.as} {...part} closeOnSelect={props.closeOnSelect} />
+          : props.render
+      }
+    />
+  );
 };
 
-export type DialogCloseButtonProps<T extends ValidComponent = "button"> = ComponentProps<
-  typeof DialogPrimitive.CloseButton<T>
->;
+export type DialogCloseButtonProps = StyledProps<typeof SDK.DialogClose>;
 
-export const DialogCloseButton = <T extends ValidComponent = "button">(
-  props: DialogCloseButtonProps<T>,
-) => {
-  return <DialogPrimitive.CloseButton data-slot="dialog-close" {...props} />;
+export const DialogCloseButton = (props: DialogCloseButtonProps) => {
+  return <SDK.DialogClose data-slot="dialog-close" {...props} />;
 };
 
-export type DialogContentProps<T extends ValidComponent = "div"> = ComponentProps<
-  typeof DialogPrimitive.Content<T>
-> & {
+export type DialogContentProps = StyledProps<typeof SDK.DialogContent> & {
   showCloseButton?: boolean;
 };
 
-export const DialogContent = <T extends ValidComponent = "div">(props: DialogContentProps<T>) => {
-  // SAFETY: The default object supplies only the wrapper-owned optional key before caller props override it.
-  const mergedProps = mergeProps({ showCloseButton: true } as DialogContentProps, props);
-  const [, rest] = splitProps(mergedProps, ["class", "children", "showCloseButton"]);
+export const DialogContent = (props: DialogContentProps) => {
+  const mergedProps = merge({ showCloseButton: true }, props);
+  const rest = omit(mergedProps, "class", "children", "showCloseButton");
 
   return (
     <>
-      <DialogPrimitive.Overlay
+      <SDK.DialogBackdrop
         data-slot="dialog-overlay"
-        class="data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 bg-overlay fixed inset-0 z-50"
+        class="transition-opacity data-[closed]:opacity-0 data-[starting-style]:opacity-0 bg-overlay fixed inset-0 z-50 duration-200"
       />
-      <DialogPrimitive.Content
+      <SDK.DialogContent
+        render={(part) => <div {...part} role="alertdialog" />}
         data-slot="dialog-content"
         class={cx(
-          "bg-bg-subtle text-fg data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 data-[closed]:zoom-out-95 data-[expanded]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border border-border-subtle p-6 shadow-lg duration-200 sm:max-w-lg",
+          "bg-bg-subtle text-fg transition-[opacity,scale] data-[closed]:opacity-0 data-[starting-style]:opacity-0 data-[closed]:scale-95 data-[starting-style]:scale-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border border-border-subtle p-6 shadow-lg duration-200 sm:max-w-lg",
           mergedProps.class,
         )}
         {...rest}
       >
         {mergedProps.children}
         <Show when={mergedProps.showCloseButton}>
-          <DialogPrimitive.CloseButton
+          <SDK.DialogClose
             aria-label="Close"
             class="text-fg-subtle hover:bg-control hover:text-fg active:bg-control-active focus-visible:border-primary-border focus-visible:ring-primary-border/30 absolute top-4 right-4 rounded-sm p-1 opacity-70 transition-[opacity,color,background-color,box-shadow] duration-200 hover:opacity-100 focus-visible:ring-[3px] focus-visible:outline-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4"
           >
             <XIcon />
-          </DialogPrimitive.CloseButton>
+          </SDK.DialogClose>
         </Show>
-      </DialogPrimitive.Content>
+      </SDK.DialogContent>
     </>
   );
 };
@@ -75,7 +83,7 @@ export const DialogContent = <T extends ValidComponent = "div">(props: DialogCon
 export type DialogHeaderProps = ComponentProps<"div">;
 
 export const DialogHeader = (props: DialogHeaderProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <div
@@ -89,7 +97,7 @@ export const DialogHeader = (props: DialogHeaderProps) => {
 export type DialogFooterProps = ComponentProps<"div">;
 
 export const DialogFooter = (props: DialogFooterProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <div
@@ -100,16 +108,13 @@ export const DialogFooter = (props: DialogFooterProps) => {
   );
 };
 
-export type DialogTitleProps<T extends ValidComponent = "h2"> = ComponentProps<
-  typeof DialogPrimitive.Title<T>
->;
+export type DialogTitleProps = StyledProps<typeof SDK.DialogTitle>;
 
-export const DialogTitle = <T extends ValidComponent = "h2">(props: DialogTitleProps<T>) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as DialogTitleProps, ["class"]);
+export const DialogTitle = (props: DialogTitleProps) => {
+  const rest = omit(props, "class");
 
   return (
-    <DialogPrimitive.Title
+    <SDK.DialogTitle
       data-slot="dialog-title"
       class={cx("text-lg leading-none font-semibold", props.class)}
       {...rest}
@@ -117,18 +122,13 @@ export const DialogTitle = <T extends ValidComponent = "h2">(props: DialogTitleP
   );
 };
 
-export type DialogDescriptionProps<T extends ValidComponent = "p"> = ComponentProps<
-  typeof DialogPrimitive.Description<T>
->;
+export type DialogDescriptionProps = StyledProps<typeof SDK.DialogDescription>;
 
-export const DialogDescription = <T extends ValidComponent = "p">(
-  props: DialogDescriptionProps<T>,
-) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as DialogDescriptionProps, ["class"]);
+export const DialogDescription = (props: DialogDescriptionProps) => {
+  const rest = omit(props, "class");
 
   return (
-    <DialogPrimitive.Description
+    <SDK.DialogDescription
       data-slot="dialog-description"
       class={cx("text-fg-subtle text-sm", props.class)}
       {...rest}

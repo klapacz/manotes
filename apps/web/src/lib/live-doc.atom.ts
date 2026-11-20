@@ -1,4 +1,4 @@
-import { useAtomValue } from "@effect/atom-solid";
+import { useAtomValue } from "./atom-solid";
 import type { RecordSchema } from "@manotes/shared/record.schema";
 import { Atom, AsyncResult } from "effect/reactivity";
 import { createMemo, type Accessor } from "solid-js";

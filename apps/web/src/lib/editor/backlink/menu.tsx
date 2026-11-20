@@ -1,14 +1,14 @@
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { Effect, Exit, flow, Stream, Array, Struct } from "effect";
-import { useEditor } from "prosekit/solid";
+import { useEditor } from "@manotes/prosekit-solid";
 import {
   AutocompleteEmpty,
   AutocompleteItem,
   AutocompletePopup,
   AutocompletePositioner,
   AutocompleteRoot,
-} from "prosekit/solid/autocomplete";
+} from "@manotes/prosekit-solid/autocomplete";
 import { For, Show, createMemo, createSignal } from "solid-js";
 import {
   commandEmptyClass,
@@ -25,7 +25,7 @@ import type { AppExtension } from "../../../editor.extension";
 import { BrowserExtensionClient } from "../../browser-extension/client";
 import { BrowserExtensionTabRecordService } from "../../browser-extension/tab-record/service";
 import { BrowserExtension } from "@manotes/shared/browser-extension/contract";
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../../atom-solid";
 import { PaneCtx } from "../../record/pane.ctx";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { createRecordLabel, createStreamRefLabel } from "../stream-ref/extension";

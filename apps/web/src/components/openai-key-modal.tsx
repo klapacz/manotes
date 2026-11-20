@@ -1,7 +1,7 @@
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../lib/atom-solid";
 import { Schema } from "effect";
 import { createSignal } from "solid-js";
-import { toast } from "somoto";
+import { toast } from "./ui/sonner";
 import { GraphAccessRuntime } from "../lib/graph-access/runtime";
 import { SettingsRepo } from "../lib/settings/repo";
 import { KeyIcon } from "./icons";
@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import { AppForm, useAppForm } from "./ui/form";
+import { AppForm, useAppForm, afterSubmit } from "./ui/form";
 
 const FormSchema = Schema.Struct({ key: Schema.NonEmptyString }).pipe(Schema.toStandardSchemaV1);
 
@@ -25,7 +25,7 @@ export function Root() {
 
   const form = useAppForm(() => ({
     defaultValues: { key: "" },
-    validators: { onDynamic: FormSchema },
+    validators: [afterSubmit(FormSchema)],
     async onSubmit({ value }) {
       await save(value.key).then(
         () => {
@@ -49,7 +49,7 @@ export function Root() {
             <DialogTitle>OpenAI API key</DialogTitle>
           </DialogHeader>
           <AppForm form={form} AppForm={form.AppForm} spacing="compact">
-            <form.AppField name="key">
+            <form.Field name="key">
               {(field) => (
                 <field.TextField
                   label="OpenAI API key"
@@ -58,7 +58,7 @@ export function Root() {
                   placeholder="OpenAI API key"
                 />
               )}
-            </form.AppField>
+            </form.Field>
             <form.SubmitButton>Save</form.SubmitButton>
           </AppForm>
         </DialogContent>

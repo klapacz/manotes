@@ -1,4 +1,4 @@
-import { useAtomValue } from "@effect/atom-solid";
+import { useAtomValue } from "../../lib/atom-solid";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import type { Attrs } from "@manotes/shared/attrs.service";
 import { PropValidation } from "@manotes/shared/prop-validation";
@@ -11,7 +11,7 @@ export function use(opts: {
   readonly state: Accessor<Attrs.ValueState<AttrsSchema.PropVal>>;
   readonly targets: Accessor<AttrsSchema.TargetFilter | undefined>;
 }) {
-  const input = createMemo(() => ({ state: opts.state(), targets: opts.targets() }), undefined, {
+  const input = createMemo(() => ({ state: opts.state(), targets: opts.targets() }), {
     equals: Equal.equals,
   });
 

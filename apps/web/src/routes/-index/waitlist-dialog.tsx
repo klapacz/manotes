@@ -1,8 +1,9 @@
-import { useAtom } from "@effect/atom-solid";
+import type { ValidComponent } from "@solidjs/web";
+import { useAtom } from "../../lib/atom-solid";
 import { EmailSchema } from "@manotes/shared/schema/email";
 import { Schema } from "effect";
 import { Atom } from "effect/reactivity";
-import { createSignal, onMount, Show, type ValidComponent } from "solid-js";
+import { createSignal, onSettled, Show } from "solid-js";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import {
@@ -16,7 +17,7 @@ import {
   DialogTrigger,
   type DialogTriggerProps,
 } from "../../components/ui/dialog";
-import { AppForm, useAppForm } from "../../components/ui/form";
+import { AppForm, useAppForm, afterSubmit } from "../../components/ui/form";
 import { MatchAsyncResult } from "../../lib";
 import { GraphAccessRuntime } from "../../lib/graph-access/runtime";
 import { SessionAtom } from "../../lib/graph-access/session/atom";
@@ -86,14 +87,14 @@ function RequestOtpForm(props: {
     mode: "promise",
   });
 
-  onMount(() => {
+  onSettled(() => {
     void checkWaitlist(Atom.Reset);
     void requestOtp(Atom.Reset);
   });
 
   const form = useAppForm(() => ({
     defaultValues: { email: "" },
-    validators: { onDynamic: RequestOtpFormSchema },
+    validators: [afterSubmit(RequestOtpFormSchema)],
     async onSubmit({ value }) {
       const res = await checkWaitlist({ payload: { email: value.email } });
 
@@ -136,9 +137,9 @@ function RequestOtpForm(props: {
         )}
       />
 
-      <form.AppField name="email">
+      <form.Field name="email">
         {(field) => <field.TextField label="Email" type="email" autofocus />}
-      </form.AppField>
+      </form.Field>
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={props.onClose}>
@@ -163,14 +164,14 @@ function VerifyOtpForm(props: {
     mode: "promise",
   });
 
-  onMount(() => {
+  onSettled(() => {
     void verifyOtp(Atom.Reset);
     void requestOtp(Atom.Reset);
   });
 
   const form = useAppForm(() => ({
     defaultValues: { otp: "" },
-    validators: { onDynamic: VerifyOtpFormSchema },
+    validators: [afterSubmit(VerifyOtpFormSchema)],
     async onSubmit({ value }) {
       await verifyOtp({
         payload: {
@@ -213,7 +214,7 @@ function VerifyOtpForm(props: {
         )}
       />
 
-      <form.AppField name="otp">
+      <form.Field name="otp">
         {(field) => (
           <field.TextField
             label="Code"
@@ -223,7 +224,7 @@ function VerifyOtpForm(props: {
             autofocus
           />
         )}
-      </form.AppField>
+      </form.Field>
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={props.onBack}>

@@ -1,12 +1,12 @@
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
-import { useAtom, useAtomMount, useAtomSubscribe, useAtomValue } from "@effect/atom-solid";
+import { useAtom, useAtomMount, useAtomSubscribe, useAtomValue } from "../lib/atom-solid";
 import { createEventListener } from "@solid-primitives/event-listener";
 import { keyArray } from "@solid-primitives/keyed";
 import { Link, getRouteApi } from "@tanstack/solid-router";
 import { Array, DateTime, Effect, Match as EffectMatch, Option, Predicate, Stream } from "effect";
 import { AsyncResult, Atom } from "effect/reactivity";
-import { For, Match, Show, Switch, createMemo, onMount, type ParentProps } from "solid-js";
-import { toast } from "somoto";
+import { For, Match, Show, Switch, createMemo, onSettled, type ParentProps } from "solid-js";
+import { toast } from "./ui/sonner";
 import { MatchAsyncResult, RecordCache, RecordSchema, bindRt } from "../lib";
 import { AudioMemoFiles } from "../lib/audio-memo/files";
 import { AudioMemoRecorder } from "../lib/audio-memo/recorder";
@@ -166,7 +166,7 @@ export function useNotifyReady(): (recordId: RecordSchema.Id) => void {
       id: recordId,
       action: {
         label: "Open",
-        onClick: () => void navigate(link),
+        onAction: () => void navigate(link),
       },
     });
   };
@@ -247,7 +247,7 @@ export function RecordingRow(props: { draft: Draft; onCancel: () => void }) {
   }
 
   function mountRecorder(element: HTMLDivElement) {
-    onMount(() => start(element));
+    onSettled(() => start(element));
   }
 
   createEventListener(window, "beforeunload", (event) => {
@@ -393,7 +393,7 @@ export function SavedRow(props: { recording: AudioMemoRepo.Record }) {
   });
 
   function mountPlayer(element: HTMLDivElement) {
-    onMount(() => start(element));
+    onSettled(() => start(element));
   }
 
   const statusLabel = () => {
@@ -454,7 +454,7 @@ export function SavedRow(props: { recording: AudioMemoRepo.Record }) {
           <Failure message={failure()} />
           <time
             class="ml-auto shrink-0 text-xs text-fg-subtle"
-            dateTime={DateTime.formatIso(props.recording.recordedAt)}
+            datetime={DateTime.formatIso(props.recording.recordedAt)}
           >
             {RecordFormat.formatUpdatedAt(props.recording.recordedAt)}
           </time>

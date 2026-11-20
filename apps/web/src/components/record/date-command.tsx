@@ -1,16 +1,26 @@
-import { createEffect, on, Show, type JSX } from "solid-js";
-import { Temporal } from "temporal-polyfill";
+import { createEffect, createSignal, Show, For } from "solid-js";
+import { Field } from "@ui-sdk/solid/field";
+import type { JSX } from "@solidjs/web";
+import { DateInput, DateInputSegment } from "@ui-sdk/solid/date-input";
 import {
-  CalendarView,
-  FieldInput,
-  createCalendarState,
-  createDateFieldState,
-} from "@manotes/date-time-picker";
+  Calendar,
+  CalendarHeading,
+  CalendarPrevious,
+  CalendarNext,
+  CalendarGrid,
+  CalendarDay,
+  CalendarWeekdays,
+  CalendarWeekday,
+  CalendarWeeks,
+  createCalendarController,
+} from "@ui-sdk/solid/calendar";
+import { Temporal } from "temporal-polyfill";
+import { Check, ChevronLeft, ChevronRight } from "@lucide/solid";
+import { Button } from "../ui/button";
+
 import { QueryEngine } from "../../lib/query-engine";
 import { DateSuggestions } from "../../lib/date-suggestions";
 import { CommandList, CommandScroll } from "../ui/command";
-import { Button } from "../ui/button";
-import { ApplyIcon } from "../icons";
 import { Picker } from "../ui/picker";
 
 export function Root(props: {
@@ -58,46 +68,28 @@ export function Root(props: {
   );
 }
 
+function normalizeDate(value: string | undefined) {
+  return value ? Temporal.PlainDate.from(value).toString() : null;
+}
+
 function DateEditor(props: {
   value: string | undefined;
-  onChange: (date: string) => void;
-  suggestions: JSX.Element;
+  onChange: (value: string) => void;
+  suggestions?: JSX.Element;
 }) {
-  const field = createDateFieldState({
-    defaultValue: props.value ? Temporal.PlainDate.from(props.value) : null,
-    get isInvalid(): boolean {
-      return !field.value() && isDirty();
-    },
+  const [draft, setDraft] = createSignal(normalizeDate(props.value));
+  const [touched, setTouched] = createSignal(false);
+  const calendar = createCalendarController();
+
+  createEffect(draft, (date) => {
+    if (date) calendar.setMonth(date.slice(0, 7));
   });
-
-  const calendar = createCalendarState({
-    get value() {
-      return field.value();
-    },
-    onChange: (date) => props.onChange(date.toString()),
-  });
-
-  createEffect(
-    on(field.value, (date) => {
-      if (date) calendar.focusDate(date);
-    }),
-  );
-
-  const isDirty = () => {
-    const value = field.value();
-
-    if (value) return value.toString() !== props.value;
-
-    return (
-      !!props.value ||
-      field.segments().some((segment) => segment.isEditable && !segment.isPlaceholder)
-    );
-  };
+  const dirty = () => draft() !== normalizeDate(props.value) || (!draft() && touched());
 
   const apply = () => {
-    const date = field.value();
+    const date = draft();
 
-    if (date && !field.isInvalid()) props.onChange(date.toString());
+    if (date) props.onChange(date);
   };
 
   return (
@@ -106,7 +98,6 @@ function DateEditor(props: {
       <div
         class="date-command-editor"
         onKeyDown={(event) => {
-          // Segment keys must not also select or navigate command suggestions.
           if (event.key !== "Escape" && event.key !== "Tab") event.stopPropagation();
 
           if (event.key === "Enter") {
@@ -116,33 +107,31 @@ function DateEditor(props: {
         }}
       >
         <div class="-mx-1 flex min-h-9 items-center gap-2 border-y border-border px-3 has-[[aria-invalid=true]]:border-error-border has-[[aria-invalid=true]]:bg-error-bg">
-          <FieldInput
-            state={field}
-            label="Date"
-            class="
-              min-w-0 flex-1 text-sm data-invalid:text-error-fg
-              [&>span]:sr-only
-              [&_[data-date-input]]:flex
-              [&_[data-date-input]]:min-h-9
-              [&_[data-date-input]]:items-center
-              [&_[data-date-input]]:bg-transparent
-              [&_[data-date-input]]:tabular-nums
-              [&_[data-segment]]:rounded-[3px]
-              [&_[data-segment]]:px-0.5
-              [&_[data-segment]]:py-px
-              [&_[data-segment]]:outline-none
-              [&_[data-placeholder]]:text-fg-subtle
-              [&[data-invalid]_[data-placeholder]]:text-error-fg
-              [&[data-invalid]_[data-segment]:focus]:bg-error-solid
-              [&[data-invalid]_[data-segment]:focus]:text-error-fg-solid
-              [&_[data-segment]:focus]:bg-primary-solid
-              [&_[data-segment]:focus]:text-primary-fg-solid
-              [&_[role=alert]]:mt-1
-              [&_[role=alert]]:text-xs
-              [&_[role=alert]]:text-error-fg
-            "
-          />
-          <Show when={isDirty()}>
+          <Field invalid={!draft() && dirty()} class="min-w-0 flex-1">
+            <DateInput
+              aria-label="Date"
+              value={draft()}
+              onValueChange={(value) => {
+                setTouched(true);
+                setDraft(value);
+              }}
+              onInput={() => setTouched(true)}
+              locale="en-US"
+              class="group/date flex min-h-9 min-w-0 flex-1 items-center bg-transparent text-sm tabular-nums data-[invalid]:text-error-fg"
+            >
+              {(state) => (
+                <For each={state.segments} keyed={(segment) => segment.key}>
+                  {(segment) => (
+                    <DateInputSegment
+                      segment={segment()}
+                      class="w-auto rounded-[3px] bg-transparent px-0.5 py-px outline-none [&:is(input)]:w-[calc(2ch+4px)] data-[type=year]:w-[calc(4ch+4px)] data-[type=literal]:p-0 data-[empty]:not-focus:text-fg-subtle focus:bg-primary-solid focus:text-primary-fg-solid data-[empty]:not-focus:group-data-[invalid]/date:text-error-fg focus:group-data-[invalid]/date:bg-error-solid focus:group-data-[invalid]/date:text-error-fg-solid"
+                    />
+                  )}
+                </For>
+              )}
+            </DateInput>
+          </Field>
+          <Show when={dirty()}>
             <span role="status" class="shrink-0 text-xs text-fg-subtle">
               Not applied
             </span>
@@ -151,11 +140,10 @@ function DateEditor(props: {
             variant="ghost"
             size="icon-xs"
             aria-label="Apply date"
-            title="Apply date"
-            disabled={!field.value() || field.isInvalid()}
+            disabled={!draft()}
             onClick={apply}
           >
-            <ApplyIcon />
+            <Check />
           </Button>
         </div>
       </div>
@@ -165,48 +153,58 @@ function DateEditor(props: {
           if (event.key !== "Escape" && event.key !== "Tab") event.stopPropagation();
         }}
       >
-        <CalendarView
-          state={calendar}
-          label="Choose date"
-          class="
-            mx-auto w-full max-w-66 text-sm
-            [&_header]:mb-2
-            [&_header]:flex
-            [&_header]:items-center
-            [&_header]:justify-between
-            [&_header]:font-semibold
-            [&_header_button]:grid
-            [&_header_button]:size-7
-            [&_header_button]:place-items-center
-            [&_header_button]:rounded-[6px]
-            [&_header_button]:border
-            [&_header_button]:border-border
-            [&_header_svg]:size-4
-            [&_table]:w-full
-            [&_table]:table-fixed
-            [&_table]:border-collapse
-            [&_table]:border-spacing-0
-            [&_th]:h-7
-            [&_th]:text-xs
-            [&_th]:font-normal
-            [&_th]:text-fg-subtle
-            [&_td]:px-0
-            [&_td]:py-px
-            [&_td]:text-center
-            [&_td_button]:h-7.5
-            [&_td_button]:w-8
-            [&_td_button]:rounded-[6px]
-            [&_td_button]:tabular-nums
-            [&_button:hover]:bg-control-hover
-            [&_button[data-outside-month]]:text-fg-subtle
-            [&_button[data-selected]]:bg-primary-solid
-            [&_button[data-selected]]:text-primary-fg-solid
-            [&_button[data-selected]:hover]:bg-primary-solid-hover
-            [&_button:focus-visible]:outline-2
-            [&_button:focus-visible]:outline-offset-1
-            [&_button:focus-visible]:outline-primary-border-hover
-          "
-        />
+        <Calendar
+          aria-label="Choose date"
+          controller={calendar}
+          value={draft()}
+          defaultMonth={Temporal.Now.plainDateISO().toString().slice(0, 7)}
+          today={Temporal.Now.plainDateISO().toString()}
+          locale="en-US"
+          weekdayFormat="narrow"
+          fixedWeeks
+          onValueChange={(value) => {
+            if (value && !Array.isArray(value)) props.onChange(value);
+          }}
+          class="mx-auto w-full max-w-66 text-sm"
+        >
+          <header class="mb-2 flex items-center justify-between font-semibold">
+            <CalendarPrevious
+              aria-label="Previous month"
+              class="grid size-7 place-items-center rounded-[6px] border border-border"
+            >
+              <ChevronLeft class="size-4" />
+            </CalendarPrevious>
+            <CalendarHeading render={(part) => <span {...part} />} />
+            <CalendarNext
+              aria-label="Next month"
+              class="grid size-7 place-items-center rounded-[6px] border border-border"
+            >
+              <ChevronRight class="size-4" />
+            </CalendarNext>
+          </header>
+          <CalendarGrid class="w-full table-fixed border-collapse">
+            <CalendarWeekdays>
+              {(index) => (
+                <CalendarWeekday index={index} class="h-7 text-xs font-normal text-fg-subtle" />
+              )}
+            </CalendarWeekdays>
+            <CalendarWeeks>
+              {(cell) => (
+                <CalendarDay
+                  value={cell.date}
+                  render={(part) => (
+                    <td class="h-7.5 px-0 py-px text-center">
+                      <button
+                        {...part}
+                        class="h-7.5 w-8 rounded-[6px] tabular-nums hover:bg-control-hover data-[outside]:text-fg-subtle data-[selected]:bg-primary-solid data-[selected]:text-primary-fg-solid data-[selected]:hover:bg-primary-solid-hover focus-visible:outline-2 focus-visible:outline-primary-border-hover focus-visible:outline-offset-1"
+                      />
+                    </td>
+                  )}
+                />
+              )}
+            </CalendarWeeks>
+          </CalendarGrid>
+        </Calendar>
       </div>
     </div>
   );

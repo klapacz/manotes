@@ -1,14 +1,11 @@
+import type { JSX } from "@solidjs/web";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { Data, Stream, Option } from "effect";
 import { defineClipboardSerializer, definePlugin, union } from "prosekit/core";
 import type { ProseMirrorNode } from "prosekit/pm/model";
 import { Plugin } from "prosekit/pm/state";
-import {
-  defineSolidNodeView,
-  type SolidNodeViewComponent,
-  type SolidNodeViewProps,
-} from "prosekit/solid";
-import { createEffect, createMemo, type JSX } from "solid-js";
+import { defineSolidNodeView, type SolidNodeViewProps } from "@manotes/prosekit-solid";
+import { createEffect, createMemo } from "solid-js";
 import { RecordCache } from "../../record-cache.service";
 import { bindRt, createAtomStore, createSyncedAtom } from "../..";
 import { BacklinkSpec } from "@manotes/shared/editor/backlink/spec";
@@ -54,13 +51,16 @@ function createBacklinkView(labelSnapshot: Map<RecordSchema.Id, string>) {
       BacklinkLabelEntry.Loading(),
     );
 
-    createEffect(() => {
-      BacklinkLabelEntry.$match({
-        Loading: () => labelSnapshot.delete(recordId()),
-        Resolved: ({ title }) => labelSnapshot.set(recordId(), title),
-        Missing: () => labelSnapshot.delete(recordId()),
-      })(state.value);
-    });
+    createEffect(
+      () => ({ id: recordId(), state: state.value }),
+      ({ id, state }) => {
+        BacklinkLabelEntry.$match({
+          Loading: () => labelSnapshot.delete(id),
+          Resolved: ({ title }) => labelSnapshot.set(id, title),
+          Missing: () => labelSnapshot.delete(id),
+        })(state);
+      },
+    );
 
     const label = BacklinkLabelEntry.$match({
       Resolved: ({ title }) => title,
@@ -74,12 +74,12 @@ function createBacklinkView(labelSnapshot: Map<RecordSchema.Id, string>) {
         data-backlink=""
         data-backlink-state={state.value._tag}
         data-backlink-id={recordId()}
-        contentEditable={false}
+        contenteditable="false"
       >
         {label(state.value)}
       </RecordLink>
     );
-  } satisfies SolidNodeViewComponent;
+  };
 }
 
 // ---------------------------------------------------------------------------

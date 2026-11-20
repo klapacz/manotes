@@ -1,8 +1,8 @@
-import { useAtomValue } from "@effect/atom-solid";
+import { useAtomValue } from "../atom-solid";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { Effect, Predicate, Stream } from "effect";
 import { AsyncResult } from "effect/reactivity";
-import { createMemo, type Accessor } from "solid-js";
+import { createMemo, latest, type Accessor } from "solid-js";
 import type * as Y from "yjs";
 import { bindRt, createSyncedAtom } from "..";
 
@@ -27,7 +27,7 @@ export function use(opts: { doc: Accessor<Y.Doc | undefined> }) {
     const result = attrs();
 
     // Atoms retain the previous success while loading; never use another record's attrs.
-    if (!AsyncResult.isSuccess(result) || result.value?.doc !== opts.doc()) return undefined;
+    if (!AsyncResult.isSuccess(result) || result.value?.doc !== latest(opts.doc)) return undefined;
 
     return result.value;
   });

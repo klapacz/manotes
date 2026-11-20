@@ -1,9 +1,9 @@
-import type { ComponentProps, ValidComponent } from "solid-js";
-import { splitProps } from "solid-js";
-import { Root } from "@kobalte/core/button";
-import type { VariantProps } from "cva";
-
 import { cva } from "../../lib/cva";
+import type { StyledProps } from "../../lib/cva";
+import { omit } from "solid-js";
+import { Dynamic, type ValidComponent } from "@solidjs/web";
+import { Button as Primitive } from "@ui-sdk/solid/button";
+import type { VariantProps } from "cva";
 
 export const buttonVariants = cva({
   base: [
@@ -57,22 +57,19 @@ export const buttonVariants = cva({
   },
 });
 
-export type ButtonProps<T extends ValidComponent = "button"> = ComponentProps<typeof Root<T>> &
-  VariantProps<typeof buttonVariants>;
+export type ButtonProps = StyledProps<typeof Primitive> &
+  VariantProps<typeof buttonVariants> & {
+    as?: ValidComponent;
+    href?: string;
+  };
 
-export const Button = <T extends ValidComponent = "button">(props: ButtonProps<T>) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as ButtonProps, [
-    "class",
-    "variant",
-    "size",
-    "rounded",
-    "intent",
-  ]);
+export function Button(props: ButtonProps) {
+  const rest = omit(props, "class", "variant", "size", "rounded", "intent", "as");
 
   return (
-    <Root
-      data-slot="button"
+    <Primitive
+      {...rest}
+      render={props.as ? (part) => <Dynamic component={props.as} {...part} /> : props.render}
       class={buttonVariants({
         variant: props.variant,
         size: props.size,
@@ -80,7 +77,6 @@ export const Button = <T extends ValidComponent = "button">(props: ButtonProps<T
         intent: props.intent,
         class: props.class,
       })}
-      {...rest}
     />
   );
-};
+}

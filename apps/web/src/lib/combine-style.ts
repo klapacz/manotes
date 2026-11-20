@@ -1,7 +1,7 @@
+import type { JSX } from "@solidjs/web";
 // https://github.com/solidjs-community/solid-primitives/blob/main/packages/props/src/combineProps.ts
 
 import { Predicate } from "effect";
-import type { JSX } from "solid-js";
 
 const extractCSSregex = /((?:--)?(?:\w+-?)+)\s*:\s*([^;]*)/g;
 

@@ -1,0 +1,14 @@
+# Solid 2 dependency cleanup
+
+Temporary replacements to revisit when compatible upstream packages are published. Checked 2026-11-21.
+
+| Waiting for                                                                                          | Current replacement                                                    | Cleanup after adopting upstream                                                                                                                                                                                          |
+| ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@effect/atom-solid` supporting Solid 2 and our Effect version                                       | `apps/web/src/lib/atom-solid.ts`, `atom-bridge.ts`, adapted from 4.0.3 | Replace local hooks with upstream imports. Delete bridge helpers once their remaining callers use upstream hooks or native Solid async APIs. Preserve full `AsyncResult`, waiting, cleanup and latest-identity behavior. |
+| Published Form v2 Solid 2 adapter, [TanStack/form#2464](https://github.com/TanStack/form/pull/2464)  | Nix-built `form-core` and `solid-form` at `22d7156b`                   | Delete `apps/web/nix/form/`, Form vendor links, flake/setup entries, file dependencies and the `form-core` override in `pnpm-workspace.yaml`. Install matching published packages.                                       |
+| Solid 2 support in `@prosekit/solid` and `@prosemirror-adapter/solid`                                | `packages/prosekit-solid`, based on adapter versions 0.8.3 and 0.5.5   | Switch imports back to upstream ProseKit bindings and delete the local package, source pins and copied licenses. Recheck the Solid 1 peer pin in `packages/shared/package.json`.                                         |
+| Published Solid 2 Virtua adapter, [inokawa/virtua#1061](https://github.com/inokawa/virtua/pull/1061) | Nix-built source at `21a041e8`                                         | Delete `apps/web/nix/virtua.nix`, its vendor link and flake/setup entries. Replace the file dependency with `virtua/solid`; remove its source-package prebundle exclusion.                                               |
+
+Keep application styling, editor pooling and virtual-list retention policy. Upstream releases must replace the relevant behavior before deleting an adapter.
+
+The TanStack Solid router/devtools RC pins can move to compatible stable releases later; there is no local router adapter to delete.

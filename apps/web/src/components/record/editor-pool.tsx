@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { Option } from "effect";
@@ -5,15 +6,15 @@ import { Data, Deferred, Effect, RcMap, Scope } from "effect";
 import {
   createContext,
   createRoot,
-  createEffect,
+  createRenderEffect,
   createSignal,
   runWithOwner,
   useContext,
   type Accessor,
-  type JSX,
   type Owner,
   type ParentProps,
 } from "solid-js";
+import { insert } from "@solidjs/web";
 import Editor from "../../editor";
 import { LiveDoc } from "../../lib/live-doc.service";
 import { LiveDocAtom } from "../../lib/live-doc.atom";
@@ -90,13 +91,13 @@ export const make = Effect.fn("EditorPool.make")(function* (
   return { get, preload } satisfies Pool;
 });
 
-const Context = createContext<Pool | null>(null);
+const Context = createContext<Accessor<Pool>>();
 
 export function Provider(props: ParentProps<{ pool: Pool }>): JSX.Element {
-  return <Context.Provider value={props.pool}>{props.children}</Context.Provider>;
+  return <Context value={() => props.pool}>{props.children}</Context>;
 }
 
-export function use(): Pool {
+export function use(): Accessor<Pool> {
   const pool = useContext(Context);
 
   if (!pool) throw new Error("Must use inside EditorPool.Provider");
@@ -114,8 +115,9 @@ function createSlot(recordId: RecordSchema.Id, filter: Accessor<AttrsSchema.Filt
   return createRoot((dispose) => {
     const docState = LiveDocAtom.use({ recordId: () => recordId });
 
-    createEffect(() => {
-      LiveDoc.Doc.$match(docState(), {
+    // Readiness must resolve during a pending transition, before ordinary effects settle.
+    createRenderEffect(docState, (state) => {
+      LiveDoc.Doc.$match(state, {
         Loading: () => undefined,
         Ready: () => Effect.runSync(Deferred.succeed(ready, undefined)),
         Error: ({ message }) => {
@@ -128,18 +130,15 @@ function createSlot(recordId: RecordSchema.Id, filter: Accessor<AttrsSchema.Filt
 
     const [attached, setAttached] = createSignal(false);
 
-    // SAFETY: Solid's DOM JSX transform returns the intrinsic `div` element synchronously;
-    // its public JSX.Element type is broader than the generated runtime value.
-    const container = (
-      <div>
-        <Editor
-          recordId={recordId}
-          attached={attached()}
-          search={Option.getOrUndefined(StreamSettings.firstSearch(filter()))}
-          backlinksTo={Option.getOrUndefined(StreamSettings.firstLinkTo(filter()))}
-        />
-      </div>
-    ) as HTMLDivElement;
+    const container = document.createElement("div");
+    insert(container, () => (
+      <Editor
+        recordId={recordId}
+        attached={attached()}
+        search={Option.getOrUndefined(StreamSettings.firstSearch(filter()))}
+        backlinksTo={Option.getOrUndefined(StreamSettings.firstLinkTo(filter()))}
+      />
+    ));
 
     return {
       container,

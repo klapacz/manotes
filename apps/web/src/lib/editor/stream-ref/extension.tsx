@@ -3,7 +3,7 @@ import { Filters } from "@manotes/shared/record/filters";
 import { Link } from "@tanstack/solid-router";
 import { Option, Stream } from "effect";
 import { createFilterLabels, useFilters } from "../../filters";
-import { defineSolidNodeView, type SolidNodeViewProps } from "prosekit/solid";
+import { defineSolidNodeView, type SolidNodeViewProps } from "@manotes/prosekit-solid";
 import { createMemo } from "solid-js";
 import { bindRt, createAtomStore, createSyncedAtom } from "../..";
 import { RecordCache } from "../../record-cache.service";
@@ -37,7 +37,7 @@ function StreamRefView(props: SolidNodeViewProps) {
     <Link
       {...PaneCtx.linkOptions(ctx, PaneCursor.openNext(input()))}
       data-stream-ref={JSON.stringify(attrs())}
-      contentEditable={false}
+      contenteditable="false"
       onClick={(event) => {
         if (
           event.button !== 0 ||

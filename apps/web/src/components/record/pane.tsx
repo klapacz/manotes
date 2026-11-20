@@ -1,6 +1,7 @@
+import type { ComponentProps } from "@solidjs/web";
 import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { Link } from "@tanstack/solid-router";
-import { splitProps, type ComponentProps, type Ref } from "solid-js";
+import { omit } from "solid-js";
 import { MatchTag } from "../../lib";
 import { callHandler } from "../../lib/call-handler";
 import { PaneCursor } from "../../lib/record/pane.cursor";
@@ -20,13 +21,14 @@ export function PaneGrid(props: ComponentProps<"main">) {
   );
 }
 
-export function Pane(props: { ref: Ref<HTMLElement | undefined> }) {
+export function Pane(props: { ref: (element: HTMLElement) => void }) {
   const ctx = PaneCtx.use();
   const pane = PaneCtx.usePane();
   const scroll = PaneScroll.use();
 
   const renderRecordLink: RecordLinkRenderer = (linkProps) => {
-    const [target, anchorProps] = splitProps(linkProps, ["id", "children", "onClick"]);
+    const target = linkProps;
+    const anchorProps = omit(linkProps, "id", "children", "onClick");
     const input = () => PaneSchema.make.record({ id: target.id });
 
     return (

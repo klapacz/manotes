@@ -1,4 +1,5 @@
-import { useEditor, useEditorDerivedValue } from "prosekit/solid";
+import type { JSX } from "@solidjs/web";
+import { useEditor, useEditorDerivedValue } from "@manotes/prosekit-solid";
 import { findTable } from "prosekit/extensions/table";
 import {
   AutocompleteItem,
@@ -6,8 +7,8 @@ import {
   AutocompletePopup,
   AutocompletePositioner,
   AutocompleteRoot,
-} from "prosekit/solid/autocomplete";
-import { createSignal, For, type JSX } from "solid-js";
+} from "@manotes/prosekit-solid/autocomplete";
+import { createSignal, For } from "solid-js";
 import type { AppExtension } from "../../editor.extension";
 import {
   commandItemBaseClass,

@@ -1,7 +1,8 @@
-import { useAtom } from "@effect/atom-solid";
+import type { ValidComponent } from "@solidjs/web";
+import { useAtom } from "../../lib/atom-solid";
 import { GraphRegistryContract } from "@manotes/shared/graph-registry/contract";
 import { Schema } from "effect";
-import { createSignal, splitProps, type ValidComponent } from "solid-js";
+import { createSignal, omit } from "solid-js";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import {
@@ -15,7 +16,7 @@ import {
   DialogTrigger,
   type DialogTriggerProps,
 } from "../../components/ui/dialog";
-import { AppForm, useAppForm } from "../../components/ui/form";
+import { AppForm, useAppForm, afterSubmit } from "../../components/ui/form";
 import { MatchAsyncResult, MatchTag } from "../../lib";
 import { GraphAccessCommands } from "../../lib/graph-access/commands";
 import { LocalRegistry } from "../../lib/graph-access/local-registry";
@@ -36,15 +37,14 @@ export function RenameGraphDialog<T extends ValidComponent = typeof Button>(prop
   });
 
   // SAFETY: Erasing the trigger's polymorphic parameter lets Solid remove graph; remaining props are forwarded unchanged to DialogTrigger.
-  const [local, triggerProps] = splitProps(props as Props, ["graph"]);
+  const local = props as Props;
+  const triggerProps = omit(local, "graph");
 
   const form = useAppForm(() => ({
     defaultValues: {
       displayName: local.graph.displayName,
     },
-    validators: {
-      onDynamic: RenameGraphFormSchema,
-    },
+    validators: [afterSubmit(RenameGraphFormSchema)],
     async onSubmit({ value }) {
       if (value.displayName === local.graph.displayName) return setOpen(false);
 
@@ -103,9 +103,9 @@ export function RenameGraphDialog<T extends ValidComponent = typeof Button>(prop
               )}
             />
 
-            <form.AppField name="displayName">
+            <form.Field name="displayName">
               {(field) => <field.TextField label="Graph name" autofocus />}
-            </form.AppField>
+            </form.Field>
 
             <DialogFooter>
               <Button

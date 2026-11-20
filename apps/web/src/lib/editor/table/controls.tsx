@@ -1,7 +1,7 @@
-import { GripHorizontal, GripVertical } from "lucide-solid";
+import { GripHorizontal, GripVertical } from "@lucide/solid";
 import type { Editor } from "prosekit/core";
-import { useEditorDerivedValue } from "prosekit/solid";
-import { MenuItem, MenuPopup, MenuPositioner } from "prosekit/solid/menu";
+import { useEditorDerivedValue } from "@manotes/prosekit-solid";
+import { MenuItem, MenuPopup, MenuPositioner } from "@manotes/prosekit-solid/menu";
 import {
   TableHandleRoot,
   TableHandleColumnPositioner,
@@ -12,7 +12,7 @@ import {
   TableHandleRowPopup,
   TableHandleRowMenuRoot,
   TableHandleRowMenuTrigger,
-} from "prosekit/solid/table-handle";
+} from "@manotes/prosekit-solid/table-handle";
 import { For } from "solid-js";
 import type { AppExtension } from "../../../editor.extension";
 import { commandItemBaseClass, commandSurfaceClass } from "../../../components/ui/command";
@@ -73,14 +73,14 @@ function TableActions(props: { kind: "row" | "column" }) {
   return (
     <MenuPositioner class="z-50 block">
       <MenuPopup class={cx(commandSurfaceClass, "flex min-w-40 flex-col border p-1 shadow-md")}>
-        <For each={actions()}>
+        <For each={actions()} keyed={(action) => action.label}>
           {(action) => (
             <MenuItem
               class={cx(commandItemBaseClass, "data-highlighted:bg-control-hover")}
-              disabled={action.disabled}
-              onSelect={action.command}
+              disabled={action().disabled}
+              onSelect={() => action().command()}
             >
-              {action.label}
+              {action().label}
             </MenuItem>
           )}
         </For>

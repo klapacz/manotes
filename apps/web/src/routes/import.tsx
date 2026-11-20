@@ -1,4 +1,4 @@
-import { useAtom, useAtomSet, useAtomValue } from "@effect/atom-solid";
+import { useAtom, useAtomSet, useAtomValue } from "../lib/atom-solid";
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
 import { Effect, Schema } from "effect";
 import { AsyncResult, Atom } from "effect/reactivity";
@@ -6,7 +6,7 @@ import { Show, createMemo } from "solid-js";
 import { GraphRegistryContract } from "@manotes/shared/graph-registry/contract";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button, buttonVariants } from "../components/ui/button";
-import { AppForm, useAppForm } from "../components/ui/form";
+import { AppForm, useAppForm, afterSubmit } from "../components/ui/form";
 import { List, ListItem } from "../components/ui/list";
 import { MatchAsyncResult, MatchTag } from "../lib";
 import { GraphAccessRuntime } from "../lib/graph-access/runtime";
@@ -74,9 +74,7 @@ function SelectBackupFileForm() {
 
   const form = useAppForm(() => ({
     defaultValues,
-    validators: {
-      onDynamic: SelectBackupFileFormSchema,
-    },
+    validators: [afterSubmit(SelectBackupFileFormSchema)],
     async onSubmit({ value }) {
       const decoded = Schema.decodeUnknownSync(SelectBackupFileFormSchema)(value);
       await decodeBackup(decoded.file);
@@ -99,7 +97,7 @@ function SelectBackupFileForm() {
         )}
       />
 
-      <form.AppField name="file">
+      <form.Field name="file">
         {(field) => (
           <field.FileField
             id="import-backup-file"
@@ -107,7 +105,7 @@ function SelectBackupFileForm() {
             accept="application/json,.json"
           />
         )}
-      </form.AppField>
+      </form.Field>
 
       <div class="flex flex-wrap gap-3">
         <form.SubmitButton>Decode backup</form.SubmitButton>
@@ -141,9 +139,7 @@ function ImportBackupForm(props: { decodedBackup: DecodedBackup }) {
     defaultValues: {
       displayName: props.decodedBackup.displayName,
     },
-    validators: {
-      onDynamic: ImportBackupFormSchema,
-    },
+    validators: [afterSubmit(ImportBackupFormSchema)],
     async onSubmit({ value }) {
       await importBackup({
         backup: props.decodedBackup.backup,
@@ -194,9 +190,9 @@ function ImportBackupForm(props: { decodedBackup: DecodedBackup }) {
         </ListItem>
       </List>
 
-      <form.AppField name="displayName">
+      <form.Field name="displayName">
         {(field) => <field.TextField label="Graph name" placeholder="Imported graph" />}
-      </form.AppField>
+      </form.Field>
 
       <div class="flex flex-wrap gap-3">
         <form.SubmitButton>Import backup</form.SubmitButton>

@@ -1,8 +1,8 @@
-import type { ComponentProps, ValidComponent } from "solid-js";
-import { mergeProps, splitProps } from "solid-js";
-import { DropdownMenu as DropdownMenuPrimitive } from "@kobalte/core/dropdown-menu";
-import { createLink } from "@tanstack/solid-router";
-import { Check, ChevronRight, Circle } from "lucide-solid";
+import type { StyledProps } from "../../lib/cva";
+import { Dynamic, type ValidComponent, type ComponentProps } from "@solidjs/web";
+import { omit } from "solid-js";
+import * as SDK from "@ui-sdk/solid/menu";
+import { Check, ChevronRight, Circle } from "@lucide/solid";
 
 import { cx } from "../../lib/cva";
 
@@ -10,101 +10,91 @@ import { cx } from "../../lib/cva";
 // Source: .reference/shadcn-solid/apps/docs/src/registry/ui/dropdown-menu.tsx
 // Why: the sidebar graph switcher needs the shared dropdown menu primitives used by the shadcn-solid sidebar patterns.
 // Modifications: replaced registry alias imports with local helpers and remapped shadcn design tokens to Manotes tokens.
-export const DropdownMenuPortal = DropdownMenuPrimitive.Portal;
+export function DropdownMenuPortal(props: { children?: import("@solidjs/web").JSX.Element }) {
+  return props.children;
+}
 
-export type DropdownMenuProps = ComponentProps<typeof DropdownMenuPrimitive>;
+export type DropdownMenuProps = StyledProps<typeof SDK.Menu> & { placement?: "bottom-start" };
 
 export const DropdownMenu = (props: DropdownMenuProps) => {
-  const mergedProps = mergeProps<DropdownMenuProps[]>(
-    {
-      gutter: 4,
-    },
-    props,
+  return <SDK.Menu data-slot="dropdown-menu" {...omit(props, "placement")} />;
+};
+
+export type DropdownMenuTriggerProps = StyledProps<typeof SDK.MenuTrigger> & {
+  as?: ValidComponent;
+};
+
+export const DropdownMenuTrigger = (props: DropdownMenuTriggerProps) => {
+  return (
+    <SDK.MenuTrigger
+      {...omit(props, "as")}
+      render={props.as ? (part) => <Dynamic component={props.as} {...part} /> : props.render}
+    />
   );
-
-  return <DropdownMenuPrimitive data-slot="dropdown-menu" {...mergedProps} />;
 };
 
-export type DropdownMenuTriggerProps<T extends ValidComponent = "div"> = ComponentProps<
-  typeof DropdownMenuPrimitive.Trigger<T>
->;
+export type DropdownMenuGroupProps = StyledProps<typeof SDK.MenuGroup>;
 
-export const DropdownMenuTrigger = <T extends ValidComponent = "div">(
-  props: DropdownMenuTriggerProps<T>,
-) => {
-  return <DropdownMenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
+export const DropdownMenuGroup = (props: DropdownMenuGroupProps) => {
+  return <SDK.MenuGroup data-slot="dropdown-menu-group" {...props} />;
 };
 
-export type DropdownMenuGroupProps<T extends ValidComponent = "div"> = ComponentProps<
-  typeof DropdownMenuPrimitive.Group<T>
->;
-
-export const DropdownMenuGroup = <T extends ValidComponent = "div">(
-  props: DropdownMenuGroupProps<T>,
-) => {
-  return <DropdownMenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
-};
-
-export type DropdownMenuSubProps = ComponentProps<typeof DropdownMenuPrimitive.Sub>;
+export type DropdownMenuSubProps = StyledProps<typeof SDK.MenuSub>;
 
 export const DropdownMenuSub = (props: DropdownMenuSubProps) => {
-  return <DropdownMenuPrimitive.Sub data-slot="dropdown-menu-sub" {...props} />;
+  return <SDK.MenuSub data-slot="dropdown-menu-sub" {...props} />;
 };
 
-export type DropdownMenuRadioGroupProps<T extends ValidComponent = "div"> = ComponentProps<
-  typeof DropdownMenuPrimitive.RadioGroup<T>
->;
-
-export const DropdownMenuRadioGroup = <T extends ValidComponent = "div">(
-  props: DropdownMenuRadioGroupProps<T>,
-) => {
-  return <DropdownMenuPrimitive.RadioGroup data-slot="dropdown-menu-radio-group" {...props} />;
+export type DropdownMenuRadioGroupProps = StyledProps<typeof SDK.MenuRadioGroup> & {
+  onChange?: (value: string) => void;
 };
 
-export type DropdownMenuSubTriggerProps<T extends ValidComponent = "div"> = ComponentProps<
-  typeof DropdownMenuPrimitive.SubTrigger<T>
-> & {
+export const DropdownMenuRadioGroup = (props: DropdownMenuRadioGroupProps) => {
+  return (
+    <SDK.MenuRadioGroup
+      data-slot="dropdown-menu-radio-group"
+      {...omit(props, "onChange")}
+      onValueChange={(value) => {
+        if (value !== null) props.onChange?.(value);
+      }}
+    />
+  );
+};
+
+export type DropdownMenuSubTriggerProps = StyledProps<typeof SDK.MenuSubTrigger> & {
   inset?: boolean;
 };
 
-export const DropdownMenuSubTrigger = <T extends ValidComponent = "div">(
-  props: DropdownMenuSubTriggerProps<T>,
-) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as DropdownMenuSubTriggerProps, ["class", "children", "inset"]);
+export const DropdownMenuSubTrigger = (props: DropdownMenuSubTriggerProps) => {
+  const rest = omit(props, "class", "children", "inset");
 
   return (
-    <DropdownMenuPrimitive.SubTrigger
+    <SDK.MenuSubTrigger
       data-slot="dropdown-menu-sub-trigger"
       data-inset={props.inset}
       class={cx(
-        "data-[highlighted]:bg-control-hover data-[highlighted]:text-fg data-[expanded]:bg-control-hover data-[expanded]:text-fg flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "data-[highlighted]:bg-control-hover data-[highlighted]:text-fg data-[open]:bg-control-hover data-[open]:text-fg flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         props.class,
       )}
       {...rest}
     >
       {props.children}
       <ChevronRight class="ml-auto" />
-    </DropdownMenuPrimitive.SubTrigger>
+    </SDK.MenuSubTrigger>
   );
 };
 
-export type DropdownMenuSubContentProps<T extends ValidComponent = "div"> = ComponentProps<
-  typeof DropdownMenuPrimitive.SubContent<T>
->;
+export type DropdownMenuSubContentProps = StyledProps<typeof SDK.MenuSubContent>;
 
-export const DropdownMenuSubContent = <T extends ValidComponent = "div">(
-  props: DropdownMenuSubContentProps<T>,
-) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as DropdownMenuSubContentProps, ["class"]);
+export const DropdownMenuSubContent = (props: DropdownMenuSubContentProps) => {
+  const rest = omit(props, "class");
 
   return (
-    <DropdownMenuPrimitive.SubContent
+    <SDK.MenuSubContent
       data-slot="dropdown-menu-sub-content"
       class={cx(
-        "bg-bg-subtle text-fg data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 data-[closed]:zoom-out-95 data-[expanded]:zoom-in-95 border-border-subtle z-50 min-w-[8rem] origin-(--kb-menu-content-transform-origin) overflow-hidden rounded-md border p-1 shadow-lg outline-none",
-        "[[data-popper-positioner][style*='--kb-popper-content-transform-origin:_top']>[data-slot=dropdown-menu-sub-content]]:slide-in-from-top-2 [[data-popper-positioner][style*='--kb-popper-content-transform-origin:_bottom']>[data-slot=dropdown-menu-sub-content]]:slide-in-from-bottom-2 [[data-popper-positioner][style*='--kb-popper-content-transform-origin:_left']>[data-slot=dropdown-menu-sub-content]]:slide-in-from-left-2 [[data-popper-positioner][style*='--kb-popper-content-transform-origin:_right']>[data-slot=dropdown-menu-sub-content]]:slide-in-from-right-2",
+        "bg-bg-subtle text-fg data-[open]:animate-in data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[open]:fade-in-0 data-[ending-style]:zoom-out-95 data-[open]:zoom-in-95 border-border-subtle z-50 min-w-[8rem] origin-(--transform-origin) [--kb-popper-content-available-height:var(--available-height)] overflow-hidden rounded-md border p-1 shadow-lg outline-none",
+        "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=right]:slide-in-from-left-2 data-[side=left]:slide-in-from-right-2",
         props.class,
       )}
       {...rest}
@@ -112,22 +102,17 @@ export const DropdownMenuSubContent = <T extends ValidComponent = "div">(
   );
 };
 
-export type DropdownMenuContentProps<T extends ValidComponent = "div"> = ComponentProps<
-  typeof DropdownMenuPrimitive.Content<T>
->;
+export type DropdownMenuContentProps = StyledProps<typeof SDK.MenuContent>;
 
-export const DropdownMenuContent = <T extends ValidComponent = "div">(
-  props: DropdownMenuContentProps<T>,
-) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as DropdownMenuContentProps, ["class"]);
+export const DropdownMenuContent = (props: DropdownMenuContentProps) => {
+  const rest = omit(props, "class");
 
   return (
-    <DropdownMenuPrimitive.Content
+    <SDK.MenuContent
       data-slot="dropdown-menu-content"
       class={cx(
-        "bg-bg-subtle text-fg data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 data-[closed]:zoom-out-95 data-[expanded]:zoom-in-95 border-border-subtle z-50 min-w-[8rem] origin-(--kb-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md outline-none",
-        "[[data-popper-positioner][style*='--kb-popper-content-transform-origin:_top']>[data-slot=dropdown-menu-content]]:slide-in-from-top-2 [[data-popper-positioner][style*='--kb-popper-content-transform-origin:_bottom']>[data-slot=dropdown-menu-content]]:slide-in-from-bottom-2 [[data-popper-positioner][style*='--kb-popper-content-transform-origin:_left']>[data-slot=dropdown-menu-content]]:slide-in-from-left-2 [[data-popper-positioner][style*='--kb-popper-content-transform-origin:_right']>[data-slot=dropdown-menu-content]]:slide-in-from-right-2",
+        "bg-bg-subtle text-fg data-[open]:animate-in data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[open]:fade-in-0 data-[ending-style]:zoom-out-95 data-[open]:zoom-in-95 border-border-subtle z-50 min-w-[8rem] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md outline-none",
+        "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=right]:slide-in-from-left-2 data-[side=left]:slide-in-from-right-2",
         props.class,
       )}
       {...rest}
@@ -135,21 +120,16 @@ export const DropdownMenuContent = <T extends ValidComponent = "div">(
   );
 };
 
-export type DropdownMenuItemProps<T extends ValidComponent = "div"> = ComponentProps<
-  typeof DropdownMenuPrimitive.Item<T>
-> & {
+export type DropdownMenuItemProps = StyledProps<typeof SDK.MenuItem> & {
   inset?: boolean;
   variant?: "default" | "destructive";
 };
 
-export const DropdownMenuItem = <T extends ValidComponent = "div">(
-  props: DropdownMenuItemProps<T>,
-) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as DropdownMenuItemProps, ["class", "inset", "variant"]);
+export const DropdownMenuItem = (props: DropdownMenuItemProps) => {
+  const rest = omit(props, "class", "inset", "variant");
 
   return (
-    <DropdownMenuPrimitive.Item
+    <SDK.MenuItem
       data-slot="dropdown-menu-item"
       data-inset={props.inset}
       data-variant={props.variant}
@@ -162,26 +142,26 @@ export const DropdownMenuItem = <T extends ValidComponent = "div">(
   );
 };
 
-type DropdownMenuItemLinkRootProps = Omit<DropdownMenuItemProps<"a">, "as">;
+type DropdownMenuItemLinkRootProps = DropdownMenuItemProps & { href?: string; to?: string };
 
 const DropdownMenuItemLinkRoot = (props: DropdownMenuItemLinkRootProps) => {
-  return <DropdownMenuItem as="a" {...props} />;
+  return (
+    <DropdownMenuItem
+      render={(part) => <a {...part} href={props.to ?? props.href} />}
+      {...omit(props, "to", "href")}
+    />
+  );
 };
 
-export const DropdownMenuItemLink = createLink(DropdownMenuItemLinkRoot);
+export const DropdownMenuItemLink = DropdownMenuItemLinkRoot;
 
-export type DropdownMenuCheckboxItemProps<T extends ValidComponent = "div"> = ComponentProps<
-  typeof DropdownMenuPrimitive.CheckboxItem<T>
->;
+export type DropdownMenuCheckboxItemProps = StyledProps<typeof SDK.MenuCheckboxItem>;
 
-export const DropdownMenuCheckboxItem = <T extends ValidComponent = "div">(
-  props: DropdownMenuCheckboxItemProps<T>,
-) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as DropdownMenuCheckboxItemProps, ["class", "children"]);
+export const DropdownMenuCheckboxItem = (props: DropdownMenuCheckboxItemProps) => {
+  const rest = omit(props, "class", "children");
 
   return (
-    <DropdownMenuPrimitive.CheckboxItem
+    <SDK.MenuCheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       class={cx(
         "data-[highlighted]:bg-control-hover data-[highlighted]:text-fg relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -190,27 +170,22 @@ export const DropdownMenuCheckboxItem = <T extends ValidComponent = "div">(
       {...rest}
     >
       <span class="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
-        <DropdownMenuPrimitive.ItemIndicator>
+        <SDK.MenuItemIndicator>
           <Check class="size-4" />
-        </DropdownMenuPrimitive.ItemIndicator>
+        </SDK.MenuItemIndicator>
       </span>
       {props.children}
-    </DropdownMenuPrimitive.CheckboxItem>
+    </SDK.MenuCheckboxItem>
   );
 };
 
-export type DropdownMenuRadioItemProps<T extends ValidComponent = "div"> = ComponentProps<
-  typeof DropdownMenuPrimitive.RadioItem<T>
->;
+export type DropdownMenuRadioItemProps = StyledProps<typeof SDK.MenuRadioItem>;
 
-export const DropdownMenuRadioItem = <T extends ValidComponent = "div">(
-  props: DropdownMenuRadioItemProps<T>,
-) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as DropdownMenuRadioItemProps, ["class", "children"]);
+export const DropdownMenuRadioItem = (props: DropdownMenuRadioItemProps) => {
+  const rest = omit(props, "class", "children");
 
   return (
-    <DropdownMenuPrimitive.RadioItem
+    <SDK.MenuRadioItem
       data-slot="dropdown-menu-radio-item"
       class={cx(
         "data-[highlighted]:bg-control-hover data-[highlighted]:text-fg relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -219,30 +194,24 @@ export const DropdownMenuRadioItem = <T extends ValidComponent = "div">(
       {...rest}
     >
       <span class="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
-        <DropdownMenuPrimitive.ItemIndicator>
+        <SDK.MenuItemIndicator>
           <Circle class="size-2 fill-current" />
-        </DropdownMenuPrimitive.ItemIndicator>
+        </SDK.MenuItemIndicator>
       </span>
       {props.children}
-    </DropdownMenuPrimitive.RadioItem>
+    </SDK.MenuRadioItem>
   );
 };
 
-export type DropdownMenuGroupLabelProps<T extends ValidComponent = "span"> = ComponentProps<
-  typeof DropdownMenuPrimitive.GroupLabel<T>
-> & {
+export type DropdownMenuGroupLabelProps = StyledProps<typeof SDK.MenuGroupLabel> & {
   inset?: boolean;
 };
 
-export const DropdownMenuGroupLabel = <T extends ValidComponent = "span">(
-  props: DropdownMenuGroupLabelProps<T>,
-) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as DropdownMenuGroupLabelProps, ["class", "inset"]);
+export const DropdownMenuGroupLabel = (props: DropdownMenuGroupLabelProps) => {
+  const rest = omit(props, "class", "inset");
 
   return (
-    <DropdownMenuPrimitive.GroupLabel
-      as="div"
+    <SDK.MenuGroupLabel
       data-slot="dropdown-menu-group-label"
       data-inset={props.inset}
       class={cx("text-fg my-1.5 px-2 text-sm font-medium data-[inset]:pl-8", props.class)}
@@ -251,20 +220,15 @@ export const DropdownMenuGroupLabel = <T extends ValidComponent = "span">(
   );
 };
 
-export type DropdownMenuItemLabelProps<T extends ValidComponent = "div"> = ComponentProps<
-  typeof DropdownMenuPrimitive.ItemLabel<T>
-> & {
+export type DropdownMenuItemLabelProps = ComponentProps<"span"> & {
   inset?: boolean;
 };
 
-export const DropdownMenuItemLabel = <T extends ValidComponent = "div">(
-  props: DropdownMenuItemLabelProps<T>,
-) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as DropdownMenuItemLabelProps, ["class", "inset"]);
+export const DropdownMenuItemLabel = (props: DropdownMenuItemLabelProps) => {
+  const rest = omit(props, "class", "inset");
 
   return (
-    <DropdownMenuPrimitive.ItemLabel
+    <span
       data-slot="dropdown-menu-item-label"
       data-inset={props.inset}
       class={cx("text-fg px-2 py-1.5 text-sm font-medium data-[inset]:pl-8", props.class)}
@@ -273,18 +237,13 @@ export const DropdownMenuItemLabel = <T extends ValidComponent = "div">(
   );
 };
 
-export type DropdownMenuSeparatorProps<T extends ValidComponent = "hr"> = ComponentProps<
-  typeof DropdownMenuPrimitive.Separator<T>
->;
+export type DropdownMenuSeparatorProps = StyledProps<typeof SDK.MenuSeparator>;
 
-export const DropdownMenuSeparator = <T extends ValidComponent = "hr">(
-  props: DropdownMenuSeparatorProps<T>,
-) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as DropdownMenuSeparatorProps, ["class"]);
+export const DropdownMenuSeparator = (props: DropdownMenuSeparatorProps) => {
+  const rest = omit(props, "class");
 
   return (
-    <DropdownMenuPrimitive.Separator
+    <SDK.MenuSeparator
       data-slot="dropdown-menu-separator"
       class={cx("bg-border-subtle -mx-1 my-1 h-px", props.class)}
       {...rest}
@@ -295,7 +254,7 @@ export const DropdownMenuSeparator = <T extends ValidComponent = "hr">(
 export type DropdownMenuShortcutProps = ComponentProps<"span">;
 
 export const DropdownMenuShortcut = (props: DropdownMenuShortcutProps) => {
-  const [, rest] = splitProps(props, ["class"]);
+  const rest = omit(props, "class");
 
   return (
     <span

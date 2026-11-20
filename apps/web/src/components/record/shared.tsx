@@ -1,10 +1,11 @@
+import type { ComponentProps } from "@solidjs/web";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { PaneNavigate } from "../../lib/record/pane.navigate";
 import { Filters } from "@manotes/shared/record/filters";
 import type { RecordRepo } from "@manotes/shared/record.repo";
 import { getRouteApi } from "@tanstack/solid-router";
 import { Data, Exit, type Types } from "effect";
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../../lib/atom-solid";
 import { Atom, AsyncResult } from "effect/reactivity";
 import { Show, createMemo, createSignal } from "solid-js";
 import { RecordFormat } from "../../lib/record";
@@ -32,7 +33,7 @@ import { RecordDatePicker } from "./date-picker";
 import { QueryEngine } from "../../lib/query-engine";
 import { MenuQuery } from "../../lib/menu-query";
 import { DateSuggestions } from "../../lib/date-suggestions";
-import { splitProps, type ComponentProps, type ParentProps } from "solid-js";
+import { omit, type ParentProps } from "solid-js";
 import { MatchTag } from "../../lib";
 import { Focus } from "./focus";
 import { RecordProps } from "./record-props";
@@ -43,7 +44,8 @@ import { LiveDocAtom } from "../../lib/live-doc.atom";
 const route = getRouteApi("/$graph/");
 
 export function PaneShell(props: ComponentProps<"section">) {
-  const [local, rest] = splitProps(props, ["children", "onFocusIn"]);
+  const local = props;
+  const rest = omit(props, "children", "onFocusIn");
 
   return (
     <section
@@ -285,7 +287,7 @@ export function RecordActions(props: { record: RecordRepo.Meta }) {
           variant="plain"
           size="icon-xs"
           rounded="full"
-          class="absolute top-0.5 right-0 z-10 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 data-expanded:opacity-100 [&_svg]:text-fg-subtle hover:[&_svg]:text-fg data-expanded:[&_svg]:text-fg"
+          class="absolute top-0.5 right-0 z-10 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 data-[open]:opacity-100 [&_svg]:text-fg-subtle hover:[&_svg]:text-fg data-[open]:[&_svg]:text-fg"
         >
           <EllipsisIcon />
         </Picker.Trigger>
@@ -413,7 +415,7 @@ export function RecordActions(props: { record: RecordRepo.Meta }) {
                       <div class="border-t border-border-subtle px-3 py-2 text-xs text-fg-subtle">
                         <p>
                           Dated{" "}
-                          <time dateTime={props.record.date}>
+                          <time datetime={props.record.date}>
                             {RecordFormat.formatShortDate(props.record.date)}
                           </time>
                         </p>
@@ -479,17 +481,19 @@ type RecordMenuChoice = Picker.Choice & RecordMenuAction;
 // Keep this highlight while a local control or portal temporarily takes focus.
 export function RecordShell(props: ComponentProps<"article">) {
   const fnode = Focus.useNode();
-  const [local, rest] = splitProps(props, ["class", "classList", "children"]);
+  const local = props;
+  const rest = omit(props, "class", "children");
 
   return (
     <article
       {...rest}
-      class={cx("transition-colors relative border-t border-t-border-subtle", local.class)}
-      classList={{
-        ...local.classList,
-        "bg-bg-subtle": fnode.highlightWithin(),
-        "border-t-primary-border": fnode.highlighted(),
-      }}
+      class={[
+        cx("transition-colors relative border-t border-t-border-subtle", local.class),
+        {
+          "bg-bg-subtle": fnode.highlightWithin(),
+          "border-t-primary-border": fnode.highlighted(),
+        },
+      ]}
     >
       {local.children}
     </article>
@@ -503,7 +507,7 @@ export function RecordShell(props: ComponentProps<"article">) {
 export function RecordDivider(props: { date: string }) {
   return (
     <time
-      dateTime={props.date}
+      datetime={props.date}
       class="block font-serif font-medium my-3 text-center text-fg-subtle"
     >
       {RecordFormat.formatGroupLabel(props.date)}

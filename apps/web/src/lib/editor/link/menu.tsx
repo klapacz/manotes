@@ -1,22 +1,15 @@
-import { Check, Copy, ExternalLink, Unlink } from "lucide-solid";
+import type { JSX } from "@solidjs/web";
+import { Check, Copy, ExternalLink, Unlink } from "@lucide/solid";
 import { definePlugin } from "prosekit/core";
 import { Plugin, TextSelection } from "prosekit/pm/state";
 import type { EditorView } from "prosekit/pm/view";
-import { useEditor, useExtension, useKeymap } from "prosekit/solid";
+import { useEditor, useExtension, useKeymap } from "@manotes/prosekit-solid";
 import {
   InlinePopoverPopup,
   InlinePopoverPositioner,
   InlinePopoverRoot,
-} from "prosekit/solid/inline-popover";
-import {
-  createEffect,
-  createMemo,
-  createSignal,
-  onCleanup,
-  onMount,
-  Show,
-  type JSX,
-} from "solid-js";
+} from "@manotes/prosekit-solid/inline-popover";
+import { createEffect, createMemo, createSignal, onCleanup, onSettled, Show } from "solid-js";
 import { Button, buttonVariants } from "../../../components/ui/button";
 import { ButtonGroup } from "../../../components/ui/button-group";
 import { inputClass } from "../../../components/ui/input";
@@ -87,7 +80,7 @@ export function LinkMenu(props: { edit: LinkEdit }): JSX.Element {
   }));
 
   // A press anywhere but the shown link or its panel dismisses it.
-  onMount(() => {
+  onSettled(() => {
     const dismiss = (event: PointerEvent) => {
       const link = hover.element();
       const target = event.target;
@@ -98,7 +91,8 @@ export function LinkMenu(props: { edit: LinkEdit }): JSX.Element {
     };
 
     document.addEventListener("pointerdown", dismiss, true);
-    onCleanup(() => document.removeEventListener("pointerdown", dismiss, true));
+
+    return () => document.removeEventListener("pointerdown", dismiss, true);
   });
 
   // Starting an edit keeps the same target, so the panel and its field stay.
@@ -112,7 +106,6 @@ export function LinkMenu(props: { edit: LinkEdit }): JSX.Element {
 
       return hovered && EditorLink.linkAtElement(view(), hovered);
     },
-    undefined,
     { equals: sameLink },
   );
 
@@ -186,14 +179,15 @@ function LinkPanel(props: {
 
   onCleanup(() => clearTimeout(reset));
 
-  createEffect(() => {
-    const input = hrefInput();
-
-    if (!input || !sameLink(props.edit.focusRequest(), props.target)) return;
-    props.edit.clearFocusRequest();
-    input.focus({ preventScroll: true });
-    input.select();
-  });
+  createEffect(
+    () => ({ input: hrefInput(), requested: sameLink(props.edit.focusRequest(), props.target) }),
+    ({ input, requested }) => {
+      if (!input || !requested) return;
+      props.edit.clearFocusRequest();
+      input.focus({ preventScroll: true });
+      input.select();
+    },
+  );
 
   const start = () => {
     settled = false;
@@ -263,7 +257,7 @@ function LinkPanel(props: {
           value={href()}
           placeholder="Paste or type a link"
           aria-label="Link"
-          inputMode="url"
+          inputmode="url"
           autocapitalize="off"
           autocorrect="off"
           spellcheck={false}

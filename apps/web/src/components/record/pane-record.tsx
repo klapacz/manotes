@@ -1,7 +1,8 @@
+import type { ComponentProps } from "@solidjs/web";
 import type { RecordRepo } from "@manotes/shared/record.repo";
 import { getRouteApi } from "@tanstack/solid-router";
 import { Option, Stream } from "effect";
-import { Show, type ComponentProps } from "solid-js";
+import { Show } from "solid-js";
 import Editor from "../../editor";
 import { MatchTag, RecordCache, bindRt, createAtomResultStore, createSyncedAtom } from "../../lib";
 import { RecordLink } from "../../lib/record/link";

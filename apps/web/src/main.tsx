@@ -1,5 +1,5 @@
 import { RouterProvider, createRouter } from "@tanstack/solid-router";
-import { render } from "solid-js/web";
+import { render } from "@solidjs/web";
 import { registerSW } from "virtual:pwa-register";
 
 import { Toaster } from "./components/ui/sonner";

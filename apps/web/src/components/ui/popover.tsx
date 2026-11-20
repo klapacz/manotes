@@ -1,6 +1,6 @@
-import type { ComponentProps, ValidComponent } from "solid-js";
-import { mergeProps, splitProps } from "solid-js";
-import { Popover as PopoverPrimitive } from "@kobalte/core/popover";
+import type { StyledProps } from "../../lib/cva";
+import { merge, omit } from "solid-js";
+import * as SDK from "@ui-sdk/solid/popover";
 
 import { cx } from "../../lib/cva";
 
@@ -8,45 +8,35 @@ import { cx } from "../../lib/cva";
 // Source: .reference/shadcn-solid/apps/docs/src/registry/ui/popover.tsx
 // Why: this repo was missing the shared popover primitive that commonly accompanies the shadcn-solid dropdown/sidebar stack.
 // Modifications: replaced registry alias imports with local helpers and remapped shadcn design tokens to Manotes tokens.
-export const PopoverPortal = PopoverPrimitive.Portal;
+export function PopoverPortal(props: { children?: import("@solidjs/web").JSX.Element }) {
+  return props.children;
+}
 
-export type PopoverProps = ComponentProps<typeof PopoverPrimitive>;
+export type PopoverProps = StyledProps<typeof SDK.Popover>;
 
 export const Popover = (props: PopoverProps) => {
-  const mergedProps = mergeProps<PopoverProps[]>(
-    {
-      gutter: 4,
-    },
-    props,
-  );
+  const mergedProps = merge({}, props);
 
-  return <PopoverPrimitive data-slot="popover" {...mergedProps} />;
+  return <SDK.Popover data-slot="popover" {...mergedProps} />;
 };
 
-export type PopoverTriggerProps<T extends ValidComponent = "button"> = ComponentProps<
-  typeof PopoverPrimitive.Trigger<T>
->;
+export type PopoverTriggerProps = StyledProps<typeof SDK.PopoverTrigger>;
 
-export const PopoverTrigger = <T extends ValidComponent = "button">(
-  props: PopoverTriggerProps<T>,
-) => {
-  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
+export const PopoverTrigger = (props: PopoverTriggerProps) => {
+  return <SDK.PopoverTrigger data-slot="popover-trigger" {...props} />;
 };
 
-export type PopoverContentProps<T extends ValidComponent = "div"> = ComponentProps<
-  typeof PopoverPrimitive.Content<T>
->;
+export type PopoverContentProps = StyledProps<typeof SDK.PopoverContent>;
 
-export const PopoverContent = <T extends ValidComponent = "div">(props: PopoverContentProps<T>) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as PopoverContentProps, ["class"]);
+export const PopoverContent = (props: PopoverContentProps) => {
+  const rest = omit(props, "class");
 
   return (
-    <PopoverPrimitive.Content
+    <SDK.PopoverContent
       data-slot="popover-content"
       class={cx(
-        "bg-bg-subtle text-fg data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0 data-[closed]:zoom-out-95 data-[expanded]:zoom-in-95 border-border-subtle z-50 w-72 origin-(--kb-popover-content-transform-origin) rounded-md border p-4 shadow-md outline-hidden",
-        "[[data-popper-positioner][style*='--kb-popper-content-transform-origin:_top']>[data-slot=popover-content]]:slide-in-from-top-2 [[data-popper-positioner][style*='--kb-popper-content-transform-origin:_bottom']>[data-slot=popover-content]]:slide-in-from-bottom-2 [[data-popper-positioner][style*='--kb-popper-content-transform-origin:_left']>[data-slot=popover-content]]:slide-in-from-left-2 [[data-popper-positioner][style*='--kb-popper-content-transform-origin:_right']>[data-slot=popover-content]]:slide-in-from-right-2",
+        "bg-bg-subtle text-fg data-[open]:animate-in data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[open]:fade-in-0 data-[ending-style]:zoom-out-95 data-[open]:zoom-in-95 border-border-subtle z-50 w-72 origin-(--transform-origin) rounded-md border p-4 shadow-md outline-hidden",
+        "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=right]:slide-in-from-left-2 data-[side=left]:slide-in-from-right-2",
         props.class,
       )}
       {...rest}

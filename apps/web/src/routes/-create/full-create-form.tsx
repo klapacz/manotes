@@ -1,11 +1,12 @@
-import { useAtom } from "@effect/atom-solid";
+import { useAtom } from "../../lib/atom-solid";
 import { Link, Navigate } from "@tanstack/solid-router";
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { GraphRegistryContract } from "@manotes/shared/graph-registry/contract";
 import { Effect, Schema } from "effect";
+import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button, buttonVariants } from "../../components/ui/button";
-import { AppForm, useAppForm } from "../../components/ui/form";
+import { AppForm, useAppForm, afterSubmit } from "../../components/ui/form";
 import { MatchAsyncResult, MatchTag } from "../../lib";
 import { GraphAccessRuntime } from "../../lib/graph-access/runtime";
 import { GraphAccessCommandsProvision } from "../../lib/graph-access/commands/provision";
@@ -13,11 +14,8 @@ import { GraphAccessCommandsProvision } from "../../lib/graph-access/commands/pr
 const CreateGraphFormSchema = Schema.Struct({
   displayName: GraphRegistryContract.DisplayNameSchema,
   password: Schema.String,
+  mode: Schema.Literals(["local", "cloud"]),
 }).pipe(Schema.toStandardSchemaV1);
-
-type CreateGraphSubmitMeta = {
-  mode: "local" | "cloud";
-};
 
 const createGraphAtom = GraphAccessRuntime.atom.fn(
   Effect.fn("RoutesCreate.createGraph")(function* ({
@@ -39,28 +37,37 @@ const createGraphAtom = GraphAccessRuntime.atom.fn(
 
 export function FullCreateForm() {
   const [createResult, createGraph] = useAtom(() => createGraphAtom, { mode: "promise" });
-  const initialSubmitMeta: CreateGraphSubmitMeta = { mode: "local" };
+
+  const defaultValues: StandardSchemaV1.InferInput<typeof CreateGraphFormSchema> = {
+    displayName: "",
+    password: "",
+    mode: "local",
+  };
 
   const form = useAppForm(() => ({
-    defaultValues: { displayName: "", password: "" },
-    validators: { onDynamic: CreateGraphFormSchema },
-    onSubmitMeta: initialSubmitMeta,
-    async onSubmit({ value, meta }) {
+    defaultValues,
+    validators: [afterSubmit(CreateGraphFormSchema)],
+    async onSubmit({ value, createValidationError }) {
       const password = GraphEncryption.normalizePassword(value.password);
-      form.setErrorMap({ onSubmit: { fields: {} } });
 
-      if (meta.mode === "cloud" && !password) {
-        return form.setErrorMap({
-          onSubmit: { fields: { password: "Password is required for synced graphs." } },
+      if (value.mode === "cloud" && !password) {
+        return createValidationError({
+          fields: { password: "Password is required for synced graphs." },
         });
       }
 
-      await createGraph({ mode: meta.mode, displayName: value.displayName, password });
+      await createGraph({ mode: value.mode, displayName: value.displayName, password });
     },
   }));
 
+  const submit = (mode: "local" | "cloud") => {
+    form.setFieldValue("mode", mode);
+
+    return form.handleSubmit();
+  };
+
   return (
-    <AppForm form={form} AppForm={form.AppForm}>
+    <AppForm form={form} AppForm={form.AppForm} submit={() => submit("local")}>
       <MatchAsyncResult
         when={createResult()}
         onSuccess={(graph) => <Navigate to="/$graph" params={{ graph: graph().localGraphId }} />}
@@ -89,13 +96,13 @@ export function FullCreateForm() {
         )}
       />
 
-      <form.AppField name="displayName">
+      <form.Field name="displayName">
         {(field) => (
           <field.TextField id="create-graph-name" label="Graph name" placeholder="work" autofocus />
         )}
-      </form.AppField>
+      </form.Field>
 
-      <form.AppField name="password">
+      <form.Field name="password">
         {(field) => (
           <field.TextField
             id="create-graph-password"
@@ -105,23 +112,19 @@ export function FullCreateForm() {
             description="Local graphs ignore this field. Synced graphs require it."
           />
         )}
-      </form.AppField>
+      </form.Field>
 
       <form.Subscribe selector={(state) => ({ isSubmitting: state.isSubmitting })}>
         {(state) => (
           <div class="flex flex-wrap gap-3">
-            <Button
-              type="button"
-              disabled={state().isSubmitting}
-              onClick={() => form.handleSubmit({ mode: "local" })}
-            >
+            <Button type="button" disabled={state().isSubmitting} onClick={() => submit("local")}>
               Create local graph
             </Button>
             <Button
               type="button"
               variant="outline"
               disabled={state().isSubmitting}
-              onClick={() => form.handleSubmit({ mode: "cloud" })}
+              onClick={() => submit("cloud")}
             >
               Create synced graph
             </Button>

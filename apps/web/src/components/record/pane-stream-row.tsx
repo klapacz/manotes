@@ -1,5 +1,5 @@
 import type { RecordRepo } from "@manotes/shared/record.repo";
-import { useAtomValue } from "@effect/atom-solid";
+import { useAtomValue } from "../../lib/atom-solid";
 import { AsyncResult } from "effect/reactivity";
 import { LiveDoc } from "../../lib/live-doc.service";
 import { LiveDocAtom } from "../../lib/live-doc.atom";
@@ -117,7 +117,8 @@ function RecordContent(props: {
   // is acquired through an atom so its scope holds the pool's RcMap reference —
   // unmount releases it, and the pool's idle TTL decides eviction.
   const pool = EditorPool.use();
-  const slotAtom = bindRt((rt) => rt.atom((get) => pool.get(get(recordIdAtom))));
+  const poolAtom = createSyncedAtom(pool);
+  const slotAtom = bindRt((rt) => rt.atom((get) => get(poolAtom).get(get(recordIdAtom))));
   const slotResult = useAtomValue(slotAtom);
 
   const listRow = VirtualList.useRow();
@@ -173,10 +174,14 @@ function RecordContent(props: {
           <MatchAsyncResult
             when={slotResult()}
             onSuccess={(slot) => {
-              createEffect(() => {
-                slot().setAttached(listRow.ready());
-                onCleanup(() => slot().setAttached(false));
-              });
+              createEffect(
+                () => ({ slot: slot(), ready: listRow.ready() }),
+                ({ slot, ready }) => {
+                  slot.setAttached(ready);
+
+                  return () => slot.setAttached(false);
+                },
+              );
 
               return <RecordClip clamped={clamped()} content={slot().container} />;
             }}
@@ -192,28 +197,32 @@ function RecordClip(props: { clamped: boolean; content: HTMLElement }) {
   const [clip, setClip] = createSignal<HTMLDivElement>();
   const [overflowing, setOverflowing] = createSignal(false);
 
-  createEffect(() => {
-    const element = clip();
+  createEffect(
+    () => ({ element: clip(), content: props.content }),
+    ({ element, content }) => {
+      if (!element) return;
 
-    if (!element) return;
+      const observer = new ResizeObserver(() => {
+        return setOverflowing(element.scrollHeight > element.clientHeight);
+      });
 
-    const observer = new ResizeObserver(() => {
-      return setOverflowing(element.scrollHeight > element.clientHeight);
-    });
+      observer.observe(element);
+      observer.observe(content);
 
-    observer.observe(element);
-    observer.observe(props.content);
-    onCleanup(() => observer.disconnect());
-  });
+      return () => observer.disconnect();
+    },
+  );
 
   return (
     <div
       ref={setClip}
-      class="overflow-hidden"
-      classList={{
-        "max-h-32": props.clamped,
-        "mask-b-from-40%": props.clamped && overflowing(),
-      }}
+      class={[
+        "overflow-hidden",
+        {
+          "max-h-32": props.clamped,
+          "mask-b-from-40%": props.clamped && overflowing(),
+        },
+      ]}
     >
       {props.content}
     </div>

@@ -1,14 +1,8 @@
-import { Badge as BadgePrimitive } from "@kobalte/core/badge";
-import type { VariantProps } from "cva";
-import type { ComponentProps, ValidComponent } from "solid-js";
-import { splitProps } from "solid-js";
-
 import { cva } from "../../lib/cva";
+import { omit } from "solid-js";
+import type { ComponentProps } from "@solidjs/web";
+import type { VariantProps } from "cva";
 
-// Adapted from shadcn-solid (commit 4c75b89, using @kobalte/core 0.13.11 / solid-js 1.9.10).
-// Source: apps/docs/src/registry/ui/badge.tsx
-// Why: graph list surfaces needed a shared status badge primitive.
-// Modifications: replaced registry alias imports with the local cva helper and remapped variants to Manotes tokens.
 export const badgeVariants = cva({
   base: "inline-flex w-fit items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap shrink-0 transition-[color,box-shadow]",
   variants: {
@@ -24,23 +18,12 @@ export const badgeVariants = cva({
   },
 });
 
-export type BadgeProps<T extends ValidComponent = "span"> = ComponentProps<
-  typeof BadgePrimitive<T>
-> &
-  VariantProps<typeof badgeVariants>;
-
-export const Badge = <T extends ValidComponent = "span">(props: BadgeProps<T>) => {
-  // SAFETY: Erasing the polymorphic parameter lets Solid split wrapper-owned keys; all other props are forwarded unchanged to the same primitive.
-  const [, rest] = splitProps(props as BadgeProps, ["class", "variant"]);
-
+export function Badge(props: ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
   return (
-    <BadgePrimitive
+    <span
       data-slot="badge"
-      class={badgeVariants({
-        variant: props.variant,
-        class: props.class,
-      })}
-      {...rest}
+      {...omit(props, "class", "variant")}
+      class={badgeVariants({ variant: props.variant, class: props.class })}
     />
   );
-};
+}

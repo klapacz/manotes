@@ -1,4 +1,4 @@
-import { useAtomValue } from "@effect/atom-solid";
+import { useAtomValue } from "./atom-solid";
 import { AsyncResult } from "effect/reactivity";
 import { createMemo } from "solid-js";
 import { Filters } from "@manotes/shared/record/filters";

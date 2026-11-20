@@ -3,17 +3,19 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  on,
   onCleanup,
-  onMount,
+  onSettled,
+  latest,
+  untrack,
   useContext,
 } from "solid-js";
 import { Atom, AsyncResult, type AtomRegistry } from "effect/reactivity";
 import { Option } from "effect";
-import { useAtomResource, useAtomValue } from "@effect/atom-solid";
-import { bindRt, createSyncedAtom } from "../../lib";
+import { useAtomResource, useAtomValue } from "../../lib/atom-solid";
+import { bindRt } from "../../lib/rt-atom";
+import { createSyncedAtom } from "../../lib/primitives";
 import type { RuntimeContext } from "../../lib/graph-access/graph-runtime/manager";
-import { QueryEngine } from "../../lib/query-engine";
+import type { QueryEngine } from "../../lib/query-engine";
 import { MenuSearch } from "../../lib/menu-search";
 
 export type Options<T> = {
@@ -29,18 +31,26 @@ export const Positions = createContext<Map<string, Position>>();
 
 export function use<T extends { value: string }>(opts: Options<T>) {
   const positions = useContext(Positions);
-  const positionKey = opts.label;
-  const previous = opts.initialSearch === undefined ? positions?.get(positionKey) : undefined;
+
+  // History/default search seed this mounted query; only request.query stays reactive.
+  const initial = untrack(() => ({
+    label: opts.label,
+    search: opts.initialSearch,
+    defaultSearch: opts.defaultSearch,
+  }));
+
+  const positionKey = initial.label;
+  const previous = initial.search === undefined ? positions?.get(positionKey) : undefined;
 
   const [search, setSearch] = createSignal(
-    opts.initialSearch ?? previous?.search ?? opts.defaultSearch ?? "",
+    initial.search ?? previous?.search ?? initial.defaultSearch ?? "",
   );
 
   const [highlighted, setHighlighted] = createSignal(previous?.highlighted ?? "");
   let command: HTMLDivElement | undefined;
   const list = () => command?.querySelector<HTMLDivElement>("[data-command-scroll]");
 
-  onMount(() => command?.querySelector("input")?.focus());
+  onSettled(() => command?.querySelector("input")?.focus());
 
   onCleanup(() => {
     return positions?.set(positionKey, {
@@ -98,33 +108,30 @@ export function use<T extends { value: string }>(opts: Options<T>) {
   });
 
   let previousText: string | undefined;
-  createEffect(
-    on(fresh, (result) => {
-      if (!result) return;
-      const choices = result.matches.map((match) => match.value);
-      const first = choices[0];
+  createEffect(fresh, (result) => {
+    if (!result) return;
+    const choices = result.matches.map((match) => match.value);
+    const first = choices[0];
 
-      if (!first) return;
-      const text = result.text;
-      const restoring = previousText === undefined && previous;
-      const candidate = restoring ? previous.highlighted : highlighted();
+    if (!first) return;
+    const text = result.text;
+    const restoring = previousText === undefined && previous;
+    const candidate = restoring ? previous.highlighted : untrack(() => latest(highlighted));
 
-      const keepSelection =
-        (restoring || previousText === text) &&
-        choices.some((choice) => choice.value === candidate);
+    const keepSelection =
+      (restoring || previousText === text) && choices.some((choice) => choice.value === candidate);
 
-      const selected = keepSelection ? candidate : first.value;
-      previousText = text;
+    const selected = keepSelection ? candidate : first.value;
+    previousText = text;
 
-      requestAnimationFrame(() => {
-        if (!command?.isConnected || search() !== text) return;
-        setHighlighted(selected);
-        const scroller = list();
+    requestAnimationFrame(() => {
+      if (!command?.isConnected || search() !== text) return;
+      setHighlighted(selected);
+      const scroller = list();
 
-        if (restoring && scroller) scroller.scrollTop = previous.scrollTop;
-      });
-    }),
-  );
+      if (restoring && scroller) scroller.scrollTop = previous.scrollTop;
+    });
+  });
 
   // Limit mounted command items: rendering every record stalls large graphs.
   const visible = createMemo(() => matches().slice(0, 50));

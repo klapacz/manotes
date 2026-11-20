@@ -34,4 +34,4 @@ export {
   Search as SearchIcon,
   Terminal as TerminalIcon,
   X as XIcon,
-} from "lucide-solid";
+} from "@lucide/solid";

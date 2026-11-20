@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 /**
  * Only the public API was checked. The implementation has not been carefully reviewed.
  * AI agents must notify the user of this review gap before working on this file.
@@ -9,8 +10,8 @@ import { Filters } from "@manotes/shared/record/filters";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { PropDef } from "@manotes/shared/prop-def.service";
 import { Array, Equal, Match, Option, Predicate, Result, Stream } from "effect";
-import { Show, createMemo, createSignal, type JSX } from "solid-js";
-import { CircleCheck, CircleDashed } from "lucide-solid";
+import { Show, createMemo, createSignal } from "solid-js";
+import { CircleCheck, CircleDashed } from "@lucide/solid";
 import { DateSuggestions } from "../../lib/date-suggestions";
 import { MenuQuery } from "../../lib/menu-query";
 import { QueryEngine } from "../../lib/query-engine";
@@ -121,13 +122,13 @@ function FilterCommands(props: {
   onOpenRecord?: (id: AttrsSchema.RecordId) => void;
   onClear?: () => void;
 }) {
-  const [group, setGroup] = createSignal(
-    props.value
+  const [group, setGroup] = createSignal(() => {
+    return props.value
       ? Option.getOrUndefined(props.filters.findGroup(props.value))
       : props.body
         ? Option.getOrUndefined(props.filters.findGroup(Filters.body.make("")))
-        : undefined,
-  );
+        : undefined;
+  });
 
   const [groupSearch, setGroupSearch] = createSignal<string>();
   const [preset, setPreset] = createSignal(false);

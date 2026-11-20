@@ -1,8 +1,9 @@
-import { useAtom } from "@effect/atom-solid";
+import type { ValidComponent } from "@solidjs/web";
+import { useAtom } from "../lib/atom-solid";
 import { Effect } from "effect";
 import { FetchHttpClient } from "effect/http";
 import { Atom } from "effect/reactivity";
-import { splitProps, type ValidComponent } from "solid-js";
+import { omit } from "solid-js";
 import { MatchAsyncResult } from "../lib";
 import { CliSetup } from "../lib/graph-access/commands/cli-setup";
 import type { LocalRegistrySchema } from "../lib/graph-access/local-registry/schema";
@@ -27,10 +28,11 @@ type Props<T extends ValidComponent = typeof Button> = {
 } & DialogTriggerProps<T>;
 
 export function CliSetupDialog<T extends ValidComponent = typeof Button>(props: Props<T>) {
-  // SAFETY: Solid's splitProps cannot preserve Kobalte's polymorphic component parameter
+  // SAFETY: Solid's omit cannot preserve Kobalte's polymorphic component parameter
   // through the Props<T> intersection; the cast changes no runtime properties and only
   // removes the local `graph` key from the trigger prop bag.
-  const [local, triggerProps] = splitProps(props as Props, ["graph"]);
+  const local = props as Props;
+  const triggerProps = omit(local, "graph");
 
   return (
     <Dialog>
