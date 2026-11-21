@@ -93,7 +93,7 @@ export function use() {
     };
   }
 
-  return { draftAtom, draftId, createControls, clearDraft };
+  return { draft, draftAtom, draftId, createControls, clearDraft };
 }
 
 export * as PaneStreamRecording from "./pane-stream-recording";

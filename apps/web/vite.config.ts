@@ -34,7 +34,7 @@ export default defineConfig({
     devtools(),
 
     tanstackRouter({ target: "solid", autoCodeSplitting: false }),
-    solidPlugin(),
+    solidPlugin({ diagnostics: true }),
     tailwindcss(),
     VitePWA({
       strategies: "injectManifest",

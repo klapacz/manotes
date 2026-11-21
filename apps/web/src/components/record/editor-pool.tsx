@@ -18,6 +18,7 @@ import { insert } from "@solidjs/web";
 import Editor from "../../editor";
 import { LiveDoc } from "../../lib/live-doc.service";
 import { LiveDocAtom } from "../../lib/live-doc.atom";
+import { Frame } from "../../lib/frame";
 import type { RecordSchema } from "@manotes/shared/record.schema";
 
 // Pool of persistent editors (corvu createPersistent-style: render once into a
@@ -31,7 +32,7 @@ import type { RecordSchema } from "@manotes/shared/record.schema";
 
 const SLOT_IDLE_TTL = "7 seconds";
 
-const PRELOAD_CONCURRENCY = 10;
+const PRELOAD_SLICE_BUDGET = "8 millis";
 
 export class EditorBootError extends Data.TaggedError("EditorBootError")<{
   readonly recordId: RecordSchema.Id;
@@ -78,13 +79,15 @@ export const make = Effect.fn("EditorPool.make")(function* (
   const preload = Effect.fn("EditorPool.preload")(function* (
     recordIds: ReadonlyArray<RecordSchema.Id>,
   ) {
-    yield* Effect.forEach(
+    if (recordIds.length === 0) return;
+
+    // Let the triggering click, popover animation, or pane scroll paint its
+    // first frame before booting editors on the main thread.
+    yield* Frame.next;
+    yield* Frame.forEach(
       recordIds,
       (recordId) => Effect.flatMap(get(recordId), (slot) => slot.ready),
-      {
-        concurrency: PRELOAD_CONCURRENCY,
-        discard: true,
-      },
+      { budget: PRELOAD_SLICE_BUDGET },
     );
   });
 

@@ -1,5 +1,14 @@
 import { Cause, Deferred, Effect, PubSub, Stream } from "effect";
-import { createEffect, createMemo, createRoot, createSignal, flush, resolve } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createRoot,
+  createSignal,
+  flush,
+  isPending,
+  resolve,
+  until,
+} from "solid-js";
 import { expect, it } from "vite-plus/test";
 import { createEffectStream, EffectFailure } from "./atom-bridge";
 
@@ -109,6 +118,112 @@ it("propagates stream failures as EffectFailure", async () => {
     const failure = await resolve(() => value()).catch((caught) => caught);
     expect(failure).toBeInstanceOf(EffectFailure);
     expect(failure instanceof EffectFailure ? Cause.pretty(failure.cause) : "").toContain("boom");
+  } finally {
+    dispose();
+  }
+});
+
+it("keeps previous deferred value while pending without holding upstream reads", async () => {
+  const gates = {
+    a: Deferred.makeUnsafe<string>(),
+    b: Deferred.makeUnsafe<string>(),
+  };
+
+  const { key, setKey, value, pending, dispose } = createRoot((dispose) => {
+    const [key, setKey] = createSignal<"a" | "b">("a");
+
+    const value = createEffectStream(
+      () => runtime,
+      () => {
+        const current = key();
+
+        return Stream.unwrap(
+          Effect.gen(function* () {
+            const resolved = yield* Deferred.await(gates[current]);
+
+            return Stream.concat(Stream.succeed(resolved), Stream.never);
+          }),
+        );
+      },
+      { deferred: true },
+    );
+
+    const pending = createMemo(() => isPending(() => value()));
+
+    return { key, setKey, value, pending, dispose };
+  });
+
+  try {
+    const first = resolve(() => value());
+    Effect.runSync(Deferred.succeed(gates.a, "value-a"));
+    expect(await first).toBe("value-a");
+    expect(pending()).toBe(false);
+
+    setKey("b");
+    flush();
+    // Upstream key updates immediately while deferred stream keeps previous value.
+    expect(key()).toBe("b");
+    expect(value()).toBe("value-a");
+    expect(pending()).toBe(true);
+
+    Effect.runSync(Deferred.succeed(gates.b, "value-b"));
+    await until(() => !pending());
+    expect(value()).toBe("value-b");
+    expect(pending()).toBe(false);
+  } finally {
+    dispose();
+  }
+});
+
+it("interrupts superseded queries on rapid replacement and settles on the latest", async () => {
+  const gates = {
+    a: Deferred.makeUnsafe<string>(),
+    b: Deferred.makeUnsafe<string>(),
+    c: Deferred.makeUnsafe<string>(),
+  };
+
+  const interrupted: string[] = [];
+
+  const { setKey, value, dispose } = createRoot((dispose) => {
+    const [key, setKey] = createSignal<"a" | "b" | "c">("a");
+
+    const value = createEffectStream(
+      () => runtime,
+      () => {
+        const current = key();
+
+        return Stream.unwrap(
+          Effect.gen(function* () {
+            const resolved = yield* Deferred.await(gates[current]);
+
+            return Stream.concat(Stream.succeed(resolved), Stream.never);
+          }),
+        ).pipe(Stream.ensuring(Effect.sync(() => interrupted.push(current))));
+      },
+      { deferred: true },
+    );
+
+    return { setKey, value, dispose };
+  });
+
+  try {
+    const first = resolve(() => value());
+    Effect.runSync(Deferred.succeed(gates.a, "value-a"));
+    expect(await first).toBe("value-a");
+
+    setKey("b");
+    flush();
+    setKey("c");
+    flush();
+
+    Effect.runSync(Deferred.succeed(gates.b, "stale-b"));
+    Effect.runSync(Deferred.succeed(gates.c, "value-c"));
+    await until(() => !isPending(() => value()));
+    expect(value()).toBe("value-c");
+
+    await Effect.runPromise(Effect.sleep("10 millis"));
+    expect(interrupted).toContain("a");
+    expect(interrupted).toContain("b");
   } finally {
     dispose();
   }

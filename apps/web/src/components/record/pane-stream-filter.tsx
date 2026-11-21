@@ -19,6 +19,7 @@ const route = getRouteApi("/$graph/");
 
 export function PaneStreamFilter(props: {
   dirty: boolean;
+  pending?: boolean;
   onRefresh: () => void;
   onCreate?: () => void;
   record?: RecordControls;
@@ -121,6 +122,7 @@ export function PaneStreamFilter(props: {
                   size="chip"
                   rounded="full"
                   onClick={props.onRefresh}
+                  disabled={props.pending}
                   class="border-warning-border bg-warning-control text-warning-fg hover:bg-warning-control-hover focus-visible:border-warning-border focus-visible:ring-warning-border/30"
                   title="Refresh records that moved or no longer match the filters"
                 >

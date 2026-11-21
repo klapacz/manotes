@@ -1,17 +1,20 @@
 import type { ComponentProps } from "@solidjs/web";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
-import { Effect, Equal, Option, Stream, Predicate } from "effect";
-import { Atom } from "effect/reactivity";
-import { Show, createEffect, createMemo, createSignal, getOwner, onSettled } from "solid-js";
+import { Effect, Equal, Option, Stream } from "effect";
+import {
+  Loading,
+  Show,
+  createEffect,
+  createMemo,
+  createProjection,
+  createSignal,
+  getOwner,
+  isPending,
+  onSettled,
+} from "solid-js";
 import { VirtualList } from "../../lib/virtual-list";
 import type { RecordSchema } from "@manotes/shared/record.schema";
-import {
-  MatchTag,
-  RecordStreamCache,
-  bindRt,
-  createAtomResultStore,
-  createSyncedAtom,
-} from "../../lib";
+import { RecordStreamCache, useGraphStream } from "../../lib";
 import { PaneCtx } from "../../lib/record/pane.ctx";
 import { RecordStream } from "../../lib/record/stream";
 import { EditorPool } from "./editor-pool";
@@ -35,69 +38,75 @@ export function PaneStream(props: ComponentProps<"section">) {
     equals: Equal.equals,
   });
 
-  const queryAtom = createSyncedAtom(query);
-  const refreshTokenAtom = createSyncedAtom(refreshToken);
-
-  // Pooled editors persist across row unmounts. The pool is an Effect resource
-  // owned by its atom's scope, captured under the pane owner so pooled editor
-  // roots inherit the pane's contexts.
+  // Pooled editors persist across row unmounts and query transitions. The pool
+  // is an Effect resource owned by its stream's scope, captured under the pane
+  // owner so pooled editor roots inherit the pane's contexts.
   const owner = getOwner();
 
-  const poolAtom = bindRt((rt) => rt.atom(EditorPool.make(owner, () => pane().filter)));
+  const pool = useGraphStream(() => {
+    return EditorPool.make(owner, () => pane().filter).pipe(
+      Effect.map((pool) => Stream.concat(Stream.succeed(pool), Stream.never)),
+      Stream.unwrap,
+    );
+  });
 
   const recording = PaneStreamRecording.use();
 
   // The DB query owns filtering and sorting; the stream only layers the
-  // refresh-gated pinned snapshot on top of the matching rows. Each successful
+  // refresh-gated pinned snapshot on top of the matching rows. Each resolved
   // emission has already preloaded and booted the first editor slots.
-  const stateAtom = bindRt((rt) => {
-    // Resolve the Solid context before Effect restarts this stream on refresh.
-    const pool = poolAtom();
-
-    return rt.atom((get) => {
-      const query = get(queryAtom);
-      get(refreshTokenAtom);
+  const stream = useGraphStream(
+    () => {
+      const currentQuery = query();
+      refreshToken();
+      const editors = pool();
 
       return Stream.unwrap(
         Effect.gen(function* () {
-          const editors = yield* get.result(pool, { suspendOnWaiting: true });
-          const changes = yield* RecordStreamCache.Service.use((cache) => cache.changes(query));
+          const changes = yield* RecordStreamCache.Service.use((cache) => {
+            return cache.changes(currentQuery);
+          });
 
           return changes.pipe(
-            Stream.scan(() => RecordStream.initialState, RecordStream.retain(query.sort)),
+            Stream.scan(() => RecordStream.initialState, RecordStream.retain(currentQuery.sort)),
             // `scan` emits its initial accumulator before the first SQL result;
-            // keep Success tied to real rows, after the first result is preloaded.
+            // keep resolved state tied to real rows, after the first result is preloaded.
             Stream.drop(1),
-            Stream.map((snapshot) => ({ ...snapshot, pool: editors })),
             Stream.mapEffect((state) => {
               return Effect.scoped(editors.preload(preloadRecordIds(state.items))).pipe(
-                Effect.as(state),
+                Effect.as({ ...state, sort: currentQuery.sort }),
               );
             }),
-            // Draft changes rebuild the final list, without restarting SQL or
-            // entering its pinned snapshot. Grouping runs once, after insertion.
-            Stream.zipLatestWith(Atom.toStream(recording.draftAtom), (snapshot, draft) => ({
-              ...snapshot,
-              rows: RecordStream.list({ items: snapshot.items, draft, sort: query.sort }),
-            })),
           );
         }),
       );
-    });
-  });
+    },
+    { deferred: true },
+  );
 
-  // Reconciliation keys row nodes by ListItem.id, keeping row references
-  // stable across emissions — virtua reuses rows by identity, so mounted
-  // editors survive while their content stays reactive.
-  const state = createAtomResultStore(stateAtom);
+  // Draft changes rebuild the final list without restarting SQL or entering its
+  // pinned snapshot. Reconciling by ListItem.id keeps row references stable
+  // across emissions so virtua reuses mounted editors.
+  const rows = createProjection<ReadonlyArray<RecordStream.ListItem>>(
+    () => {
+      const current = stream();
+
+      return RecordStream.list({
+        items: current.items,
+        draft: recording.draft(),
+        sort: current.sort,
+      });
+    },
+    [],
+    { key: "id" },
+  );
 
   const refresh = () => setRefreshToken((token) => token + 1);
 
   const createRecord = RecordCreate.useCreateRecord();
 
   const createRecordOn = (date: string | undefined) => {
-    if (!Predicate.isTagged(state, "Success")) return;
-    createRecord({ date, pool: state.value.pool, pane: pane() }, (record) => {
+    createRecord({ date, pool: pool(), pane: pane() }, (record) => {
       refresh();
       focus.request(fid.editor(record.id), { reveal: "always" });
     });
@@ -118,32 +127,25 @@ export function PaneStream(props: ComponentProps<"section">) {
   // From a record, create beside it on its date; otherwise use the pane's date.
   const createNearFocus = () => {
     const recordId = Focus.recordIn(pane().paneId, focus.activeId());
-    const rows = Predicate.isTagged(state, "Success") ? state.value.rows : [];
     const row = rows.find((row) => RecordStream.recordId(row) === recordId);
 
     createRecordOn(row ? RecordStream.date(row) : filteredDate());
   };
 
   // Rendering, keyboard order and retention all derive from these same rows.
-  const listOrder = createMemo(() => {
-    return Predicate.isTagged(state, "Success") ? recordIdsFromRows(state.value.rows) : [];
-  });
+  const listOrder = createMemo(() => recordIdsFromRows(rows));
 
   const [lastFocused, setLastFocused] = createSignal<RecordSchema.Id>();
 
   const record = recording.createControls({
     // Recording is available everywhere for now.
     // TODO: Consider restricting it to streams filtered by `_tag = "note"`.
-    enabled: () => {
-      return Predicate.isTagged(state, "Success");
-    },
+    enabled: () => true,
     getFocusedRow() {
-      if (!Predicate.isTagged(state, "Success")) return;
-
       // The Record button may have taken focus from the originating record.
       const id = Focus.recordIn(pane().paneId, focus.activeId()) ?? lastFocused();
 
-      return state.value.items.find(({ record }) => record.id === id);
+      return stream().items.find(({ record }) => record.id === id);
     },
   });
 
@@ -180,7 +182,7 @@ export function PaneStream(props: ComponentProps<"section">) {
 
   const fnode = Focus.createNode(() => ({
     id: fid.pane(),
-    enabled: !Predicate.isTagged(state, "Loading"),
+    enabled: Boolean(stream()),
     focus: (element) => {
       Focus.focusBrowseTarget(element);
       const ids = listOrder();
@@ -213,7 +215,6 @@ export function PaneStream(props: ComponentProps<"section">) {
     },
     {
       key: RecordCreate.shortcut,
-      enabled: () => Predicate.isTagged(state, "Success"),
       handler: () => {
         createNearFocus();
 
@@ -234,36 +235,32 @@ export function PaneStream(props: ComponentProps<"section">) {
   return (
     <Focus.NodeProvider node={fnode}>
       <Focus.Element as={PaneShell} {...props}>
-        <PaneStreamFilter
-          onCreate={Predicate.isTagged(state, "Success") ? handleCreate : undefined}
-          record={record()}
-          dirty={Predicate.isTagged(state, "Success") ? state.value.dirty : false}
-          onRefresh={refresh}
-        />
-        <MatchTag
-          when={state}
-          cases={{
-            Loading: () => null,
-            Success: (state) => (
-              <EditorPool.Provider pool={state().value.pool}>
-                <Show
-                  when={state().value.rows.length > 0}
-                  fallback={
-                    <PaneEmptyState>
-                      {hasSearch() ? "No records match your search." : "No records in this pane."}
-                    </PaneEmptyState>
-                  }
-                >
-                  <RevealedRows
-                    rows={state().value.rows}
-                    retained={retained()}
-                    onClearDraft={recording.clearDraft}
-                  />
-                </Show>
-              </EditorPool.Provider>
-            ),
-          }}
-        />
+        <Loading fallback={<PaneStreamFilter dirty={false} onRefresh={refresh} />}>
+          <PaneStreamFilter
+            onCreate={handleCreate}
+            record={record()}
+            dirty={stream().dirty}
+            pending={isPending(() => stream())}
+            onRefresh={refresh}
+          />
+          <EditorPool.Provider pool={pool()}>
+            <Show
+              when={rows.length > 0}
+              fallback={
+                <PaneEmptyState>
+                  {hasSearch() ? "No records match your search." : "No records in this pane."}
+                </PaneEmptyState>
+              }
+            >
+              <RevealedRows
+                rows={rows}
+                retained={retained()}
+                pending={isPending(() => stream())}
+                onClearDraft={recording.clearDraft}
+              />
+            </Show>
+          </EditorPool.Provider>
+        </Loading>
       </Focus.Element>
     </Focus.NodeProvider>
   );
@@ -272,6 +269,7 @@ export function PaneStream(props: ComponentProps<"section">) {
 function RevealedRows(props: {
   rows: ReadonlyArray<RecordStream.ListItem>;
   retained: ReadonlyArray<RecordSchema.Id>;
+  pending?: boolean;
   onClearDraft: (id: RecordSchema.Id) => void;
 }) {
   const [revealed, setRevealed] = createSignal(false);
@@ -289,6 +287,7 @@ function RevealedRows(props: {
         "min-h-0 flex-1 transition-opacity duration-150 ease-out",
         {
           "opacity-0": !revealed(),
+          "opacity-60": revealed() && props.pending,
         },
       ]}
     >

@@ -1,6 +1,14 @@
 import { Cause, Effect, Exit, Fiber, Stream } from "effect";
 import { AsyncResult, Atom, AtomRegistry } from "effect/reactivity";
-import { createMemo, createRenderEffect, from, onCleanup, untrack, type Accessor } from "solid-js";
+import {
+  createDeferred,
+  createMemo,
+  createRenderEffect,
+  from,
+  onCleanup,
+  untrack,
+  type Accessor,
+} from "solid-js";
 
 export class EffectFailure<E> extends Error {
   constructor(readonly cause: Cause.Cause<E>) {
@@ -22,8 +30,11 @@ export function createEffectValue<A, E>(start: (signal: AbortSignal) => Promise<
 export function createEffectStream<A, E, R>(
   runtime: Accessor<EffectStreamRuntime<R>>,
   stream: Accessor<Stream.Stream<A, E, R>>,
+  options?: { readonly deferred?: boolean },
 ): Accessor<A> {
-  return createMemo(() => {
+  const derive = options?.deferred ? createDeferred : createMemo;
+
+  return derive(() => {
     const rt = runtime();
     const source = stream();
 

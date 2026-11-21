@@ -2,9 +2,9 @@ import type { ComponentProps } from "@solidjs/web";
 import type { RecordRepo } from "@manotes/shared/record.repo";
 import { getRouteApi } from "@tanstack/solid-router";
 import { Option, Stream } from "effect";
-import { Show } from "solid-js";
+import { Errored, Loading, Show } from "solid-js";
 import Editor from "../../editor";
-import { MatchTag, RecordCache, bindRt, createAtomResultStore, createSyncedAtom } from "../../lib";
+import { RecordCache, useGraphStream } from "../../lib";
 import { RecordLink } from "../../lib/record/link";
 import { RecordCreate } from "./record-create";
 import { PaneCtx } from "../../lib/record/pane.ctx";
@@ -30,18 +30,15 @@ export function PaneRecord(props: ComponentProps<"section">) {
   };
 
   const pane = PaneCtx.useRecord();
-  const recordIdAtom = createSyncedAtom(() => pane().id);
 
-  const recordsAtom = bindRt((rt) => {
-    return rt.atom((get) => {
-      return RecordCache.Service.use((cache) => cache.changes(get(recordIdAtom))).pipe(
-        Stream.unwrap,
-        Stream.map(Option.getOrNull),
-      );
-    });
+  const record = useGraphStream(() => {
+    const id = pane().id;
+
+    return RecordCache.Service.use((cache) => cache.changes(id)).pipe(
+      Stream.unwrap,
+      Stream.map(Option.getOrNull),
+    );
   });
-
-  const record = createAtomResultStore(recordsAtom);
 
   const fid = Focus.useId();
 
@@ -69,23 +66,18 @@ export function PaneRecord(props: ComponentProps<"section">) {
     <Focus.NodeProvider node={fnode}>
       <Focus.Element as={PaneShell} {...props}>
         <PaneHeader onCreate={handleCreate} />
-        <MatchTag
-          when={record}
-          cases={{
-            Loading: () => null,
-            Error: () => <PaneEmptyState>Failed to load record.</PaneEmptyState>,
-            Success: (state) => (
-              <Show
-                when={state().value}
-                // Only claim the record is missing once the query has answered;
-                // rendering the fallback while loading flashes it on every pane open.
-                fallback={<PaneEmptyState>Record not found.</PaneEmptyState>}
-              >
-                {(record) => <PaneRecordInner record={record()} />}
-              </Show>
-            ),
-          }}
-        />
+        <Errored fallback={<PaneEmptyState>Failed to load record.</PaneEmptyState>}>
+          <Loading fallback={null}>
+            <Show
+              when={record()}
+              // Only claim the record is missing once the query has answered;
+              // rendering the fallback while loading flashes it on every pane open.
+              fallback={<PaneEmptyState>Record not found.</PaneEmptyState>}
+            >
+              {(record) => <PaneRecordInner record={record()} />}
+            </Show>
+          </Loading>
+        </Errored>
       </Focus.Element>
     </Focus.NodeProvider>
   );

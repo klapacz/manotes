@@ -28,8 +28,9 @@ export const bindRt = createBindRt(() => GraphRuntimeContext.use()().runtime.ato
 
 export function useGraphStream<A, E>(
   stream: Accessor<Stream.Stream<A, E, RuntimeContext>>,
+  options?: { readonly deferred?: boolean },
 ): Accessor<A> {
   const graph = GraphRuntimeContext.use();
 
-  return createEffectStream(() => graph().runtime, stream);
+  return createEffectStream(() => graph().runtime, stream, options);
 }

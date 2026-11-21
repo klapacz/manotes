@@ -144,7 +144,7 @@ importers:
         version: 0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(jsdom@27.4.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0)
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(vitest@4.1.11))(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0)
+        version: 4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11)(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0)
       y-prosemirror:
         specifier: ^1.3.7
         version: 1.3.7(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-view@1.42.6)(y-protocols@1.0.6(yjs@13.6.27))(yjs@13.6.27)
@@ -321,6 +321,9 @@ importers:
       '@effect/language-service':
         specifier: ^0.75.1
         version: 0.75.1
+      '@solidjs/diagnostics':
+        specifier: ^2.0.3
+        version: 2.0.3(@solidjs/web@2.0.3(solid-js@2.0.3))(solid-js@2.0.3)(vitest@4.1.11)
       '@solidjs/vite-plugin':
         specifier: 3.0.1
         version: 3.0.1(@babel/core@7.29.7)(@solidjs/web@2.0.3(solid-js@2.0.3))(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(solid-js@2.0.3)
@@ -350,7 +353,7 @@ importers:
         version: 0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(jsdom@27.4.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0)
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(vitest@4.1.11))(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0)
+        version: 4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11)(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0)
       workbox-build:
         specifier: ^7.4.1
         version: 7.4.1(@types/babel__core@7.20.5)
@@ -436,7 +439,7 @@ importers:
         version: 0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(jsdom@27.4.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0)
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(vitest@4.1.11))(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0)
+        version: 4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11)(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0)
 
   packages/effect-db-sqlite:
     dependencies:
@@ -3503,6 +3506,16 @@ packages:
 
   '@solidjs/compiler@2.0.2':
     resolution: {integrity: sha512-z7ZlbBQaCeNt4wt12xLS86pdgwet2QwAjyB/+enhDkPL2LUF4jWt7Q8NIlLkXVxm6RJWvZRL5hwcVmrH6JZhZA==}
+
+  '@solidjs/diagnostics@2.0.3':
+    resolution: {integrity: sha512-MnEn1gWzPhSeItEVE6ksp5SzJzOq/yTmzSEH8x03SvFc+Ydp2vVLa9xMf403GVH4mE3toflqo1XXsoXXtFvDfA==}
+    peerDependencies:
+      '@solidjs/web': ^2.0.3
+      solid-js: ^2.0.3
+      vitest: 4.1.11
+    peerDependenciesMeta:
+      vitest:
+        optional: true
 
   '@solidjs/meta@0.29.4':
     resolution: {integrity: sha512-zdIWBGpR9zGx1p1bzIPqF5Gs+Ks/BH8R6fWhmUa/dcK1L2rUC8BAcZJzNRYBQv74kScf1TSOs0EY//Vd/I0V8g==}
@@ -10179,6 +10192,14 @@ snapshots:
       '@solidjs/compiler-wasm32-wasi': 2.0.2
       '@solidjs/compiler-win32-x64-msvc': 2.0.2
 
+  '@solidjs/diagnostics@2.0.3(@solidjs/web@2.0.3(solid-js@2.0.3))(solid-js@2.0.3)(vitest@4.1.11)':
+    dependencies:
+      '@solidjs/signals': 2.0.3
+      '@solidjs/web': 2.0.3(solid-js@2.0.3)
+      solid-js: 2.0.3
+    optionalDependencies:
+      vitest: 4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11)(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0)
+
   '@solidjs/meta@0.29.4(solid-js@2.0.3)':
     dependencies:
       solid-js: 2.0.3
@@ -10663,7 +10684,7 @@ snapshots:
       '@testing-library/dom': 10.4.1
       '@testing-library/user-event': 14.6.7(@testing-library/dom@10.4.1)
       '@vitest/browser': 4.1.11(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(vitest@4.1.11)
-      vitest: 4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(vitest@4.1.11))(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0)
+      vitest: 4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11)(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0)
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -10679,7 +10700,7 @@ snapshots:
       pngjs: 7.0.0
       sirv: 3.0.2
       tinyrainbow: 3.1.1
-      vitest: 4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(vitest@4.1.11))(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0)
+      vitest: 4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11)(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0)
       ws: 8.22.0
     transitivePeerDependencies:
       - bufferutil
@@ -13935,7 +13956,7 @@ snapshots:
       oxlint: 1.81.0(oxlint-tsgolint@7.0.2001)(vite-plus@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(jsdom@27.4.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))
       oxlint-tsgolint: 7.0.2001
       vite: '@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0)'
-      vitest: 4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(vitest@4.1.11))(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0)
+      vitest: 4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11)(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0)
     optionalDependencies:
       '@voidzero-dev/vite-plus-darwin-arm64': 0.3.1
       '@voidzero-dev/vite-plus-darwin-x64': 0.3.1
@@ -13979,7 +14000,7 @@ snapshots:
     optionalDependencies:
       vite: '@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0)'
 
-  vitest@4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(vitest@4.1.11))(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0):
+  vitest@4.1.11(@types/node@25.9.6)(@vitest/browser-preview@4.1.11)(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))(jsdom@27.4.0):
     dependencies:
       '@vitest/expect': 4.1.11
       '@vitest/mocker': 4.1.11(@voidzero-dev/vite-plus-core@0.3.1(@types/node@25.9.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.21.0)(typescript@7.0.2)(yaml@2.9.0))

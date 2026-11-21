@@ -59,6 +59,7 @@
   },
   "devDependencies": {
     "@effect/language-service": "^0.75.1",
+    "@solidjs/diagnostics": "^2.0.3",
     "@solidjs/vite-plugin": "3.0.1",
     "@tanstack/devtools-vite": "^0.8.5",
     "@types/node": "^25.9.1",
