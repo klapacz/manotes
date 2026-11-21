@@ -1,42 +1,21 @@
-import { useAtomValue } from "../atom-solid";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { Effect, Predicate, Stream } from "effect";
-import { AsyncResult } from "effect/reactivity";
-import { createMemo, latest, type Accessor } from "solid-js";
+import { createMemo, type Accessor } from "solid-js";
 import type * as Y from "yjs";
-import { bindRt, createSyncedAtom } from "..";
+import { useGraphStream } from "..";
 
 export function use(opts: { doc: Accessor<Y.Doc | undefined> }) {
   // The caller supplies a document only after its initial Yjs updates have loaded.
-  // Changing it releases the previous attrs subscription through the atom's scope.
-  const docAtom = createSyncedAtom(opts.doc);
+  // Changing it interrupts the previous attrs stream before the new snapshot resolves.
+  const record = useGraphStream(() => {
+    const doc = opts.doc();
 
-  const attrsAtom = bindRt((rt) => {
-    return rt.atom((get) => {
-      const doc = get(docAtom);
+    if (!doc) return Stream.succeed(undefined);
 
-      if (!doc) return Stream.succeed(undefined);
-
-      return Attrs.Service.use((attrs) => Effect.succeed(attrs.watch({ doc }))).pipe(Stream.unwrap);
-    });
+    return Attrs.Service.use((attrs) => Effect.succeed(attrs.watch({ doc }))).pipe(Stream.unwrap);
   });
 
-  const attrs = useAtomValue(attrsAtom);
-
-  const record = createMemo(() => {
-    const result = attrs();
-
-    // Atoms retain the previous success while loading; never use another record's attrs.
-    if (!AsyncResult.isSuccess(result) || result.value?.doc !== latest(opts.doc)) return undefined;
-
-    return result.value;
-  });
-
-  const editable = createMemo(() => {
-    const current = record();
-
-    return current !== undefined;
-  });
+  const editable = createMemo(() => record() !== undefined);
 
   const definition = createMemo(() => {
     const current = record();

@@ -3,7 +3,7 @@ import "./editor.css";
 
 import { createEditor, Priority, union, withPriority } from "prosekit/core";
 import { ProseKit } from "@manotes/prosekit-solid";
-import { createEffect, createMemo, onCleanup, Show } from "solid-js";
+import { createEffect, createMemo, Errored, Loading, onCleanup, Show } from "solid-js";
 import * as Y from "yjs";
 import {
   defineYjsCommands,
@@ -76,8 +76,11 @@ function ReadyEditor(props: Props & { readonly doc: Y.Doc }) {
 
   const attrs = EditorAttrs.use({ doc: () => props.doc });
 
-  createEffect(attrs.editable, (editable) => {
-    if (!editable) return editor.use(defineReadonly());
+  createEffect(attrs.editable, {
+    effect: (editable) => {
+      if (!editable) return editor.use(defineReadonly());
+    },
+    error: () => editor.use(defineReadonly()),
   });
 
   createEffect(
@@ -120,14 +123,18 @@ function ReadyEditor(props: Props & { readonly doc: Y.Doc }) {
           class="outline-none p-4"
           style={props.style}
         />
-        <Show when={attrs.definition()}>
-          {(definition) => (
-            <PropertyDef.Root recordId={props.recordId} doc={props.doc} attrs={definition()} />
-          )}
-        </Show>
-        <Show when={attrs.rule()}>
-          {(rule) => <RuleDef.Root recordId={props.recordId} doc={props.doc} attrs={rule()} />}
-        </Show>
+        <Errored fallback={null}>
+          <Loading fallback={null}>
+            <Show when={attrs.definition()}>
+              {(definition) => (
+                <PropertyDef.Root recordId={props.recordId} doc={props.doc} attrs={definition()} />
+              )}
+            </Show>
+            <Show when={attrs.rule()}>
+              {(rule) => <RuleDef.Root recordId={props.recordId} doc={props.doc} attrs={rule()} />}
+            </Show>
+          </Loading>
+        </Errored>
         <RecordPropGroups.Root recordId={props.recordId} doc={props.doc} />
         <BacklinkMenu currentRecordId={props.recordId} />
         <TabMenu />

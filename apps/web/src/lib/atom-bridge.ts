@@ -1,4 +1,4 @@
-import { Cause, Effect, Exit } from "effect";
+import { Cause, Effect, Exit, Fiber, Stream } from "effect";
 import { AsyncResult, Atom, AtomRegistry } from "effect/reactivity";
 import { createMemo, createRenderEffect, from, onCleanup, untrack, type Accessor } from "solid-js";
 
@@ -9,9 +9,46 @@ export class EffectFailure<E> extends Error {
   }
 }
 
+export interface EffectStreamRuntime<R> {
+  readonly runFork: <A, E>(effect: Effect.Effect<A, E, R>) => Fiber.Fiber<A, unknown>;
+}
+
 /** Read reactive inputs in start, before handing the work to an Effect runtime. */
 export function createEffectValue<A, E>(start: (signal: AbortSignal) => Promise<Exit.Exit<A, E>>) {
   return createMemo(() => run(start));
+}
+
+/** Read reactive inputs in stream, then subscribe to the returned Effect Stream inside Solid's async graph. */
+export function createEffectStream<A, E, R>(
+  runtime: Accessor<EffectStreamRuntime<R>>,
+  stream: Accessor<Stream.Stream<A, E, R>>,
+): Accessor<A> {
+  return createMemo(() => {
+    const rt = runtime();
+    const source = stream();
+
+    return from<A>((next, error, complete) => {
+      const fiber = rt.runFork(
+        Stream.runForEach(source, (value) => Effect.sync(() => next(value))).pipe(
+          Effect.onExit((exit) => {
+            return Effect.sync(() => {
+              if (Exit.isSuccess(exit)) {
+                complete();
+
+                return;
+              }
+
+              if (!Cause.hasInterruptsOnly(exit.cause)) error(new EffectFailure(exit.cause));
+            });
+          }),
+        ),
+      );
+
+      return () => {
+        Effect.runFork(Fiber.interrupt(fiber));
+      };
+    });
+  });
 }
 
 export function createAtomValue<A>(

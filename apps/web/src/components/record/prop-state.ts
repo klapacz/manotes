@@ -1,11 +1,9 @@
-import { useAtomValue } from "../../lib/atom-solid";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import type { Attrs } from "@manotes/shared/attrs.service";
 import { PropValidation } from "@manotes/shared/prop-validation";
-import { Equal, Stream } from "effect";
-import { AsyncResult } from "effect/reactivity";
+import { Equal, Result, Stream } from "effect";
 import { createMemo, type Accessor } from "solid-js";
-import { bindRt, createSyncedAtom } from "../../lib";
+import { useGraphStream } from "../../lib";
 
 export function use(opts: {
   readonly state: Accessor<Attrs.ValueState<AttrsSchema.PropVal>>;
@@ -15,37 +13,23 @@ export function use(opts: {
     equals: Equal.equals,
   });
 
-  const inputAtom = createSyncedAtom(input);
-
-  const result = useAtomValue(
-    bindRt((rt) => {
-      return rt.atom((get) => {
-        const current = get(inputAtom);
-
-        return PropValidation.watch(current).pipe(
-          Stream.map((state) => ({ input: current, state })),
-        );
-      });
-    }),
-  );
+  const validated = useGraphStream(() => {
+    return PropValidation.watch(input()).pipe(
+      Stream.map(Result.succeed),
+      Stream.catchCause((cause) => Stream.succeed(Result.fail(cause))),
+    );
+  });
 
   const state = () => {
-    const current = result();
+    const current = validated();
 
-    // An earlier value's scope result must not mark a replacement invalid.
-    if (AsyncResult.isSuccess(current) && Equal.equals(current.value.input, input())) {
-      return current.value.state;
-    }
-
-    return input().state;
+    return Result.isSuccess(current) ? current.success : input().state;
   };
 
   const error = () => {
-    const current = result();
+    const current = validated();
 
-    if (AsyncResult.isFailure(current)) return current.cause;
-
-    return undefined;
+    return Result.isFailure(current) ? current.failure : undefined;
   };
 
   return { state, error };
