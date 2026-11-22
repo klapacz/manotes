@@ -10,7 +10,6 @@ import {
   createSignal,
   getOwner,
   isPending,
-  onSettled,
 } from "solid-js";
 import { VirtualList } from "../../lib/virtual-list";
 import type { RecordSchema } from "@manotes/shared/record.schema";
@@ -252,49 +251,21 @@ export function PaneStream(props: ComponentProps<"section">) {
                 </PaneEmptyState>
               }
             >
-              <RevealedRows
-                rows={rows}
-                retained={retained()}
-                pending={isPending(() => stream())}
-                onClearDraft={recording.clearDraft}
-              />
+              <div
+                class={[
+                  "min-h-0 flex-1 transition-opacity duration-150 ease-out starting:opacity-0",
+                  { "opacity-60": isPending(() => stream()) },
+                ]}
+              >
+                <VirtualList.Root data={rows} key={RecordStream.recordId} retained={retained()}>
+                  {(item) => <PaneStreamRow.Root row={item} onClearDraft={recording.clearDraft} />}
+                </VirtualList.Root>
+              </div>
             </Show>
           </EditorPool.Provider>
         </Loading>
       </Focus.Element>
     </Focus.NodeProvider>
-  );
-}
-
-function RevealedRows(props: {
-  rows: ReadonlyArray<RecordStream.ListItem>;
-  retained: ReadonlyArray<RecordSchema.Id>;
-  pending?: boolean;
-  onClearDraft: (id: RecordSchema.Id) => void;
-}) {
-  const [revealed, setRevealed] = createSignal(false);
-
-  onSettled(() => {
-    // Double rAF: the first frame commits opacity:0 (and the booted editors'
-    // layout) to pixels, the second flips to opacity:1 so the CSS fade-in
-    // actually animates.
-    requestAnimationFrame(() => requestAnimationFrame(() => setRevealed(true)));
-  });
-
-  return (
-    <div
-      class={[
-        "min-h-0 flex-1 transition-opacity duration-150 ease-out",
-        {
-          "opacity-0": !revealed(),
-          "opacity-60": revealed() && props.pending,
-        },
-      ]}
-    >
-      <VirtualList.Root data={props.rows} key={RecordStream.recordId} retained={props.retained}>
-        {(item) => <PaneStreamRow.Root row={item} onClearDraft={props.onClearDraft} />}
-      </VirtualList.Root>
-    </div>
   );
 }
 
