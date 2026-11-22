@@ -3,10 +3,13 @@ import { PaneSchema } from "@manotes/shared/record/pane.schema";
 import { NestedStreamFilterEditor } from "./nested-stream-filter";
 import type { FilterMenu } from "./filter-picker";
 import { StreamDisplay } from "./stream-display";
+import { StreamSwitcher } from "./stream-switcher";
 import { getRouteApi } from "@tanstack/solid-router";
-import { Show, createSignal } from "solid-js";
+import { Show, createMemo, createSignal } from "solid-js";
+import { usePresets } from "../../lib/filters";
 import { PaneCursor } from "../../lib/record/pane.cursor";
 import { PaneCtx } from "../../lib/record/pane.ctx";
+import { StreamSwitch } from "../../lib/record/stream-switch";
 import { MatchTag } from "../../lib";
 import { Button } from "../ui/button";
 import { HorizontalScroll } from "../ui/horizontal-scroll";
@@ -28,20 +31,15 @@ export function PaneStreamFilter(props: {
   const ctx = PaneCtx.use();
   const pane = PaneCtx.useStream();
   const navigate = route.useNavigate();
+  const presets = usePresets();
 
   const focus = Focus.use();
   const fid = Focus.useId();
   const [menu, setMenu] = createSignal<FilterMenu>({ open: false });
+  const [switcherOpen, setSwitcherOpen] = createSignal(false);
 
-  const changeSettings = (settings: StreamSettings.Settings) => {
-    void navigate({
-      ...PaneCtx.linkOptions(
-        ctx,
-        PaneCursor.updateCurrent(() => ({ ...pane(), ...settings })),
-      ),
-      replace: false,
-    });
-  };
+  const showSwitcher = () => pane().source?._tag !== "prop" && pane().source?._tag !== "rule";
+  const matchedStream = createMemo(() => StreamSwitch.matchStream(pane().filter, presets()));
 
   const changeFilter = (filter: StreamSettings.Filter) => {
     void navigate({
@@ -63,7 +61,23 @@ export function PaneStreamFilter(props: {
     });
   };
 
+  const handleSwitchStream = (choice: StreamSwitch.Choice, next: boolean) => {
+    void navigate({
+      ...PaneCtx.linkOptions(ctx, StreamSwitch.switchStream(pane(), choice, next)),
+      replace: false,
+    });
+  };
+
   Focus.useNode().registerShortcuts([
+    {
+      key: [["S"]],
+      enabled: showSwitcher,
+      handler: () => {
+        setSwitcherOpen(true);
+
+        return true;
+      },
+    },
     {
       key: [["F"]],
       handler: () => {
@@ -95,8 +109,8 @@ export function PaneStreamFilter(props: {
     <NestedStreamFilterEditor
       filter={pane().filter}
       targetOnly={pane().source?._tag === "prop" || pane().source?._tag === "rule"}
+      hideFilters={pane().source === undefined && matchedStream() !== undefined}
       onChange={changeFilter}
-      onPreset={changeSettings}
       menu={menu()}
       onMenuChange={setMenu}
       onClose={() => focus.request(fid.pane())}
@@ -114,6 +128,16 @@ export function PaneStreamFilter(props: {
             record={props.record}
           >
             <HorizontalScroll class="-my-2 -ml-4 -mr-3 flex-1" contentClass="gap-2 py-2">
+              <Show when={showSwitcher()}>
+                <StreamSwitcher
+                  open={switcherOpen()}
+                  onOpenChange={setSwitcherOpen}
+                  onClose={() => focus.request(fid.pane())}
+                  presets={presets()}
+                  matched={matchedStream()}
+                  onSelect={handleSwitchStream}
+                />
+              </Show>
               {trigger}
               <StreamDisplay.Menu settings={pane()} onChange={changeDisplay} />
               <Show when={props.dirty}>

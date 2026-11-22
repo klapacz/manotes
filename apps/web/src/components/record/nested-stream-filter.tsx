@@ -8,7 +8,6 @@ import type { JSX } from "@solidjs/web";
 // This version edits canonical URL settings through the shared Filters definitions.
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Filters } from "@manotes/shared/record/filters";
-import type { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { Option, Predicate } from "effect";
 import { For, Show, createMemo, createSignal, createUniqueId } from "solid-js";
 import { ChevronDown, ChevronRight, FunnelPlus, ListPlus, Pencil, Plus, X } from "@lucide/solid";
@@ -27,8 +26,8 @@ const expr = AttrsSchema.makeFilterExpr;
 export function NestedStreamFilterEditor(props: {
   filter: Filter;
   targetOnly: boolean;
+  hideFilters?: boolean;
   onChange: (filter: Filter) => void;
-  onPreset: (settings: StreamSettings.Settings) => void;
   menu: FilterMenu;
   onMenuChange: (menu: FilterMenu) => void;
   onClose: () => void;
@@ -87,7 +86,6 @@ export function NestedStreamFilterEditor(props: {
           return filters().setExpression(siblings, expression, rootGroup() ? "or" : "and");
         });
       }}
-      onPreset={props.targetOnly ? undefined : props.onPreset}
       onOpenRecord={props.onOpenRecord}
       onClose={props.onClose}
       triggerRef={(button) => (filterButton = button)}
@@ -98,8 +96,10 @@ export function NestedStreamFilterEditor(props: {
     </FilterPicker>
   );
 
+  const hasFilters = () => props.filter.length > 0 && !props.hideFilters;
+
   const content = (
-    <Show when={props.filter.length > 0}>
+    <Show when={hasFilters()}>
       <section aria-label="Stream filters" class="mx-4 mb-3 min-w-0 pane:mx-0">
         <div id={treeId} class="min-w-0 py-1">
           <GroupRows
@@ -145,7 +145,7 @@ export function NestedStreamFilterEditor(props: {
     </Show>
   );
 
-  return props.children(trigger, content, () => props.filter.length > 0);
+  return props.children(trigger, content, hasFilters);
 }
 
 type GroupRowsProps = {

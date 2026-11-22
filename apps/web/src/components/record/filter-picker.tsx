@@ -7,16 +7,14 @@ import type { JSX } from "@solidjs/web";
 import type { RecordRepo } from "@manotes/shared/record.repo";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Filters } from "@manotes/shared/record/filters";
-import { StreamSettings } from "@manotes/shared/record/stream-settings";
-import type { PresetRecordRepo } from "@manotes/shared/preset-record.repo";
 import { PropDef } from "@manotes/shared/prop-def.service";
-import { Array, Equal, identity, Match, Option, Predicate, Result, Stream } from "effect";
+import { Array, Equal, Match, Option, Predicate, Result, Stream } from "effect";
 import { Show, createMemo, createSignal, untrack } from "solid-js";
 import { CircleCheck, CircleDashed } from "@lucide/solid";
 import { DateSuggestions } from "../../lib/date-suggestions";
 import { MenuQuery } from "../../lib/menu-query";
 import { QueryEngine } from "../../lib/query-engine";
-import { createFilterLabels, resolveFilterLabels, usePresets } from "../../lib/filters";
+import { createFilterLabels, resolveFilterLabels } from "../../lib/filters";
 import type { RecordCache } from "../../lib/record-cache.service";
 import { Picker } from "../ui/picker";
 import { SelectedIcon } from "../icons";
@@ -46,7 +44,6 @@ export function FilterPicker(props: {
   menu?: FilterMenu;
   onMenuChange?: (menu: FilterMenu) => void;
   onSelect: (expression: AttrsSchema.FilterExpr) => void;
-  onPreset?: (settings: StreamSettings.Settings) => void;
   onOpenRecord?: (id: AttrsSchema.RecordId) => void;
   onClear?: () => void;
   onClose?: () => void;
@@ -97,14 +94,6 @@ export function FilterPicker(props: {
               props.onSelect(expression);
               close();
             }}
-            onPreset={
-              props.onPreset
-                ? (settings) => {
-                    props.onPreset?.(settings);
-                    close();
-                  }
-                : undefined
-            }
             onOpenRecord={
               props.onOpenRecord ? (id) => close(() => props.onOpenRecord?.(id)) : undefined
             }
@@ -123,7 +112,6 @@ function FilterCommands(props: {
   siblings?: AttrsSchema.Filter;
   body?: boolean;
   onSelect: (expression: AttrsSchema.FilterExpr) => void;
-  onPreset?: (settings: StreamSettings.Settings) => void;
   onOpenRecord?: (id: AttrsSchema.RecordId) => void;
   onClear?: () => void;
 }) {
@@ -141,26 +129,7 @@ function FilterCommands(props: {
   );
 
   const [groupSearch, setGroupSearch] = createSignal<string>();
-  const [preset, setPreset] = createSignal(false);
-  const presets = usePresets();
   const labels = createFilterLabels(() => props.filters.groups.map((group) => group.label));
-
-  const activePreset = createMemo(() => {
-    return Array.matchLeft(props.filter ?? props.siblings ?? [], {
-      onEmpty: () => undefined,
-      onNonEmpty: (only, rest) => {
-        if (Array.isReadonlyArrayNonEmpty(rest)) return undefined;
-
-        return Option.getOrUndefined(
-          Array.findFirst(presets(), (item) => {
-            return Option.exists(Filters.presetExpression(item.preset_filter), (expression) => {
-              return Equal.equals(expression, only);
-            });
-          }),
-        );
-      },
-    });
-  });
 
   const currentExpressions = createMemo(() => {
     return Array.map(props.siblings ?? [], (expression) => ({
@@ -213,23 +182,6 @@ function FilterCommands(props: {
         label: "OR group",
         run: () => props.onSelect(AttrsSchema.makeFilterExpr.or({ val: [] })),
       },
-      ...(props.onPreset
-        ? [
-            {
-              value: "preset",
-              label: "Preset",
-              suffix: <Picker.Caret />,
-              detail: activePreset()
-                ? () => (
-                    <FilterLabel
-                      label={Filters.Label.Record({ id: activePreset()!.id, val: identity })}
-                    />
-                  )
-                : undefined,
-              run: () => setPreset(true),
-            },
-          ]
-        : []),
     ];
 
     return QueryEngine.combine([
@@ -276,44 +228,32 @@ function FilterCommands(props: {
 
   return (
     <Show
-      when={!preset()}
+      when={group()}
       fallback={
-        <PresetCommands
-          presets={presets()}
-          activeId={activePreset()?.id}
-          onSelect={(settings) => props.onPreset?.(settings)}
-          onBack={() => setPreset(false)}
-        />
+        <Picker.Query label="Search filters" query={query()} onSelect={(action) => action.run()}>
+          {(items) => (
+            <CommandList>
+              <CommandScroll>{items}</CommandScroll>
+              <Show when={props.onClear}>
+                <Picker.Footer>
+                  <Picker.Clear onSelect={props.onClear} />
+                </Picker.Footer>
+              </Show>
+            </CommandList>
+          )}
+        </Picker.Query>
       }
     >
-      <Show
-        when={group()}
-        fallback={
-          <Picker.Query label="Search filters" query={query()} onSelect={(action) => action.run()}>
-            {(items) => (
-              <CommandList>
-                <CommandScroll>{items}</CommandScroll>
-                <Show when={props.onClear}>
-                  <Picker.Footer>
-                    <Picker.Clear onSelect={props.onClear} />
-                  </Picker.Footer>
-                </Show>
-              </CommandList>
-            )}
-          </Picker.Query>
-        }
-      >
-        {(group) => (
-          <GroupCommands
-            group={group()}
-            search={groupSearch()}
-            value={currentValue()}
-            onSelect={props.onSelect}
-            onClear={props.onClear}
-            onBack={() => setGroup(undefined)}
-          />
-        )}
-      </Show>
+      {(group) => (
+        <GroupCommands
+          group={group()}
+          search={groupSearch()}
+          value={currentValue()}
+          onSelect={props.onSelect}
+          onClear={props.onClear}
+          onBack={() => setGroup(undefined)}
+        />
+      )}
     </Show>
   );
 }
@@ -597,45 +537,4 @@ function entryQuery(
       }),
     );
   };
-}
-
-function PresetCommands(props: {
-  presets: readonly PresetRecordRepo.Def[];
-  activeId?: AttrsSchema.RecordId;
-  onSelect: (settings: StreamSettings.Settings) => void;
-  onBack: () => void;
-}) {
-  const query = createMemo(() => {
-    const actions = Array.filterMap(props.presets, (preset) => {
-      return Result.fromOption(
-        Option.map(Filters.presetExpression(preset.preset_filter), (expression) => ({
-          value: preset.id,
-          label: preset.title || "Untitled",
-          suffix:
-            preset.id === props.activeId ? (
-              <SelectedIcon aria-label="Selected" class="size-4" />
-            ) : undefined,
-          run: () => {
-            props.onSelect({ ...StreamSettings.defaultDisplay, filter: [expression] });
-          },
-        })),
-        () => undefined,
-      );
-    });
-
-    return MenuQuery.actions(() => actions);
-  });
-
-  return (
-    <Picker.Query label="Choose preset" query={query()} onSelect={(action) => action.run()}>
-      {(items) => (
-        <CommandList>
-          <CommandScroll>{items}</CommandScroll>
-          <Picker.Footer>
-            <Picker.Back onSelect={props.onBack} />
-          </Picker.Footer>
-        </CommandList>
-      )}
-    </Picker.Query>
-  );
 }

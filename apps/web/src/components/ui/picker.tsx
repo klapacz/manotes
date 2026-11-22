@@ -247,7 +247,7 @@ export type Choice = {
 
 type QueryProps<Option extends Choice> = PickerQuery.Options<Option> & {
   selected?: string | readonly string[];
-  onSelect: (choice: Option) => void;
+  onSelect: (choice: Option, event: Event) => void;
   disabled?: boolean;
   placeholder?: string;
   children?: (items: JSX.Element, search: () => string) => JSX.Element;
@@ -285,9 +285,9 @@ export function Query<Option extends Choice>(props: QueryProps<Option>) {
               value={choice.value}
               keywords={[choice.label, ...(choice.keywords ?? [])]}
               disabled={props.disabled}
-              onSelect={() => {
+              onSelect={(event) => {
                 query.setHighlighted(choice.value);
-                props.onSelect(choice);
+                props.onSelect(choice, event);
               }}
             >
               <Show when={"selected" in props}>
