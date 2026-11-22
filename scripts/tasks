@@ -9,32 +9,48 @@ if [[ "${1:-}" == -- ]]; then
 fi
 
 if (( $# )); then
-  exec cat -- "$1.md"
+  {
+    printf 'const id = %s;\n' "$(node -e 'process.stdout.write(JSON.stringify(process.argv[1]))' -- "$1")"
+    cat <<'RECORD_JS'
+const records = await api.list({
+  filter: /^[A-Z]{4}$/.test(id)
+    ? [
+        { _tag: "cmp", val: [["prop", "prop:kind"], "=", { _tag: "enum", val: "option:kind:task" }] },
+        { _tag: "cmp", val: [["prop", "prop:id"], "=", { _tag: "text", val: id }] },
+      ]
+    : [{ _tag: "cmp", val: ["id", "=", id] }],
+});
+if (records.length === 0) throw new Error(`Record not found: ${id}`);
+if (records.length > 1) throw new Error(`Duplicate task ID: ${id}`);
+await api.showList("full", records);
+RECORD_JS
+  } | manotes execute
+  exit
 fi
 
 exec manotes execute <<'JS'
 const states = [
-  ["in-progress", "In progress"],
-  ["todo", "Todo"],
+  ["in-progress", "🚧 In progress"],
+  ["todo", "📋 Todo"],
 ];
-const priorities = ["urgent", "high", "mid", "low"];
+const priorities = ["urgent", "high", "mid", "low"].map((value) => `option:priority:${value}`);
 const records = await api.list({
   filter: [
     { _tag: "cmp", val: ["_tag", "=", "note"] },
+    { _tag: "cmp", val: [["prop", "prop:kind"], "=", { _tag: "enum", val: "option:kind:task" }] },
+    { _tag: "cmp", val: [["prop", "builtin:archived"], "=", { _tag: "bool", val: false }] },
     {
       _tag: "or",
       val: states.map(([state]) => ({
         _tag: "cmp",
-        val: [["link", "->", `state:${state}`], "exists", true],
+        val: [["prop", "prop:state"], "=", { _tag: "enum", val: `option:state:${state}` }],
       })),
     },
   ],
 });
 const tasks = records.flatMap((item) => {
-  if (!item.title?.startsWith("task:")) return [];
-
-  const state = linked(item, "state");
-  const priority = linked(item, "priority");
+  const state = propValue(item, "prop:state", "enum");
+  const priority = propValue(item, "prop:priority", "enum");
 
   if (state === undefined || priority === undefined) return [];
 
@@ -43,24 +59,26 @@ const tasks = records.flatMap((item) => {
 
 for (const [state, label] of states) {
   const group = tasks
-    .filter((task) => task.state === state)
+    .filter((task) => task.state === `option:state:${state}`)
     .sort((a, b) =>
-      priorities.indexOf(a.priority) - priorities.indexOf(b.priority) ||
-      a.title.localeCompare(b.title),
+      (priorities.includes(a.priority) ? priorities.indexOf(a.priority) : priorities.length) -
+        (priorities.includes(b.priority) ? priorities.indexOf(b.priority) : priorities.length) ||
+      (a.title ?? a.id).localeCompare(b.title ?? b.id),
     );
 
   console.log(`${label} (${group.length})\n`);
 
   for (const task of group) {
     const snippet = task.snippets.join("\n\n").replaceAll("\n", "\n  ");
-    console.log(`${task.title} ${task.id} ${task.date}\n\n  ${snippet}\n`);
+    const code = propValue(task, "prop:id", "text") ?? "No ID";
+    const project = task.props.top.find((entry) => entry.propId === "prop:project")?.value.label ?? "Unassigned";
+    const priority = task.props.top.find((entry) => entry.propId === "prop:priority")?.value.label ?? "Unassigned";
+    console.log(`${code} ${task.title ?? "Untitled"} ${task.date}\n  ${project} · ${priority}\n\n  ${snippet}\n`);
   }
 }
 
-// State and priority links live in the task's first content block.
-function linked(item, kind) {
-  return item.snippets[0]?.match(
-    new RegExp(`\\]\\(\\./${kind}(?:%3[Aa]|:)([^)]+)\\.md\\)`),
-  )?.[1];
+function propValue(item, propId, type) {
+  const state = item.props.top.find((entry) => entry.propId === propId)?.value.state;
+  return state?._tag === "Valid" && state.value._tag === type ? state.value.val : undefined;
 }
 JS
