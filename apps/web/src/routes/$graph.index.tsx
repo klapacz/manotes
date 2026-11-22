@@ -31,7 +31,7 @@ export const Route = createFileRoute("/$graph/")({
 
     const filter = PresetRecordRepo.findDefault(presets).pipe(
       Option.map((preset) => preset.preset_filter),
-      Option.getOrElse((): AttrsSchema.Filter => []),
+      Option.getOrElse((): AttrsSchema.Filter => StreamSettings.defaultFilter),
     );
 
     throw redirect({

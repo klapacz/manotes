@@ -121,8 +121,12 @@ export const prefilledPayload = Effect.fn("ComponentsRecordRecordCreate.prefille
 
     yield* Match.value(tag).pipe(
       Match.when("prop", () => attrs.initializeProp({ doc })),
-      Match.when("rule", () => attrs.initializeRule({ doc, targets: defaultTargetFilter })),
-      Match.when("preset", () => attrs.initializePreset({ doc, filter: defaultTargetFilter })),
+      Match.when("rule", () => {
+        return attrs.initializeRule({ doc, targets: StreamSettings.defaultFilter });
+      }),
+      Match.when("preset", () => {
+        return attrs.initializePreset({ doc, filter: StreamSettings.defaultFilter });
+      }),
       Match.when("owned", () => {
         return Array.findFirst(pane.filter, (expression) => {
           return Filters.enumOptions.match(expression).pipe(Result.getSuccess);
@@ -142,11 +146,6 @@ export const prefilledPayload = Effect.fn("ComponentsRecordRecordCreate.prefille
   },
   Effect.scoped,
 );
-
-const defaultTargetFilter: AttrsSchema.TargetFilter = [
-  AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
-  Filters.aliases.unarchived.make(),
-];
 
 function needsHeading(comparisons: readonly AttrsSchema.FilterCmp[]): boolean {
   return Array.some(comparisons, (comparison) => {

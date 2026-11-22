@@ -16,6 +16,11 @@ export const defaultDisplay = {
   view: "full",
 } as const satisfies Display;
 
+export const defaultFilter: AttrsSchema.TargetFilter = [
+  cmp({ val: ["_tag", "=", "note"] }),
+  Filters.aliases.unarchived.make(),
+];
+
 export const systemStreams = {
   properties: {
     filter: [cmp({ val: ["_tag", "=", "prop"] }), Filters.aliases.unarchived.make()],
