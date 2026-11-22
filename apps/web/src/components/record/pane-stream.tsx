@@ -181,7 +181,9 @@ export function PaneStream(props: ComponentProps<"section">) {
 
   const fnode = Focus.createNode(() => ({
     id: fid.pane(),
-    enabled: Boolean(stream()),
+    // Stay unregistered while a deferred query is pending so pending pane focus
+    // requests wait for the new rows instead of landing on stale items.
+    enabled: Boolean(stream()) && !isPending(() => stream()),
     focus: (element) => {
       Focus.focusBrowseTarget(element);
       const ids = listOrder();

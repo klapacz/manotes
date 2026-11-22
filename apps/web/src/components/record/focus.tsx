@@ -220,8 +220,23 @@ export function createNode(options: () => Options): Node {
           : undefined;
 
       return () => {
+        // Solid runs effect cleanups before removing the element from the DOM.
+        // Removing `current` from `scopes` here means the `focusout` listener
+        // can no longer identify it, so recover to the pane if focus falls to body.
+        const hadFocus = document.activeElement === current;
         context.scopes.delete(current);
         unregister?.();
+
+        if (hadFocus && options.id) {
+          const paneId = options.id.paneId;
+
+          queueMicrotask(() => {
+            if (document.activeElement !== document.body) return;
+
+            if (current.isConnected) current.focus({ preventScroll: true });
+            else context.dom.request(FocusId.Pane({ paneId }));
+          });
+        }
       };
     },
   );
