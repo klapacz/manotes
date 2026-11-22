@@ -221,7 +221,9 @@ export function Content(props: {
           </div>
         </Show>
         <div data-drawer-no-drag="" class="min-h-0 overflow-y-auto">
-          <Positions value={history}>{props.children(close)}</Positions>
+          <Loading fallback={null}>
+            <Positions value={history}>{props.children(close)}</Positions>
+          </Loading>
         </div>
       </Dynamic>
     </>
@@ -252,14 +254,6 @@ type QueryProps<Option extends Choice> = PickerQuery.Options<Option> & {
 };
 
 export function Query<Option extends Choice>(props: QueryProps<Option>) {
-  return (
-    <Loading fallback={null}>
-      <QueryContent {...props} />
-    </Loading>
-  );
-}
-
-function QueryContent<Option extends Choice>(props: QueryProps<Option>) {
   const query = PickerQuery.use(props);
 
   const items = () => (

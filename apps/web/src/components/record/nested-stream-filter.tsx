@@ -12,7 +12,7 @@ import type { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { Option, Predicate } from "effect";
 import { For, Show, createMemo, createSignal, createUniqueId } from "solid-js";
 import { ChevronDown, ChevronRight, FunnelPlus, ListPlus, Pencil, Plus, X } from "@lucide/solid";
-import { useFilters } from "../../lib/filters";
+import { createFilterLabels, useFilters } from "../../lib/filters";
 import { cx } from "../../lib/cva";
 import { Button } from "../ui/button";
 import { ButtonGroup } from "../ui/button-group";
@@ -318,6 +318,8 @@ function ExpressionRow(props: {
     );
   };
 
+  const titleText = createFilterLabels(() => [title()]);
+
   const editable = () => Option.isSome(props.filters.findGroup(props.expression));
 
   return (
@@ -396,7 +398,7 @@ function ExpressionRow(props: {
               rounded="none"
               class="h-full shrink-0 text-fg-subtle"
               aria-label="Remove filter"
-              title={`Remove ${Filters.renderLabel(title())}`}
+              title={`Remove ${titleText()[0] ?? Filters.renderLabel(title())}`}
               onClick={props.onRemove}
             >
               <X />

@@ -8,15 +8,16 @@ import type { RecordRepo } from "@manotes/shared/record.repo";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Filters } from "@manotes/shared/record/filters";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
-import { PresetRecordRepo } from "@manotes/shared/preset-record.repo";
+import type { PresetRecordRepo } from "@manotes/shared/preset-record.repo";
 import { PropDef } from "@manotes/shared/prop-def.service";
-import { Array, Equal, Match, Option, Predicate, Result, Stream } from "effect";
+import { Array, Equal, identity, Match, Option, Predicate, Result, Stream } from "effect";
 import { Show, createMemo, createSignal, untrack } from "solid-js";
 import { CircleCheck, CircleDashed } from "@lucide/solid";
 import { DateSuggestions } from "../../lib/date-suggestions";
 import { MenuQuery } from "../../lib/menu-query";
 import { QueryEngine } from "../../lib/query-engine";
-import { createFilterLabels } from "../../lib/filters";
+import { createFilterLabels, resolveFilterLabels, usePresets } from "../../lib/filters";
+import type { RecordCache } from "../../lib/record-cache.service";
 import { Picker } from "../ui/picker";
 import { SelectedIcon } from "../icons";
 import { CommandList, CommandScroll } from "../ui/command";
@@ -138,7 +139,25 @@ function FilterCommands(props: {
 
   const [groupSearch, setGroupSearch] = createSignal<string>();
   const [preset, setPreset] = createSignal(false);
+  const presets = usePresets();
   const labels = createFilterLabels(() => props.filters.groups.map((group) => group.label));
+
+  const activePreset = createMemo(() => {
+    return Array.matchLeft(props.siblings ?? [], {
+      onEmpty: () => undefined,
+      onNonEmpty: (only, rest) => {
+        if (Array.isReadonlyArrayNonEmpty(rest)) return undefined;
+
+        return Option.getOrUndefined(
+          Array.findFirst(presets(), (item) => {
+            return Option.exists(Filters.presetExpression(item.preset_filter), (expression) => {
+              return Equal.equals(expression, only);
+            });
+          }),
+        );
+      },
+    });
+  });
 
   const currentExpressions = createMemo(() => {
     return Array.map(props.siblings ?? [], (expression) => ({
@@ -197,6 +216,13 @@ function FilterCommands(props: {
               value: "preset",
               label: "Preset",
               suffix: <Picker.Caret />,
+              detail: activePreset()
+                ? () => (
+                    <FilterLabel
+                      label={Filters.Label.Record({ id: activePreset()!.id, val: identity })}
+                    />
+                  )
+                : undefined,
               run: () => setPreset(true),
             },
           ]
@@ -250,6 +276,8 @@ function FilterCommands(props: {
       when={!preset()}
       fallback={
         <PresetCommands
+          presets={presets()}
+          activeId={activePreset()?.id}
           onSelect={(settings) => props.onPreset?.(settings)}
           onBack={() => setPreset(false)}
         />
@@ -335,7 +363,7 @@ function GroupCommands(props: {
     const queries: QueryEngine.Query<
       Choice | MenuQuery.Action,
       unknown,
-      RecordRepo.Service | PropDef.Service
+      RecordRepo.Service | PropDef.Service | RecordCache.Service
     >[] = props.group.entries.map((entry, index) => {
       if (Predicate.isTagged(entry, "Named") && entry.picker && props.group.entries.length > 1) {
         const label = labels()[index + 1] ?? Filters.renderLabel(entry.picker.label);
@@ -419,24 +447,39 @@ function entryQuery(
   entry: Filters.Definition,
   index: number,
   expression?: AttrsSchema.FilterExpr,
-): QueryEngine.Query<Choice, unknown, RecordRepo.Service | PropDef.Service> {
+): QueryEngine.Query<Choice, unknown, RecordRepo.Service | PropDef.Service | RecordCache.Service> {
   const selection = expression ? entry.selection(expression) : Option.none();
 
   if (!entry.picker) {
-    return MenuQuery.choices(() => {
-      return Option.toArray(
-        Option.flatMap(entry.select(undefined), (expression) => {
-          return Option.map(entry.getLabel(expression), (label) => ({
-            value: String(index),
-            label: Filters.renderLabel(label),
-            expression,
-            suffix: Option.isSome(selection) ? (
-              <SelectedIcon aria-label="Selected" class="size-4" />
-            ) : undefined,
-          }));
+    const item = Option.flatMap(entry.select(undefined), (expression) => {
+      return Option.map(entry.getLabel(expression), (label) => ({ expression, label }));
+    });
+
+    if (Option.isNone(item)) return MenuQuery.choices(() => []);
+    const { expression: target, label } = item.value;
+
+    const toChoice = (text: string): Choice => ({
+      value: String(index),
+      label: text,
+      expression: target,
+      suffix: Option.isSome(selection) ? (
+        <SelectedIcon aria-label="Selected" class="size-4" />
+      ) : undefined,
+    });
+
+    if (!Array.isReadonlyArrayNonEmpty(Filters.labelRecords(label))) {
+      return MenuQuery.choices(() => [toChoice(Filters.renderLabel(label))]);
+    }
+
+    return (request) => {
+      return resolveFilterLabels([label]).pipe(
+        Stream.switchMap(([resolved]) => {
+          return MenuQuery.choices(() => [toChoice(resolved ?? Filters.renderLabel(label))])(
+            request,
+          );
         }),
       );
-    });
+    };
   }
 
   const picker = entry.picker;
@@ -554,34 +597,34 @@ function entryQuery(
 }
 
 function PresetCommands(props: {
+  presets: readonly PresetRecordRepo.Def[];
+  activeId?: AttrsSchema.RecordId;
   onSelect: (settings: StreamSettings.Settings) => void;
   onBack: () => void;
 }) {
-  const query: QueryEngine.Query<MenuQuery.Action, unknown, PresetRecordRepo.Service> = (
-    request,
-  ) => {
-    return Stream.unwrap(PresetRecordRepo.Service.use((repo) => repo.reactiveDefs())).pipe(
-      Stream.switchMap((saved) => {
-        return MenuQuery.actions(() => {
-          return Array.filterMap(saved, (preset) => {
-            return Result.fromOption(
-              Option.map(Filters.presetExpression(preset.preset_filter), (expression) => ({
-                value: preset.id,
-                label: preset.title || "Untitled",
-                run: () => {
-                  props.onSelect({ ...StreamSettings.defaultDisplay, filter: [expression] });
-                },
-              })),
-              () => undefined,
-            );
-          });
-        })(request);
-      }),
-    );
-  };
+  const query = createMemo(() => {
+    const actions = Array.filterMap(props.presets, (preset) => {
+      return Result.fromOption(
+        Option.map(Filters.presetExpression(preset.preset_filter), (expression) => ({
+          value: preset.id,
+          label: preset.title || "Untitled",
+          suffix:
+            preset.id === props.activeId ? (
+              <SelectedIcon aria-label="Selected" class="size-4" />
+            ) : undefined,
+          run: () => {
+            props.onSelect({ ...StreamSettings.defaultDisplay, filter: [expression] });
+          },
+        })),
+        () => undefined,
+      );
+    });
+
+    return MenuQuery.actions(() => actions);
+  });
 
   return (
-    <Picker.Query label="Choose preset" query={query} onSelect={(action) => action.run()}>
+    <Picker.Query label="Choose preset" query={query()} onSelect={(action) => action.run()}>
       {(items) => (
         <CommandList>
           <CommandScroll>{items}</CommandScroll>
