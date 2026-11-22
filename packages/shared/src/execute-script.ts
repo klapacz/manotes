@@ -126,8 +126,8 @@ function createGlobals(
       name: "api.createRecord",
       spread: true,
       execute: (args, { signal }) => {
-        const [id, ops] = decodeCreateRecordArgs(args);
-        const call = api.createRecord(id ?? undefined, ops, signal);
+        const [init, ops] = decodeCreateRecordArgs(args);
+        const call = api.createRecord(init, ops, signal);
         pending.push(call);
 
         return call;
@@ -141,7 +141,7 @@ const decodeEditRecordArgs = Schema.decodeUnknownSync(
 );
 
 const decodeCreateRecordArgs = Schema.decodeUnknownSync(
-  Schema.Tuple([Schema.NullOr(RecordSchema.Id), Schema.Array(ExecuteApi.CreateOp)]),
+  Schema.Tuple([ExecuteApi.CreateInit, Schema.Array(ExecuteApi.CreateOp)]),
 );
 
 const decodeListArgs = Schema.decodeUnknownSync(

@@ -21,7 +21,7 @@ The following TypeScript describes the API; scripts themselves must be JavaScrip
 
 ```ts
 type RecordId = string; // Non-empty, without the .md suffix.
-type RecordTag = "note" | "prop" | "owned" | "rule";
+type RecordTag = "note" | "prop" | "owned" | "rule" | "preset";
 type PropType = "text" | "number" | "bool" | "enum" | "link";
 
 type PropValue =
@@ -136,6 +136,11 @@ type ListItem = CommonItem & (
       rule_targets: TargetFilter | null;
       rule_expects: Readonly<Record<RecordId, RuleExpectation>>;
     }
+  | {
+      _tag: "preset";
+      preset_filter: Filter | null;
+      preset_default: boolean;
+    }
 );
 
 type ListFormat =
@@ -143,12 +148,46 @@ type ListFormat =
   | "short" // Header, Markdown snippets, then grouped props.
   | "full"; // Header, complete Markdown body, kind-specific settings, then grouped props.
 
+type CreateInit =
+  | { _tag: "note"; id?: RecordId }
+  | { _tag: "preset"; id?: RecordId; preset_filter: Filter; preset_default?: boolean }
+  | { _tag: "prop"; id?: RecordId; prop_type: "text"; prop_default?: { _tag: "text"; val: string } }
+  | { _tag: "prop"; id?: RecordId; prop_type: "number"; prop_default?: { _tag: "number"; val: number } }
+  | { _tag: "prop"; id?: RecordId; prop_type: "bool"; prop_default?: { _tag: "bool"; val: boolean } }
+  | { _tag: "prop"; id?: RecordId; prop_type: "enum"; prop_default?: { _tag: "enum"; val: RecordId } }
+  | {
+      _tag: "prop";
+      id?: RecordId;
+      prop_type: "link";
+      prop_default?: { _tag: "link"; val: RecordId };
+      prop_targets?: TargetFilter;
+    }
+  | {
+      _tag: "rule";
+      id?: RecordId;
+      rule_targets: TargetFilter;
+      rule_storage?: RuleStorage;
+      rule_expects?: Readonly<Record<RecordId, RuleExpectation>>;
+    }
+  | { _tag: "owned"; id?: RecordId; owned_type: "enum_option"; owned_parent: RecordId };
+
 type UpdateOp =
   | { kind: "body.replace"; text: string; with: string; occurrence?: number | "all" }
   | { kind: "body.append"; markdown: string }
   | { kind: "date.set"; date: string } // Valid YYYY-MM-DD.
   | { kind: "prop.set"; propId: RecordId; ruleId?: RecordId; value: PropValue }
-  | { kind: "prop.clear"; propId: RecordId; ruleId?: RecordId };
+  | { kind: "prop.clear"; propId: RecordId; ruleId?: RecordId }
+  | { kind: "preset_filter.set"; value: Filter }
+  | { kind: "preset_default.set"; value: boolean }
+  | { kind: "prop_type.set"; value: PropType }
+  | { kind: "prop_default.set"; value: PropValue }
+  | { kind: "prop_default.clear" }
+  | { kind: "prop_targets.set"; value: TargetFilter }
+  | { kind: "prop_targets.clear" }
+  | { kind: "rule_storage.set"; value: RuleStorage }
+  | { kind: "rule_targets.set"; value: TargetFilter }
+  | { kind: "rule_expects.set"; propId: RecordId; value: RuleExpectation }
+  | { kind: "rule_expects.clear"; propId: RecordId };
 
 type CreateOp = Extract<UpdateOp, { kind: "body.append" | "date.set" | "prop.set" }>;
 
@@ -156,13 +195,13 @@ interface Api {
   list(options?: ListOpts): Promise<readonly ListItem[]>;
   listProps(): Promise<readonly PropDef[]>; // Available definitions, including built-ins.
   showList(format: ListFormat, items: readonly ListItem[]): Promise<void>;
-  createRecord(id: RecordId | undefined, ops: readonly CreateOp[]): Promise<RecordId>;
+  createRecord(init: CreateInit, ops: readonly CreateOp[]): Promise<RecordId>;
   editRecord(id: RecordId, ops: readonly UpdateOp[]): Promise<void>;
 }
 ```
 
-Use `showList` for formatted bodies and props. `full` also shows prop defs, owned-record
-settings and rule settings. Use `text(records)` for the structured fields.
+Use `showList` for formatted bodies and props. `full` also shows the kind-specific settings
+defined in `ListItem` above. Use `text(records)` for the structured fields.
 Avoid mixing `showList` with `text()` or `console.log()` in the same script;
 their output can appear out of order.
 
@@ -280,7 +319,7 @@ Default to an ordinary note without an H1 for capture. Use an H1 when creating a
 
 ```js
 // Create with a generated ID. Date defaults to today.
-const id = await api.createRecord(undefined, [
+const id = await api.createRecord({ _tag: "note" }, [
   { kind: "body.append", markdown: "First paragraph." },
   { kind: "date.set", date: "2026-11-08" },
   { kind: "prop.set", propId: "builtin:archived", value: { _tag: "bool", val: false } },
@@ -289,6 +328,39 @@ await api.editRecord(id, [
   { kind: "body.replace", text: "First", with: "Updated" },
   { kind: "body.append", markdown: "\n## Next steps\n\n- Review the plan." },
 ]);
+```
+
+```js
+// Create a prop def, an enum option, a rule, and a preset, then edit settings.
+const statusId = await api.createRecord(
+  { _tag: "prop", prop_type: "enum" },
+  [{ kind: "body.append", markdown: "# Status" }],
+);
+const doneId = await api.createRecord(
+  { _tag: "owned", owned_type: "enum_option", owned_parent: statusId },
+  [{ kind: "body.append", markdown: "# Done" }],
+);
+await api.editRecord(statusId, [
+  { kind: "prop_default.set", value: { _tag: "enum", val: doneId } },
+]);
+const ruleId = await api.createRecord(
+  {
+    _tag: "rule",
+    rule_targets: [{ _tag: "cmp", val: ["_tag", "=", "note"] }],
+    rule_storage: { _tag: "group" },
+    rule_expects: { [statusId]: { _tag: "required" } },
+  },
+  [{ kind: "body.append", markdown: "# Note rule" }],
+);
+const presetId = await api.createRecord(
+  {
+    _tag: "preset",
+    preset_filter: [{ _tag: "cmp", val: ["_tag", "=", "note"] }],
+    preset_default: true,
+  },
+  [{ kind: "body.append", markdown: "# All notes" }],
+);
+await api.editRecord(presetId, [{ kind: "preset_default.set", value: false }]);
 ```
 
 ```js
@@ -306,7 +378,8 @@ for (const record of records) {
 Body replacements match literal Markdown. Omit `occurrence` for exactly one match,
 use a zero-based index for one occurrence, or `"all"` for all. Use `with: ""` to delete text.
 Edits run in order. Each awaited create/edit call saves independently; earlier calls survive a later failure.
-Creation accepts an unused explicit ID or `undefined`. IDs starting with `builtin:` are reserved.
+Creation accepts an unused explicit `id` or omits `id` to generate one. IDs starting with `builtin:` are reserved.
+Kind-specific edit ops (`preset_*`, `prop_*`, `rule_*`) require a matching record `_tag` (and `prop_type: "link"` for `prop_targets.*`).
 Read `<record-id>.md` files when needed, but never edit them or `.manotes/` directly.
 
 ## Set and clear props
@@ -337,9 +410,10 @@ can use unavailable defs/rules, a different value type, or targets outside the
 def's choices. Read the record again to inspect validity and rule expectations.
 Clearing removes the saved assignment; property equality filters can then use the
 def's default. Creation accepts `prop.set`, but not `prop.clear`.
-Prop operations run in their given order. A requested prop batch produces an update
+Prop operations run in their given order. A requested attr/prop batch produces an update
 even if its final values are unchanged, and can change `updatedAt`.
-These operations edit assignments. They do not create or edit prop defs or rules.
+`prop.set` and `prop.clear` edit assignments; use `prop_type.set`, `prop_default.*`,
+`prop_targets.*`, `rule_*`, and `preset_*` ops to edit definitions, rules, and presets.
 
 ## Sync
 

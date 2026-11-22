@@ -507,7 +507,7 @@ describe("ExecuteApi prop operations", () => {
     await runIntegration(
       Effect.gen(function* () {
         yield* runTestScript(`
-        const id = await api.createRecord("created-props", [
+        const id = await api.createRecord({ _tag: "note", id: "created-props" }, [
           { kind: "prop.set", propId: "builtin:archived", value: { _tag: "bool", val: true } },
           { kind: "prop.set", propId: "priority", ruleId: "task", value: { _tag: "number", val: 4 } },
         ]);
@@ -571,7 +571,7 @@ describe("ExecuteApi.createRecord", () => {
     await runIntegration(
       Effect.gen(function* () {
         yield* runTestScript(dedent`
-          const id = await api.createRecord("created-record", [
+          const id = await api.createRecord({ _tag: "note", id: "created-record" }, [
             { kind: "date.set", date: "invalid but superseded" },
             { kind: "body.append", markdown: "# Created" },
             { kind: "body.append", markdown: "See [Target](./target.md)." },
@@ -602,8 +602,8 @@ describe("ExecuteApi.createRecord", () => {
     await runIntegration(
       Effect.gen(function* () {
         yield* runTestScript(dedent`
-          const first = await api.createRecord(undefined, []);
-          const second = await api.createRecord(undefined, [{ kind: "date.set", date: "2024-02-29" }]);
+          const first = await api.createRecord({ _tag: "note" }, []);
+          const second = await api.createRecord({ _tag: "note" }, [{ kind: "date.set", date: "2024-02-29" }]);
           if (!first || !second || first === second) throw new Error("invalid generated IDs");
           await api.editRecord(first, [{ kind: "body.append", markdown: "Generated." }]);
         `);
@@ -624,9 +624,9 @@ describe("ExecuteApi.createRecord", () => {
     await runIntegration(
       Effect.gen(function* () {
         for (const call of [
-          'api.createRecord("", [])',
-          'api.createRecord("invalid", [{ kind: "body.replace", text: "", with: "no" }])',
-          'api.createRecord("invalid", [{ kind: "body.append", markdown: "Not saved" }, { kind: "date.set", date: "2025-02-29" }])',
+          'api.createRecord({ _tag: "note", id: "" }, [])',
+          'api.createRecord({ _tag: "note", id: "invalid" }, [{ kind: "body.replace", text: "", with: "no" }])',
+          'api.createRecord({ _tag: "note", id: "invalid" }, [{ kind: "body.append", markdown: "Not saved" }, { kind: "date.set", date: "2025-02-29" }])',
         ]) {
           const result = yield* runTestScript(`await ${call};`).pipe(Effect.result);
 
@@ -657,7 +657,7 @@ describe("ExecuteApi.createRecord", () => {
 
         for (const id of [RECORD_ID, "unmaterialized"]) {
           const result = yield* runTestScript(dedent`
-            await api.createRecord("${id}", [{ kind: "body.append", markdown: "Never saved." }]);
+            await api.createRecord({ _tag: "note", id: "${id}" }, [{ kind: "body.append", markdown: "Never saved." }]);
           `).pipe(Effect.result);
 
           expect(Result.isFailure(result)).toBe(true);
@@ -681,8 +681,8 @@ describe("ExecuteApi.createRecord", () => {
       Effect.gen(function* () {
         yield* runTestScript(dedent`
           const results = await Promise.allSettled([
-            api.createRecord("same-id", [{ kind: "body.append", markdown: "First." }]),
-            api.createRecord("same-id", [{ kind: "body.append", markdown: "Second." }]),
+            api.createRecord({ _tag: "note", id: "same-id" }, [{ kind: "body.append", markdown: "First." }]),
+            api.createRecord({ _tag: "note", id: "same-id" }, [{ kind: "body.append", markdown: "Second." }]),
           ]);
           if (results.filter((result) => result.status === "fulfilled").length !== 1) {
             throw new Error("Expected one successful creation");
@@ -692,6 +692,235 @@ describe("ExecuteApi.createRecord", () => {
         const eventRepo = yield* EventRepo.Service;
         expect(yield* recordRepo.findAllNotes()).toHaveLength(1);
         expect(yield* eventRepo.countPending()).toBe(2);
+      }),
+    );
+  });
+
+  it("creates and edits preset records and exposes preset_default in CliList", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        const events = yield* EventRepo.Service;
+
+        yield* runTestScript(dedent`
+          const id = await api.createRecord(
+            {
+              _tag: "preset",
+              id: "inbox",
+              preset_filter: [{ _tag: "cmp", val: ["_tag", "=", "note"] }],
+              preset_default: true,
+            },
+            [{ kind: "body.append", markdown: "# Inbox" }],
+          );
+          const [created] = await api.list({ filter: [{ _tag: "cmp", val: ["id", "=", id] }] });
+          if (created._tag !== "preset" || created.preset_default !== true || created.preset_filter.length !== 1) {
+            throw new Error("unexpected created preset");
+          }
+          await api.editRecord(id, [
+            { kind: "preset_filter.set", value: [] },
+            { kind: "preset_default.set", value: false },
+          ]);
+          const [edited] = await api.list({ filter: [{ _tag: "cmp", val: ["id", "=", id] }] });
+          if (edited._tag !== "preset" || edited.preset_default !== false || edited.preset_filter.length !== 0) {
+            throw new Error("unexpected edited preset");
+          }
+          // Repeated attr op still writes an update event.
+          await api.editRecord(id, [{ kind: "preset_default.set", value: false }]);
+        `);
+
+        const updates = yield* events.findUpdatesForRecord(RecordSchema.Id.make("inbox"));
+        expect(updates).toHaveLength(3);
+        const doc = replay(updates.map((event) => event.payload));
+
+        try {
+          const saved = yield* YSchema.exportLoose(RecordDoc.fromDoc({ doc }).attrs);
+          expect(saved._tag).toBe("preset");
+          expect(saved).toMatchObject({
+            preset_filter: [],
+          });
+          expect(saved).not.toHaveProperty("preset_default");
+        } finally {
+          doc.destroy();
+        }
+      }),
+    );
+  });
+
+  it("creates and edits prop definitions across all value types and enum options", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        yield* seedRecord(RECORD_ID, "# Target note");
+
+        yield* runTestScript(dedent`
+          await api.createRecord(
+            { _tag: "prop", id: "p-text", prop_type: "text", prop_default: { _tag: "text", val: "hi" } },
+            [{ kind: "body.append", markdown: "# Caption" }],
+          );
+          await api.createRecord(
+            { _tag: "prop", id: "p-num", prop_type: "number" },
+            [{ kind: "body.append", markdown: "# Score" }],
+          );
+          await api.createRecord(
+            { _tag: "prop", id: "p-bool", prop_type: "bool", prop_default: { _tag: "bool", val: true } },
+            [{ kind: "body.append", markdown: "# Done" }],
+          );
+          await api.createRecord(
+            { _tag: "prop", id: "p-enum", prop_type: "enum" },
+            [{ kind: "body.append", markdown: "# Status" }],
+          );
+          await api.createRecord(
+            { _tag: "owned", id: "opt-open", owned_type: "enum_option", owned_parent: "p-enum" },
+            [{ kind: "body.append", markdown: "# Open" }],
+          );
+          await api.createRecord(
+            {
+              _tag: "prop",
+              id: "p-link",
+              prop_type: "link",
+              prop_default: { _tag: "link", val: "${RECORD_ID}" },
+              prop_targets: [{ _tag: "cmp", val: ["_tag", "=", "note"] }],
+            },
+            [{ kind: "body.append", markdown: "# Related" }],
+          );
+
+          await api.editRecord("p-num", [
+            { kind: "prop_default.set", value: { _tag: "number", val: 5 } },
+          ]);
+          await api.editRecord("p-text", [
+            { kind: "prop_default.clear" },
+            { kind: "prop_type.set", value: "link" },
+            { kind: "prop_targets.set", value: [{ _tag: "cmp", val: ["id", "=", "${RECORD_ID}"] }] },
+          ]);
+          await api.editRecord("p-link", [
+            { kind: "prop_targets.clear" },
+          ]);
+        `);
+
+        const items = yield* CliList.list();
+        const byId = (id: string) => items.find((item) => item.id === id);
+
+        expect(byId("p-num")?._tag).toBe("prop");
+        expect(byId("p-num")).toMatchObject({
+          prop_type: "number",
+          prop_default: {
+            state: Attrs.ValueState.Valid({
+              value: AttrsSchema.PropVal.cases.number.make({ val: 5 }),
+            }),
+          },
+        });
+        expect(byId("p-bool")?._tag).toBe("prop");
+        expect(byId("p-bool")).toMatchObject({
+          prop_type: "bool",
+          prop_default: {
+            state: Attrs.ValueState.Valid({
+              value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+            }),
+          },
+        });
+        expect(byId("p-text")?._tag).toBe("prop");
+        expect(byId("p-text")).toMatchObject({
+          prop_type: "link",
+          prop_default: { state: Attrs.ValueState.Unset(), label: null },
+          prop_targets: [AttrsSchema.makeTargetFilterExpr.cmp({ val: ["id", "=", RECORD_ID] })],
+        });
+        expect(byId("p-link")?._tag).toBe("prop");
+        expect(byId("p-link")).toMatchObject({
+          prop_type: "link",
+          prop_targets: null,
+        });
+        expect(byId("opt-open")?._tag).toBe("owned");
+        expect(byId("opt-open")).toMatchObject({
+          owned_type: "enum_option",
+          owned_parent: RecordSchema.Id.make("p-enum"),
+        });
+      }),
+    );
+  });
+
+  it("creates and edits rule records with storage, targets, and expectations", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        yield* runTestScript(dedent`
+          await api.createRecord(
+            {
+              _tag: "rule",
+              id: "task-rule",
+              rule_targets: [{ _tag: "cmp", val: ["_tag", "=", "note"] }],
+              rule_storage: { _tag: "group" },
+              rule_expects: {
+                status: { _tag: "required" },
+                priority: { _tag: "optional" },
+              },
+            },
+            [{ kind: "body.append", markdown: "# Task rule" }],
+          );
+
+          await api.editRecord("task-rule", [
+            { kind: "rule_storage.set", value: { _tag: "top" } },
+            { kind: "rule_targets.set", value: [] },
+            { kind: "rule_expects.set", propId: "owner", value: { _tag: "required" } },
+            { kind: "rule_expects.clear", propId: "priority" },
+          ]);
+        `);
+
+        const [rule] = yield* CliList.list({
+          filter: [
+            AttrsSchema.makeFilterExpr.cmp({ val: ["id", "=", RecordSchema.Id.make("task-rule")] }),
+          ],
+        });
+
+        expect(rule?._tag).toBe("rule");
+        expect(rule).toMatchObject({
+          rule_storage: AttrsSchema.RuleStorage.cases.top.make({}),
+          rule_targets: [],
+          rule_expects: {
+            [RecordSchema.Id.make("status")]: AttrsSchema.RuleExpectation.cases.required.make({}),
+            [RecordSchema.Id.make("owner")]: AttrsSchema.RuleExpectation.cases.required.make({}),
+          },
+        });
+      }),
+    );
+  });
+
+  it("rejects mismatched attr edit ops and rolls back the whole batch", async () => {
+    await runIntegration(
+      Effect.gen(function* () {
+        yield* seedRecord(RECORD_ID, INITIAL_MARKDOWN);
+        yield* runTestScript(dedent`
+          await api.createRecord({ _tag: "prop", id: "text-prop", prop_type: "text" }, []);
+        `);
+        const records = yield* RecordRepo.Service;
+        const events = yield* EventRepo.Service;
+        const beforeNote = yield* records.getById(RECORD_ID);
+        const beforeProp = yield* records.getById(RecordSchema.Id.make("text-prop"));
+        const pendingBefore = yield* events.countPending();
+
+        for (const [targetId, badOp] of [
+          [RECORD_ID, { kind: "preset_filter.set", value: [] }],
+          [RECORD_ID, { kind: "preset_default.set", value: true }],
+          [
+            RECORD_ID,
+            {
+              kind: "prop_default.set",
+              value: AttrsSchema.PropVal.cases.bool.make({ val: true }),
+            },
+          ],
+          [RECORD_ID, { kind: "rule_targets.set", value: [] }],
+          ["text-prop", { kind: "prop_targets.set", value: [] }],
+          ["text-prop", { kind: "prop_targets.clear" }],
+        ] as const) {
+          const result = yield* runTestScript(dedent`
+            await api.editRecord("${targetId}", [
+              { kind: "date.set", date: "2024-02-29" },
+              ${JSON.stringify(badOp)},
+            ]);
+          `).pipe(Effect.result);
+
+          expect(Result.isFailure(result)).toBe(true);
+        }
+
+        expect(yield* records.getById(RECORD_ID)).toEqual(beforeNote);
+        expect(yield* records.getById(RecordSchema.Id.make("text-prop"))).toEqual(beforeProp);
+        expect(yield* events.countPending()).toBe(pendingBefore);
       }),
     );
   });
@@ -1081,7 +1310,7 @@ describe("ExecuteApi.list", () => {
         yield* runTestScript(`
         const pending = await api.list();
         if (pending.length !== 1 || pending[0].title !== "Interrupted") throw new Error("catch-up");
-        await api.createRecord("created", [{ kind: "body.append", markdown: "# Created" }]);
+        await api.createRecord({ _tag: "note", id: "created" }, [{ kind: "body.append", markdown: "# Created" }]);
         if ((await api.list()).length !== 2) throw new Error("create visibility");
         await api.editRecord("created", [{ kind: "body.replace", text: "Created", with: "Edited" }]);
         const edited = await api.list({ filter: [{ _tag: "cmp", val: ["id", "=", "created"] }] });

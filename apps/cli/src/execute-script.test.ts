@@ -2,7 +2,7 @@ import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { Console, Effect, Exit, Result } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
-import type { Api } from "@manotes/shared/execute-api";
+import { ExecuteApi, type Api } from "@manotes/shared/execute-api";
 import { ExecuteScript } from "@manotes/shared/execute-script";
 import { CliExecute } from "./cli.execute";
 import { CliList } from "@manotes/shared/list";
@@ -93,10 +93,28 @@ describe("ExecuteScript.run", () => {
     'await api.editRecord("note", [{ kind: "prop.set", propId: "flag", value: { _tag: "bool", val: "true" } }]);',
     'await api.editRecord("note", [{ kind: "prop.set", propId: "number", value: { _tag: "number", val: NaN } }]);',
     'await api.editRecord("note", [{ kind: "prop.clear", propId: "" }]);',
-    'await api.createRecord("", []);',
-    'await api.createRecord("note", [{ kind: "body.replace", text: "a", with: "b" }]);',
-    'await api.createRecord("note", [{ kind: "date.set", date: 7 }]);',
-    'await api.createRecord("note", [{ kind: "prop.clear", propId: "flag" }]);',
+    'await api.editRecord("note", [{ kind: "preset_default.set", value: "true" }]);',
+    'await api.editRecord("note", [{ kind: "prop_type.set", value: "invalid" }]);',
+    'await api.editRecord("note", [{ kind: "prop_targets.set", value: [{ _tag: "cmp", val: ["rules", "violation", true] }] }]);',
+    'await api.editRecord("note", [{ kind: "rule_storage.set", value: { _tag: "other" } }]);',
+    'await api.editRecord("note", [{ kind: "rule_expects.set", propId: "", value: { _tag: "required" } }]);',
+    'await api.editRecord("note", [{ kind: "rule_expects.clear", propId: "" }]);',
+    'await api.createRecord("note", []);',
+    "await api.createRecord(undefined, []);",
+    'await api.createRecord({ _tag: "note", id: "" }, []);',
+    'await api.createRecord({ _tag: "unknown" }, []);',
+    'await api.createRecord({ _tag: "preset" }, []);',
+    'await api.createRecord({ _tag: "preset", preset_filter: [], preset_default: "yes" }, []);',
+    'await api.createRecord({ _tag: "prop", prop_type: "text", prop_default: { _tag: "number", val: 1 } }, []);',
+    'await api.createRecord({ _tag: "prop", prop_type: "text", prop_targets: [] }, []);',
+    'await api.createRecord({ _tag: "prop", prop_type: "link", prop_targets: [{ _tag: "cmp", val: ["rules", "violation", true] }] }, []);',
+    'await api.createRecord({ _tag: "rule" }, []);',
+    'await api.createRecord({ _tag: "rule", rule_targets: [{ _tag: "cmp", val: ["rules", "violation", true] }] }, []);',
+    'await api.createRecord({ _tag: "owned", owned_type: "enum_option" }, []);',
+    'await api.createRecord({ _tag: "owned", owned_type: "other", owned_parent: "p" }, []);',
+    'await api.createRecord({ _tag: "note", id: "note" }, [{ kind: "body.replace", text: "a", with: "b" }]);',
+    'await api.createRecord({ _tag: "note", id: "note" }, [{ kind: "date.set", date: 7 }]);',
+    'await api.createRecord({ _tag: "note", id: "note" }, [{ kind: "prop.clear", propId: "flag" }]);',
     'await api.list("wrong");',
     'await api.listProps("wrong");',
     "await api.list({ limit: 0 });",
@@ -125,7 +143,7 @@ describe("ExecuteScript.run", () => {
     await Effect.runPromise(
       run(
         `
-      const id = await api.createRecord("note", [
+      const id = await api.createRecord({ _tag: "note", id: "note" }, [
         { kind: "prop.set", propId: "builtin:archived", value: { _tag: "bool", val: true } },
       ]);
       await api.editRecord(id, [
@@ -139,7 +157,7 @@ describe("ExecuteScript.run", () => {
     );
 
     expect(api.createRecord).toHaveBeenCalledWith(
-      "note",
+      ExecuteApi.CreateInit.members[0].make({ id: RecordSchema.Id.make("note") }),
       [
         {
           kind: "prop.set",
@@ -159,6 +177,50 @@ describe("ExecuteScript.run", () => {
           value: AttrsSchema.PropVal.cases.enum.make({ val: RecordSchema.Id.make("done") }),
         },
         { kind: "prop.clear", propId: "priority", ruleId: "task" },
+      ],
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("forwards non-note createRecord inits and attr edit ops", async () => {
+    const api = makeApi();
+
+    await Effect.runPromise(
+      run(
+        `
+      const id = await api.createRecord(
+        {
+          _tag: "preset",
+          id: "inbox",
+          preset_filter: [{ _tag: "cmp", val: ["_tag", "=", "note"] }],
+          preset_default: true,
+        },
+        [],
+      );
+      await api.editRecord(id, [
+        { kind: "preset_filter.set", value: [] },
+        { kind: "preset_default.set", value: false },
+      ]);
+    `,
+        "preset.js",
+        api,
+      ),
+    );
+
+    expect(api.createRecord).toHaveBeenCalledWith(
+      ExecuteApi.CreateInit.members[1].make({
+        id: RecordSchema.Id.make("inbox"),
+        preset_filter: [AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] })],
+        preset_default: true,
+      }),
+      [],
+      expect.any(AbortSignal),
+    );
+    expect(api.editRecord).toHaveBeenCalledWith(
+      "inbox",
+      [
+        { kind: "preset_filter.set", value: [] },
+        { kind: "preset_default.set", value: false },
       ],
       expect.any(AbortSignal),
     );
@@ -366,7 +428,7 @@ function makeApi() {
     listProps: vi.fn<Api["listProps"]>(async () => []),
     editRecord: vi.fn<Api["editRecord"]>(async () => undefined),
     createRecord: vi.fn<Api["createRecord"]>(
-      async (id) => id ?? RecordSchema.Id.make("generated-id"),
+      async (init) => init.id ?? RecordSchema.Id.make("generated-id"),
     ),
   };
 }

@@ -332,11 +332,12 @@ const clearGroupProp = Effect.fn("Attrs.clearGroupProp")(function* (opts: {
 
 const initializeProp = Effect.fn("Attrs.initializeProp")(function* (opts: {
   readonly doc: Y.Doc;
-  readonly defaultValue?: AttrsSchema.PropVal;
+  readonly type?: AttrsSchema.PropValTag;
+  readonly defaultValue?: AttrsSchema.PropVal | undefined;
 }) {
   const { attrs } = RecordDoc.fromDoc({ doc: opts.doc });
   const prop = yield* attrs.pipe(YSchema.set("_tag", "prop"));
-  yield* prop.pipe(YSchema.set("prop_type", opts.defaultValue?._tag ?? "bool"));
+  yield* prop.pipe(YSchema.set("prop_type", opts.type ?? opts.defaultValue?._tag ?? "bool"));
 
   if (opts.defaultValue !== undefined) {
     yield* prop.pipe(YSchema.set("prop_default", opts.defaultValue));

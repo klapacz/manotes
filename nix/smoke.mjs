@@ -48,7 +48,7 @@ try {
   assert.match(run(["status"]), /Pending publication: 0 changes/);
   run(
     ["execute"],
-    'await api.createRecord("smoke", [{ kind: "body.append", markdown: "# Packaged CLI\\n\\nCreated outside the checkout. Żółw 🐢." }]);',
+    'await api.createRecord({ _tag: "note", id: "smoke" }, [{ kind: "body.append", markdown: "# Packaged CLI\\n\\nCreated outside the checkout. Żółw 🐢." }]);',
   );
   assert.match(
     readFileSync(path.join(directory, "smoke.md"), "utf8"),

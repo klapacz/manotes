@@ -342,4 +342,30 @@ describe("CliList.format", () => {
       `Targets: ${JSON.stringify(targets)}`,
     );
   });
+
+  it("shows preset filter and default flag in full", () => {
+    const filter = [AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] })];
+
+    const record = CliList.Item.cases.preset.make({
+      ...settingsFields,
+      preset_filter: filter,
+      preset_default: true,
+    });
+
+    expect(CliList.format("full", [record])).toBe(
+      [
+        header,
+        "",
+        "  Preset def:",
+        `    Filter: ${JSON.stringify(record.preset_filter)}`,
+        "    Default: true",
+      ].join("\n"),
+    );
+    expect(CliList.format("full", [{ ...record, preset_filter: [], preset_default: false }])).toBe(
+      `${header}\n\n  Preset def:\n    Filter: all records\n    Default: false`,
+    );
+    expect(
+      CliList.format("full", [{ ...record, preset_filter: null, preset_default: false }]),
+    ).toBe(`${header}\n\n  Preset def:\n    Filter: unset\n    Default: false`);
+  });
 });

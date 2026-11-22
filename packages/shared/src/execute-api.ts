@@ -1,8 +1,9 @@
 import { RecordSchema } from "./record.schema";
-import { Array, DateTime, Effect, Option, Result, Schema, Stream } from "effect";
+import { Array, DateTime, Effect, Match, Option, Record, Result, Schema, Stream } from "effect";
 import { nanoid } from "nanoid";
 import * as Y from "yjs";
 import { initProseMirrorDoc, updateYFragment } from "y-prosemirror";
+import { AttrsSchema } from "./attrs.schema";
 import { DB } from "./db.service";
 import { EventRepo } from "./event.repo";
 import { EventSchema } from "./event.schema";
@@ -21,6 +22,50 @@ import { RuleRecord } from "./rule-record.service";
 import { Attrs } from "./attrs.service";
 import { ExecuteProps } from "./execute-props";
 import { EffectOption } from "./effect/effect-option";
+
+const CreateNoteInit = Schema.TaggedStruct("note", {
+  id: Schema.optionalKey(RecordSchema.Id),
+});
+
+const CreatePresetInit = Schema.TaggedStruct("preset", {
+  id: Schema.optionalKey(RecordSchema.Id),
+  preset_filter: AttrsSchema.Filter,
+  preset_default: Schema.optionalKey(Schema.Boolean),
+});
+
+const CreatePropInit = Schema.Union([
+  createPropInit(AttrsSchema.PropVal.cases.text),
+  createPropInit(AttrsSchema.PropVal.cases.number),
+  createPropInit(AttrsSchema.PropVal.cases.bool),
+  createPropInit(AttrsSchema.PropVal.cases.enum),
+  createPropInit(AttrsSchema.PropVal.cases.link).mapFields((fields) => ({
+    ...fields,
+    prop_targets: Schema.optionalKey(AttrsSchema.TargetFilter),
+  })),
+]).pipe(Schema.toTaggedUnion("prop_type"));
+
+const CreateRuleInit = Schema.TaggedStruct("rule", {
+  id: Schema.optionalKey(RecordSchema.Id),
+  rule_targets: AttrsSchema.TargetFilter,
+  rule_storage: Schema.optionalKey(AttrsSchema.RuleStorage),
+  rule_expects: Schema.optionalKey(Schema.Record(RecordSchema.Id, AttrsSchema.RuleExpectation)),
+});
+
+const CreateOwnedInit = Schema.TaggedStruct("owned", {
+  id: Schema.optionalKey(RecordSchema.Id),
+  owned_type: Schema.Literal("enum_option"),
+  owned_parent: RecordSchema.Id,
+});
+
+export const CreateInit = Schema.Union([
+  CreateNoteInit,
+  CreatePresetInit,
+  CreatePropInit,
+  CreateRuleInit,
+  CreateOwnedInit,
+]);
+
+export type CreateInit = typeof CreateInit.Type;
 
 const AppendOp = Schema.Struct({
   kind: Schema.Literal("body.append"),
@@ -41,11 +86,81 @@ const ReplaceOp = Schema.Struct({
   ),
 });
 
+const PresetFilterSetOp = Schema.Struct({
+  kind: Schema.Literal("preset_filter.set"),
+  value: AttrsSchema.Filter,
+});
+
+const PresetDefaultSetOp = Schema.Struct({
+  kind: Schema.Literal("preset_default.set"),
+  value: Schema.Boolean,
+});
+
+const PropTypeSetOp = Schema.Struct({
+  kind: Schema.Literal("prop_type.set"),
+  value: AttrsSchema.PropValTag,
+});
+
+const PropDefaultSetOp = Schema.Struct({
+  kind: Schema.Literal("prop_default.set"),
+  value: AttrsSchema.PropVal,
+});
+
+const PropDefaultClearOp = Schema.Struct({
+  kind: Schema.Literal("prop_default.clear"),
+});
+
+const PropTargetsSetOp = Schema.Struct({
+  kind: Schema.Literal("prop_targets.set"),
+  value: AttrsSchema.TargetFilter,
+});
+
+const PropTargetsClearOp = Schema.Struct({
+  kind: Schema.Literal("prop_targets.clear"),
+});
+
+const RuleStorageSetOp = Schema.Struct({
+  kind: Schema.Literal("rule_storage.set"),
+  value: AttrsSchema.RuleStorage,
+});
+
+const RuleTargetsSetOp = Schema.Struct({
+  kind: Schema.Literal("rule_targets.set"),
+  value: AttrsSchema.TargetFilter,
+});
+
+const RuleExpectsSetOp = Schema.Struct({
+  kind: Schema.Literal("rule_expects.set"),
+  propId: RecordSchema.Id,
+  value: AttrsSchema.RuleExpectation,
+});
+
+const RuleExpectsClearOp = Schema.Struct({
+  kind: Schema.Literal("rule_expects.clear"),
+  propId: RecordSchema.Id,
+});
+
+const AttrEditOp = Schema.Union([
+  PresetFilterSetOp,
+  PresetDefaultSetOp,
+  PropTypeSetOp,
+  PropDefaultSetOp,
+  PropDefaultClearOp,
+  PropTargetsSetOp,
+  PropTargetsClearOp,
+  RuleStorageSetOp,
+  RuleTargetsSetOp,
+  RuleExpectsSetOp,
+  RuleExpectsClearOp,
+]);
+
+type AttrOp = ExecuteProps.Op | typeof AttrEditOp.Type;
+
 export const CreateOp = Schema.Union([AppendOp, DateOp, ExecuteProps.SetOp]);
 
 export type CreateOp = typeof CreateOp.Type;
 
-export const UpdateOp = Schema.Union([CreateOp, ReplaceOp, ExecuteProps.ClearOp]);
+export const UpdateOp = Schema.Union([CreateOp, ReplaceOp, ExecuteProps.ClearOp, AttrEditOp]);
 
 export type UpdateOp = typeof UpdateOp.Type;
 
@@ -61,7 +176,7 @@ export type Api = {
     signal?: AbortSignal,
   ) => Promise<void>;
   readonly createRecord: (
-    id: RecordSchema.Id | undefined,
+    init: CreateInit,
     ops: readonly CreateOp[],
     signal?: AbortSignal,
   ) => Promise<RecordSchema.Id>;
@@ -102,7 +217,7 @@ export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
         if (Option.isNone(found)) return yield* Effect.fail(new Error(`Record not found: ${id}`));
         const { record, backlinks } = found.value;
 
-        // Date stays separate; body and props share the Yjs update.
+        // Date stays separate; body and attrs share the Yjs update.
         const resolved = yield* resolveOps(ops);
         const date = Option.filter(resolved.date, (date) => date !== record.date);
 
@@ -111,11 +226,11 @@ export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
           recordId: id,
           snapshot: record.materializedYUpdate,
           body: resolved.body,
-          prop: resolved.prop,
+          attr: resolved.attr,
           backlinkLabels: BacklinkLabels.buildCache(backlinks),
         });
 
-        // Body/date no-ops are skipped; requested prop operations produce an update.
+        // Body/date no-ops are skipped; requested attr operations produce an update.
         if (update === null && Option.isNone(date)) return;
 
         const createdAt = yield* DateTime.now;
@@ -151,10 +266,10 @@ export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
   });
 
   const createRecord = Effect.fn("ExecuteApi.createRecord")(function* (
-    requestedId: RecordSchema.Id | undefined,
+    init: CreateInit,
     ops: readonly CreateOp[],
   ) {
-    const id = yield* Schema.decodeUnknownEffect(RecordSchema.CreateId)(requestedId ?? nanoid());
+    const id = yield* Schema.decodeEffect(RecordSchema.CreateId)(init.id ?? nanoid());
 
     return yield* db.transaction(
       Effect.gen(function* () {
@@ -173,8 +288,9 @@ export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
 
         const update = yield* createInitialUpdate({
           recordId: id,
+          init,
           body: resolved.body,
-          prop: resolved.prop,
+          attr: resolved.attr,
         });
 
         const createdAt = yield* DateTime.now;
@@ -217,14 +333,26 @@ export const makeApi = Effect.fn("ExecuteApi.makeApi")(function* () {
         { signal },
       );
     },
-    createRecord: (id, ops, signal) => {
+    createRecord: (init, ops, signal) => {
       return Effect.runPromise(
-        createRecord(id, ops).pipe(Effect.provideService(Attrs.Service, attrs)),
+        createRecord(init, ops).pipe(Effect.provideService(Attrs.Service, attrs)),
         { signal },
       );
     },
   } satisfies Api;
 });
+
+function createPropInit<
+  const Tag extends AttrsSchema.PropValTag,
+  const Value extends Schema.Constraint,
+>(value: Schema.TaggedStruct<Tag, { readonly val: Value }>) {
+  return Schema.TaggedStruct("prop", {
+    id: Schema.optionalKey(RecordSchema.Id),
+    prop_type: value.fields._tag,
+    prop_default: Schema.optionalKey(value),
+    prop_targets: Schema.optionalKey(Schema.Never),
+  });
+}
 
 const resolveOps = Effect.fn("ExecuteApi.resolveOps")(function* (ops: readonly UpdateOp[]) {
   const [dates, remaining] = Array.partition(ops, (op) => {
@@ -233,8 +361,8 @@ const resolveOps = Effect.fn("ExecuteApi.resolveOps")(function* (ops: readonly U
     return Result.fail(op);
   });
 
-  const [prop, body] = Array.partition(remaining, (op) => {
-    if (op.kind === "prop.set" || op.kind === "prop.clear") return Result.succeed(op);
+  const [body, attr] = Array.partition(remaining, (op) => {
+    if (op.kind === "body.append" || op.kind === "body.replace") return Result.succeed(op);
 
     return Result.fail(op);
   });
@@ -243,13 +371,121 @@ const resolveOps = Effect.fn("ExecuteApi.resolveOps")(function* (ops: readonly U
     EffectOption.traverse(Schema.decodeUnknownEffect(PlainDateString)),
   );
 
-  return { date, body, prop };
+  return { date, body, attr };
+});
+
+const initializeAttrs = Effect.fn("ExecuteApi.initializeAttrs")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly init: CreateInit;
+}) {
+  const attrs = yield* Attrs.Service;
+
+  yield* Match.value(opts.init).pipe(
+    Match.tag("note", () => Effect.void),
+    Match.tag("preset", (init) => {
+      return Effect.gen(function* () {
+        yield* attrs.initializePreset({ doc: opts.doc, filter: init.preset_filter });
+
+        if (init.preset_default !== undefined) {
+          yield* attrs.setPresetDefault({ doc: opts.doc, value: init.preset_default });
+        }
+      });
+    }),
+    Match.tag("prop", (init) => {
+      return Effect.gen(function* () {
+        yield* attrs.initializeProp({
+          doc: opts.doc,
+          type: init.prop_type,
+          defaultValue: init.prop_default,
+        });
+
+        if (init.prop_type === "link" && init.prop_targets !== undefined) {
+          yield* attrs.setPropTargets({ doc: opts.doc, targets: init.prop_targets });
+        }
+      });
+    }),
+    Match.tag("rule", (init) => {
+      return Effect.gen(function* () {
+        yield* attrs.initializeRule({ doc: opts.doc, targets: init.rule_targets });
+
+        if (init.rule_storage !== undefined) {
+          yield* attrs.setRuleStorage({ doc: opts.doc, storage: init.rule_storage });
+        }
+
+        if (init.rule_expects !== undefined) {
+          for (const [propId, value] of Record.toEntries(init.rule_expects)) {
+            yield* attrs.setRuleExpectation({
+              doc: opts.doc,
+              propId: RecordSchema.Id.make(propId),
+              value,
+            });
+          }
+        }
+      });
+    }),
+    Match.tag("owned", (init) => {
+      return attrs.initializeEnumOption({ doc: opts.doc, enum_parent: init.owned_parent });
+    }),
+    Match.exhaustive,
+  );
+});
+
+const applyAttrOp = Effect.fn("ExecuteApi.applyAttrOp")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly recordId: RecordSchema.Id;
+  readonly op: AttrOp;
+}) {
+  const attrs = yield* Attrs.Service;
+
+  yield* Match.value(opts.op).pipe(
+    Match.when({ kind: "prop.set" }, (op) => {
+      return ExecuteProps.apply({ doc: opts.doc, recordId: opts.recordId, op });
+    }),
+    Match.when({ kind: "prop.clear" }, (op) => {
+      return ExecuteProps.apply({ doc: opts.doc, recordId: opts.recordId, op });
+    }),
+    Match.when({ kind: "preset_filter.set" }, (op) => {
+      return attrs.setPresetFilter({ doc: opts.doc, filter: op.value });
+    }),
+    Match.when({ kind: "preset_default.set" }, (op) => {
+      return attrs.setPresetDefault({ doc: opts.doc, value: op.value });
+    }),
+    Match.when({ kind: "prop_type.set" }, (op) => {
+      return attrs.setPropType({ doc: opts.doc, type: op.value });
+    }),
+    Match.when({ kind: "prop_default.set" }, (op) => {
+      return attrs.setPropDefault({ doc: opts.doc, value: op.value });
+    }),
+    Match.when({ kind: "prop_default.clear" }, () => {
+      return attrs.clearPropDefault({ doc: opts.doc });
+    }),
+    Match.when({ kind: "prop_targets.set" }, (op) => {
+      return attrs.setPropTargets({ doc: opts.doc, targets: op.value });
+    }),
+    Match.when({ kind: "prop_targets.clear" }, () => {
+      return attrs.setPropTargets({ doc: opts.doc, targets: undefined });
+    }),
+    Match.when({ kind: "rule_storage.set" }, (op) => {
+      return attrs.setRuleStorage({ doc: opts.doc, storage: op.value });
+    }),
+    Match.when({ kind: "rule_targets.set" }, (op) => {
+      return attrs.setRuleTargets({ doc: opts.doc, targets: op.value });
+    }),
+    Match.when({ kind: "rule_expects.set" }, (op) => {
+      return attrs.setRuleExpectation({ doc: opts.doc, propId: op.propId, value: op.value });
+    }),
+    Match.when({ kind: "rule_expects.clear" }, (op) => {
+      return attrs.clearRuleExpectation({ doc: opts.doc, propId: op.propId });
+    }),
+    Match.exhaustive,
+  );
 });
 
 const createInitialUpdate = Effect.fn("ExecuteApi.createInitialUpdate")(function* (opts: {
   readonly recordId: RecordSchema.Id;
+  readonly init: CreateInit;
   readonly body: readonly EditDocument.Edit[];
-  readonly prop: readonly ExecuteProps.Op[];
+  readonly attr: readonly AttrOp[];
 }) {
   // Creation must persist the empty paragraph too; a date event alone has no body.
   const doc = yield* Effect.try({
@@ -271,8 +507,10 @@ const createInitialUpdate = Effect.fn("ExecuteApi.createInitialUpdate")(function
   const { meta } = initProseMirrorDoc(fragment, RECORD_SCHEMA);
   updateYFragment(yDoc, fragment, doc, meta);
 
-  for (const op of opts.prop) {
-    yield* ExecuteProps.apply({ doc: yDoc, recordId: opts.recordId, op });
+  yield* initializeAttrs({ doc: yDoc, init: opts.init });
+
+  for (const op of opts.attr) {
+    yield* applyAttrOp({ doc: yDoc, recordId: opts.recordId, op });
   }
 
   return Y.encodeStateAsUpdate(yDoc);
@@ -282,10 +520,10 @@ const createUpdate = Effect.fn("ExecuteApi.createUpdate")(function* (opts: {
   readonly recordId: RecordSchema.Id;
   readonly snapshot: RecordRepo.MaterializedYUpdate;
   readonly body: readonly EditDocument.Edit[];
-  readonly prop: readonly ExecuteProps.Op[];
+  readonly attr: readonly AttrOp[];
   readonly backlinkLabels: ReadonlyMap<RecordSchema.Id, string>;
 }) {
-  if (opts.body.length === 0 && opts.prop.length === 0) return null;
+  if (opts.body.length === 0 && opts.attr.length === 0) return null;
 
   // Only encoded bytes leave this scope; the private Yjs document is destroyed
   // before the caller persists any events, including when editing fails.
@@ -309,15 +547,15 @@ const createUpdate = Effect.fn("ExecuteApi.createUpdate")(function* (opts: {
 
   const bodyChanged = !updated.eq(doc);
 
-  // Preserve body-only no-op handling; requested prop operations still run.
-  if (!bodyChanged && opts.prop.length === 0) return null;
+  // Preserve body-only no-op handling; requested attr operations still run.
+  if (!bodyChanged && opts.attr.length === 0) return null;
 
   const stateVector = Y.encodeStateVector(yDoc);
 
   if (bodyChanged) updateYFragment(yDoc, fragment, updated, meta);
 
-  for (const op of opts.prop) {
-    yield* ExecuteProps.apply({ doc: yDoc, recordId: opts.recordId, op });
+  for (const op of opts.attr) {
+    yield* applyAttrOp({ doc: yDoc, recordId: opts.recordId, op });
   }
 
   return Y.encodeStateAsUpdate(yDoc, stateVector);

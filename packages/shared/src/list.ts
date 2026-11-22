@@ -68,6 +68,7 @@ export type ItemRule = typeof ItemRule.Type;
 export const ItemPreset = Schema.TaggedStruct("preset", {
   ...commonFields,
   preset_filter: Schema.NullOr(AttrsSchema.Filter),
+  preset_default: Schema.Boolean,
 });
 
 export type ItemPreset = typeof ItemPreset.Type;
@@ -235,6 +236,7 @@ const readItem = Effect.fn("CliList.readItem")(function* (opts: {
         Item.cases.preset.make({
           ...common,
           preset_filter: opts.row.preset_filter,
+          preset_default: opts.row.preset_default,
         }),
       );
     }),
@@ -399,7 +401,11 @@ function formatSettings(item: Item): string {
         Match.orElse(formatTargets),
       );
 
-      return ["Preset def:", `  Filter: ${filterLabel}`].join("\n");
+      return [
+        "Preset def:",
+        `  Filter: ${filterLabel}`,
+        `  Default: ${item.preset_default ? "true" : "false"}`,
+      ].join("\n");
     }),
     Match.exhaustive,
   );
