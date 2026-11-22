@@ -11,21 +11,21 @@ export type Cursor = {
   index: number;
 };
 
-export type Transform = (cursor: Cursor) => InputStack;
+export type Transform = (cursor: Cursor) => InputStack | undefined;
 
 export const pane = (cursor: Cursor): PaneSchema.Pane => {
   return cursor.stack[cursor.index] ?? cursor.stack[0];
 };
 
 /** Opens `next` after the current pane, closing panes to the right. */
-export const openNext = (next: PaneSchema.PaneInput): Transform => {
-  return (cursor) => {
+export const openNext = (next: PaneSchema.PaneInput) => {
+  return (cursor: Cursor): InputStack => {
     return Array.append(throughCurrent(cursor), next);
   };
 };
 
 export const close: Transform = (cursor) => {
-  if (cursor.index === 0) return [PaneSchema.make.stream(StreamSettings.defaultPreset)];
+  if (cursor.index === 0) return undefined;
 
   return Array.splitAtNonEmpty(cursor.stack, cursor.index)[0];
 };
@@ -73,7 +73,7 @@ function normalizeToInput(value: PaneSchema.PaneInput | PaneSchema.Pane) {
     Match.tag("record", ({ id }) => PaneSchema.make.record({ id })),
     Match.tag("stream", (pane) => ({
       ...PaneSchema.make.stream({}),
-      filter: pane.filter ?? StreamSettings.defaultPreset.filter,
+      filter: pane.filter ?? [],
       source: pane.source ?? null,
       sort: pane.sort ?? StreamSettings.defaultDisplay.sort,
     })),

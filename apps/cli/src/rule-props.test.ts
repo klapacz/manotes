@@ -7,7 +7,6 @@ import { EventRepo } from "@manotes/shared/event.repo";
 import { CliList } from "@manotes/shared/list";
 import { Materializer } from "@manotes/shared/materializer.service";
 import { RecordRepo } from "@manotes/shared/record.repo";
-import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { PropDef } from "@manotes/shared/prop-def.service";
 import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
 import { RuleProps } from "@manotes/shared/rule-props";
@@ -555,7 +554,10 @@ describe("reactive rule props pipeline", () => {
         // Target changes stop expectations but retain the saved group's values.
         yield* attrs.setRuleTargets({
           doc: rule,
-          targets: StreamSettings.presets.pages.filter,
+          targets: [
+            AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+            AttrsSchema.makeTargetFilterExpr.cmp({ val: ["title", "exists", true] }),
+          ],
         });
         yield* save(rule, task);
         yield* waitFor(latest, (groups) => {
@@ -656,8 +658,11 @@ describe("reactive rule props pipeline", () => {
   });
 });
 
-function recordsFilter() {
-  return StreamSettings.presets.notes.filter;
+function recordsFilter(): AttrsSchema.TargetFilter {
+  return [
+    AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+    AttrsSchema.makeTargetFilterExpr.cmp({ val: ["title", "exists", false] }),
+  ];
 }
 
 function makeDoc() {

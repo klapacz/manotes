@@ -1,7 +1,6 @@
 import { Data, Effect, Schema } from "effect";
 import { nanoid } from "nanoid";
 import { RecordSchema } from "../record.schema";
-import { StreamSettings as Settings } from "./stream-settings";
 import { AttrsSchema } from "../attrs.schema";
 
 const StreamSort = Schema.Literals(["date", "updated"]).pipe(
@@ -20,9 +19,7 @@ export type StreamView = typeof StreamView.Type;
 
 export const StreamSettings = Schema.Struct({
   filter: AttrsSchema.Filter.pipe(
-    Schema.withDecodingDefault(
-      Effect.sync((): AttrsSchema.Filter => Settings.defaultPreset.filter),
-    ),
+    Schema.withDecodingDefault(Effect.sync((): AttrsSchema.Filter => [])),
   ),
   sort: StreamSort,
   view: StreamView,

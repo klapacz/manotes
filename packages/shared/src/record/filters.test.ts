@@ -86,32 +86,33 @@ describe("Filters definitions and Outline operations", () => {
     ).toEqual([expr.or({ val: [first, next] })]);
   });
 
-  it("replaces recognized Type choices in AND and appends alternatives in OR", () => {
-    const choices = [
-      Filters.namedTypes.notes.make(),
-      Filters.namedTypes.pages.make(),
-      Filters.namedTypes.properties.make(),
-      Filters.enumOptions.make(id),
-      Filters.enumOptions.make(other),
-      Filters.namedTypes.rules.make(),
-      Filters.namedTypes.presets.make(),
-    ];
+  it("replaces recognized family and comparison choices in AND and appends alternatives in OR", () => {
+    const enumChoices = [Filters.enumOptions.make(id), Filters.enumOptions.make(other)];
+
+    const kindChoices = AttrsSchema.RecordTag.literals.map((tag) => {
+      return expr.cmp({ val: ["_tag", "=", tag] });
+    });
 
     const archived = Filters.aliases.unarchived.make();
 
-    for (const previous of choices) {
-      for (const next of choices) {
-        expect(registry.setExpression([previous, archived], next, "and")).toEqual([next, archived]);
-        expect(registry.setExpression([previous, archived], next, "or")).toEqual([
-          previous,
-          archived,
-          next,
-        ]);
+    for (const choices of [enumChoices, kindChoices]) {
+      for (const previous of choices) {
+        for (const next of choices) {
+          expect(registry.setExpression([previous, archived], next, "and")).toEqual([
+            next,
+            archived,
+          ]);
+          expect(registry.setExpression([previous, archived], next, "or")).toEqual([
+            previous,
+            archived,
+            next,
+          ]);
+        }
       }
     }
 
-    expect(registry.setExpression(choices, Filters.namedTypes.pages.make(), "and")).toEqual([
-      Filters.namedTypes.pages.make(),
+    expect(registry.setExpression(enumChoices, Filters.enumOptions.make(other), "and")).toEqual([
+      Filters.enumOptions.make(other),
     ]);
   });
 
@@ -120,18 +121,23 @@ describe("Filters definitions and Outline operations", () => {
     const next = Filters.body.make("next");
     expect(registry.setExpression([first], next, "or")).toEqual([first, next]);
 
-    const custom = expr.and({ val: [Filters.namedTypes.pages.make(), first] });
+    const custom = expr.and({ val: [expr.cmp({ val: ["_tag", "=", "note"] }), first] });
     const options = Filters.enumOptions.make(id);
     expect(registry.setExpression([custom], options, "and")).toEqual([custom, options]);
     expect(registry.setExpression([custom], options, "or")).toEqual([custom, options]);
   });
 
-  it("keeps the Type picker separate from raw record tag controls", () => {
-    const group = Option.getOrThrow(registry.findGroup(Filters.namedTypes.pages.make()));
-    expect(group.entries).toHaveLength(6);
-    expect(group.entries.every((entry) => Predicate.isTagged(entry, "Named"))).toBe(true);
-    expect(registry.findGroup(Filters.namedTypes.properties.make())).toEqual(Option.some(group));
-    expect(registry.findGroup(Filters.enumOptions.make(id))).toEqual(Option.some(group));
+  it("exposes Record kind without a Type group while still recognizing hidden aliases", () => {
+    expect(registry.groups.some((group) => Filters.renderLabel(group.label) === "Type")).toBe(
+      false,
+    );
+    expect(registry.findGroup(Filters.enumOptions.make(id))).toEqual(Option.none());
+    expect(
+      Filters.renderLabel(
+        Option.getOrThrow(registry.getLabel(Filters.enumOptions.make(id))),
+        () => "Priority",
+      ),
+    ).toBe("Enum options · Priority");
     const raw = expr.cmp({ val: ["_tag", "=", "owned"] });
     expect(Filters.renderLabel(Option.getOrThrow(registry.findGroup(raw)).label)).toBe(
       "Record kind",
@@ -245,7 +251,7 @@ describe("Filters definitions and Outline operations", () => {
   });
 
   it("removes only the selected expression, drops empty groups and unwraps single children", () => {
-    const notes = Filters.namedTypes.notes.make();
+    const notes = expr.cmp({ val: ["_tag", "=", "note"] });
     const archived = Filters.aliases.unarchived.make();
     expect(Filters.removeExpression([notes, archived], [0])).toEqual([archived]);
     expect(
@@ -257,10 +263,10 @@ describe("Filters definitions and Outline operations", () => {
   });
 
   it("keeps fixed and parameterized named builders distinct with the same definition kind", () => {
-    expectTypeOf(Filters.namedTypes.notes.make).parameters.toEqualTypeOf<[]>();
+    expectTypeOf(Filters.aliases.unarchived.make).parameters.toEqualTypeOf<[]>();
     expectTypeOf(Filters.enumOptions.make).parameters.toEqualTypeOf<[AttrsSchema.RecordId]>();
-    expect(Filters.namedTypes.notes._tag).toBe(Filters.enumOptions._tag);
-    expect(Filters.namedTypes.notes.selection(Filters.namedTypes.notes.make())).toEqual(
+    expect(Filters.aliases.unarchived._tag).toBe(Filters.enumOptions._tag);
+    expect(Filters.aliases.unarchived.selection(Filters.aliases.unarchived.make())).toEqual(
       Option.some(undefined),
     );
     expect(Filters.enumOptions.selection(Filters.enumOptions.make(id))).toEqual(Option.some(id));
@@ -341,7 +347,7 @@ describe("Filters definitions and Outline operations", () => {
         title: "Link",
         prop_type: "link" as const,
         prop_default: AttrsSchema.PropVal.cases.link.make({ val: other }),
-        prop_targets: [Filters.namedTypes.pages.make()],
+        prop_targets: [AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "note"] })],
       },
     ]) {
       const entry = Filters.property(def).entries[0]!;
@@ -454,7 +460,7 @@ describe("Filters definitions and Outline operations", () => {
 
   it("round-trips registry output through canonical URL and target codecs", () => {
     const filter = [
-      Filters.namedTypes.pages.make(),
+      AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
       Filters.enumOptions.make(id),
       Filters.aliases.unarchived.make(),
     ];
@@ -473,8 +479,12 @@ describe("Filters definitions and Outline operations", () => {
   });
 
   it("registers saved presets only in stream registries with live record labels", () => {
-    const singleExpr = Filters.namedTypes.pages.make();
-    const multiFilter = [Filters.namedTypes.notes.make(), Filters.aliases.unarchived.make()];
+    const singleExpr = expr.cmp({ val: ["_tag", "=", "note"] });
+
+    const multiFilter = [
+      expr.cmp({ val: ["_tag", "=", "note"] }),
+      Filters.aliases.unarchived.make(),
+    ];
 
     expect(Filters.presetExpression([])).toEqual(Option.none());
     expect(Filters.presetExpression([singleExpr])).toEqual(Option.some(singleExpr));

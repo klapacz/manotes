@@ -17,9 +17,10 @@ function label(filter: AttrsSchema.Filter) {
 }
 
 describe("simple stream-ref labels", () => {
-  it("labels the default conditions and an unrestricted filter", () => {
-    expect(label(StreamSettings.defaultPreset.filter)).toBe("Notes · Unarchived");
-    expect(label([Filters.namedTypes.pages.make()])).toBe("Pages");
+  it("labels system stream conditions and an unrestricted filter", () => {
+    expect(label(StreamSettings.systemStreams.properties.filter)).toBe("Properties · Unarchived");
+    expect(label(StreamSettings.systemStreams.rules.filter)).toBe("Rules · Unarchived");
+    expect(label(StreamSettings.systemStreams.presets.filter)).toBe("Presets · Unarchived");
     expect(label([])).toBe("All records");
   });
 
@@ -60,7 +61,7 @@ describe("simple stream-ref labels", () => {
   it("counts each unknown top-level group once without expanding its children", () => {
     const group = expr.or({
       val: [
-        Filters.namedTypes.notes.make(),
+        expr.cmp({ val: ["_tag", "=", "note"] }),
         expr.cmp({ val: [["link", "->", project], "exists", true] }),
       ],
     });
@@ -77,7 +78,7 @@ describe("simple stream-ref labels", () => {
       label([
         Filters.aliases.unarchived.make(),
         group,
-        expr.and({ val: [Filters.namedTypes.pages.make()] }),
+        expr.and({ val: [expr.cmp({ val: ["title", "exists", true] })] }),
         expr.cmp({ val: ["id", "=", project] }),
       ]),
     ).toBe("Unarchived · 3 Filters");
@@ -87,17 +88,16 @@ describe("simple stream-ref labels", () => {
     expect(
       StreamRefSpec.renderLabels(
         StreamRefSpec.labels({
-          ...StreamSettings.defaultPreset,
-          sort: "updated",
+          ...StreamSettings.systemStreams.properties,
           view: "snippets",
         }),
       ),
-    ).toBe("Notes · Unarchived · updated · snippets");
+    ).toBe("Properties · Unarchived · updated · snippets");
   });
 
   it("describes literal labels without record dependencies", () => {
-    expect(StreamRefSpec.expressionLabel(Filters.namedTypes.notes.make())).toEqual(
-      Result.succeed(StreamRefSpec.Label.Literal({ val: "Notes" })),
+    expect(StreamRefSpec.expressionLabel(Filters.aliases.unarchived.make())).toEqual(
+      Result.succeed(StreamRefSpec.Label.Literal({ val: "Unarchived" })),
     );
   });
 

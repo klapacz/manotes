@@ -52,7 +52,7 @@ export class Service extends Context.Service<Service>()("RuleRecordRepo.Service"
       Query.from(Tables.records),
       Query.where(
         RecordFilter.filterPredicate([
-          Filters.namedTypes.rules.make(),
+          AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "rule"] }),
           Filters.aliases.unarchived.make(),
         ]),
       ),

@@ -22,16 +22,24 @@ describe("PaneCursor.inputMatches", () => {
     ).toBe(false);
   });
 
-  it("fills omitted defaults but preserves explicitly cleared filters", () => {
-    const pane = decodePane(PaneSchema.make.stream(StreamSettings.defaultPreset));
+  it("fills omitted defaults and distinguishes non-empty filters", () => {
+    const pane = decodePane(PaneSchema.make.stream({}));
     expect(PaneCursor.inputMatches(PaneSchema.make.stream({}))(pane)).toBe(true);
-    expect(PaneCursor.inputMatches(PaneSchema.make.stream({ filter: [] }))(pane)).toBe(false);
+    expect(PaneCursor.inputMatches(PaneSchema.make.stream({ filter: [] }))(pane)).toBe(true);
+    expect(
+      PaneCursor.inputMatches(
+        PaneSchema.make.stream({ filter: [Filters.aliases.unarchived.make()] }),
+      )(pane),
+    ).toBe(false);
   });
 
   it("compares nested expressions and sort while ignoring display view", () => {
     const filter = [
       AttrsSchema.makeFilterExpr.or({
-        val: [Filters.namedTypes.notes.make(), Filters.namedTypes.pages.make()],
+        val: [
+          AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+          AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "prop"] }),
+        ],
       }),
     ] as const;
 
@@ -49,7 +57,8 @@ describe("PaneCursor.inputMatches", () => {
 
   it("distinguishes source tags and IDs", () => {
     const input = PaneSchema.make.stream({
-      ...StreamSettings.defaultPreset,
+      ...StreamSettings.defaultDisplay,
+      filter: [],
       source: PaneSchema.Source.cases.prop.make({ id }),
     });
 
@@ -67,13 +76,22 @@ describe("PaneCursor.inputMatches", () => {
       })(pane),
     ).toBe(false);
     expect(
-      PaneCursor.inputMatches(PaneSchema.make.stream(StreamSettings.defaultPreset))(pane),
+      PaneCursor.inputMatches(
+        PaneSchema.make.stream({ ...StreamSettings.defaultDisplay, filter: [] }),
+      )(pane),
     ).toBe(false);
   });
 
   it("leaves identity generation to decoding", () => {
-    const input = PaneSchema.make.stream(StreamSettings.defaultPreset);
+    const input = PaneSchema.make.stream({ ...StreamSettings.defaultDisplay, filter: [] });
     expect(input).not.toHaveProperty("paneId");
     expect(decodePane(input).paneId.length).toBeGreaterThan(0);
+  });
+
+  it("clears panes when closing the root pane so the route re-resolves the default preset", () => {
+    const first = decodePane(PaneSchema.make.record({ id }));
+    const second = decodePane(PaneSchema.make.stream({}));
+    expect(PaneCursor.close({ stack: [first], index: 0 })).toBeUndefined();
+    expect(PaneCursor.close({ stack: [first, second], index: 1 })).toEqual([first]);
   });
 });

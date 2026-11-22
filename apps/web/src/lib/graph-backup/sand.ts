@@ -101,17 +101,22 @@ function convertReferences(doc: Y.Doc) {
 }
 
 function convertFilter(filter: typeof SandFilter.Type): AttrsSchema.Filter {
-  const type = Match.value(filter.type).pipe(
-    Match.tag("notes", () => Filters.namedTypes.notes.make()),
-    Match.tag("pages", () => Filters.namedTypes.pages.make()),
-    Match.tag("prop", () => Filters.namedTypes.properties.make()),
-    Match.tag("rule", () => Filters.namedTypes.rules.make()),
-    Match.tag("enum_option", ({ enum_parent }) => Filters.enumOptions.make(enum_parent)),
+  const cmp = AttrsSchema.makeFilterExpr.cmp;
+
+  const type: AttrsSchema.FilterExpr[] = Match.value(filter.type).pipe(
+    Match.tag("notes", () => {
+      return [cmp({ val: ["_tag", "=", "note"] }), cmp({ val: ["title", "exists", false] })];
+    }),
+    Match.tag("pages", () => {
+      return [cmp({ val: ["_tag", "=", "note"] }), cmp({ val: ["title", "exists", true] })];
+    }),
+    Match.tag("prop", () => [cmp({ val: ["_tag", "=", "prop"] })]),
+    Match.tag("rule", () => [cmp({ val: ["_tag", "=", "rule"] })]),
+    Match.tag("enum_option", ({ enum_parent }) => [Filters.enumOptions.make(enum_parent)]),
     Match.exhaustive,
   );
 
-  const expressions: AttrsSchema.FilterExpr[] = [type];
-  const cmp = AttrsSchema.makeFilterExpr.cmp;
+  const expressions: AttrsSchema.FilterExpr[] = [...type];
   const search = filter.search?.trim();
 
   if (search) expressions.push(cmp({ val: ["body", "contains", search] }));

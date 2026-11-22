@@ -5,7 +5,6 @@ import { DB } from "@manotes/shared/db.service";
 import { EventRepo } from "@manotes/shared/event.repo";
 import { Materializer } from "@manotes/shared/materializer.service";
 import { MaterializerAttrs } from "@manotes/shared/materializer/attrs.service";
-import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { RecordRepo } from "@manotes/shared/record.repo";
 import { DateTime, Effect, Layer, Result, Record, Schema, type Scope } from "effect";
 import { Reactivity } from "effect/reactivity";
@@ -306,7 +305,10 @@ describe("attrs materialization", () => {
         const beforeExpects = yield* sql`SELECT * FROM rule_expects`;
         const beforeCheckpoint = yield* sql`SELECT * FROM materialization_checkpoint`;
 
-        const targets = StreamSettings.presets.pages.filter;
+        const targets: AttrsSchema.TargetFilter = [
+          AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+          AttrsSchema.makeTargetFilterExpr.cmp({ val: ["title", "exists", true] }),
+        ];
 
         attrs.set("rule_targets", targets);
         props.set("priority", AttrsSchema.PropVal.cases.bool.make({ val: true }));

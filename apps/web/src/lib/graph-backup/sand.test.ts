@@ -30,11 +30,24 @@ type LegacyFilter = {
 
 describe("temporary sand backup import", () => {
   it.each([
-    [{}, [Filters.namedTypes.notes.make(), Filters.aliases.unarchived.make()]],
-    [{ type: { _tag: "notes" }, props: {} }, [Filters.namedTypes.notes.make()]],
-    [{ type: { _tag: "pages" }, props: {} }, [Filters.namedTypes.pages.make()]],
-    [{ type: { _tag: "prop" }, props: {} }, [Filters.namedTypes.properties.make()]],
-    [{ type: { _tag: "rule" }, props: {} }, [Filters.namedTypes.rules.make()]],
+    [
+      {},
+      [
+        cmp({ val: ["_tag", "=", "note"] }),
+        cmp({ val: ["title", "exists", false] }),
+        Filters.aliases.unarchived.make(),
+      ],
+    ],
+    [
+      { type: { _tag: "notes" }, props: {} },
+      [cmp({ val: ["_tag", "=", "note"] }), cmp({ val: ["title", "exists", false] })],
+    ],
+    [
+      { type: { _tag: "pages" }, props: {} },
+      [cmp({ val: ["_tag", "=", "note"] }), cmp({ val: ["title", "exists", true] })],
+    ],
+    [{ type: { _tag: "prop" }, props: {} }, [cmp({ val: ["_tag", "=", "prop"] })]],
+    [{ type: { _tag: "rule" }, props: {} }, [cmp({ val: ["_tag", "=", "rule"] })]],
     [
       { type: { _tag: "enum_option", enum_parent: project }, props: {} },
       [Filters.enumOptions.make(project)],
@@ -79,7 +92,8 @@ describe("temporary sand backup import", () => {
       Y.applyUpdate(replay, backup.events[0]!.payload);
 
       expect(settings(replay).filter).toEqual([
-        Filters.namedTypes.pages.make(),
+        cmp({ val: ["_tag", "=", "note"] }),
+        cmp({ val: ["title", "exists", true] }),
         cmp({ val: ["body", "contains", "hello"] }),
         cmp({ val: ["date", "=", "2026-10-01"] }),
         cmp({ val: [["link", "->", project], "exists", true] }),
@@ -156,12 +170,13 @@ describe("temporary sand backup import", () => {
       }
 
       expect(settings(replay).filter).toEqual([
-        Filters.namedTypes.pages.make(),
+        cmp({ val: ["_tag", "=", "note"] }),
+        cmp({ val: ["title", "exists", true] }),
         cmp({ val: ["body", "contains", "edit 104"] }),
         Filters.aliases.unarchived.make(),
       ]);
       expect(settings(otherReplay).filter).toEqual([
-        Filters.namedTypes.rules.make(),
+        cmp({ val: ["_tag", "=", "rule"] }),
         Filters.aliases.unarchived.make(),
       ]);
       expect(replay.getMap("attrs").toJSON()).toEqual(source.getMap("attrs").toJSON());

@@ -17,7 +17,6 @@ import { RecordRepo } from "@manotes/shared/record.repo";
 import { RecordSchema } from "@manotes/shared/record.schema";
 import { RecordDoc } from "@manotes/shared/record/doc";
 import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
-import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { Filters } from "@manotes/shared/record/filters";
 import { YSchema } from "@manotes/shared/y-schema";
 import {
@@ -181,11 +180,14 @@ describe("Archived builtin", () => {
 
           expect(properties.map(({ id }) => id)).toEqual(["untitled-prop"]);
 
-          for (const type of ["notes", "pages"] as const) {
+          for (const titleExists of [false, true]) {
             expect(
               Option.getOrThrow(
                 yield* (yield* records.reactiveStreamList({
-                  filter: [Filters.namedTypes[type].make()],
+                  filter: [
+                    AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+                    AttrsSchema.makeFilterExpr.cmp({ val: ["title", "exists", titleExists] }),
+                  ],
                   sort: "date",
                 })).pipe(Stream.runHead),
               ),
@@ -279,7 +281,8 @@ describe("Archived builtin", () => {
               const rows = Option.getOrThrow(
                 yield* (yield* records.reactiveStreamList({
                   filter: [
-                    Filters.namedTypes.notes.make(),
+                    AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+                    AttrsSchema.makeFilterExpr.cmp({ val: ["title", "exists", false] }),
                     ...propertyComparisons({
                       [propId]: AttrsSchema.PropVal.cases.number.make({ val }),
                     }),
@@ -314,7 +317,8 @@ describe("Archived builtin", () => {
           const rows = Option.getOrThrow(
             yield* (yield* records.reactiveStreamList({
               filter: [
-                Filters.namedTypes.notes.make(),
+                AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+                AttrsSchema.makeFilterExpr.cmp({ val: ["title", "exists", false] }),
                 ...propertyComparisons({
                   [propId]: AttrsSchema.PropVal.cases.number.make({ val: 7.5 }),
                   [AttrsSchema.RecordId.make("missing")]: AttrsSchema.PropVal.cases.bool.make({
@@ -397,7 +401,11 @@ describe("Archived builtin", () => {
             return Effect.gen(function* () {
               const rows = Option.getOrThrow(
                 yield* (yield* records.reactiveStreamList({
-                  filter: [Filters.namedTypes.notes.make(), ...propertyComparisons(props)],
+                  filter: [
+                    AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+                    AttrsSchema.makeFilterExpr.cmp({ val: ["title", "exists", false] }),
+                    ...propertyComparisons(props),
+                  ],
                   sort: "date",
                 })).pipe(Stream.runHead),
               );
@@ -429,7 +437,11 @@ describe("Archived builtin", () => {
 
           const pull = yield* Stream.toPull(
             (yield* records.reactiveStreamList({
-              filter: [Filters.namedTypes.notes.make(), ...propertyComparisons(defaultProps)],
+              filter: [
+                AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+                AttrsSchema.makeFilterExpr.cmp({ val: ["title", "exists", false] }),
+                ...propertyComparisons(defaultProps),
+              ],
               sort: "date",
             })).pipe(Stream.changesWith((a, b) => JSON.stringify(a) === JSON.stringify(b))),
           );
@@ -618,7 +630,11 @@ describe("Archived builtin", () => {
             ...definitions.map((value) => ({ [`prop:${value._tag}`]: value })),
             props,
           ]) {
-            const filter = [Filters.namedTypes.notes.make(), ...propertyComparisons(filters)];
+            const filter = [
+              AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+              AttrsSchema.makeFilterExpr.cmp({ val: ["title", "exists", false] }),
+              ...propertyComparisons(filters),
+            ];
 
             const rows = Option.getOrThrow(
               yield* (yield* records.reactiveStreamList({ filter, sort: "updated" })).pipe(
@@ -757,7 +773,11 @@ describe("Archived builtin", () => {
             AttrsSchema.PropVal.cases.link.make({ val: AttrsSchema.RecordId.make("target") }),
           ];
 
-          const targets = StreamSettings.presets.pages.filter;
+          const targets: AttrsSchema.TargetFilter = [
+            AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+            AttrsSchema.makeTargetFilterExpr.cmp({ val: ["title", "exists", true] }),
+            Filters.aliases.unarchived.make(),
+          ];
 
           for (const value of values) {
             const { doc, attrs } = yield* Effect.acquireRelease(

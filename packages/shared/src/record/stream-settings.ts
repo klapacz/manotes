@@ -1,4 +1,4 @@
-import { Array, Match, Option, Record, Result, Schema, Struct } from "effect";
+import { Array, Match, Option, Record, Result, Schema } from "effect";
 import type { PaneSchema } from "./pane.schema";
 import { Filters } from "./filters";
 import { AttrsSchema } from "../attrs.schema";
@@ -9,24 +9,30 @@ export type Filter = AttrsSchema.Filter;
 
 export type Display = Pick<Settings, "sort" | "view">;
 
-// TODO: Use these presets and enumOptionsPreset to generate PresetCommands in
-// apps/web/src/components/record/filter-picker.tsx.
-export const presets = {
-  notes: {
-    filter: [Filters.namedTypes.notes.make(), Filters.aliases.unarchived.make()],
-    sort: "date",
+const cmp = AttrsSchema.makeTargetFilterExpr.cmp;
+
+export const defaultDisplay = {
+  sort: "date",
+  view: "full",
+} as const satisfies Display;
+
+export const systemStreams = {
+  properties: {
+    filter: [cmp({ val: ["_tag", "=", "prop"] }), Filters.aliases.unarchived.make()],
+    sort: "updated",
     view: "full",
   },
-  pages: {
-    filter: [Filters.namedTypes.pages.make(), Filters.aliases.unarchived.make()],
+  rules: {
+    filter: [cmp({ val: ["_tag", "=", "rule"] }), Filters.aliases.unarchived.make()],
+    sort: "updated",
+    view: "full",
+  },
+  presets: {
+    filter: [cmp({ val: ["_tag", "=", "preset"] }), Filters.aliases.unarchived.make()],
     sort: "updated",
     view: "full",
   },
 } as const satisfies Record<string, Settings>;
-
-export const defaultPreset = presets.notes;
-
-export const defaultDisplay = Struct.pick(defaultPreset, ["sort", "view"]);
 
 export function enumOptionsPreset(parentId: AttrsSchema.RecordId): Settings {
   return {

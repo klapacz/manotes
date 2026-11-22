@@ -29,25 +29,26 @@ export class Service extends Context.Service<Service>()("PresetRecordRepo.Servic
   make: Effect.gen(function* () {
     const db = yield* DB.Service;
 
+    const defPlan = defSelect.pipe(
+      Query.from(Tables.records),
+      Query.where(
+        Query.and(Query.eq(Tables.records._tag, "preset"), Query.eq(Tables.records.attrs_valid, 1)),
+      ),
+      Query.orderBy(Tables.records.title, "asc"),
+      Query.orderBy(Tables.records.id, "asc"),
+    );
+
+    const listDefs = Effect.fn("PresetRecordRepo.listDefs")(function* () {
+      return yield* db.query(defPlan).pipe(Effect.flatMap(decodeDefs));
+    });
+
     const reactiveDefs = Effect.fn("PresetRecordRepo.reactiveDefs")(function* () {
-      const stream = yield* db.reactiveQuery(
-        defSelect.pipe(
-          Query.from(Tables.records),
-          Query.where(
-            Query.and(
-              Query.eq(Tables.records._tag, "preset"),
-              Query.eq(Tables.records.attrs_valid, 1),
-            ),
-          ),
-          Query.orderBy(Tables.records.title, "asc"),
-          Query.orderBy(Tables.records.id, "asc"),
-        ),
-      );
+      const stream = yield* db.reactiveQuery(defPlan);
 
       return stream.pipe(Stream.mapEffect((rows) => decodeDefs(rows)));
     });
 
-    return { reactiveDefs };
+    return { listDefs, reactiveDefs };
   }),
 }) {
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));

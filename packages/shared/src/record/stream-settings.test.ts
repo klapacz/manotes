@@ -11,13 +11,14 @@ const expr = AttrsSchema.makeFilterExpr;
 const parent = AttrsSchema.RecordId.make("priority");
 
 describe("canonical stream settings", () => {
-  it("defaults missing filters while preserving an explicit empty array", () => {
+  it("defaults missing filters to empty and leaves omitted panes undefined", () => {
     const decode = Schema.decodeUnknownSync(PaneSchema.Pane);
-    expect(decode(PaneSchema.make.stream({}))).toMatchObject(StreamSettings.defaultPreset);
+    expect(decode(PaneSchema.make.stream({}))).toMatchObject({
+      ...StreamSettings.defaultDisplay,
+      filter: [],
+    });
     expect(decode(PaneSchema.make.stream({ filter: [] }))).toMatchObject({ filter: [] });
-    expect(Schema.decodeUnknownSync(RecordSearch.Schema)({}).panes[0]).toMatchObject(
-      StreamSettings.defaultPreset,
-    );
+    expect(Schema.decodeUnknownSync(RecordSearch.Schema)({}).panes).toBeUndefined();
     expect(() => {
       return decode(JSON.parse('{"_tag":"stream","filter":{"type":{"_tag":"notes"}}}'));
     }).toThrow();
@@ -30,7 +31,9 @@ describe("canonical stream settings", () => {
       panes: [
         PaneSchema.make.stream({
           filter: [
-            expr.or({ val: [Filters.namedTypes.notes.make(), Filters.enumOptions.make(parent)] }),
+            expr.or({
+              val: [expr.cmp({ val: ["_tag", "=", "note"] }), Filters.enumOptions.make(parent)],
+            }),
           ],
           source: PaneSchema.Source.cases.prop.make({ id: parent }),
         }),
@@ -47,7 +50,7 @@ describe("canonical stream settings", () => {
     if (!Predicate.isTagged(options, "and")) throw new Error("Expected enum group");
 
     const unmatched = [
-      Filters.namedTypes.notes.make(),
+      expr.cmp({ val: ["_tag", "=", "note"] }),
       expr.and({ val: [options] }),
       expr.and({ val: [...options.val, Filters.aliases.unarchived.make()] }),
       expr.and({ val: [...options.val].reverse() }),
@@ -60,11 +63,16 @@ describe("canonical stream settings", () => {
   });
 
   it("derives display defaults and ignores OR branches when prefilling", () => {
-    expect(StreamSettings.changedDisplay(StreamSettings.defaultPreset)).toEqual([]);
-    expect(StreamSettings.changedDisplay(StreamSettings.presets.pages)).toEqual(["sort"]);
+    expect(StreamSettings.changedDisplay({ ...StreamSettings.defaultDisplay, filter: [] })).toEqual(
+      [],
+    );
+    expect(StreamSettings.changedDisplay(StreamSettings.systemStreams.properties)).toEqual([
+      "sort",
+    ]);
     expect(
       StreamSettings.requiredComparisons([
-        Filters.namedTypes.notes.make(),
+        expr.cmp({ val: ["_tag", "=", "note"] }),
+        expr.cmp({ val: ["title", "exists", false] }),
         expr.or({ val: [expr.cmp({ val: ["date", "=", "2026-10-15"] })] }),
       ]),
     ).toEqual([
@@ -96,7 +104,7 @@ describe("canonical stream settings", () => {
       optional,
       expr.and({
         val: [
-          Filters.namedTypes.notes.make(),
+          expr.cmp({ val: ["_tag", "=", "note"] }),
           expr.cmp({ val: ["body", "contains", "alpha"] }),
           expr.cmp({ val: ["date", "=", "2026-10-15"] }),
         ],

@@ -1,5 +1,4 @@
 import { AttrsSchema } from "../../attrs.schema";
-import { Filters } from "../../record/filters";
 import { RecordSchema } from "../../record.schema";
 import dedent from "dedent";
 import { createEditor, union } from "prosekit/core";
@@ -149,7 +148,8 @@ describe("app Markdown conversion", () => {
       paneId: "source-pane",
       href: "https://old-device.example/graph",
       filter: [
-        Filters.namedTypes.pages.make(),
+        AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+        AttrsSchema.makeFilterExpr.cmp({ val: ["title", "exists", true] }),
         AttrsSchema.makeFilterExpr.cmp({ val: ["body", "contains", "a & b [x] (é)!"] }),
         AttrsSchema.makeFilterExpr.cmp({
           val: [["link", "->", RecordSchema.Id.make("project")], "exists", true],
@@ -182,25 +182,25 @@ describe("app Markdown conversion", () => {
     expect(
       StreamRefSpec.renderLabels(
         StreamRefSpec.labels({
-          filter: [Filters.namedTypes.pages.make()],
+          filter: [AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "prop"] })],
           sort: "updated",
           view: "full",
         }),
       ),
-    ).toBe("Pages · updated");
+    ).toBe("Properties · updated");
     expect(
       StreamRefSpec.renderLabels(
         StreamRefSpec.labels({
-          filter: [Filters.namedTypes.notes.make()],
+          filter: [AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] })],
           sort: "date",
           view: "full",
         }),
       ),
-    ).toBe("Notes");
+    ).toBe("Documents");
     expect(StreamRefSpec.renderLabels(StreamRefSpec.labels(attrs))).toContain("snippets");
     expect(
       StreamRefSpec.decodeAttrs({
-        filter: [Filters.namedTypes.notes.make()],
+        filter: [AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] })],
       }),
     ).toMatchObject({
       sort: "date",
@@ -374,7 +374,7 @@ describe("app Markdown conversion", () => {
           RECORD_SCHEMA.node(
             "streamRef",
             StreamRefSpec.decodeAttrs({
-              filter: [Filters.namedTypes.notes.make()],
+              filter: [AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] })],
             }),
           ),
         ]),

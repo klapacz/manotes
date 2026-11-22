@@ -21,41 +21,6 @@ const expr = AttrsSchema.makeTargetFilterExpr;
 
 const recordType = family("recordType");
 
-export const namedTypes = {
-  notes: named({
-    family: recordType,
-    expression: expr.and({
-      val: [
-        expr.cmp({ val: ["_tag", "=", "note"] }),
-        expr.cmp({ val: ["title", "exists", false] }),
-      ],
-    }),
-    getLabel: () => Label.Literal({ val: "Notes" }),
-  }),
-  pages: named({
-    family: recordType,
-    expression: expr.and({
-      val: [expr.cmp({ val: ["_tag", "=", "note"] }), expr.cmp({ val: ["title", "exists", true] })],
-    }),
-    getLabel: () => Label.Literal({ val: "Pages" }),
-  }),
-  properties: named({
-    family: recordType,
-    expression: expr.cmp({ val: ["_tag", "=", "prop"] }),
-    getLabel: () => Label.Literal({ val: "Properties" }),
-  }),
-  rules: named({
-    family: recordType,
-    expression: expr.cmp({ val: ["_tag", "=", "rule"] }),
-    getLabel: () => Label.Literal({ val: "Rules" }),
-  }),
-  presets: named({
-    family: recordType,
-    expression: expr.cmp({ val: ["_tag", "=", "preset"] }),
-    getLabel: () => Label.Literal({ val: "Presets" }),
-  }),
-};
-
 // Collapse a preset's filter list into one expression so it can be embedded
 // and recognized as a single named chip (empty -> none, single -> as-is, many -> AND).
 export function presetExpression(
@@ -152,7 +117,7 @@ export const ruleViolation = comparison({
   },
   picker: Picker.Record({
     label: "Rule violations",
-    filter: [namedTypes.rules.make(), aliases.unarchived.make()],
+    filter: [expr.cmp({ val: ["_tag", "=", "rule"] }), aliases.unarchived.make()],
     map: identity,
     unmap: Schema.decodeUnknownOption(AttrsSchema.RecordId),
   }),
@@ -426,17 +391,6 @@ const propType = comparison({
 const ruleViolationGroup = group({ label: "Rule violations", entries: [ruleViolation] });
 
 export const groups = [
-  group({
-    label: "Type",
-    entries: [
-      namedTypes.notes,
-      namedTypes.pages,
-      namedTypes.properties,
-      enumOptions,
-      namedTypes.rules,
-      namedTypes.presets,
-    ],
-  }),
   group({ label: kind.picker.label, entries: [kind] }),
   group({ label: "Body", entries: [body] }),
   group({ label: "Date", entries: [date] }),
@@ -456,10 +410,12 @@ function savedPreset(preset: PresetRecordRepo.Def) {
   });
 }
 
+const hiddenAliases = [aliases.unarchived, enumOptions] as const;
+
 export function fromDefinitions(defs: readonly PropRecordRepo.Def[]) {
   return create({
     groups: [...groups, ...defs.map(property)],
-    aliases: [aliases.unarchived],
+    aliases: hiddenAliases,
   });
 }
 
@@ -481,7 +437,7 @@ export function forStreams(registry: Registry, presets: readonly PresetRecordRep
       ruleViolationGroup,
       group({ label: propertyViolation.picker.label, entries: [propertyViolation] }),
     ]),
-    aliases: [aliases.unarchived],
+    aliases: hiddenAliases,
   });
 }
 

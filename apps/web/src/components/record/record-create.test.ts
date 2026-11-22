@@ -69,7 +69,12 @@ vi.mock("../../lib/atom-solid", () => ({
 vi.mock("../ui/sonner", () => ({ toast: { promise: <T>(promise: Promise<T>) => promise } }));
 
 describe("blank record creation", () => {
-  it("creates a rule with default Notes targets and an empty expectations map", () => {
+  const defaultTargetFilter: AttrsSchema.TargetFilter = [
+    AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+    Filters.aliases.unarchived.make(),
+  ];
+
+  it("creates a rule with default unarchived note targets and an empty expectations map", () => {
     const payload = Effect.runSync(
       prefilledPayload(
         PaneSchema.Pane.cases.stream.make({
@@ -90,7 +95,7 @@ describe("blank record creation", () => {
           props: {},
           rule_storage: AttrsSchema.RuleStorage.cases.top.make({}),
           rule_expects: {},
-          rule_targets: StreamSettings.defaultPreset.filter,
+          rule_targets: defaultTargetFilter,
         }),
       );
       expect(ProsemirrorMaterializer.yDocToNodeJSON({ yDoc: doc })).toMatchObject({
@@ -101,7 +106,7 @@ describe("blank record creation", () => {
     }
   });
 
-  it("creates a preset with default Notes filter and an editable heading", () => {
+  it("creates a preset with default unarchived note filter and an editable heading", () => {
     const payload = Effect.runSync(
       prefilledPayload(
         PaneSchema.Pane.cases.stream.make({
@@ -120,7 +125,7 @@ describe("blank record creation", () => {
       expect(Effect.runSync(YSchema.exportStrict(attrs))).toEqual(
         Data.taggedEnum<AttrsSchema.Attrs>().preset({
           props: {},
-          preset_filter: StreamSettings.defaultPreset.filter,
+          preset_filter: defaultTargetFilter,
         }),
       );
       expect(ProsemirrorMaterializer.yDocToNodeJSON({ yDoc: doc })).toMatchObject({
@@ -208,7 +213,11 @@ describe("blank record creation", () => {
         prefilledPayload(
           PaneSchema.Pane.cases.stream.make({
             paneId: PaneSchema.Id.make("stream"),
-            filter: StreamSettings.defaultPreset.filter,
+            filter: [
+              AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+              AttrsSchema.makeFilterExpr.cmp({ val: ["title", "exists", false] }),
+              Filters.aliases.unarchived.make(),
+            ],
             sort: "date",
             view: "full",
           }),
@@ -217,12 +226,18 @@ describe("blank record creation", () => {
     );
   });
 
-  it("seeds the Pages preset with an editable heading", () => {
+  it("seeds a titled stream with an editable heading", () => {
     const payload = Effect.runSync(
       prefilledPayload(
         PaneSchema.Pane.cases.stream.make({
           paneId: PaneSchema.Id.make("pages"),
-          ...StreamSettings.presets.pages,
+          filter: [
+            AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+            AttrsSchema.makeFilterExpr.cmp({ val: ["title", "exists", true] }),
+            Filters.aliases.unarchived.make(),
+          ],
+          sort: "updated",
+          view: "full",
         }),
       ).pipe(Effect.provide(Attrs.Service.layer)),
     );

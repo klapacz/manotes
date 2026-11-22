@@ -12,7 +12,7 @@ import type { UnknownNodeJSON } from "@manotes/shared/node-json";
 import type { Hotkey } from "@tanstack/hotkeys";
 import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 import { Attrs } from "@manotes/shared/attrs.service";
-import type { AttrsSchema } from "@manotes/shared/attrs.schema";
+import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { RecordDoc } from "@manotes/shared/record/doc";
 import * as Y from "yjs";
 import type { EditorPool } from "./editor-pool";
@@ -121,12 +121,8 @@ export const prefilledPayload = Effect.fn("ComponentsRecordRecordCreate.prefille
 
     yield* Match.value(tag).pipe(
       Match.when("prop", () => attrs.initializeProp({ doc })),
-      Match.when("rule", () => {
-        return attrs.initializeRule({ doc, targets: StreamSettings.defaultPreset.filter });
-      }),
-      Match.when("preset", () => {
-        return attrs.initializePreset({ doc, filter: StreamSettings.defaultPreset.filter });
-      }),
+      Match.when("rule", () => attrs.initializeRule({ doc, targets: defaultTargetFilter })),
+      Match.when("preset", () => attrs.initializePreset({ doc, filter: defaultTargetFilter })),
       Match.when("owned", () => {
         return Array.findFirst(pane.filter, (expression) => {
           return Filters.enumOptions.match(expression).pipe(Result.getSuccess);
@@ -146,6 +142,11 @@ export const prefilledPayload = Effect.fn("ComponentsRecordRecordCreate.prefille
   },
   Effect.scoped,
 );
+
+const defaultTargetFilter: AttrsSchema.TargetFilter = [
+  AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+  Filters.aliases.unarchived.make(),
+];
 
 function needsHeading(comparisons: readonly AttrsSchema.FilterCmp[]): boolean {
   return Array.some(comparisons, (comparison) => {
