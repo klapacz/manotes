@@ -1120,6 +1120,7 @@ describe("ExecuteApi.list", () => {
             rule_storage: null,
             rule_targets: null,
             preset_filter: null,
+            preset_default: false,
             attrs_valid: false,
           },
         });

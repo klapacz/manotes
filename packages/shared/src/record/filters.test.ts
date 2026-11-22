@@ -483,8 +483,8 @@ describe("Filters definitions and Outline operations", () => {
     );
 
     const withPresets = Filters.forStreams(registry, [
-      { id, title: "Inbox", preset_filter: multiFilter },
-      { id: other, title: "Empty", preset_filter: [] },
+      { id, title: "Inbox", preset_filter: multiFilter, preset_default: false },
+      { id: other, title: "Empty", preset_filter: [], preset_default: false },
     ]);
 
     const presetExpr = Option.getOrThrow(Filters.presetExpression(multiFilter));

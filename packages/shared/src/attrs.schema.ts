@@ -304,6 +304,7 @@ export const Attrs = Schema.Union([
   Schema.Struct({
     ...records.cases.preset.fields,
     preset_filter: Filter,
+    preset_default: Schema.optionalKey(Schema.Boolean),
   }),
 ]);
 

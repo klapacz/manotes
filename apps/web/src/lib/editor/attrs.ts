@@ -52,11 +52,11 @@ export function use(opts: { doc: Accessor<Y.Doc | undefined> }) {
 
     if (!current) return undefined;
 
-    const { preset_filter } = current.attrs;
+    const { preset_filter, preset_default } = current.attrs;
 
     if (!Predicate.isTagged(current.attrs, "preset")) return undefined;
 
-    return { preset_filter };
+    return { preset_filter, preset_default: preset_default === true };
   });
 
   return { editable, definition, rule, preset };

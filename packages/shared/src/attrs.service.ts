@@ -62,6 +62,7 @@ export class Service extends Context.Service<Service>()("Attrs.Service", {
     initializeRule,
     initializePreset,
     setPresetFilter,
+    setPresetDefault,
     setRuleStorage,
     setRuleTargets,
     setRuleExpectation,
@@ -484,6 +485,17 @@ const setPresetFilter = Effect.fn("Attrs.setPresetFilter")(function* (opts: {
 }) {
   const preset = yield* editablePresetAttrs({ doc: opts.doc });
   yield* preset.pipe(YSchema.set("preset_filter", opts.filter));
+});
+
+const setPresetDefault = Effect.fn("Attrs.setPresetDefault")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly value: boolean;
+}) {
+  const preset = yield* editablePresetAttrs({ doc: opts.doc });
+
+  if (!opts.value) return yield* preset.pipe(YSchema.clear("preset_default"));
+
+  yield* preset.pipe(YSchema.set("preset_default", true));
 });
 
 const editablePresetAttrs = Effect.fn("Attrs.editablePresetAttrs")(function* (opts: {

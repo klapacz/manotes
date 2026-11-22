@@ -1,5 +1,5 @@
 import { Query } from "effect-qb";
-import { Context, Effect, Layer, Schema, Stream, Struct } from "effect";
+import { Array, Context, Effect, Layer, Option, Order, Schema, Stream, Struct, pipe } from "effect";
 import { AttrsSchema } from "./attrs.schema";
 import { DB } from "./db.service";
 import { Tables } from "./db.tables";
@@ -9,9 +9,19 @@ export const ValidDef = Schema.Struct({
   id: RecordSchema.Id,
   title: Schema.NullOr(Schema.String),
   preset_filter: Schema.NullOr(AttrsSchema.Filter).pipe(Schema.decodeTo(AttrsSchema.Filter)),
+  preset_default: Schema.Boolean,
 });
 
 export type Def = typeof ValidDef.Type;
+
+export function findDefault(defs: readonly Def[]): Option.Option<Def> {
+  return pipe(
+    defs,
+    Array.filter((def) => def.preset_default),
+    Array.sort(Order.mapInput(Order.String, (def: Def) => def.id)),
+    Array.head,
+  );
+}
 
 const decodeDefs = Schema.decodeEffect(Schema.Array(ValidDef));
 
@@ -43,7 +53,7 @@ export class Service extends Context.Service<Service>()("PresetRecordRepo.Servic
   static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(DB.Service.layer));
 }
 
-const defFields = ["id", "title", "preset_filter"] as const;
+const defFields = ["id", "title", "preset_filter", "preset_default"] as const;
 
 // Preserve named JSON column types in emitted declarations.
 const defColumns: Pick<typeof Tables.records, (typeof defFields)[number]> = Struct.pick(

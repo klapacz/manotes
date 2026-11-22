@@ -66,6 +66,7 @@ const project = Effect.fn("MaterializerAttrs.project")(function* (opts: { readon
     rule_storage: loose.rule_storage ?? null,
     rule_targets: loose.rule_targets ?? null,
     preset_filter: loose.preset_filter ?? null,
+    preset_default: loose.preset_default ?? false,
     attrs_valid: Result.isSuccess(strict),
   };
 

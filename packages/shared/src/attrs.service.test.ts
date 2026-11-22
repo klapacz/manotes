@@ -727,3 +727,69 @@ describe("Attrs rule editing", () => {
     }
   });
 });
+
+describe("Attrs preset editing", () => {
+  it("sets and clears preset_default while keeping preset docs strictly valid", () => {
+    const { doc, attrs: cursor } = RecordDoc.make();
+
+    const filter = AttrsSchema.Filter.make([
+      AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
+    ]);
+
+    try {
+      Effect.runSync(
+        Effect.gen(function* () {
+          const makeAttrs = Data.taggedEnum<AttrsSchema.Attrs>();
+          const attrs = yield* Attrs.Service;
+          yield* attrs.initializePreset({ doc, filter });
+          expect(yield* YSchema.exportStrict(cursor)).toEqual(
+            makeAttrs.preset({
+              props: {},
+              preset_filter: filter,
+            }),
+          );
+
+          yield* attrs.setPresetDefault({ doc, value: true });
+          expect(yield* YSchema.exportStrict(cursor)).toEqual(
+            makeAttrs.preset({
+              props: {},
+              preset_filter: filter,
+              preset_default: true,
+            }),
+          );
+
+          yield* attrs.setPresetDefault({ doc, value: false });
+          expect(doc.getMap("attrs").has("preset_default")).toBe(false);
+          expect(yield* YSchema.exportStrict(cursor)).toEqual(
+            makeAttrs.preset({
+              props: {},
+              preset_filter: filter,
+            }),
+          );
+        }).pipe(Effect.provide(Attrs.Service.layer)),
+      );
+    } finally {
+      doc.destroy();
+    }
+  });
+
+  it("rejects setPresetDefault on non-preset docs without mutating Yjs", () => {
+    const doc = new Y.Doc();
+
+    try {
+      Effect.runSync(
+        Attrs.Service.use((attrs) => {
+          return Effect.gen(function* () {
+            const before = Y.encodeStateAsUpdate(doc);
+            expect(
+              Result.isFailure(yield* Effect.result(attrs.setPresetDefault({ doc, value: true }))),
+            ).toBe(true);
+            expect(Y.encodeStateAsUpdate(doc)).toEqual(before);
+          });
+        }).pipe(Effect.provide(Attrs.Service.layer)),
+      );
+    } finally {
+      doc.destroy();
+    }
+  });
+});

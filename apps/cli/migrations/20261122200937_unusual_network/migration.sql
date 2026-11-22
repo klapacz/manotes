@@ -1,0 +1,1 @@
+ALTER TABLE `records` ADD `preset_default` INTEGER DEFAULT (0) NOT NULL;
