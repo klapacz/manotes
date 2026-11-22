@@ -4,6 +4,8 @@ import { AttrsSchema } from "./attrs.schema";
 import { DB } from "./db.service";
 import { Tables } from "./db.tables";
 import { RecordSchema } from "./record.schema";
+import { RecordFilter } from "./record/filter";
+import { Filters } from "./record/filters";
 
 export const ValidDef = Schema.Struct({
   id: RecordSchema.Id,
@@ -32,8 +34,12 @@ export class Service extends Context.Service<Service>()("PresetRecordRepo.Servic
     const defPlan = defSelect.pipe(
       Query.from(Tables.records),
       Query.where(
-        Query.and(Query.eq(Tables.records._tag, "preset"), Query.eq(Tables.records.attrs_valid, 1)),
+        RecordFilter.filterPredicate([
+          AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "preset"] }),
+          Filters.aliases.unarchived.make(),
+        ]),
       ),
+      Query.where(Query.eq(Tables.records.attrs_valid, 1)),
       Query.orderBy(Tables.records.title, "asc"),
       Query.orderBy(Tables.records.id, "asc"),
     );
