@@ -217,6 +217,7 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
           "owned_parent",
           "rule_storage",
           "rule_targets",
+          "preset_filter",
         ]),
         props: db.jsonArrayFrom(
           Query.select(Struct.pick(Tables.props, ["path", "propId", "value"])).pipe(
@@ -382,6 +383,7 @@ export type AttrsColumns = Pick<
   | "owned_parent"
   | "rule_storage"
   | "rule_targets"
+  | "preset_filter"
   | "attrs_valid"
 >;
 

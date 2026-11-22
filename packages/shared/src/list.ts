@@ -65,7 +65,14 @@ export const ItemRule = Schema.TaggedStruct("rule", {
 
 export type ItemRule = typeof ItemRule.Type;
 
-export const Item = Schema.Union([ItemNote, ItemProp, ItemOwned, ItemRule]).pipe(
+export const ItemPreset = Schema.TaggedStruct("preset", {
+  ...commonFields,
+  preset_filter: Schema.NullOr(AttrsSchema.Filter),
+});
+
+export type ItemPreset = typeof ItemPreset.Type;
+
+export const Item = Schema.Union([ItemNote, ItemProp, ItemOwned, ItemRule, ItemPreset]).pipe(
   Schema.toTaggedUnion("_tag"),
 );
 
@@ -220,6 +227,14 @@ const readItem = Effect.fn("CliList.readItem")(function* (opts: {
             }),
             Record.fromEntries,
           ),
+        }),
+      );
+    }),
+    Match.when("preset", () => {
+      return Effect.succeed(
+        Item.cases.preset.make({
+          ...common,
+          preset_filter: opts.row.preset_filter,
         }),
       );
     }),
@@ -378,11 +393,19 @@ function formatSettings(item: Item): string {
 
       return [...lines, "  Expects:", ...expects].join("\n");
     }),
+    Match.tag("preset", (item) => {
+      const filterLabel = Match.value(item.preset_filter).pipe(
+        Match.when(null, () => "unset"),
+        Match.orElse(formatTargets),
+      );
+
+      return ["Preset def:", `  Filter: ${filterLabel}`].join("\n");
+    }),
     Match.exhaustive,
   );
 }
 
-function formatTargets(targets: AttrsSchema.TargetFilter): string {
+function formatTargets(targets: AttrsSchema.Filter): string {
   if (targets.length === 0) return "all records";
 
   return JSON.stringify(targets);

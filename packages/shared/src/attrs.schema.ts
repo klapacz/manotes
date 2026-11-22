@@ -66,6 +66,7 @@ const records = Schema.TaggedUnion({
   prop: common,
   owned: common,
   rule: common,
+  preset: common,
 });
 
 export const RecordTag = Schema.Literals(Record.keys(records.cases));
@@ -299,6 +300,10 @@ export const Attrs = Schema.Union([
     rule_storage: RuleStorage,
     rule_targets: TargetFilter,
     rule_expects: YSchema.Map({ schema: Schema.Record(RecordId, RuleExpectation), key: "propId" }),
+  }),
+  Schema.Struct({
+    ...records.cases.preset.fields,
+    preset_filter: Filter,
   }),
 ]);
 

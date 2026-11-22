@@ -2,9 +2,10 @@ import { useAtomValue } from "./atom-solid";
 import { AsyncResult } from "effect/reactivity";
 import { createMemo } from "solid-js";
 import { Filters } from "@manotes/shared/record/filters";
+import { PresetRecordRepo } from "@manotes/shared/preset-record.repo";
 import { PropDef } from "@manotes/shared/prop-def.service";
 import { EffectStream } from "@manotes/shared/effect/stream";
-import { Array, Option, Record, Stream } from "effect";
+import { Array, Effect, Option, Record, Stream } from "effect";
 import { bindRt } from "./rt-atom";
 import { createAtomStore, createSyncedAtom } from "./primitives";
 import { RecordCache } from "./record-cache.service";
@@ -12,9 +13,14 @@ import { RecordFormat } from "./record";
 
 const registry = bindRt((rt) => {
   return rt.atom(
-    PropDef.Service.use((service) => service.reactiveDefs()).pipe(
+    Effect.all({
+      defs: PropDef.Service.use((service) => service.reactiveDefs()),
+      presets: PresetRecordRepo.Service.use((repo) => repo.reactiveDefs()),
+    }).pipe(
+      Effect.map(({ defs, presets }) => {
+        return Stream.zipLatestWith(defs, presets, Filters.fromDefinitions);
+      }),
       Stream.unwrap,
-      Stream.map(Filters.fromDefinitions),
     ),
   );
 });

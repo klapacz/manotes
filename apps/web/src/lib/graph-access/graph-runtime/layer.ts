@@ -15,6 +15,7 @@ import { GraphRuntimeSyncSessionWatcher } from "./sync-session-watcher";
 import { GraphRuntimeLock } from "./lock";
 import { GraphDatabase } from "./database";
 import { Attrs } from "@manotes/shared/attrs.service";
+import { PresetRecordRepo } from "@manotes/shared/preset-record.repo";
 import { PropDef } from "@manotes/shared/prop-def.service";
 import { EnumOptionRepo } from "@manotes/shared/enum-option.repo";
 import { RuleRecord } from "@manotes/shared/rule-record.service";
@@ -42,6 +43,7 @@ export const makeLayer = (opts: SetupOpts) => {
         EventRepo.Service.layer,
         RecordRepo.Service.layer,
         Attrs.Service.layer,
+        PresetRecordRepo.Service.layer,
         PropDef.Service.layer,
         EnumOptionRepo.Service.layer,
         RuleRecord.Service.layer,

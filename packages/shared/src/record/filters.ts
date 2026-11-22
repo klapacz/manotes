@@ -1,6 +1,7 @@
 import { Array, identity, Match, Option, Result, Schema } from "effect";
 import { AttrsSchema } from "../attrs.schema";
 import { BuiltinAttrs } from "../builtin-attrs";
+import type { PresetRecordRepo } from "../preset-record.repo";
 import type { PropRecordRepo } from "../prop-record.repo";
 import { PlainDateString } from "../temporal.schema";
 import {
@@ -48,7 +49,30 @@ export const namedTypes = {
     expression: expr.cmp({ val: ["_tag", "=", "rule"] }),
     getLabel: () => Label.Literal({ val: "Rules" }),
   }),
+  presets: named({
+    family: recordType,
+    expression: expr.cmp({ val: ["_tag", "=", "preset"] }),
+    getLabel: () => Label.Literal({ val: "Presets" }),
+  }),
 };
+
+// Collapse a preset's filter list into one expression so it can be embedded
+// and recognized as a single named chip (empty -> none, single -> as-is, many -> AND).
+export function presetExpression(
+  filter: AttrsSchema.Filter,
+): Option.Option<AttrsSchema.FilterExpr> {
+  return Array.matchLeft(filter, {
+    onEmpty: () => Option.none(),
+    onNonEmpty: (head, tail) => {
+      return Option.some(
+        Array.match(tail, {
+          onEmpty: () => head,
+          onNonEmpty: () => AttrsSchema.makeFilterExpr.and({ val: filter }),
+        }),
+      );
+    },
+  });
+}
 
 export function enumOptionsParent(
   expression: AttrsSchema.FilterExpr,
@@ -310,6 +334,7 @@ const kind = comparison({
           { label: "Properties", value: "prop" },
           { label: "Owned records", value: "owned" },
           { label: "Rules", value: "rule" },
+          { label: "Presets", value: "preset" },
         ],
       },
     ],
@@ -409,6 +434,7 @@ export const groups = [
       namedTypes.properties,
       enumOptions,
       namedTypes.rules,
+      namedTypes.presets,
     ],
   }),
   group({ label: kind.picker.label, entries: [kind] }),
@@ -421,8 +447,33 @@ export const groups = [
   ...links.map((entry) => group({ label: entry.picker.label, entries: [entry] })),
 ];
 
-export function fromDefinitions(defs: readonly PropRecordRepo.Def[]) {
-  return create({ groups: [...groups, ...defs.map(property)], aliases: [aliases.unarchived] });
+function savedPreset(preset: PresetRecordRepo.Def) {
+  return Option.map(presetExpression(preset.preset_filter), (expression) => {
+    return named({
+      expression,
+      getLabel: () => Label.Record({ id: preset.id, val: identity }),
+    });
+  });
+}
+
+export function fromDefinitions(
+  defs: readonly PropRecordRepo.Def[],
+  presets: readonly PresetRecordRepo.Def[] = [],
+) {
+  const savedGroups = Array.match(
+    Array.filterMap(presets, (preset) => {
+      return Result.fromOption(savedPreset(preset), () => undefined);
+    }),
+    {
+      onEmpty: () => [],
+      onNonEmpty: (entries) => [group({ label: "Saved presets", entries })],
+    },
+  );
+
+  return create({
+    groups: [...groups, ...savedGroups, ...defs.map(property)],
+    aliases: [aliases.unarchived],
+  });
 }
 
 export const builtin = fromDefinitions(BuiltinAttrs.defs);

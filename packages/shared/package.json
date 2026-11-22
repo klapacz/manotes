@@ -61,6 +61,7 @@
     "./migrator": "./dist/migrator.mjs",
     "./msgpack": "./dist/msgpack.mjs",
     "./node-json": "./dist/node-json.mjs",
+    "./preset-record.repo": "./dist/preset-record.repo.mjs",
     "./prop-def.service": "./dist/prop-def.service.mjs",
     "./prop-record.repo": "./dist/prop-record.repo.mjs",
     "./prop-validation": "./dist/prop-validation.mjs",

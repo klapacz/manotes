@@ -22,6 +22,7 @@ export const records = Table.make("records", {
   owned_parent: Column.text().pipe(Column.schema(RecordSchema.Id), Column.nullable),
   rule_storage: nullableJson(AttrsSchema.RuleStorage),
   rule_targets: nullableJson(AttrsSchema.TargetFilter),
+  preset_filter: nullableJson(AttrsSchema.Filter),
   attrs_valid: Column.custom(Schema.BooleanFromBit, Type.int()).pipe(
     Column.default(Query.literal(0)),
   ),

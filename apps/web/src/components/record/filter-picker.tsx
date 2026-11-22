@@ -8,6 +8,7 @@ import type { RecordRepo } from "@manotes/shared/record.repo";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Filters } from "@manotes/shared/record/filters";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
+import { PresetRecordRepo } from "@manotes/shared/preset-record.repo";
 import { PropDef } from "@manotes/shared/prop-def.service";
 import { Array, Equal, Match, Option, Predicate, Result, Stream } from "effect";
 import { Show, createMemo, createSignal, untrack } from "solid-js";
@@ -556,63 +557,39 @@ function PresetCommands(props: {
   onSelect: (settings: StreamSettings.Settings) => void;
   onBack: () => void;
 }) {
-  const [enumParent, setEnumParent] = createSignal(false);
-  const picker = Filters.enumOptions.picker;
-
-  // TODO: Generate preset choices from shared definitions instead of hardcoding them here.
-  const query = MenuQuery.actions(() => {
-    return [
-      {
-        value: "notes",
-        label: "Notes preset",
-        run: () => props.onSelect(StreamSettings.presets.notes),
-      },
-      {
-        value: "pages",
-        label: "Pages preset",
-        run: () => props.onSelect(StreamSettings.presets.pages),
-      },
-      {
-        value: "enum",
-        label: "Enum options preset",
-        suffix: <Picker.Caret />,
-        run: () => setEnumParent(true),
-      },
-    ];
-  });
+  const query: QueryEngine.Query<MenuQuery.Action, unknown, PresetRecordRepo.Service> = (
+    request,
+  ) => {
+    return Stream.unwrap(PresetRecordRepo.Service.use((repo) => repo.reactiveDefs())).pipe(
+      Stream.switchMap((saved) => {
+        return MenuQuery.actions(() => {
+          return Array.filterMap(saved, (preset) => {
+            return Result.fromOption(
+              Option.map(Filters.presetExpression(preset.preset_filter), (expression) => ({
+                value: preset.id,
+                label: preset.title || "Untitled",
+                run: () => {
+                  props.onSelect({ ...StreamSettings.defaultDisplay, filter: [expression] });
+                },
+              })),
+              () => undefined,
+            );
+          });
+        })(request);
+      }),
+    );
+  };
 
   return (
-    <Show
-      when={enumParent()}
-      fallback={
-        <Picker.Query label="Choose preset" query={query} onSelect={(action) => action.run()}>
-          {(items) => (
-            <CommandList>
-              <CommandScroll>{items}</CommandScroll>
-              <Picker.Footer>
-                <Picker.Back onSelect={props.onBack} />
-              </Picker.Footer>
-            </CommandList>
-          )}
-        </Picker.Query>
-      }
-    >
-      <Picker.Query
-        label="Enum options preset of"
-        query={RecordQuery.scoped({
-          filter: Predicate.isTagged(picker, "Record") ? picker.filter : [],
-        })}
-        onSelect={(record) => props.onSelect(StreamSettings.enumOptionsPreset(record.value))}
-      >
-        {(items) => (
-          <CommandList>
-            <CommandScroll>{items}</CommandScroll>
-            <Picker.Footer>
-              <Picker.Back onSelect={() => setEnumParent(false)} />
-            </Picker.Footer>
-          </CommandList>
-        )}
-      </Picker.Query>
-    </Show>
+    <Picker.Query label="Choose preset" query={query} onSelect={(action) => action.run()}>
+      {(items) => (
+        <CommandList>
+          <CommandScroll>{items}</CommandScroll>
+          <Picker.Footer>
+            <Picker.Back onSelect={props.onBack} />
+          </Picker.Footer>
+        </CommandList>
+      )}
+    </Picker.Query>
   );
 }

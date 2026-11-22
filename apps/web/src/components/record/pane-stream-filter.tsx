@@ -14,6 +14,7 @@ import { Focus } from "./focus";
 import { PaneHeader, type RecordControls } from "./shared";
 import { PropScope } from "./prop-scope";
 import { RuleTargets } from "./rule-targets";
+import { PresetFilter } from "./preset-filter";
 
 const route = getRouteApi("/$graph/");
 
@@ -93,7 +94,7 @@ export function PaneStreamFilter(props: {
   return (
     <NestedStreamFilterEditor
       filter={pane().filter}
-      targetOnly={pane().source !== undefined}
+      targetOnly={pane().source?._tag === "prop" || pane().source?._tag === "rule"}
       onChange={changeFilter}
       onPreset={changeSettings}
       menu={menu()}
@@ -147,6 +148,13 @@ export function PaneStreamFilter(props: {
                   rule: (source) => (
                     <RuleTargets.Header
                       ruleId={source().id}
+                      filter={pane().filter}
+                      onDiscard={changeFilter}
+                    />
+                  ),
+                  preset: (source) => (
+                    <PresetFilter.Header
+                      presetId={source().id}
                       filter={pane().filter}
                       onDiscard={changeFilter}
                     />

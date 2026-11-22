@@ -101,6 +101,36 @@ describe("blank record creation", () => {
     }
   });
 
+  it("creates a preset with default Notes filter and an editable heading", () => {
+    const payload = Effect.runSync(
+      prefilledPayload(
+        PaneSchema.Pane.cases.stream.make({
+          paneId: PaneSchema.Id.make("presets"),
+          filter: [AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "preset"] })],
+          sort: "updated",
+          view: "full",
+        }),
+      ).pipe(Effect.provide(Attrs.Service.layer)),
+    );
+
+    const { doc, attrs } = RecordDoc.make();
+
+    try {
+      Y.applyUpdate(doc, payload);
+      expect(Effect.runSync(YSchema.exportStrict(attrs))).toEqual(
+        Data.taggedEnum<AttrsSchema.Attrs>().preset({
+          props: {},
+          preset_filter: StreamSettings.defaultPreset.filter,
+        }),
+      );
+      expect(ProsemirrorMaterializer.yDocToNodeJSON({ yDoc: doc })).toMatchObject({
+        content: [{ type: "heading", attrs: { level: 1 }, content: [{ text: "Untitled" }] }],
+      });
+    } finally {
+      doc.destroy();
+    }
+  });
+
   it("creates an owned enum option with its parent and editable title in one update", () => {
     const enum_parent = RecordSchema.Id.make("priority");
 

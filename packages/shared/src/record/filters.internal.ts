@@ -180,9 +180,9 @@ export function family(label: string): symbol {
   return Symbol(label);
 }
 
-export function named(opts: {
+export function named<const Expr extends AttrsSchema.FilterExpr>(opts: {
   family?: symbol;
-  expression: AttrsSchema.TargetFilterExpr;
+  expression: Expr;
   getLabel: () => Label;
 }) {
   const match = (expression: AttrsSchema.FilterExpr) => {

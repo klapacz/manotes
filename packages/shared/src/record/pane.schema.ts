@@ -39,6 +39,7 @@ const PaneId = Id.pipe(Schema.withDecodingDefaultKey(Effect.sync(makeId)));
 export const Source = Schema.TaggedUnion({
   prop: { id: RecordSchema.Id },
   rule: { id: RecordSchema.Id },
+  preset: { id: RecordSchema.Id },
 });
 
 export const Pane = Schema.TaggedUnion({

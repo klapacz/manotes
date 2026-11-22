@@ -20,6 +20,7 @@ import { LiveDocAtom } from "./lib/live-doc.atom";
 import { defineReadonly } from "prosekit/extensions/readonly";
 import { PropertyDef } from "./components/record/property-def";
 import { RuleDef } from "./components/record/rule-def";
+import { PresetDef } from "./components/record/preset-def";
 import { RecordPropGroups } from "./components/record/record-prop-groups";
 import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
 import BacklinkMenu, { StreamRefMenu, TabMenu } from "./lib/editor/backlink/menu";
@@ -132,6 +133,11 @@ function ReadyEditor(props: Props & { readonly doc: Y.Doc }) {
             </Show>
             <Show when={attrs.rule()}>
               {(rule) => <RuleDef.Root recordId={props.recordId} doc={props.doc} attrs={rule()} />}
+            </Show>
+            <Show when={attrs.preset()}>
+              {(preset) => (
+                <PresetDef.Root recordId={props.recordId} doc={props.doc} attrs={preset()} />
+              )}
             </Show>
           </Loading>
         </Errored>

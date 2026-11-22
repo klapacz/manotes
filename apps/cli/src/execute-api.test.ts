@@ -1119,6 +1119,7 @@ describe("ExecuteApi.list", () => {
             owned_parent: null,
             rule_storage: null,
             rule_targets: null,
+            preset_filter: null,
             attrs_valid: false,
           },
         });

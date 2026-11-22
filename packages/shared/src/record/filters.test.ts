@@ -94,6 +94,7 @@ describe("Filters definitions and Outline operations", () => {
       Filters.enumOptions.make(id),
       Filters.enumOptions.make(other),
       Filters.namedTypes.rules.make(),
+      Filters.namedTypes.presets.make(),
     ];
 
     const archived = Filters.aliases.unarchived.make();
@@ -127,7 +128,7 @@ describe("Filters definitions and Outline operations", () => {
 
   it("keeps the Type picker separate from raw record tag controls", () => {
     const group = Option.getOrThrow(registry.findGroup(Filters.namedTypes.pages.make()));
-    expect(group.entries).toHaveLength(5);
+    expect(group.entries).toHaveLength(6);
     expect(group.entries.every((entry) => Predicate.isTagged(entry, "Named"))).toBe(true);
     expect(registry.findGroup(Filters.namedTypes.properties.make())).toEqual(Option.some(group));
     expect(registry.findGroup(Filters.enumOptions.make(id))).toEqual(Option.some(group));
@@ -469,5 +470,30 @@ describe("Filters definitions and Outline operations", () => {
     const encoded = Option.flatMap(settings, Schema.encodeOption(codec));
     expect(Option.flatMap(encoded, Schema.decodeOption(codec))).toEqual(settings);
     expect(JSON.stringify(settings)).not.toContain("family");
+  });
+
+  it("registers saved presets as named expressions with live record labels", () => {
+    const singleExpr = Filters.namedTypes.pages.make();
+    const multiFilter = [Filters.namedTypes.notes.make(), Filters.aliases.unarchived.make()];
+
+    expect(Filters.presetExpression([])).toEqual(Option.none());
+    expect(Filters.presetExpression([singleExpr])).toEqual(Option.some(singleExpr));
+    expect(Filters.presetExpression(multiFilter)).toEqual(
+      Option.some(expr.and({ val: multiFilter })),
+    );
+
+    const withPresets = Filters.fromDefinitions(BuiltinAttrs.defs, [
+      { id, title: "Inbox", preset_filter: multiFilter },
+      { id: other, title: "Empty", preset_filter: [] },
+    ]);
+
+    const presetExpr = Option.getOrThrow(Filters.presetExpression(multiFilter));
+    const group = Option.getOrThrow(withPresets.findGroup(presetExpr));
+    expect(Filters.renderLabel(group.label)).toBe("Saved presets");
+    expect(group.entries).toHaveLength(1);
+
+    const label = Option.getOrThrow(withPresets.getLabel(presetExpr));
+    expect(Filters.labelRecords(label)).toEqual([id]);
+    expect(Filters.renderLabel(label, () => "Inbox")).toBe("Inbox");
   });
 });

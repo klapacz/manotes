@@ -60,6 +60,8 @@ export class Service extends Context.Service<Service>()("Attrs.Service", {
     initializeProp,
     initializeEnumOption,
     initializeRule,
+    initializePreset,
+    setPresetFilter,
     setRuleStorage,
     setRuleTargets,
     setRuleExpectation,
@@ -463,6 +465,36 @@ const editableRuleAttrs = Effect.fn("Attrs.editableRuleAttrs")(function* (opts: 
     YSchema.find("_tag"),
     Effect.flatMap(Effect.fromOption),
     Effect.flatMap(YSchema.expect("rule")),
+  );
+});
+
+const initializePreset = Effect.fn("Attrs.initializePreset")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly filter: AttrsSchema.Filter;
+}) {
+  const { attrs } = RecordDoc.fromDoc({ doc: opts.doc });
+  const preset = yield* attrs.pipe(YSchema.set("_tag", "preset"));
+  yield* preset.pipe(YSchema.set("preset_filter", opts.filter));
+  yield* preset.pipe(YSchema.upsertMap("props"));
+});
+
+const setPresetFilter = Effect.fn("Attrs.setPresetFilter")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly filter: AttrsSchema.Filter;
+}) {
+  const preset = yield* editablePresetAttrs({ doc: opts.doc });
+  yield* preset.pipe(YSchema.set("preset_filter", opts.filter));
+});
+
+const editablePresetAttrs = Effect.fn("Attrs.editablePresetAttrs")(function* (opts: {
+  readonly doc: Y.Doc;
+}) {
+  const { attrs } = RecordDoc.fromDoc(opts);
+
+  return yield* attrs.pipe(
+    YSchema.find("_tag"),
+    Effect.flatMap(Effect.fromOption),
+    Effect.flatMap(YSchema.expect("preset")),
   );
 });
 

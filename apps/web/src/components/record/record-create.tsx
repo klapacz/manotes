@@ -124,6 +124,9 @@ export const prefilledPayload = Effect.fn("ComponentsRecordRecordCreate.prefille
       Match.when("rule", () => {
         return attrs.initializeRule({ doc, targets: StreamSettings.defaultPreset.filter });
       }),
+      Match.when("preset", () => {
+        return attrs.initializePreset({ doc, filter: StreamSettings.defaultPreset.filter });
+      }),
       Match.when("owned", () => {
         return Array.findFirst(pane.filter, (expression) => {
           return Filters.enumOptions.match(expression).pipe(Result.getSuccess);
@@ -148,7 +151,7 @@ function needsHeading(comparisons: readonly AttrsSchema.FilterCmp[]): boolean {
   return Array.some(comparisons, (comparison) => {
     return Match.value(comparison).pipe(
       Match.when(["title", "exists", true], () => true),
-      Match.when(["_tag", "=", Match.is("prop", "rule", "owned")], () => true),
+      Match.when(["_tag", "=", Match.is("prop", "rule", "owned", "preset")], () => true),
       Match.orElse(() => false),
     );
   });
