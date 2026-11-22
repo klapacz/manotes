@@ -40,6 +40,7 @@ export function FilterLabel(props: { label: Filters.DisplayLabel }) {
 export function FilterPicker(props: {
   label: string;
   filters: Filters.Registry;
+  filter?: AttrsSchema.Filter;
   value?: AttrsSchema.FilterExpr;
   siblings?: AttrsSchema.Filter;
   menu?: FilterMenu;
@@ -88,6 +89,7 @@ export function FilterPicker(props: {
         {(close) => (
           <FilterCommands
             filters={props.filters}
+            filter={props.filter}
             value={props.value}
             siblings={props.siblings}
             body={props.menu?.body}
@@ -116,6 +118,7 @@ export function FilterPicker(props: {
 
 function FilterCommands(props: {
   filters: Filters.Registry;
+  filter?: AttrsSchema.Filter;
   value?: AttrsSchema.FilterExpr;
   siblings?: AttrsSchema.Filter;
   body?: boolean;
@@ -143,7 +146,7 @@ function FilterCommands(props: {
   const labels = createFilterLabels(() => props.filters.groups.map((group) => group.label));
 
   const activePreset = createMemo(() => {
-    return Array.matchLeft(props.siblings ?? [], {
+    return Array.matchLeft(props.filter ?? props.siblings ?? [], {
       onEmpty: () => undefined,
       onNonEmpty: (only, rest) => {
         if (Array.isReadonlyArrayNonEmpty(rest)) return undefined;

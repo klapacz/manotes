@@ -12,7 +12,7 @@ import type { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { Option, Predicate } from "effect";
 import { For, Show, createMemo, createSignal, createUniqueId } from "solid-js";
 import { ChevronDown, ChevronRight, FunnelPlus, ListPlus, Pencil, Plus, X } from "@lucide/solid";
-import { createFilterLabels, useFilters } from "../../lib/filters";
+import { createFilterLabels, useFilters, usePresets } from "../../lib/filters";
 import { cx } from "../../lib/cva";
 import { Button } from "../ui/button";
 import { ButtonGroup } from "../ui/button-group";
@@ -36,11 +36,12 @@ export function NestedStreamFilterEditor(props: {
   children: (trigger: JSX.Element, filters: JSX.Element, hasFilters: () => boolean) => JSX.Element;
 }) {
   const registry = useFilters();
+  const presets = usePresets();
 
   const filters = createMemo(() => {
     if (props.targetOnly) return registry();
 
-    return Filters.forStreams(registry());
+    return Filters.forStreams(registry(), presets());
   });
 
   const [expanded, setExpanded] = createSignal(false);
@@ -70,6 +71,7 @@ export function NestedStreamFilterEditor(props: {
     <FilterPicker
       label="Filter stream"
       filters={filters()}
+      filter={props.filter}
       siblings={rootGroup()?.val ?? props.filter}
       menu={props.menu}
       onMenuChange={props.onMenuChange}
@@ -85,7 +87,7 @@ export function NestedStreamFilterEditor(props: {
           return filters().setExpression(siblings, expression, rootGroup() ? "or" : "and");
         });
       }}
-      onPreset={props.onPreset}
+      onPreset={props.targetOnly ? undefined : props.onPreset}
       onOpenRecord={props.onOpenRecord}
       onClose={props.onClose}
       triggerRef={(button) => (filterButton = button)}

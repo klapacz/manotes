@@ -1,4 +1,4 @@
-import { Array, identity, Match, Option, Result, Schema } from "effect";
+import { Array, identity, Match, Option, pipe, Result, Schema } from "effect";
 import { AttrsSchema } from "../attrs.schema";
 import { BuiltinAttrs } from "../builtin-attrs";
 import type { PresetRecordRepo } from "../preset-record.repo";
@@ -456,31 +456,28 @@ function savedPreset(preset: PresetRecordRepo.Def) {
   });
 }
 
-export function fromDefinitions(
-  defs: readonly PropRecordRepo.Def[],
-  presets: readonly PresetRecordRepo.Def[] = [],
-) {
-  const savedGroups = Array.match(
-    Array.filterMap(presets, (preset) => {
-      return Result.fromOption(savedPreset(preset), () => undefined);
-    }),
-    {
-      onEmpty: () => [],
-      onNonEmpty: (entries) => [group({ label: "Saved presets", entries })],
-    },
-  );
-
+export function fromDefinitions(defs: readonly PropRecordRepo.Def[]) {
   return create({
-    groups: [...groups, ...savedGroups, ...defs.map(property)],
+    groups: [...groups, ...defs.map(property)],
     aliases: [aliases.unarchived],
   });
 }
 
 export const builtin = fromDefinitions(BuiltinAttrs.defs);
 
-export function forStreams(registry: Registry) {
+export function forStreams(registry: Registry, presets: readonly PresetRecordRepo.Def[] = []) {
+  const savedGroups = pipe(
+    presets,
+    Array.filterMap((preset) => Result.fromOption(savedPreset(preset), () => undefined)),
+    Array.match({
+      onEmpty: () => [],
+      onNonEmpty: (entries) => [group({ label: "Saved presets", entries })],
+    }),
+  );
+
   return create({
     groups: Array.appendAll(registry.groups, [
+      ...savedGroups,
       ruleViolationGroup,
       group({ label: propertyViolation.picker.label, entries: [propertyViolation] }),
     ]),

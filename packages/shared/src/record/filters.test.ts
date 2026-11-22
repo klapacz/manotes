@@ -472,7 +472,7 @@ describe("Filters definitions and Outline operations", () => {
     expect(JSON.stringify(settings)).not.toContain("family");
   });
 
-  it("registers saved presets as named expressions with live record labels", () => {
+  it("registers saved presets only in stream registries with live record labels", () => {
     const singleExpr = Filters.namedTypes.pages.make();
     const multiFilter = [Filters.namedTypes.notes.make(), Filters.aliases.unarchived.make()];
 
@@ -482,12 +482,14 @@ describe("Filters definitions and Outline operations", () => {
       Option.some(expr.and({ val: multiFilter })),
     );
 
-    const withPresets = Filters.fromDefinitions(BuiltinAttrs.defs, [
+    const withPresets = Filters.forStreams(registry, [
       { id, title: "Inbox", preset_filter: multiFilter },
       { id: other, title: "Empty", preset_filter: [] },
     ]);
 
     const presetExpr = Option.getOrThrow(Filters.presetExpression(multiFilter));
+    expect(registry.findGroup(presetExpr)).toEqual(Option.none());
+
     const group = Option.getOrThrow(withPresets.findGroup(presetExpr));
     expect(Filters.renderLabel(group.label)).toBe("Saved presets");
     expect(group.entries).toHaveLength(1);

@@ -19,7 +19,7 @@ const registry = bindRt((rt) => {
     }).pipe(
       Effect.map(({ defs, presets }) => {
         return Stream.zipLatestWith(defs, presets, (defs, presets) => ({
-          filters: Filters.fromDefinitions(defs, presets),
+          filters: Filters.fromDefinitions(defs),
           presets,
         }));
       }),
