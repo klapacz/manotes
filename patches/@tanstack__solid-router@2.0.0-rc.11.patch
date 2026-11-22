@@ -1,0 +1,40 @@
+diff --git a/dist/esm/link.js b/dist/esm/link.js
+index 532ea6f06f9aa2eadb295729e007e6729aed4d93..45662fa071e835bf2d2462a643aa71679dc0e6a0 100644
+--- a/dist/esm/link.js
++++ b/dist/esm/link.js
+@@ -204,7 +204,7 @@ function useLinkProps(options) {
+ 	let resolved;
+ 	const resolvedProps = () => resolved = resolveLinkStateProps();
+ 	const linkRef = mergeRefs(setRef, (el) => {
+-		mergeRefs(resolved?.ref ?? local.ref)(el);
++		mergeRefs(resolved?.ref ?? Solid.untrack(() => local.ref))(el);
+ 	});
+ 	return Solid.merge(propsSafeToSpread, resolvedProps, { ref: linkRef });
+ }
+@@ -289,7 +289,8 @@ var Link = (props) => {
+ 		} });
+ 		return ch;
+ 	};
+-	if (local._asChild === "svg") {
++	const asChild = Solid.untrack(() => local._asChild);
++	if (asChild === "svg") {
+ 		const [_, svgLinkProps] = splitProps(linkProps, ["class"]);
+ 		var _el$ = _tmpl$();
+ 		var _el$2 = _el$.firstChild;
+@@ -297,14 +298,14 @@ var Link = (props) => {
+ 		insert(_el$2, children);
+ 		return _el$;
+ 	}
+-	if (!local._asChild) {
++	if (!asChild) {
+ 		var _el$3 = _tmpl$2();
+ 		spread(_el$3, linkProps, true);
+ 		insert(_el$3, children);
+ 		return _el$3;
+ 	}
+ 	return createComponent(Dynamic, mergeProps({ get component() {
+-		return local._asChild;
++		return asChild;
+ 	} }, linkProps, { get children() {
+ 		return children();
+ 	} }));

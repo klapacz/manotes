@@ -2,12 +2,14 @@ import type { JSX } from "@solidjs/web";
 import type { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { Option } from "effect";
-import { Data, Deferred, Effect, RcMap, Scope } from "effect";
+import { Data, Deferred, Effect, Exit, RcMap, Scope } from "effect";
 import {
   createContext,
   createRoot,
   createRenderEffect,
   createSignal,
+  getOwner,
+  onCleanup,
   runWithOwner,
   useContext,
   type Accessor,
@@ -93,6 +95,19 @@ export const make = Effect.fn("EditorPool.make")(function* (
 
   return { get, preload } satisfies Pool;
 });
+
+/** Create a pane-owned pool synchronously and close its Effect scope on owner cleanup. */
+export function create(filter: Accessor<AttrsSchema.Filter>): Pool {
+  const owner = getOwner();
+  const scope = Effect.runSync(Scope.make());
+  const pool = Effect.runSync(make(owner, filter).pipe(Scope.provide(scope)));
+
+  onCleanup(() => {
+    Effect.runFork(Scope.close(scope, Exit.void));
+  });
+
+  return pool;
+}
 
 const Context = createContext<Accessor<Pool>>();
 

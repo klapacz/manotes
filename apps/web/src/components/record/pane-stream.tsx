@@ -8,7 +8,6 @@ import {
   createMemo,
   createProjection,
   createSignal,
-  getOwner,
   isPending,
 } from "solid-js";
 import { VirtualList } from "../../lib/virtual-list";
@@ -37,17 +36,8 @@ export function PaneStream(props: ComponentProps<"section">) {
     equals: Equal.equals,
   });
 
-  // Pooled editors persist across row unmounts and query transitions. The pool
-  // is an Effect resource owned by its stream's scope, captured under the pane
-  // owner so pooled editor roots inherit the pane's contexts.
-  const owner = getOwner();
-
-  const pool = useGraphStream(() => {
-    return EditorPool.make(owner, () => pane().filter).pipe(
-      Effect.map((pool) => Stream.concat(Stream.succeed(pool), Stream.never)),
-      Stream.unwrap,
-    );
-  });
+  // Pooled editors persist across row unmounts and query transitions.
+  const pool = EditorPool.create(() => pane().filter);
 
   const recording = PaneStreamRecording.use();
 
@@ -58,7 +48,6 @@ export function PaneStream(props: ComponentProps<"section">) {
     () => {
       const currentQuery = query();
       refreshToken();
-      const editors = pool();
 
       return Stream.unwrap(
         Effect.gen(function* () {
@@ -72,7 +61,7 @@ export function PaneStream(props: ComponentProps<"section">) {
             // keep resolved state tied to real rows, after the first result is preloaded.
             Stream.drop(1),
             Stream.mapEffect((state) => {
-              return Effect.scoped(editors.preload(preloadRecordIds(state.items))).pipe(
+              return Effect.scoped(pool.preload(preloadRecordIds(state.items))).pipe(
                 Effect.as({ ...state, sort: currentQuery.sort }),
               );
             }),
@@ -84,28 +73,26 @@ export function PaneStream(props: ComponentProps<"section">) {
   );
 
   // Draft changes rebuild the final list without restarting SQL or entering its
-  // pinned snapshot. Reconciling by ListItem.id keeps row references stable
-  // across emissions so virtua reuses mounted editors.
-  const rows = createProjection<ReadonlyArray<RecordStream.ListItem>>(
-    () => {
-      const current = stream();
+  // pinned snapshot. Keep a plain array memo for non-UI derivations (`listOrder`)
+  // and reconcile by ListItem.id into a projection so virtua reuses mounted editors.
+  const list = createMemo(() => {
+    const current = stream();
 
-      return RecordStream.list({
-        items: current.items,
-        draft: recording.draft(),
-        sort: current.sort,
-      });
-    },
-    [],
-    { key: "id" },
-  );
+    return RecordStream.list({
+      items: current.items,
+      draft: recording.draft(),
+      sort: current.sort,
+    });
+  });
+
+  const rows = createProjection<ReadonlyArray<RecordStream.ListItem>>(list, [], { key: "id" });
 
   const refresh = () => setRefreshToken((token) => token + 1);
 
   const createRecord = RecordCreate.useCreateRecord();
 
   const createRecordOn = (date: string | undefined) => {
-    createRecord({ date, pool: pool(), pane: pane() }, (record) => {
+    createRecord({ date, pool, pane: pane() }, (record) => {
       refresh();
       focus.request(fid.editor(record.id), { reveal: "always" });
     });
@@ -126,13 +113,13 @@ export function PaneStream(props: ComponentProps<"section">) {
   // From a record, create beside it on its date; otherwise use the pane's date.
   const createNearFocus = () => {
     const recordId = Focus.recordIn(pane().paneId, focus.activeId());
-    const row = rows.find((row) => RecordStream.recordId(row) === recordId);
+    const row = list().find((row) => RecordStream.recordId(row) === recordId);
 
     createRecordOn(row ? RecordStream.date(row) : filteredDate());
   };
 
   // Rendering, keyboard order and retention all derive from these same rows.
-  const listOrder = createMemo(() => recordIdsFromRows(rows));
+  const listOrder = createMemo(() => recordIdsFromRows(list()));
 
   const [lastFocused, setLastFocused] = createSignal<RecordSchema.Id>();
 
@@ -244,7 +231,7 @@ export function PaneStream(props: ComponentProps<"section">) {
             pending={isPending(() => stream())}
             onRefresh={refresh}
           />
-          <EditorPool.Provider pool={pool()}>
+          <EditorPool.Provider pool={pool}>
             <Show
               when={rows.length > 0}
               fallback={

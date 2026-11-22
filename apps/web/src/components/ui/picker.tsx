@@ -221,7 +221,7 @@ export function Content(props: {
           </div>
         </Show>
         <div data-drawer-no-drag="" class="min-h-0 overflow-y-auto">
-          <Positions value={history()}>{props.children(close)}</Positions>
+          <Positions value={history}>{props.children(close)}</Positions>
         </div>
       </Dynamic>
     </>

@@ -27,10 +27,10 @@ export type Options<T> = {
 
 type Position = { search: string; highlighted: string; scrollTop: number };
 
-export const Positions = createContext<Map<string, Position>>();
+export const Positions = createContext<() => Map<string, Position>>();
 
 export function use<T extends { value: string }>(opts: Options<T>) {
-  const positions = useContext(Positions);
+  const positions = useContext(Positions)?.();
 
   // History/default search seed this mounted query; only request.query stays reactive.
   const initial = untrack(() => ({
