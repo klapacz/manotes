@@ -19,6 +19,9 @@ export default Alchemy.Stack(
 
     const web = yield* Cloudflare.Website.Vite("App", {
       rootDir: "../web",
+      assets: {
+        notFoundHandling: "single-page-application",
+      },
       dev: {
         host: "127.0.0.1",
         port: PortSchema.decode(process.env[DevEnv.names.webPort]) ?? 5173,
