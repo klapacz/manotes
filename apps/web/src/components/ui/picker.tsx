@@ -1,4 +1,13 @@
-import { createContext, createSignal, Show, For, Loading, useContext, omit } from "solid-js";
+import {
+  createContext,
+  createMemo,
+  createSignal,
+  Show,
+  For,
+  Loading,
+  useContext,
+  omit,
+} from "solid-js";
 import type { JSX, ComponentProps } from "@solidjs/web";
 import { Dynamic } from "@solidjs/web";
 import * as Drawer from "@ui-sdk/solid/drawer";
@@ -25,7 +34,6 @@ type PickerContext = {
   trigger?: HTMLElement;
   afterClose?: () => void;
   placement?: string;
-  history?: Map<string, { search: string; highlighted: string; scrollTop: number }>;
 };
 
 const Context = createContext<PickerContext>();
@@ -53,10 +61,7 @@ export function Root(props: {
     mobile,
     open: () => props.open ?? open(),
     change: (v: boolean) => {
-      if (v) {
-        ctx.afterClose = undefined;
-        ctx.history?.clear();
-      }
+      if (v) ctx.afterClose = undefined;
 
       setOpen(v);
       props.onOpenChange?.(v);
@@ -140,8 +145,15 @@ export function Content(props: {
   children: (close: (action?: () => void) => void) => JSX.Element;
 }) {
   const ctx = usePicker();
-  const history = new Map();
-  ctx.history = history;
+
+  // Fresh history map per open session so closing always clears search/input
+  // (including controlled opens like F or /), while Back inside a session still restores it.
+  const history = createMemo(() => {
+    ctx.open();
+
+    return new Map();
+  });
+
   let content: HTMLDivElement | undefined;
 
   const close = (action?: () => void) => {
@@ -209,7 +221,7 @@ export function Content(props: {
           </div>
         </Show>
         <div data-drawer-no-drag="" class="min-h-0 overflow-y-auto">
-          <Positions value={history}>{props.children(close)}</Positions>
+          <Positions value={history()}>{props.children(close)}</Positions>
         </div>
       </Dynamic>
     </>

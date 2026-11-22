@@ -10,7 +10,7 @@ import { Filters } from "@manotes/shared/record/filters";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { PropDef } from "@manotes/shared/prop-def.service";
 import { Array, Equal, Match, Option, Predicate, Result, Stream } from "effect";
-import { Show, createMemo, createSignal } from "solid-js";
+import { Show, createMemo, createSignal, untrack } from "solid-js";
 import { CircleCheck, CircleDashed } from "@lucide/solid";
 import { DateSuggestions } from "../../lib/date-suggestions";
 import { MenuQuery } from "../../lib/menu-query";
@@ -122,13 +122,18 @@ function FilterCommands(props: {
   onOpenRecord?: (id: AttrsSchema.RecordId) => void;
   onClear?: () => void;
 }) {
-  const [group, setGroup] = createSignal(() => {
-    return props.value
-      ? Option.getOrUndefined(props.filters.findGroup(props.value))
-      : props.body
-        ? Option.getOrUndefined(props.filters.findGroup(Filters.body.make("")))
-        : undefined;
-  });
+  // Seed the initial subpage on mount only; FilterCommands unmounts after the
+  // close animation, so deriving from props would blink back to the main page
+  // while closing.
+  const [group, setGroup] = createSignal(
+    untrack(() => {
+      return props.value
+        ? Option.getOrUndefined(props.filters.findGroup(props.value))
+        : props.body
+          ? Option.getOrUndefined(props.filters.findGroup(Filters.body.make("")))
+          : undefined;
+    }),
+  );
 
   const [groupSearch, setGroupSearch] = createSignal<string>();
   const [preset, setPreset] = createSignal(false);
