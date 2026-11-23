@@ -11,7 +11,7 @@ import { bindRt } from "../../lib";
 import { MenuQuery } from "../../lib/menu-query";
 import { QueryEngine } from "../../lib/query-engine";
 import { RecordLink } from "../../lib/record/link-component";
-import { XIcon } from "../icons";
+import { PlusIcon, XIcon } from "../icons";
 import { Button } from "../ui/button";
 import { ButtonGroup } from "../ui/button-group";
 import { DescriptionList } from "../ui/description-list";
@@ -128,86 +128,103 @@ export function Root(props: { recordId: AttrsSchema.RecordId; doc: Y.Doc; attrs:
           </DescriptionList.Row>
           <DescriptionList.Row>
             <DescriptionList.Term>Expected</DescriptionList.Term>
-            <DescriptionList.Details>
-              <DescriptionList.Root>
-                <For each={Record.keys(expects())}>
-                  {(propId) => (
-                    <DescriptionList.Row class="first:pt-0">
-                      <DescriptionList.Term>
+            <DescriptionList.Details class="flex flex-col items-start gap-1.5">
+              <Show when={Record.keys(expects()).length > 0}>
+                <div class="flex max-w-full flex-col items-start gap-1.5 px-2">
+                  <For each={Record.keys(expects())}>
+                    {(propId) => (
+                      <ButtonGroup.Root class="max-w-full" aria-label="Expected property">
                         <Show
                           when={Option.getOrUndefined(BuiltinAttrs.find(propId))}
                           fallback={
-                            <RecordLink id={propId} class="hover:underline">
-                              <RecordLabel.Root id={propId} />
-                            </RecordLink>
+                            <Button
+                              as={RecordLink}
+                              id={propId}
+                              variant="outline"
+                              size="xs"
+                              class="min-w-0 shrink"
+                            >
+                              <span class="truncate">
+                                <RecordLabel.Root id={propId} />
+                              </span>
+                            </Button>
                           }
                         >
-                          {(def) => <>{def().title}</>}
+                          {(def) => (
+                            <span class="inline-flex h-7 min-w-0 items-center rounded-md border border-border bg-bg px-2 text-sm shadow-xs">
+                              <span class="truncate">{def().title}</span>
+                            </span>
+                          )}
                         </Show>
-                      </DescriptionList.Term>
-                      <DescriptionList.Details>
-                        <ButtonGroup.Root aria-label="Expected property">
-                          <Picker.Root label="Expectation">
-                            <Picker.Trigger variant="ghost" size="xs" disabled={mutation().waiting}>
-                              {expectationChoices.find(
-                                (choice) => choice.value === expects()[propId]?._tag,
-                              )?.label ?? "Invalid"}
-                            </Picker.Trigger>
-                            <Picker.Content>
-                              {(close) => (
-                                <Picker.Query<(typeof expectationChoices)[number]>
-                                  label="Expectation"
-                                  query={MenuQuery.choices(() => expectationChoices)}
-                                  selected={expects()[propId]?._tag}
-                                  disabled={mutation().waiting}
-                                  onSelect={(choice) => {
-                                    change(Change.Set({ propId, value: choice.expectation }));
-                                    close();
-                                  }}
-                                />
-                              )}
-                            </Picker.Content>
-                          </Picker.Root>
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            aria-label="Remove expected property"
+                        <Picker.Root label="Expectation">
+                          <Picker.Trigger
+                            variant="outline"
+                            size="xs"
+                            class="text-fg-subtle hover:text-fg"
                             disabled={mutation().waiting}
-                            onClick={() => change(Change.Remove({ propId }))}
                           >
-                            <XIcon />
-                          </Button>
-                        </ButtonGroup.Root>
-                      </DescriptionList.Details>
-                    </DescriptionList.Row>
-                  )}
-                </For>
-              </DescriptionList.Root>
-              <div class="pt-2 pb-1">
-                <Picker.Root label="Add expected property">
-                  <Picker.Trigger variant="outline" size="xs" disabled={mutation().waiting}>
-                    Add
-                  </Picker.Trigger>
-                  <Picker.Content>
-                    {(close) => (
-                      <Picker.Query
-                        label="Add expected property"
-                        query={query}
-                        disabled={mutation().waiting}
-                        onSelect={(choice) => {
-                          change(
-                            Change.Set({
-                              propId: choice.propId,
-                              value: AttrsSchema.RuleExpectation.cases.required.make({}),
-                            }),
-                          );
-                          close();
-                        }}
-                      />
+                            {expectationChoices.find(
+                              (choice) => choice.value === expects()[propId]?._tag,
+                            )?.label ?? "Invalid"}
+                          </Picker.Trigger>
+                          <Picker.Content>
+                            {(close) => (
+                              <Picker.Query<(typeof expectationChoices)[number]>
+                                label="Expectation"
+                                query={MenuQuery.choices(() => expectationChoices)}
+                                selected={expects()[propId]?._tag}
+                                disabled={mutation().waiting}
+                                onSelect={(choice) => {
+                                  change(Change.Set({ propId, value: choice.expectation }));
+                                  close();
+                                }}
+                              />
+                            )}
+                          </Picker.Content>
+                        </Picker.Root>
+                        <Button
+                          variant="outline"
+                          size="icon-xs"
+                          aria-label="Remove expected property"
+                          disabled={mutation().waiting}
+                          onClick={() => change(Change.Remove({ propId }))}
+                        >
+                          <XIcon />
+                        </Button>
+                      </ButtonGroup.Root>
                     )}
-                  </Picker.Content>
-                </Picker.Root>
-              </div>
+                  </For>
+                </div>
+              </Show>
+              <Picker.Root label="Add expected property">
+                <Picker.Trigger
+                  variant="ghost"
+                  size="xs"
+                  class="text-fg-subtle hover:text-fg"
+                  disabled={mutation().waiting}
+                >
+                  <PlusIcon />
+                  Add
+                </Picker.Trigger>
+                <Picker.Content>
+                  {(close) => (
+                    <Picker.Query
+                      label="Add expected property"
+                      query={query}
+                      disabled={mutation().waiting}
+                      onSelect={(choice) => {
+                        change(
+                          Change.Set({
+                            propId: choice.propId,
+                            value: AttrsSchema.RuleExpectation.cases.required.make({}),
+                          }),
+                        );
+                        close();
+                      }}
+                    />
+                  )}
+                </Picker.Content>
+              </Picker.Root>
             </DescriptionList.Details>
           </DescriptionList.Row>
         </DescriptionList.Root>
