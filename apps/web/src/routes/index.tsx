@@ -1,13 +1,13 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
-import { createEffect, For } from "solid-js";
+import { createEffect, Errored, For, Loading } from "solid-js";
 import { Effect, Array, pipe, Option, Stream } from "effect";
-import { useAtomValue, useAtom } from "../lib/atom-solid";
+import { useAtomValue, useAtom, useAtomResource } from "../lib/atom-solid";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Badge } from "../components/ui/badge";
 import { Button, buttonVariants } from "../components/ui/button";
 import { CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { List, ListItem } from "../components/ui/list";
-import { MatchAsyncResult, MatchTag, createAtomStore } from "../lib";
+import { MatchAsyncResult, MatchTag } from "../lib";
 import { GraphAccessCommands } from "../lib/graph-access/commands";
 import { GraphAccessRuntime } from "../lib/graph-access/runtime";
 import { LocalRegistry } from "../lib/graph-access/local-registry";
@@ -50,8 +50,7 @@ const cloudGraphsNotOnDeviceAtom = GraphAccessRuntime.atom.atom(
 );
 
 function RouteComponent() {
-  const initialLocalGraphs: LocalRegistry.Schema.Record[] = [];
-  const localGraphs = createAtomStore(() => localGraphsAtom, initialLocalGraphs);
+  const [localGraphs] = useAtomResource(() => localGraphsAtom);
   const session = useAtomValue(() => SessionAtom.find);
 
   return (
@@ -121,18 +120,36 @@ function RouteComponent() {
           </div>
         </div>
 
-        <List>
-          <For
-            each={localGraphs.value}
+        <Errored
+          fallback={
+            <Alert variant="destructive">
+              <AlertDescription>Failed to load graphs on this device.</AlertDescription>
+            </Alert>
+          }
+        >
+          <Loading
             fallback={
-              <ListItem dashed class="px-4 py-3 text-sm text-fg-subtle">
-                No graphs yet.
-              </ListItem>
+              <List>
+                <ListItem dashed class="px-4 py-3 text-sm text-fg-subtle">
+                  Loading graphs...
+                </ListItem>
+              </List>
             }
           >
-            {(graph) => <GraphListItem graph={graph} />}
-          </For>
-        </List>
+            <List>
+              <For
+                each={localGraphs()}
+                fallback={
+                  <ListItem dashed class="px-4 py-3 text-sm text-fg-subtle">
+                    No graphs yet.
+                  </ListItem>
+                }
+              >
+                {(graph) => <GraphListItem graph={graph} />}
+              </For>
+            </List>
+          </Loading>
+        </Errored>
       </section>
 
       <MatchAsyncResult

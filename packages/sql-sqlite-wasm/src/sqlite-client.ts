@@ -1,7 +1,8 @@
 /**
  * Adapted from Effect's `packages/sql/sqlite-wasm/src/SqliteClient.ts`; the
- * copied revision was not recorded. Local changes add worker initialization,
- * cooperative OPFS wiring, and a module self export.
+ * copied revision was not recorded. Local changes add the worker configuration
+ * handshake, fail acquisition on startup errors before the connection ref exists,
+ * wire cooperative OPFS update notifications, and add a module self export.
  */
 /* eslint-disable anti-slop/no-known-value-widening, anti-slop/no-unknown-parameters, anti-slop/no-unsafe-dictionary-type, anti-slop/require-safety-comment-for-type-assertion -- Preserve the copied Effect client's dynamic worker protocol and casts. */
 
@@ -102,11 +103,14 @@ export const make = (
       : undefined;
 
     const pending = new Map<number, (effect: Exit.Exit<any, SqlError>) => void>();
+    // Custom: the first worker must finish starting before its ScopedRef exists.
+    let connectionRef: ScopedRef.ScopedRef<SqliteConnection> | undefined;
 
     const makeConnection = Effect.gen(function* () {
       let currentId = 0;
+      let ready = false;
       const scope = yield* Effect.scope;
-      const readyDeferred = yield* Deferred.make<void>();
+      const readyDeferred = yield* Deferred.make<void, SqlError>();
 
       const worker = yield* options.worker;
       const port = "port" in worker ? worker.port : worker;
@@ -124,6 +128,7 @@ export const make = (
         const [id, error, results] = event.data;
 
         if (id === "ready") {
+          ready = true;
           Deferred.doneUnsafe(readyDeferred, Exit.void);
 
           return;
@@ -153,8 +158,24 @@ export const make = (
 
       port.addEventListener("message", onMessage);
 
-      function onError() {
-        Effect.runFork(ScopedRef.set(connectionRef, makeConnection));
+      function onError(event: Event) {
+        if (!ready) {
+          const cause =
+            event instanceof ErrorEvent ? (event.error ?? event.message) : "Worker error event";
+
+          Deferred.doneUnsafe(
+            readyDeferred,
+            Exit.fail(
+              new SqlError({
+                reason: classifyError(cause, "Worker failed to initialize", "connect"),
+              }),
+            ),
+          );
+
+          return;
+        }
+
+        if (connectionRef) Effect.runFork(ScopedRef.set(connectionRef, makeConnection));
       }
 
       if ("onerror" in worker) worker.addEventListener("error", onError);
@@ -230,10 +251,11 @@ export const make = (
       });
     });
 
-    const connectionRef = yield* ScopedRef.fromAcquire(makeConnection);
+    const ref = yield* ScopedRef.fromAcquire(makeConnection);
+    connectionRef = ref;
 
     const semaphore = yield* Semaphore.make(1);
-    const acquirer = semaphore.withPermits(1)(ScopedRef.get(connectionRef));
+    const acquirer = semaphore.withPermits(1)(ScopedRef.get(ref));
 
     const transactionAcquirer = Effect.uninterruptibleMask(
       Effect.fnUntraced(function* (restore) {
@@ -242,7 +264,7 @@ export const make = (
         yield* restore(semaphore.take(1));
         yield* Scope.addFinalizer(scope, semaphore.release(1));
 
-        return yield* ScopedRef.get(connectionRef);
+        return yield* ScopedRef.get(ref);
       }),
     );
 

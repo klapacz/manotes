@@ -1,8 +1,10 @@
+import type { Types } from "effect";
 import type { StyledProps } from "../../lib/cva";
 import { Dynamic, type ValidComponent, type ComponentProps } from "@solidjs/web";
 import { omit } from "solid-js";
 import * as SDK from "@ui-sdk/solid/menu";
 import { Check, ChevronRight, Circle } from "@lucide/solid";
+import { createLink } from "@tanstack/solid-router";
 
 import { cx } from "../../lib/cva";
 
@@ -142,18 +144,16 @@ export const DropdownMenuItem = (props: DropdownMenuItemProps) => {
   );
 };
 
-type DropdownMenuItemLinkRootProps = DropdownMenuItemProps & { href?: string; to?: string };
+type DropdownMenuItemLinkRootProps = Types.MergeRight<
+  ComponentProps<"a">,
+  Omit<DropdownMenuItemProps, "render">
+>;
 
 const DropdownMenuItemLinkRoot = (props: DropdownMenuItemLinkRootProps) => {
-  return (
-    <DropdownMenuItem
-      render={(part) => <a {...part} href={props.to ?? props.href} />}
-      {...omit(props, "to", "href")}
-    />
-  );
+  return <DropdownMenuItem {...props} render={(part) => <a {...part} />} />;
 };
 
-export const DropdownMenuItemLink = DropdownMenuItemLinkRoot;
+export const DropdownMenuItemLink = createLink(DropdownMenuItemLinkRoot);
 
 export type DropdownMenuCheckboxItemProps = StyledProps<typeof SDK.MenuCheckboxItem>;
 
