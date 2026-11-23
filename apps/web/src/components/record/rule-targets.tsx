@@ -11,7 +11,6 @@ import type * as Y from "yjs";
 import { bindRt, createAtomResultStore, createSyncedAtom, MatchTag } from "../../lib";
 import { SyncedAttrs } from "../../lib/editor/synced-attrs";
 import { RecordLink } from "../../lib/record/link-component";
-import { ArrowUpRightIcon } from "../icons";
 import { Alert } from "../ui/alert";
 import { Button } from "../ui/button";
 import { RecordLabel } from "./record-label";
@@ -40,14 +39,8 @@ export function Links(props: {
         filter={props.targets}
         source={PaneSchema.Source.cases.rule.make({ id: props.ruleId })}
       />
-      <Button
-        variant="ghost"
-        size="xs"
-        class="ml-auto text-fg-subtle hover:text-fg"
-        onClick={openInvalid}
-      >
-        Invalid
-        <ArrowUpRightIcon />
+      <Button variant="ghost" size="xs" class="text-fg-subtle hover:text-fg" onClick={openInvalid}>
+        Show violations
       </Button>
     </>
   );

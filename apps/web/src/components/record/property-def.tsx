@@ -108,7 +108,7 @@ export function Root(props: {
         <DescriptionList.Root>
           <DescriptionList.Row>
             <DescriptionList.Term>Value kind</DescriptionList.Term>
-            <DescriptionList.Details class="flex flex-wrap gap-1">
+            <DescriptionList.Details class="flex flex-col items-start">
               <Picker.Root label="Value kind">
                 <Picker.Trigger variant="ghost" size="xs" disabled={mutation().waiting}>
                   {typeLabels[props.attrs.prop_type]}
@@ -130,11 +130,10 @@ export function Root(props: {
               <Button
                 variant="ghost"
                 size="xs"
-                class="ml-auto text-fg-subtle hover:text-fg"
+                class="text-fg-subtle hover:text-fg"
                 onClick={openInvalid}
               >
-                Invalid
-                <ArrowUpRightIcon />
+                Show violations
               </Button>
             </DescriptionList.Details>
           </DescriptionList.Row>
