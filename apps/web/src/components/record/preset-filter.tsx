@@ -9,41 +9,21 @@ import { createMemo, Show } from "solid-js";
 import type * as Y from "yjs";
 import { bindRt, createAtomResultStore, createSyncedAtom, MatchTag } from "../../lib";
 import { SyncedAttrs } from "../../lib/editor/synced-attrs";
-import { createStreamRefLabel } from "../../lib/editor/stream-ref/extension";
 import { RecordLink } from "../../lib/record/link-component";
-import { PaneNavigate } from "../../lib/record/pane.navigate";
-import { ArrowUpRightIcon } from "../icons";
 import { Alert } from "../ui/alert";
 import { Button } from "../ui/button";
 import { RecordLabel } from "./record-label";
+import { StreamFilterLink } from "./stream-filter-link";
 
 export function Links(props: {
   presetId: AttrsSchema.RecordId;
   filter: AttrsSchema.Filter | undefined;
 }) {
-  const openNext = PaneNavigate.useOpenNext();
-
-  const settings = (): StreamSettings.Settings => ({
-    ...StreamSettings.defaultDisplay,
-    filter: props.filter ?? [],
-  });
-
-  const label = createStreamRefLabel(settings);
-
-  const open = () => {
-    return openNext(
-      PaneSchema.make.stream({
-        ...settings(),
-        source: PaneSchema.Source.cases.preset.make({ id: props.presetId }),
-      }),
-    );
-  };
-
   return (
-    <Button variant="ghost" size="xs" onClick={open}>
-      {label()}
-      <ArrowUpRightIcon />
-    </Button>
+    <StreamFilterLink
+      filter={props.filter}
+      source={PaneSchema.Source.cases.preset.make({ id: props.presetId })}
+    />
   );
 }
 

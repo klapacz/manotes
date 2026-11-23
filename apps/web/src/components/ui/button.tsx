@@ -31,7 +31,7 @@ export const buttonVariants = cva({
     },
     size: {
       default: "h-9 px-4 py-2 has-[>svg]:px-3",
-      xs: "h-7 max-w-full gap-1.5 px-2 text-sm font-normal",
+      xs: "h-7 max-w-full gap-1.5 px-2 py-1 text-sm font-normal",
       sm: "h-8 gap-1.5 px-3 has-[>svg]:px-2.5",
       lg: "h-10 px-6 has-[>svg]:px-4",
       chip: "h-7 max-w-full gap-1.5 px-2 text-xs",
@@ -49,6 +49,9 @@ export const buttonVariants = cva({
       error: "bg-error-control text-error-fg hover:bg-error-control-hover",
       warning: "bg-warning-control text-warning-fg hover:bg-warning-control-hover",
     },
+    inline: {
+      true: "inline-block h-auto min-w-0 shrink whitespace-normal text-left wrap-anywhere [&_svg]:inline [&_svg]:align-middle",
+    },
   },
   defaultVariants: {
     variant: "default",
@@ -64,7 +67,7 @@ export type ButtonProps = StyledProps<typeof Primitive> &
   };
 
 export function Button(props: ButtonProps) {
-  const rest = omit(props, "class", "variant", "size", "rounded", "intent", "as");
+  const rest = omit(props, "class", "variant", "size", "rounded", "intent", "inline", "as");
 
   return (
     <Primitive
@@ -75,6 +78,7 @@ export function Button(props: ButtonProps) {
         size: props.size,
         rounded: props.rounded,
         intent: props.intent,
+        inline: props.inline,
         class: props.class,
       })}
     />

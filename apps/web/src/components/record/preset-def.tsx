@@ -28,7 +28,7 @@ export function Root(props: { recordId: AttrsSchema.RecordId; doc: Y.Doc; attrs:
         <DescriptionList.Root>
           <DescriptionList.Row>
             <DescriptionList.Term>Filter</DescriptionList.Term>
-            <DescriptionList.Details class="flex flex-wrap gap-1">
+            <DescriptionList.Details>
               <PresetFilter.Links presetId={props.recordId} filter={props.attrs.preset_filter} />
             </DescriptionList.Details>
           </DescriptionList.Row>

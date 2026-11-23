@@ -8,43 +8,22 @@ import { AsyncResult } from "effect/reactivity";
 import { createMemo, Show } from "solid-js";
 import type * as Y from "yjs";
 import { bindRt, createAtomResultStore, createSyncedAtom, MatchTag } from "../../lib";
-import { createStreamRefLabel } from "../../lib/editor/stream-ref/extension";
 import { RecordLink } from "../../lib/record/link-component";
-import { ArrowUpRightIcon } from "../icons";
 import { Alert } from "../ui/alert";
 import { Button } from "../ui/button";
 import { RecordLabel } from "./record-label";
 import { SyncedAttrs } from "../../lib/editor/synced-attrs";
-
-import { PaneNavigate } from "../../lib/record/pane.navigate";
+import { StreamFilterLink } from "./stream-filter-link";
 
 export function Link(props: {
   propId: AttrsSchema.RecordId;
   targets: AttrsSchema.TargetFilter | undefined;
 }) {
-  const openNext = PaneNavigate.useOpenNext();
-
-  const settings = (): StreamSettings.Settings => ({
-    ...StreamSettings.defaultDisplay,
-    filter: props.targets ?? [],
-  });
-
-  const label = createStreamRefLabel(settings);
-
-  const open = () => {
-    return openNext(
-      PaneSchema.make.stream({
-        ...settings(),
-        source: PaneSchema.Source.cases.prop.make({ id: props.propId }),
-      }),
-    );
-  };
-
   return (
-    <Button variant="ghost" size="xs" onClick={open}>
-      {label()}
-      <ArrowUpRightIcon />
-    </Button>
+    <StreamFilterLink
+      filter={props.targets}
+      source={PaneSchema.Source.cases.prop.make({ id: props.propId })}
+    />
   );
 }
 
