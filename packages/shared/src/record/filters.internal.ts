@@ -75,6 +75,19 @@ export function labelRecords(label: DisplayLabel): readonly AttrsSchema.RecordId
 
 export type PickerValue = string | number | boolean | undefined;
 
+export type ChoiceIcon = "set" | "unset" | "valid" | "invalid";
+
+export type ChoiceItem<Raw = PickerValue> = {
+  readonly label: string;
+  readonly value: Raw;
+  readonly icon?: ChoiceIcon;
+};
+
+export type ChoiceGroup<Raw = PickerValue> = {
+  readonly label: string;
+  readonly choices: readonly ChoiceItem<Raw>[];
+};
+
 type FilterValue = AttrsSchema.FilterCmp[2];
 
 type PickerKind = Data.TaggedEnum<{
@@ -83,7 +96,7 @@ type PickerKind = Data.TaggedEnum<{
   Date: {};
   Record: { filter: AttrsSchema.TargetFilter };
   Choices: {
-    groups: readonly { label: string; choices: readonly { label: string; value: PickerValue }[] }[];
+    groups: readonly ChoiceGroup[];
     getLabel: (raw: PickerValue) => Option.Option<Label>;
   };
 }>;
@@ -148,7 +161,7 @@ export function comparison<Value, Cmp extends AttrsSchema.FilterCmp>(opts: {
     return matched as Option.Option<Cmp>;
   };
 
-  const make = (value: Value) => ({ _tag: "cmp" as const, val: opts.make(value) });
+  const make = (value: Value) => AttrsSchema.makeFilterExpr.cmp({ val: opts.make(value) });
 
   const selection = (expression: AttrsSchema.FilterExpr) => {
     return Option.flatMap(match(expression), (cmp) => {
@@ -378,7 +391,7 @@ function recordPicker<Value>(
 }
 
 type Choices<Raw> = {
-  groups: readonly { label: string; choices: readonly { label: string; value: Raw }[] }[];
+  groups: readonly ChoiceGroup<Raw>[];
 };
 
 function choicesPicker<Raw extends PickerValue, Value = Raw>(

@@ -529,4 +529,37 @@ describe("Filters definitions and Outline operations", () => {
     expect(Filters.labelRecords(label)).toEqual([id]);
     expect(Filters.renderLabel(label, () => "Inbox")).toBe("Inbox");
   });
+
+  it("declares choice icons explicitly only on presence and validity choices", () => {
+    const streams = Filters.forStreams(registry);
+
+    const choicesByLabel = (groupLabel: string) => {
+      const group = streams.groups.find((g) => Filters.renderLabel(g.label) === groupLabel);
+
+      return (group?.entries ?? []).flatMap((entry) => {
+        return entry.picker && Predicate.isTagged(entry.picker, "Choices")
+          ? entry.picker.groups.flatMap((choiceGroup) => choiceGroup.choices)
+          : [];
+      });
+    };
+
+    expect(choicesByLabel("Title").map(({ label, icon }) => ({ label, icon }))).toEqual([
+      { label: "Is set", icon: "set" },
+      { label: "Is unset", icon: "unset" },
+    ]);
+
+    expect(choicesByLabel("Archived").map(({ label, icon }) => ({ label, icon }))).toEqual([
+      { label: "True", icon: undefined },
+      { label: "False", icon: undefined },
+      { label: "Is set", icon: "set" },
+      { label: "Is unset", icon: "unset" },
+      { label: "Is valid", icon: "valid" },
+      { label: "Is invalid", icon: "invalid" },
+    ]);
+
+    expect(choicesByLabel("Record kind").every(({ icon }) => icon === undefined)).toBe(true);
+    expect(choicesByLabel("Links to")).toEqual([]);
+    expect(choicesByLabel("Links from")).toEqual([]);
+    expect(choicesByLabel("Rule violations")).toEqual([]);
+  });
 });

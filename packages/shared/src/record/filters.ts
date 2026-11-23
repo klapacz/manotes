@@ -237,8 +237,8 @@ export function property(definition: PropRecordRepo.Def): Group {
         {
           label: "",
           choices: [
-            { label: "Is set", value: true },
-            { label: "Is unset", value: false },
+            { label: "Is set", value: true, icon: "set" },
+            { label: "Is unset", value: false, icon: "unset" },
           ],
         },
       ],
@@ -304,8 +304,8 @@ const title = comparison({
       {
         label: "Title",
         choices: [
-          { label: "Is set", value: true },
-          { label: "Is unset", value: false },
+          { label: "Is set", value: true, icon: "set" },
+          { label: "Is unset", value: false, icon: "unset" },
         ],
       },
     ],
@@ -453,8 +453,8 @@ function propertyValidity(propId: AttrsSchema.RecordId) {
         {
           label: "",
           choices: [
-            { label: "Is valid", value: false },
-            { label: "Is invalid", value: true },
+            { label: "Is valid", value: false, icon: "valid" },
+            { label: "Is invalid", value: true, icon: "invalid" },
           ],
         },
       ],

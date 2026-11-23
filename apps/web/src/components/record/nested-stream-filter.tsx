@@ -70,7 +70,6 @@ export function NestedStreamFilterEditor(props: {
     <FilterPicker
       label="Filter stream"
       filters={filters()}
-      filter={props.filter}
       siblings={rootGroup()?.val ?? props.filter}
       menu={props.menu}
       onMenuChange={props.onMenuChange}

@@ -37,7 +37,6 @@ export function FilterLabel(props: { label: Filters.DisplayLabel }) {
 export function FilterPicker(props: {
   label: string;
   filters: Filters.Registry;
-  filter?: AttrsSchema.Filter;
   value?: AttrsSchema.FilterExpr;
   siblings?: AttrsSchema.Filter;
   menu?: FilterMenu;
@@ -85,7 +84,6 @@ export function FilterPicker(props: {
         {(close) => (
           <FilterCommands
             filters={props.filters}
-            filter={props.filter}
             value={props.value}
             siblings={props.siblings}
             body={props.menu?.body}
@@ -106,7 +104,6 @@ export function FilterPicker(props: {
 
 function FilterCommands(props: {
   filters: Filters.Registry;
-  filter?: AttrsSchema.Filter;
   value?: AttrsSchema.FilterExpr;
   siblings?: AttrsSchema.Filter;
   body?: boolean;
@@ -392,41 +389,67 @@ function entryQuery(
 ): QueryEngine.Query<Choice, unknown, RecordRepo.Service | RecordCache.Service> {
   const selection = expression ? entry.selection(expression) : Option.none();
 
-  if (!entry.picker) {
-    const item = Option.flatMap(entry.select(undefined), (expression) => {
-      return Option.map(entry.getLabel(expression), (label) => ({ expression, label }));
-    });
+  if (!entry.picker) return namedEntryQuery(entry, index, selection);
 
-    if (Option.isNone(item)) return MenuQuery.choices(() => []);
-    const { expression: target, label } = item.value;
+  const candidates = pickerCandidates(entry.picker, index, selection);
 
-    const toChoice = (text: string): Choice => ({
-      value: String(index),
-      label: text,
-      expression: target,
-      suffix: Option.isSome(selection) ? (
-        <SelectedIcon aria-label="Selected" class="size-4" />
-      ) : undefined,
-    });
-
-    if (!Array.isReadonlyArrayNonEmpty(Filters.labelRecords(label))) {
-      return MenuQuery.choices(() => [toChoice(Filters.renderLabel(label))]);
-    }
-
-    return (request) => {
-      return resolveFilterLabels([label]).pipe(
-        Stream.switchMap(([resolved]) => {
-          return MenuQuery.choices(() => [toChoice(resolved ?? Filters.renderLabel(label))])(
-            request,
+  return (request) => {
+    return candidates(request).pipe(
+      Stream.map((matches) => {
+        return Array.filterMap(matches, (match) => {
+          return Result.fromOption(
+            Option.map(entry.select(match.value.raw), (selected) => ({
+              ...match,
+              value: { ...match.value, expression: selected },
+            })),
+            () => undefined,
           );
-        }),
-      );
-    };
+        });
+      }),
+    );
+  };
+}
+
+function namedEntryQuery(
+  entry: Filters.Definition,
+  index: number,
+  selection: Option.Option<Filters.PickerValue>,
+): QueryEngine.Query<Choice, unknown, RecordCache.Service> {
+  const item = Option.flatMap(entry.select(undefined), (expression) => {
+    return Option.map(entry.getLabel(expression), (label) => ({ expression, label }));
+  });
+
+  if (Option.isNone(item)) return MenuQuery.choices(() => []);
+  const { expression: target, label } = item.value;
+
+  const toChoice = (text: string): Choice => ({
+    value: String(index),
+    label: text,
+    expression: target,
+    suffix: Option.isSome(selection) ? (
+      <SelectedIcon aria-label="Selected" class="size-4" />
+    ) : undefined,
+  });
+
+  if (!Array.isReadonlyArrayNonEmpty(Filters.labelRecords(label))) {
+    return MenuQuery.choices(() => [toChoice(Filters.renderLabel(label))]);
   }
 
-  const picker = entry.picker;
+  return (request) => {
+    return resolveFilterLabels([label]).pipe(
+      Stream.switchMap(([resolved]) => {
+        return MenuQuery.choices(() => [toChoice(resolved ?? Filters.renderLabel(label))])(request);
+      }),
+    );
+  };
+}
 
-  const choice = (value: Filters.PickerValue, label: string): Candidate => ({
+function pickerCandidates(
+  picker: NonNullable<Filters.Definition["picker"]>,
+  index: number,
+  selection: Option.Option<Filters.PickerValue>,
+): QueryEngine.Query<Candidate, unknown, RecordRepo.Service> {
+  const makeCandidate = (value: Filters.PickerValue, label: string): Candidate => ({
     value: `${index}:${JSON.stringify(value)}`,
     label,
     raw: value,
@@ -439,25 +462,24 @@ function entryQuery(
     ) : undefined,
   });
 
-  const query: QueryEngine.Query<Candidate, unknown, RecordRepo.Service> = Match.value(picker).pipe(
+  return Match.value(picker).pipe(
     Match.tag("Choices", ({ groups }) => {
-      const query = MenuQuery.choices(() => {
+      return MenuQuery.choices(() => {
         return groups.flatMap((group) => {
           return group.choices.map((item) => ({
-            ...choice(item.value, item.label),
+            ...makeCandidate(item.value, item.label),
+            icon: choiceIcon(item.icon),
             group: group.label ? `${index}:${group.label}` : "operators",
             groupLabel: group.label ? () => group.label : undefined,
           }));
         });
       });
-
-      return query;
     }),
     Match.tag("Record", ({ filter }) => {
       const query = filter.length ? RecordQuery.scoped({ filter }) : RecordQuery.query;
 
       return QueryEngine.map(query, (record) => ({
-        ...choice(record.value, record.label),
+        ...makeCandidate(record.value, record.label),
         badge: record.badge,
         group: String(index),
         groupLabel: () => <FilterLabel label={picker.label} />,
@@ -469,11 +491,14 @@ function entryQuery(
           ...(request.text === "" &&
           Predicate.isString(picker.defaultValue) &&
           picker.defaultValue !== ""
-            ? [{ score: 1, value: choice(picker.defaultValue, picker.defaultValue) }]
+            ? [{ score: 1, value: makeCandidate(picker.defaultValue, picker.defaultValue) }]
             : []),
           {
             score: 1,
-            value: choice(request.text, request.text === "" ? 'Use empty text ""' : request.text),
+            value: makeCandidate(
+              request.text,
+              request.text === "" ? 'Use empty text ""' : request.text,
+            ),
           },
         ]);
       };
@@ -482,51 +507,29 @@ function entryQuery(
       return (request: QueryEngine.Request) => {
         return Stream.succeed(
           !request.text.trim() && Predicate.isNumber(picker.defaultValue)
-            ? [{ score: 1, value: choice(picker.defaultValue, String(picker.defaultValue)) }]
+            ? [{ score: 1, value: makeCandidate(picker.defaultValue, String(picker.defaultValue)) }]
             : Option.match(PropQuery.parseNumber(request.text), {
                 onNone: () => [],
-                onSome: ({ val }) => [{ score: 1, value: choice(val, String(val)) }],
+                onSome: ({ val }) => [{ score: 1, value: makeCandidate(val, String(val)) }],
               }),
         );
       };
     }),
     Match.tag("Date", () => {
-      return QueryEngine.map(DateSuggestions.query, (date) => choice(date.id, date.title));
+      return QueryEngine.map(DateSuggestions.query, (date) => makeCandidate(date.id, date.title));
     }),
     Match.exhaustive,
   );
+}
 
-  return (request) => {
-    return query(request).pipe(
-      Stream.map((matches) => {
-        return Array.filterMap(matches, (match) => {
-          return Result.fromOption(
-            Option.map(entry.select(match.value.raw), (expression) => ({
-              ...match,
-              value: {
-                ...match.value,
-                expression,
-                icon: Match.value(expression).pipe(
-                  Match.when({ _tag: "cmp", val: [Match.any, "exists", true] }, () => (
-                    <CircleCheck aria-hidden="true" />
-                  )),
-                  Match.when({ _tag: "cmp", val: [Match.any, "exists", false] }, () => (
-                    <CircleDashed aria-hidden="true" />
-                  )),
-                  Match.when({ _tag: "cmp", val: [Match.any, "violation", true] }, () => (
-                    <CircleX aria-hidden="true" />
-                  )),
-                  Match.when({ _tag: "cmp", val: [Match.any, "violation", false] }, () => (
-                    <CircleCheck aria-hidden="true" />
-                  )),
-                  Match.orElse(() => undefined),
-                ),
-              },
-            })),
-            () => undefined,
-          );
-        });
-      }),
-    );
-  };
+function choiceIcon(icon: Filters.ChoiceIcon | undefined): JSX.Element | undefined {
+  if (!icon) return undefined;
+
+  return Match.value(icon).pipe(
+    Match.when("set", () => <CircleCheck aria-hidden="true" />),
+    Match.when("valid", () => <CircleCheck aria-hidden="true" />),
+    Match.when("unset", () => <CircleDashed aria-hidden="true" />),
+    Match.when("invalid", () => <CircleX aria-hidden="true" />),
+    Match.exhaustive,
+  );
 }
