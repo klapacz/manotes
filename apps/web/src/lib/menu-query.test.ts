@@ -160,6 +160,34 @@ describe("prefixed menu queries", () => {
     expect(results).toHaveLength(3);
     expect(calls).toBe(1);
   });
+
+  it("ranks top-level partial matches ahead of unprefixed nested exact matches", async () => {
+    const noop = () => {};
+
+    const query = QueryEngine.combine([
+      MenuQuery.actions(() => {
+        return [
+          { value: "links-to", label: "Links to", run: noop },
+          { value: "links-from", label: "Links from", run: noop },
+        ];
+      }),
+      MenuQuery.nested({
+        label: "Links to",
+        query: MenuQuery.choices(() => [{ value: "links", label: "Links", run: noop }]),
+      }),
+    ]);
+
+    const unprefixed = await read(query({ text: "links" }));
+    expect(unprefixed.map((match) => match.value.value)).toEqual([
+      "links-to",
+      "links-from",
+      "Links to:links",
+    ]);
+
+    const prefixed = await read(query({ text: "links to links" }));
+    expect(prefixed.map((match) => match.value.value)).toEqual(["links-to", "Links to:links"]);
+    expect(prefixed[1]?.score).toBe(1);
+  });
 });
 
 function read<T, E>(stream: Stream.Stream<T, E, Scope.Scope>) {

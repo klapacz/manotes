@@ -52,16 +52,24 @@ export function score(opts: { text: string; label: string; keywords?: readonly s
 
   if (!query) return 1;
 
-  const labels = [opts.label, ...(opts.keywords ?? [])];
+  const labels = [opts.label, ...(opts.keywords ?? [])].map((label) => label.toLowerCase());
 
-  if (labels.some((label) => label.toLowerCase() === query)) return 1;
+  // Score match quality in descending tiers: exact > prefix > word-prefix > substring.
+  if (labels.some((label) => label === query)) return 1;
 
-  if (labels.some((label) => label.toLowerCase().startsWith(query))) return 0.9;
+  if (labels.some((label) => label.startsWith(query))) return 0.9;
 
-  return labels.some((label) => label.toLowerCase().includes(query)) ? 0.7 : 0;
+  // Prefer matches at the start of any word (e.g. "from" in "Links from") over mid-word hits.
+  if (labels.some((label) => startsWord(label, query))) return 0.8;
+
+  return labels.some((label) => label.includes(query)) ? 0.7 : 0;
 }
 
 export * as QueryEngine from "./query-engine";
+
+function startsWord(label: string, query: string): boolean {
+  return label.split(/\s+/).some((word) => word.startsWith(query));
+}
 
 function rank<T>(groups: readonly (readonly Match<T>[])[]): readonly Match<T>[] {
   const matches: Match<T>[] = [];

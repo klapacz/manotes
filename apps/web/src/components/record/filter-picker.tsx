@@ -182,6 +182,17 @@ function FilterCommands(props: {
 
     return QueryEngine.combine([
       MenuQuery.actions(() => actions),
+      ...(props.onOpenRecord
+        ? [
+            MenuQuery.nested({
+              label: "Open record",
+              query: QueryEngine.map(RecordQuery.query, (record): MenuQuery.Action => ({
+                ...record,
+                run: () => props.onOpenRecord?.(record.value),
+              })),
+            }),
+          ]
+        : []),
       ...groups.map((group, groupIndex) => {
         return MenuQuery.nested({
           label: names[groupIndex] ?? Filters.renderLabel(group.label),
@@ -199,17 +210,6 @@ function FilterCommands(props: {
           ),
         });
       }),
-      ...(props.onOpenRecord
-        ? [
-            MenuQuery.nested({
-              label: "Open record",
-              query: QueryEngine.map(RecordQuery.query, (record): MenuQuery.Action => ({
-                ...record,
-                run: () => props.onOpenRecord?.(record.value),
-              })),
-            }),
-          ]
-        : []),
     ]);
   });
 
@@ -494,7 +494,8 @@ function pickerCandidates(
             ? [{ score: 1, value: makeCandidate(picker.defaultValue, picker.defaultValue) }]
             : []),
           {
-            score: 1,
+            // Free-text accepts any query, so keep it below concrete matches in combined pickers.
+            score: 0.2,
             value: makeCandidate(
               request.text,
               request.text === "" ? 'Use empty text ""' : request.text,

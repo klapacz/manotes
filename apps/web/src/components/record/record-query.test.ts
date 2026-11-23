@@ -53,6 +53,12 @@ describe("RecordQuery", () => {
 
     const byId = new Map(matches.map((match) => [match.value.value, match.score]));
 
+    expect(matches.map((match) => match.value.value)).toEqual([
+      RecordSchema.Id.make("note-title"),
+      RecordSchema.Id.make("prop-title"),
+      RecordSchema.Id.make("note-body"),
+      RecordSchema.Id.make("rule-body"),
+    ]);
     expect(byId.get(RecordSchema.Id.make("note-title"))!).toBeGreaterThan(
       byId.get(RecordSchema.Id.make("prop-title"))!,
     );

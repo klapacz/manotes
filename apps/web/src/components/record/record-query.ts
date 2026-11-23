@@ -1,6 +1,6 @@
 import { RecordFormat } from "@manotes/shared/record/format";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
-import { Effect, Option, Predicate, Stream } from "effect";
+import { Array, Effect, Option, Order, Predicate, Stream, pipe } from "effect";
 import { RecordRepo } from "@manotes/shared/record.repo";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import type { RecordSchema } from "@manotes/shared/record.schema";
@@ -13,6 +13,10 @@ export type Result = {
 };
 
 const NON_NOTE_PENALTY = 0.05;
+
+const byScoreDesc: Order.Order<QueryEngine.Match<Result>> = Order.flip(
+  Order.mapInput(Order.Number, (match) => match.score),
+);
 
 export const query = searchQuery([]);
 
@@ -39,14 +43,18 @@ function searchQuery(filter: AttrsSchema.Filter) {
   return QueryEngine.share((request) => {
     return Stream.unwrap(search(request)).pipe(
       Stream.map((records) => {
-        return records.map((record) => ({
-          value: {
-            value: record.id,
-            label: RecordFormat.queryLabel(record, request.text),
-            badge: showKind ? RecordFormat.kindLabel(record._tag) : undefined,
-          },
-          score: scoreRecord(record, request.text),
-        }));
+        return pipe(
+          records,
+          Array.map((record) => ({
+            value: {
+              value: record.id,
+              label: RecordFormat.queryLabel(record, request.text),
+              badge: showKind ? RecordFormat.kindLabel(record._tag) : undefined,
+            },
+            score: scoreRecord(record, request.text),
+          })),
+          Array.sort(byScoreDesc),
+        );
       }),
     );
   });

@@ -188,7 +188,8 @@ export function textQuery(opts: {
 
           return [
             {
-              score: 1,
+              // Free-text accepts any query, so keep it below concrete matches in combined pickers.
+              score: String.isNonEmpty(request.text) ? 0.2 : 1,
               value: {
                 value: label,
                 label,

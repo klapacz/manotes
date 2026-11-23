@@ -4,10 +4,11 @@ import { QueryEngine } from "./query-engine";
 import { DateSuggestions } from "./date-suggestions";
 
 describe("menu queries", () => {
-  it("ranks exact labels and aliases ahead of prefixes and other matches", () => {
+  it("ranks exact labels and aliases ahead of prefixes, word prefixes, and other matches", () => {
     const score = (label: string) => QueryEngine.score({ text: "date", label });
     expect(score("Date")).toBeGreaterThan(score("Date settings"));
     expect(score("Date settings")).toBeGreaterThan(score("Change date"));
+    expect(score("Change date")).toBeGreaterThan(score("Updated"));
     expect(QueryEngine.score({ text: "calendar", label: "Date", keywords: ["calendar"] })).toBe(1);
     expect(QueryEngine.score({ text: "zzzz", label: "Date" })).toBe(0);
   });

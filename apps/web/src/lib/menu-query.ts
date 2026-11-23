@@ -51,6 +51,9 @@ export function actions(values: () => readonly Action[]): QueryEngine.Query<Acti
   };
 }
 
+// Keep unprefixed nested matches below top-level action matches (which score >= 0.7).
+const UNPREFIXED_NESTED_SCALE = 0.5;
+
 export function nested<T extends Picker.Choice, E, R>(opts: {
   label: string;
   query: QueryEngine.Query<T, E, R>;
@@ -65,7 +68,16 @@ export function nested<T extends Picker.Choice, E, R>(opts: {
     if (request.text.trim().length < 2) return Stream.succeed([]);
     const text = prefixText({ label: opts.label, text: request.text });
 
-    return query(text === undefined ? request : { text });
+    if (text !== undefined) return query({ text });
+
+    return query(request).pipe(
+      Stream.map((matches) => {
+        return matches.map((match) => ({
+          ...match,
+          score: match.score * UNPREFIXED_NESTED_SCALE,
+        }));
+      }),
+    );
   };
 }
 

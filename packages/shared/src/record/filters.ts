@@ -381,10 +381,10 @@ export const groups = [
   group({ label: "Body", entries: [body] }),
   group({ label: "Date", entries: [date] }),
   group({ label: "Title", entries: [title] }),
+  ...links.map((entry) => group({ label: entry.picker.label, entries: [entry] })),
   ...[ownedType, ownedParent, propType].map((entry) => {
     return group({ label: entry.picker.label, entries: [entry] });
   }),
-  ...links.map((entry) => group({ label: entry.picker.label, entries: [entry] })),
 ];
 
 function savedPreset(preset: PresetRecordRepo.Def) {
