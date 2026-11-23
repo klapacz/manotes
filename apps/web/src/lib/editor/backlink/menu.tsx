@@ -40,6 +40,7 @@ const STREAM_REF_REGEX = /\[!([^\]\n]*)$/u;
 type BacklinkRecord = {
   id: RecordSchema.Id;
   title: string;
+  _tag: AttrsSchema.RecordTag;
 };
 
 const EMPTY_BACKLINK_RECORDS: BacklinkRecord[] = [];
@@ -98,7 +99,7 @@ export default function BacklinkMenu(props: { currentRecordId: RecordSchema.Id }
                 ...record,
                 title: RecordFormat.label(record),
               })),
-              Array.map(Struct.pick(["id", "title"])),
+              Array.map(Struct.pick(["id", "title", "_tag"])),
             ),
           ),
         );
@@ -129,7 +130,10 @@ export default function BacklinkMenu(props: { currentRecordId: RecordSchema.Id }
                 onSelect={() => onSelect(record.id)}
                 value={record.id}
               >
-                {record.title}
+                <span class="min-w-0 flex-1 truncate">{record.title}</span>
+                <Show when={RecordFormat.kindLabel(record._tag)}>
+                  {(label) => <span class="shrink-0 text-sm text-fg-subtle">{label()}</span>}
+                </Show>
               </AutocompleteItem>
             )}
           </For>

@@ -43,6 +43,17 @@ export function propValueLabel(value: AttrsSchema.PropVal): string {
   );
 }
 
+export function kindLabel(tag: AttrsSchema.RecordTag): string | undefined {
+  return Match.value(tag).pipe(
+    Match.when("note", () => undefined),
+    Match.when("prop", () => "Property"),
+    Match.when("owned", () => "Owned"),
+    Match.when("rule", () => "Rule"),
+    Match.when("preset", () => "Preset"),
+    Match.exhaustive,
+  );
+}
+
 export function ruleLabel(status: RuleProps.GroupStatus): string {
   return Match.value(status).pipe(
     Match.tag("Unavailable", () => "Rule unavailable"),

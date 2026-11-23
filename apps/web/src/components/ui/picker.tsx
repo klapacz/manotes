@@ -234,6 +234,7 @@ export type Choice = {
   value: string;
   label: string;
   labelSuffix?: JSX.Element;
+  badge?: string;
   group?: string;
   groupLabel?: () => JSX.Element;
   icon?: JSX.Element;
@@ -326,6 +327,9 @@ export function Query<Option extends Choice>(props: QueryProps<Option>) {
                 <span class="min-w-0 truncate">{choice.label}</span>
                 {choice.labelSuffix}
               </span>
+              <Show when={choice.badge}>
+                <span class="shrink-0 text-sm text-fg-subtle">{choice.badge}</span>
+              </Show>
               <Show when={choice.detail}>
                 {(detail) => (
                   <span class={cx("relative min-w-0 max-w-[50%]", choice.modified && "pr-2")}>

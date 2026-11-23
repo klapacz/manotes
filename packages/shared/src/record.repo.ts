@@ -331,7 +331,10 @@ export class Service extends Context.Service<Service>()("RecordRepo.Service", {
           Query.from(Tables.records),
           Query.where(RecordFilter.filterPredicate(filter)),
           Query.where(Query.neq(Tables.records.text, "")),
+          // Rank title matches first, then prioritize notes within each tier so non-note
+          // records (properties, rules, presets, owned) don't crowd out notes before LIMIT 100.
           Query.orderBy(Query.case().when(RecordFilter.titleMatchPredicate(filter), 0).else(1)),
+          Query.orderBy(Query.case().when(Query.eq(Tables.records._tag, "note"), 0).else(1)),
           Query.orderBy(Tables.records.createdAt, "desc"),
           Query.limit(100),
         ),
@@ -453,6 +456,7 @@ export type Meta = Query.ResultRow<typeof streamSelect>;
 
 const previewSelect = Query.select({
   id: Tables.records.id,
+  _tag: Tables.records._tag,
   title: Tables.records.title,
   text: Tables.records.text,
   date: Tables.records.date,

@@ -458,6 +458,7 @@ function entryQuery(
 
       return QueryEngine.map(query, (record) => ({
         ...choice(record.value, record.label),
+        badge: record.badge,
         group: String(index),
         groupLabel: () => <FilterLabel label={picker.label} />,
       }));
