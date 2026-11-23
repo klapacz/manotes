@@ -29,6 +29,6 @@ export const decodeNonEmptyArray = Schema.decodeEffect(
 
 export const decodeArray = Schema.decodeEffect(Schema.Array(CommittedEventFromRecord));
 
-export const encodeCreateRecords = Schema.encodeEffect(Schema.Array(CreateRecord));
+export const encodeCreateRecords = Schema.encodeEffect(Schema.NonEmptyArray(CreateRecord));
 
 export * as GraphSyncEventSchema from "./schema.ts";

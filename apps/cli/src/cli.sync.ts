@@ -1,5 +1,5 @@
 import { Effect, Layer, Predicate, Option, Redacted, Stream, SubscriptionRef } from "effect";
-import { NodeWS } from "@effect/platform-node/NodeSocket";
+import * as NodeWS from "@effect/platform-node/NodeWS";
 import { Socket } from "effect/socket";
 import { GraphSync } from "@manotes/shared/graph-sync/service";
 import { GraphSyncContext } from "@manotes/shared/graph-sync/context";

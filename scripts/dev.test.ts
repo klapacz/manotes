@@ -2,7 +2,7 @@ import { Server } from "node:net";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { NodeServices, NodeSocketServer } from "@effect/platform-node";
-import { ConfigProvider, Deferred, Effect, Fiber, Record, Runtime, Stdio } from "effect";
+import { ConfigProvider, Deferred, Effect, Fiber, Record, Runtime, Stdio, Schema } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { RouteConflictError, RouteStore } from "portless";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
@@ -233,8 +233,15 @@ describe("main", () => {
           if (command.command === "vp") return ChildProcessSpawner.ExitCode(0);
 
           const env = command.options.env;
-          const webPort = PortSchema.decode(env?.[DevEnv.names.webPort] ?? "");
-          const apiPort = PortSchema.decode(env?.[DevEnv.names.apiPort] ?? "");
+
+          const webPort = Schema.decodeUnknownSync(PortSchema.FromString)(
+            env?.[DevEnv.names.webPort],
+          );
+
+          const apiPort = Schema.decodeUnknownSync(PortSchema.FromString)(
+            env?.[DevEnv.names.apiPort],
+          );
+
           expect(webPort).not.toBe(apiPort);
           expect(env?.[DevEnv.names.stage]).toMatch(new RegExp(`^dev_.+_${workspace}$`));
           expect(command.args.slice(1, 9)).toEqual([
@@ -253,7 +260,11 @@ describe("main", () => {
           expect(command.args.includes("@manotes/extension")).toBe(extension);
           expect(command.args.at(-1)).toBe("dev");
           expect(store.loadRoutes()).toHaveLength(before.length + 3);
-          const extensionPort = PortSchema.decode(env?.[DevEnv.names.extensionPort] ?? "");
+
+          const extensionPort = Schema.decodeUnknownSync(PortSchema.FromString)(
+            env?.[DevEnv.names.extensionPort],
+          );
+
           expect(new Set([webPort, apiPort, extensionPort]).size).toBe(3);
 
           return ChildProcessSpawner.ExitCode(0);

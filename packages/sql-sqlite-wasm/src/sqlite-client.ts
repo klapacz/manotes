@@ -248,6 +248,7 @@ export const make = (
 
     return Object.assign(
       (yield* SqlClient.make({
+        driver: "sqlite-wasm",
         acquirer,
         compiler,
         transactionAcquirer,

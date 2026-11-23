@@ -1,6 +1,6 @@
 # Database maintenance
 
-Manotes uses Effect Query Builder 0.24.1 with Effect 4.0.3 for SQLite queries. Table declarations are the schema source for queries and migrations. See the [SQLite migration package](../packages/effect-db-sqlite/README.md) for generation and execution commands, and [dependency patches](../patches/README.md) before upgrading QB, effect-db or Drizzle Kit.
+Manotes uses Effect Query Builder 0.24.1 with Effect 4.1.5 for SQLite queries. Table declarations are the schema source for queries and migrations. See the [SQLite migration package](../packages/effect-db-sqlite/README.md) for generation and execution commands, and [dependency patches](../patches/README.md) before upgrading QB, effect-db or Drizzle Kit.
 
 ## Tables, codecs and writes
 

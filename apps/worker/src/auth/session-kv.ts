@@ -1,4 +1,4 @@
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import { Context, Data, Duration, Effect, Layer, Schema } from "effect";
 
 const StoredSession = Schema.Struct({

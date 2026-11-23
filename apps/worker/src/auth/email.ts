@@ -1,4 +1,4 @@
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import { Config, Context, Effect, Layer } from "effect";
 import { AuthErrors } from "./errors.ts";
 

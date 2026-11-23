@@ -1,6 +1,6 @@
 # effect-qb 0.24.1 compatibility patch
 
-`effect-qb@0.24.1.patch` modifies the published npm package. The project uses `effect@4.0.3`. The published 0.24.1 package still needs these compatibility fixes.
+`effect-qb@0.24.1.patch` modifies the published npm package. The project uses `effect@4.1.5`. The published 0.24.1 package still needs these compatibility fixes.
 
 | Upstream source                                         | Reason and modification                                                                                                                                                                                                                                                                                                                    |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -30,3 +30,13 @@ These changes are needed to reproduce the existing SQLite schema through QB DDL.
 `drizzle-kit@1.0.0-rc.4.patch` modifies the published `bin.cjs`, `cli.js`/`.mjs` and `payload-sqlite.js`/`.mjs` bundles. Source: `drizzle-kit/src/dialects/sqlite/convertor.ts`, the `recreate_table` converter in Drizzle tag `v1.0.0-rc.4`. The unpatched converter reconstructs `sqlite_sequence` from retained rows, losing IDs of deleted events. The patch saves the old sequence before replacing an AUTOINCREMENT table, restores the greater old/new sequence after renaming, and removes its temporary table. The `drizzle-kit/src/dialects/sqlite/diff.ts` rebuild predicate and the converter source-column filter also preserve readable generated values when a column becomes writable, rather than dropping/re-adding it.
 
 Remove the patch when `packages/effect-db-sqlite/src/schema.test.ts`'s sequence and generated-to-writable regressions pass against an unpatched upstream release. There is no foreign-key fix in this patch; the agreed transaction/cascade limitation is documented in the runner and package README.
+
+## Effect 4.1 compatibility
+
+The catalog pins Effect and the installed platform/SQL packages to 4.1.5. Overrides keep effect-db's exact 4.0.0 platform-node and sql-pg dependencies on that release too. The existing QB 0.24.1 patch needs no additional changes for this upgrade. QB and effect-db 0.24.2 restrict their Effect peer range to versions below 4.1, so this project retains the patched 0.24.1 packages.
+
+`effect-db@0.24.1.patch` also updates upstream `src/internal/node-platform.ts`, `src/internal/postgres-source-discovery.ts`, `src/postgres/migrate.ts` and `src/cli.ts`, plus their published declarations and bundled copies. Effect 4.1 removed `effect/Crypto` and crypto from `NodeServices`. Use `SecureRandom.uuidV4()` for temporary discovery filenames, `Digest.sha256` for migration checksums, and explicitly merge `NodeCrypto.layer` into the Node service providers. The checksum prefix, newline normalization and hex encoding stay the same.
+
+Alchemy 2.0.0-beta.87 supports Effect 4.1 directly and needs no compatibility patch. Cloudflare integrations now come from the matching `@alchemy.run/cloudflare` package.
+
+The first deployment with this version upgrades Cloudflare's state store to v8. Upgrade all machines and CI jobs together, then never use an older Alchemy client against the upgraded store. Upstream warns that downgrading can lose the state encryption key. See the [beta.85 state-store upgrade notes](https://alchemy.run/blog/2026-11-01-beta-85/#cloudflare-state-store-v8). This dependency update does not run that deployment or state migration.

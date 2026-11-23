@@ -2,7 +2,7 @@ import { DevEnv } from "@manotes/shared/dev-env";
 import { fileURLToPath } from "node:url";
 import { PortSchema } from "@manotes/shared/schema/port";
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Command from "alchemy/Command";
 import { Effect, Config, Layer } from "effect";
 import Worker from "./src/index.ts";

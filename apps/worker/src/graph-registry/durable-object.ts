@@ -1,4 +1,4 @@
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import { SqliteClient } from "@effect/sql-sqlite-do";
 import { DisplayNameTakenError, GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
 import { Effect, Layer, Option, Predicate, Scope, Context } from "effect";

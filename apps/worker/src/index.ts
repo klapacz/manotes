@@ -1,7 +1,7 @@
 import { DevEnv } from "@manotes/shared/dev-env";
 import { PortSchema } from "@manotes/shared/schema/port";
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Output from "alchemy/Output";
 import { Effect, Layer } from "effect";
 import { HttpMiddleware, HttpRouter, HttpServer, HttpServerRequest } from "effect/http";

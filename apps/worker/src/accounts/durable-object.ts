@@ -2,7 +2,7 @@ import { Config, Data, Effect, Layer, Option } from "effect";
 import { Struct } from "effect";
 import { SqliteClient } from "@effect/sql-sqlite-do";
 import { AccountsRepo } from "./repo.ts";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import { Email } from "@manotes/shared/schema/email";
 
 export const NAMESPACE_KEY = "accounts-v1";

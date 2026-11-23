@@ -1,16 +1,247 @@
 diff --git a/dist/cli.js b/dist/cli.js
-index d9cfeac51022344120e2992882e455738c20c002..92fb51ca8d929edfdab550810c6a709ef4238233 100755
+index d9cfeac51022344120e2992882e455738c20c002..edd0189a540ecf3f0553ee28a728580f689f6bd2 100755
 --- a/dist/cli.js
 +++ b/dist/cli.js
-@@ -5618,4 +5618,8 @@ var migrate = Command.make("migrate", {}, () => Effect10.void).pipe(Command.with
+@@ -1,4 +1,6 @@
+ #!/usr/bin/env node
++import * as CompatNodeCrypto from "@effect/platform-node/NodeCrypto";
++import * as CompatLayer from "effect/Layer";
+ import { createRequire } from "node:module";
+ var __create = Object.create;
+ var __getProtoOf = Object.getPrototypeOf;
+@@ -448,7 +450,7 @@ var inferPostgresTypeKind = (ddlType) => {
+ // src/internal/node-platform.ts
+ import { NodePath, NodeServices } from "@effect/platform-node";
+ import * as Effect from "effect/Effect";
+-var runNodePlatform = (effect) => Effect.runPromise(Effect.provide(effect, NodeServices.layer));
++var runNodePlatform = (effect) => Effect.runPromise(Effect.provide(effect, CompatLayer.merge(NodeServices.layer, CompatNodeCrypto.layer)));
+ var runNodePath = (effect) => Effect.runSync(Effect.provide(effect, NodePath.layer));
+ 
+ // src/postgres/pull.ts
+@@ -4162,7 +4164,7 @@ var planPostgresSchemaDiff = (source, database) => {
+ 
+ // src/internal/postgres-source-discovery.ts
+ import * as Std from "effect-qb";
+-import * as Crypto from "effect/Crypto";
++import * as SecureRandom from "effect/crypto/SecureRandom";
+ import * as Effect5 from "effect/Effect";
+ import * as FileSystem3 from "effect/FileSystem";
+ import * as Path3 from "effect/Path";
+@@ -4529,11 +4531,11 @@ var discoverInFile = (filePath, contents) => {
+   return declarations;
+ };
+ var createTemporaryExportModuleEffect = (filePath, names) => Effect5.gen(function* () {
+-  const crypto = yield* Crypto.Crypto;
++  const crypto = yield* SecureRandom.SecureRandom;
+   const fs = yield* FileSystem3.FileSystem;
+   const paths = yield* Path3.Path;
+   const extension = paths.extname(filePath) || ".ts";
+-  const uuid = yield* crypto.randomUUIDv4;
++  const uuid = yield* crypto.uuidV4();
+   const tempPath = paths.join(paths.dirname(filePath), `.__effect_qb_discovery_${paths.basename(filePath, extension)}_${uuid}${extension}`);
+   const contents = yield* fs.readFileString(filePath);
+   yield* fs.writeFileString(tempPath, `${contents}
+@@ -4832,7 +4834,7 @@ var loadPostgresSchemaPlanEffect = (cwd, config, databaseUrl) => Effect6.gen(fun
+ var loadPostgresSchemaPlan = (cwd, config, databaseUrl) => runNodePlatform(loadPostgresSchemaPlanEffect(cwd, config, databaseUrl));
+ 
+ // src/postgres/migrate.ts
+-import * as Crypto3 from "effect/Crypto";
++import * as Digest3 from "effect/crypto/Digest";
+ import * as Hex from "effect/encoding/Hex";
+ import * as SqlClient5 from "effect/sql/SqlClient";
+ import * as SqlSchema2 from "effect/sql/SqlSchema";
+@@ -4932,7 +4934,7 @@ var migrationTableSql = (tableName) => `create table if not exists ${qualifyIden
+ var normalizeMigrationContents = (contents) => contents.replaceAll(`\r
+ `, `
+ `);
+-var migrationChecksumOfEffect = (contents) => Effect8.flatMap(Crypto3.Crypto, (crypto) => Effect8.map(crypto.digest("SHA-256", new TextEncoder().encode(normalizeMigrationContents(contents))), (digest) => `${MIGRATION_CHECKSUM_PREFIX}:${Hex.encode(digest)}`));
++var migrationChecksumOfEffect = (contents) => Effect8.flatMap(Digest3.Digest, (crypto) => Effect8.map(crypto.digest(Digest3.sha256, new TextEncoder().encode(normalizeMigrationContents(contents))), (digest) => `${MIGRATION_CHECKSUM_PREFIX}:${Hex.encode(digest)}`));
+ var EmptyRequest2 = Schema2.Struct({});
+ var AppliedMigrationRowSchema = Schema2.Struct({
+   id: Schema2.Union([
+@@ -5618,4 +5620,8 @@ var migrate = Command.make("migrate", {}, () => Effect10.void).pipe(Command.with
  var root = Command.make("effectdb", {}, () => Effect10.void).pipe(Command.withSubcommands([push, pull, migrate]));
  
  // src/cli.ts
+-Command2.run(root, { version: "0.24.1" }).pipe(Effect11.tapCause((cause) => Effect11.logError(cause)), Effect11.provideService(Logger.LogToStderr, true), Effect11.provide(NodeServices2.layer), NodeRuntime.runMain({ disableErrorReporting: true }));
 +import { EffectDbSqliteCli } from "@manotes/effect-db-sqlite/cli";
 +if (!await EffectDbSqliteCli.runIfSqlite(process.argv.slice(2))) {
- Command2.run(root, { version: "0.24.1" }).pipe(Effect11.tapCause((cause) => Effect11.logError(cause)), Effect11.provideService(Logger.LogToStderr, true), Effect11.provide(NodeServices2.layer), NodeRuntime.runMain({ disableErrorReporting: true }));
++Command2.run(root, { version: "0.24.1" }).pipe(Effect11.tapCause((cause) => Effect11.logError(cause)), Effect11.provideService(Logger.LogToStderr, true), Effect11.provide(CompatLayer.merge(NodeServices2.layer, CompatNodeCrypto.layer)), NodeRuntime.runMain({ disableErrorReporting: true }));
 +
 +}
+diff --git a/dist/index.js b/dist/index.js
+index 6f2e71ecbbc9a33b6443f91795498fddc3794d06..c06cca47caa8f75889811db52c7ed56257debd61 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1,3 +1,5 @@
++import * as CompatNodeCrypto from "@effect/platform-node/NodeCrypto";
++import * as CompatLayer from "effect/Layer";
+ import { createRequire } from "node:module";
+ var __create = Object.create;
+ var __getProtoOf = Object.getPrototypeOf;
+@@ -25,7 +27,7 @@ import * as Path from "effect/Path";
+ // src/internal/node-platform.ts
+ import { NodePath, NodeServices } from "@effect/platform-node";
+ import * as Effect from "effect/Effect";
+-var runNodePlatform = (effect) => Effect.runPromise(Effect.provide(effect, NodeServices.layer));
++var runNodePlatform = (effect) => Effect.runPromise(Effect.provide(effect, CompatLayer.merge(NodeServices.layer, CompatNodeCrypto.layer)));
+ var runNodePath = (effect) => Effect.runSync(Effect.provide(effect, NodePath.layer));
+ 
+ // src/internal/postgres-config.ts
+diff --git a/dist/internal/node-platform.d.ts b/dist/internal/node-platform.d.ts
+index bdab47e7744b61fbf42856b399ad8f3551d5eb66..2aa0a5ff2979bb14dc6905cbac89d8ed920d6e52 100644
+--- a/dist/internal/node-platform.d.ts
++++ b/dist/internal/node-platform.d.ts
+@@ -1,7 +1,8 @@
+-import * as Crypto from "effect/Crypto";
++import type * as Digest from "effect/crypto/Digest"
++import type * as SecureRandom from "effect/crypto/SecureRandom";
+ import * as Effect from "effect/Effect";
+ import * as FileSystem from "effect/FileSystem";
+ import * as Path from "effect/Path";
+-export type PlatformServices = Crypto.Crypto | FileSystem.FileSystem | Path.Path;
++export type PlatformServices = Digest.Digest | SecureRandom.SecureRandom | FileSystem.FileSystem | Path.Path;
+ export declare const runNodePlatform: <A, E>(effect: Effect.Effect<A, E, PlatformServices>) => Promise<A>;
+ export declare const runNodePath: <A, E>(effect: Effect.Effect<A, E, Path.Path>) => A;
+diff --git a/dist/internal/postgres-source-discovery.d.ts b/dist/internal/postgres-source-discovery.d.ts
+index baec85ce8e3ef0f8a72735cfb0faf626dbc2e3d1..3a0062ba2426cfed69f6ab38d7764207170bee52 100644
+--- a/dist/internal/postgres-source-discovery.d.ts
++++ b/dist/internal/postgres-source-discovery.d.ts
+@@ -1,4 +1,4 @@
+-import * as Crypto from "effect/Crypto";
++import * as SecureRandom from "effect/crypto/SecureRandom";
+ import * as Effect from "effect/Effect";
+ import * as FileSystem from "effect/FileSystem";
+ import * as Path from "effect/Path";
+@@ -50,7 +50,7 @@ export interface SourceBinding {
+ export declare const discoverSourceSchemaEffect: (cwd: string, source: {
+     readonly include: readonly string[];
+     readonly exclude?: readonly string[];
+-}) => Effect.Effect<DiscoveredSourceSchema, unknown, Crypto.Crypto | FileSystem.FileSystem | Path.Path>;
++}) => Effect.Effect<DiscoveredSourceSchema, unknown, SecureRandom.SecureRandom | FileSystem.FileSystem | Path.Path>;
+ export declare const discoverSourceSchema: (cwd: string, source: {
+     readonly include: readonly string[];
+     readonly exclude?: readonly string[];
+diff --git a/dist/postgres/migrate.d.ts b/dist/postgres/migrate.d.ts
+index f1ff944db28a10f74c127f4048500081f854b08f..542fdefadd1a17854ff7ad59a40744fe41072716 100644
+--- a/dist/postgres/migrate.d.ts
++++ b/dist/postgres/migrate.d.ts
+@@ -1,4 +1,4 @@
+-import * as Crypto from "effect/Crypto";
++import * as Digest from "effect/crypto/Digest";
+ import * as SqlClient from "effect/sql/SqlClient";
+ import * as Effect from "effect/Effect";
+ import * as FileSystem from "effect/FileSystem";
+@@ -22,9 +22,9 @@ export declare const renderMigrationFile: (changes: readonly SchemaChange[]) =>
+ export declare const writeMigrationFileEffect: (migrationsDir: string, name: string, changes: readonly SchemaChange[]) => Effect.Effect<string, unknown, FileSystem.FileSystem | Path.Path>;
+ export declare const writeMigrationFile: (migrationsDir: string, name: string, changes: readonly SchemaChange[]) => Promise<string>;
+ export declare const applyStatements: (statements: readonly string[]) => Effect.Effect<void, unknown, SqlClient.SqlClient>;
+-export declare const readPendingMigrationFilesEffect: (migrationsDir: string, appliedNames: ReadonlySet<string>) => Effect.Effect<ReadonlyArray<MigrationFile>, unknown, Crypto.Crypto | FileSystem.FileSystem | Path.Path>;
++export declare const readPendingMigrationFilesEffect: (migrationsDir: string, appliedNames: ReadonlySet<string>) => Effect.Effect<ReadonlyArray<MigrationFile>, unknown, Digest.Digest | FileSystem.FileSystem | Path.Path>;
+ export declare const readPendingMigrationFiles: (migrationsDir: string, appliedNames: ReadonlySet<string>) => Promise<ReadonlyArray<MigrationFile>>;
+-export declare const readMigrationFilesEffect: (migrationsDir: string) => Effect.Effect<ReadonlyArray<MigrationFile>, unknown, Crypto.Crypto | FileSystem.FileSystem | Path.Path>;
++export declare const readMigrationFilesEffect: (migrationsDir: string) => Effect.Effect<ReadonlyArray<MigrationFile>, unknown, Digest.Digest | FileSystem.FileSystem | Path.Path>;
+ export declare const readMigrationFiles: (migrationsDir: string) => Promise<ReadonlyArray<MigrationFile>>;
+ export declare const ensureMigrationTable: (tableName: string) => Effect.Effect<void, unknown, SqlClient.SqlClient>;
+ export declare const withMigrationLock: <A, E, R>(tableName: string, effect: Effect.Effect<A, E, R>) => Effect.Effect<A, unknown, SqlClient.SqlClient | R>;
+diff --git a/dist/postgres/migrate.js b/dist/postgres/migrate.js
+index 4a6f9ca64760d3b571d4c90257f9fd1b0b4c5348..0a900f62df4125fc4d53dd0e1bae072b99e14b99 100644
+--- a/dist/postgres/migrate.js
++++ b/dist/postgres/migrate.js
+@@ -1,3 +1,5 @@
++import * as CompatNodeCrypto from "@effect/platform-node/NodeCrypto";
++import * as CompatLayer from "effect/Layer";
+ import { createRequire } from "node:module";
+ var __create = Object.create;
+ var __getProtoOf = Object.getPrototypeOf;
+@@ -18,7 +20,7 @@ var __toESM = (mod, isNodeMode, target) => {
+ var __require = /* @__PURE__ */ createRequire(import.meta.url);
+ 
+ // src/postgres/migrate.ts
+-import * as Crypto from "effect/Crypto";
++import * as Digest from "effect/crypto/Digest";
+ import * as Hex from "effect/encoding/Hex";
+ import * as SqlClient3 from "effect/sql/SqlClient";
+ import * as SqlSchema from "effect/sql/SqlSchema";
+@@ -30,7 +32,7 @@ import * as Schema from "effect/Schema";
+ // src/internal/node-platform.ts
+ import { NodePath, NodeServices } from "@effect/platform-node";
+ import * as Effect from "effect/Effect";
+-var runNodePlatform = (effect) => Effect.runPromise(Effect.provide(effect, NodeServices.layer));
++var runNodePlatform = (effect) => Effect.runPromise(Effect.provide(effect, CompatLayer.merge(NodeServices.layer, CompatNodeCrypto.layer)));
+ var runNodePath = (effect) => Effect.runSync(Effect.provide(effect, NodePath.layer));
+ 
+ // src/internal/postgres-runtime.ts
+@@ -132,7 +134,7 @@ var migrationTableSql = (tableName) => `create table if not exists ${qualifyIden
+ var normalizeMigrationContents = (contents) => contents.replaceAll(`\r
+ `, `
+ `);
+-var migrationChecksumOfEffect = (contents) => Effect4.flatMap(Crypto.Crypto, (crypto) => Effect4.map(crypto.digest("SHA-256", new TextEncoder().encode(normalizeMigrationContents(contents))), (digest) => `${MIGRATION_CHECKSUM_PREFIX}:${Hex.encode(digest)}`));
++var migrationChecksumOfEffect = (contents) => Effect4.flatMap(Digest.Digest, (crypto) => Effect4.map(crypto.digest(Digest.sha256, new TextEncoder().encode(normalizeMigrationContents(contents))), (digest) => `${MIGRATION_CHECKSUM_PREFIX}:${Hex.encode(digest)}`));
+ var EmptyRequest = Schema.Struct({});
+ var AppliedMigrationRowSchema = Schema.Struct({
+   id: Schema.Union([
+diff --git a/dist/postgres/pull.js b/dist/postgres/pull.js
+index af6726cbb9d32569648262be68ad7bece971eea5..e61a3a4d346c2501f691691947ffc7c397e669d7 100644
+--- a/dist/postgres/pull.js
++++ b/dist/postgres/pull.js
+@@ -1,3 +1,5 @@
++import * as CompatNodeCrypto from "@effect/platform-node/NodeCrypto";
++import * as CompatLayer from "effect/Layer";
+ import { createRequire } from "node:module";
+ var __create = Object.create;
+ var __getProtoOf = Object.getPrototypeOf;
+@@ -447,7 +449,7 @@ var inferPostgresTypeKind = (ddlType) => {
+ // src/internal/node-platform.ts
+ import { NodePath, NodeServices } from "@effect/platform-node";
+ import * as Effect from "effect/Effect";
+-var runNodePlatform = (effect) => Effect.runPromise(Effect.provide(effect, NodeServices.layer));
++var runNodePlatform = (effect) => Effect.runPromise(Effect.provide(effect, CompatLayer.merge(NodeServices.layer, CompatNodeCrypto.layer)));
+ var runNodePath = (effect) => Effect.runSync(Effect.provide(effect, NodePath.layer));
+ 
+ // src/postgres/pull.ts
+diff --git a/dist/postgres/push.js b/dist/postgres/push.js
+index 8a4ced81e3582ff10a6e6bc79a358d30ef605b13..b53b59eed26cef78032f7c791b7eac7c2d397746 100644
+--- a/dist/postgres/push.js
++++ b/dist/postgres/push.js
+@@ -1,3 +1,5 @@
++import * as CompatNodeCrypto from "@effect/platform-node/NodeCrypto";
++import * as CompatLayer from "effect/Layer";
+ import { createRequire } from "node:module";
+ var __create = Object.create;
+ var __getProtoOf = Object.getPrototypeOf;
+@@ -719,7 +721,7 @@ var introspectPostgresSchema = (filter) => Effect.flatMap(SqlClient.SqlClient, (
+ // src/internal/node-platform.ts
+ import { NodePath, NodeServices } from "@effect/platform-node";
+ import * as Effect2 from "effect/Effect";
+-var runNodePlatform = (effect) => Effect2.runPromise(Effect2.provide(effect, NodeServices.layer));
++var runNodePlatform = (effect) => Effect2.runPromise(Effect2.provide(effect, CompatLayer.merge(NodeServices.layer, CompatNodeCrypto.layer)));
+ var runNodePath = (effect) => Effect2.runSync(Effect2.provide(effect, NodePath.layer));
+ 
+ // src/internal/postgres-runtime.ts
+@@ -1761,7 +1763,7 @@ var planPostgresSchemaDiff = (source, database) => {
+ 
+ // src/internal/postgres-source-discovery.ts
+ import * as Std from "effect-qb";
+-import * as Crypto from "effect/Crypto";
++import * as SecureRandom from "effect/crypto/SecureRandom";
+ import * as Effect4 from "effect/Effect";
+ import * as FileSystem from "effect/FileSystem";
+ import * as Path from "effect/Path";
+@@ -2128,11 +2130,11 @@ var discoverInFile = (filePath, contents) => {
+   return declarations;
+ };
+ var createTemporaryExportModuleEffect = (filePath, names) => Effect4.gen(function* () {
+-  const crypto = yield* Crypto.Crypto;
++  const crypto = yield* SecureRandom.SecureRandom;
+   const fs = yield* FileSystem.FileSystem;
+   const paths = yield* Path.Path;
+   const extension = paths.extname(filePath) || ".ts";
+-  const uuid = yield* crypto.randomUUIDv4;
++  const uuid = yield* crypto.uuidV4();
+   const tempPath = paths.join(paths.dirname(filePath), `.__effect_qb_discovery_${paths.basename(filePath, extension)}_${uuid}${extension}`);
+   const contents = yield* fs.readFileString(filePath);
+   yield* fs.writeFileString(tempPath, `${contents}
 diff --git a/dist/sqlite.d.ts b/dist/sqlite.d.ts
 new file mode 100644
 index 0000000000000000000000000000000000000000..b1dcb8110f998af55ff83ec2701f4a0c47d03dd1
@@ -43,10 +274,16 @@ index 66a2553a412a4158013aaf8c6eeed07e53d0cf13..84f93b2d7f7c45880bba239b75dac6c5
    "publishConfig": {
      "access": "public"
 diff --git a/src/cli.ts b/src/cli.ts
-index f7b362956c8bc2bcd22204f392f98b11fbabad97..0734ccd29243c01856beda28eaa86bf868e0eadb 100644
+index f7b362956c8bc2bcd22204f392f98b11fbabad97..0bd7810a81978290a2ea821e33b69970d6a19dc3 100644
 --- a/src/cli.ts
 +++ b/src/cli.ts
-@@ -5,10 +5,14 @@ import * as Effect from "effect/Effect"
+@@ -1,3 +1,5 @@
++import * as CompatNodeCrypto from "@effect/platform-node/NodeCrypto";
++import * as CompatLayer from "effect/Layer";
+ #!/usr/bin/env node
+ import { NodeRuntime, NodeServices } from "@effect/platform-node"
+ import { Command } from "effect/cli"
+@@ -5,10 +7,14 @@ import * as Effect from "effect/Effect"
  import * as Logger from "effect/Logger"
  
  import { root } from "./commands.js"
@@ -56,11 +293,129 @@ index f7b362956c8bc2bcd22204f392f98b11fbabad97..0734ccd29243c01856beda28eaa86bf8
  Command.run(root, { version: "0.24.1" }).pipe(
    Effect.tapCause((cause) => Effect.logError(cause)),
    Effect.provideService(Logger.LogToStderr, true),
-   Effect.provide(NodeServices.layer),
+-  Effect.provide(NodeServices.layer),
++  Effect.provide(CompatLayer.merge(NodeServices.layer, CompatNodeCrypto.layer)),
    NodeRuntime.runMain({ disableErrorReporting: true })
  )
 +
 +}
+diff --git a/src/internal/node-platform.ts b/src/internal/node-platform.ts
+index a9067c824badd50bcec46993b2bda105dfe9e2e4..63b1c7ff8ba27e7ff62398659f82c2f8b7d18901 100644
+--- a/src/internal/node-platform.ts
++++ b/src/internal/node-platform.ts
+@@ -1,18 +1,21 @@
++import * as CompatNodeCrypto from "@effect/platform-node/NodeCrypto";
++import * as CompatLayer from "effect/Layer";
+ import { NodePath, NodeServices } from "@effect/platform-node"
+-import * as Crypto from "effect/Crypto"
++import type * as Digest from "effect/crypto/Digest"
++import type * as SecureRandom from "effect/crypto/SecureRandom"
+ import * as Effect from "effect/Effect"
+ import * as FileSystem from "effect/FileSystem"
+ import * as Path from "effect/Path"
+ 
+ export type PlatformServices =
+-  | Crypto.Crypto
++  | Digest.Digest | SecureRandom.SecureRandom
+   | FileSystem.FileSystem
+   | Path.Path
+ 
+ export const runNodePlatform = <A, E>(
+   effect: Effect.Effect<A, E, PlatformServices>
+ ): Promise<A> =>
+-  Effect.runPromise(Effect.provide(effect, NodeServices.layer))
++  Effect.runPromise(Effect.provide(effect, CompatLayer.merge(NodeServices.layer, CompatNodeCrypto.layer)))
+ 
+ export const runNodePath = <A, E>(
+   effect: Effect.Effect<A, E, Path.Path>
+diff --git a/src/internal/postgres-source-discovery.ts b/src/internal/postgres-source-discovery.ts
+index 183768e52d32d5b9270a4bbe587a0cd63d07d5a3..3f6822530f3efef06565f3c8566dcbb6e6dd921a 100644
+--- a/src/internal/postgres-source-discovery.ts
++++ b/src/internal/postgres-source-discovery.ts
+@@ -1,5 +1,5 @@
+ import * as Std from "effect-qb"
+-import * as Crypto from "effect/Crypto"
++import * as SecureRandom from "effect/crypto/SecureRandom"
+ import * as Effect from "effect/Effect"
+ import * as FileSystem from "effect/FileSystem"
+ import * as Path from "effect/Path"
+@@ -547,13 +547,13 @@ const discoverInFile = (
+ const createTemporaryExportModuleEffect = (
+   filePath: string,
+   names: readonly string[]
+-): Effect.Effect<string, unknown, Crypto.Crypto | FileSystem.FileSystem | Path.Path> =>
++): Effect.Effect<string, unknown, SecureRandom.SecureRandom | FileSystem.FileSystem | Path.Path> =>
+   Effect.gen(function*() {
+-    const crypto = yield* Crypto.Crypto
++    const crypto = yield* SecureRandom.SecureRandom
+     const fs = yield* FileSystem.FileSystem
+     const paths = yield* Path.Path
+     const extension = paths.extname(filePath) || ".ts"
+-    const uuid = yield* crypto.randomUUIDv4
++    const uuid = yield* crypto.uuidV4()
+     const tempPath = paths.join(
+       paths.dirname(filePath),
+       `.__effect_qb_discovery_${paths.basename(filePath, extension)}_${uuid}${extension}`
+@@ -568,7 +568,7 @@ const createTemporaryExportModuleEffect = (
+ 
+ const importDiscoveredValuesEffect = (
+   declarations: readonly SourceDeclaration[]
+-): Effect.Effect<ReadonlyArray<unknown>, unknown, Crypto.Crypto | FileSystem.FileSystem | Path.Path> =>
++): Effect.Effect<ReadonlyArray<unknown>, unknown, SecureRandom.SecureRandom | FileSystem.FileSystem | Path.Path> =>
+   Effect.gen(function*() {
+     const fs = yield* FileSystem.FileSystem
+     const paths = yield* Path.Path
+@@ -625,7 +625,7 @@ export const discoverSourceSchemaEffect = (
+     readonly include: readonly string[]
+     readonly exclude?: readonly string[]
+   }
+-): Effect.Effect<DiscoveredSourceSchema, unknown, Crypto.Crypto | FileSystem.FileSystem | Path.Path> =>
++): Effect.Effect<DiscoveredSourceSchema, unknown, SecureRandom.SecureRandom | FileSystem.FileSystem | Path.Path> =>
+   Effect.gen(function*() {
+     const fs = yield* FileSystem.FileSystem
+     const paths = yield* Path.Path
+diff --git a/src/postgres/migrate.ts b/src/postgres/migrate.ts
+index 68c94d8d9ad2fa2a37ab1989818b94b4875d1e02..edb96aaee47f52a0d3a46b738607cb259c721bd6 100644
+--- a/src/postgres/migrate.ts
++++ b/src/postgres/migrate.ts
+@@ -1,4 +1,4 @@
+-import * as Crypto from "effect/Crypto"
++import * as Digest from "effect/crypto/Digest"
+ import * as Hex from "effect/encoding/Hex"
+ import * as SqlClient from "effect/sql/SqlClient"
+ import * as SqlSchema from "effect/sql/SqlSchema"
+@@ -102,10 +102,10 @@ const normalizeMigrationContents = (contents: string): string =>
+ 
+ const migrationChecksumOfEffect = (
+   contents: string
+-): Effect.Effect<string, unknown, Crypto.Crypto> =>
+-  Effect.flatMap(Crypto.Crypto, (crypto) =>
++): Effect.Effect<string, unknown, Digest.Digest> =>
++  Effect.flatMap(Digest.Digest, (crypto) =>
+     Effect.map(
+-      crypto.digest("SHA-256", new TextEncoder().encode(normalizeMigrationContents(contents))),
++      crypto.digest(Digest.sha256, new TextEncoder().encode(normalizeMigrationContents(contents))),
+       (digest) => `${MIGRATION_CHECKSUM_PREFIX}:${Hex.encode(digest)}`
+     ))
+ 
+@@ -248,7 +248,7 @@ export const applyStatements = (
+ export const readPendingMigrationFilesEffect = (
+   migrationsDir: string,
+   appliedNames: ReadonlySet<string>
+-): Effect.Effect<ReadonlyArray<MigrationFile>, unknown, Crypto.Crypto | FileSystem.FileSystem | Path.Path> =>
++): Effect.Effect<ReadonlyArray<MigrationFile>, unknown, Digest.Digest | FileSystem.FileSystem | Path.Path> =>
+   Effect.gen(function*() {
+     const fs = yield* FileSystem.FileSystem
+     const paths = yield* Path.Path
+@@ -285,7 +285,7 @@ export const readPendingMigrationFiles = (
+ 
+ export const readMigrationFilesEffect = (
+   migrationsDir: string
+-): Effect.Effect<ReadonlyArray<MigrationFile>, unknown, Crypto.Crypto | FileSystem.FileSystem | Path.Path> =>
++): Effect.Effect<ReadonlyArray<MigrationFile>, unknown, Digest.Digest | FileSystem.FileSystem | Path.Path> =>
+   readPendingMigrationFilesEffect(migrationsDir, new Set())
+ 
+ export const readMigrationFiles = (
 diff --git a/src/sqlite.ts b/src/sqlite.ts
 new file mode 100644
 index 0000000000000000000000000000000000000000..8744d3e42844f672dd087b50c2a6ce80d137d832
