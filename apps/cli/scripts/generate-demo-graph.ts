@@ -5,6 +5,9 @@
  * Usage: tsx scripts/generate-demo-graph.ts <output-path>
  */
 import { RecordSchema } from "@manotes/shared/record.schema";
+import { AttrsSchema } from "@manotes/shared/attrs.schema";
+import { Attrs } from "@manotes/shared/attrs.service";
+import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { writeFileSync } from "node:fs";
 import { DateTime, Effect, Predicate, Record } from "effect";
 import { nanoid } from "nanoid";
@@ -20,6 +23,25 @@ import type { Block, Inline } from "./demo-content";
 
 const pageIds = Record.map(PAGES, () => RecordSchema.Id.make(nanoid()));
 
+const presets = [
+  {
+    title: "Notes",
+    filter: [
+      ...StreamSettings.defaultFilter,
+      AttrsSchema.makeFilterExpr.cmp({ val: ["title", "exists", false] }),
+    ],
+    default: true,
+  },
+  {
+    title: "Pages",
+    filter: [
+      ...StreamSettings.defaultFilter,
+      AttrsSchema.makeFilterExpr.cmp({ val: ["title", "exists", true] }),
+    ],
+    default: false,
+  },
+];
+
 function inlineToJSON(inline: Inline) {
   if (Predicate.isString(inline)) return { type: "text", text: inline };
 
@@ -34,14 +56,31 @@ function blockToJSON(block: Block) {
   return { type: "paragraph", content: block.p.map(inlineToJSON) };
 }
 
-function buildPayload(blocks: Array<Block>): Uint8Array<ArrayBufferLike> {
+function buildPayload(
+  blocks: Array<Block>,
+  preset?: { filter: AttrsSchema.Filter; default: boolean },
+): Uint8Array<ArrayBufferLike> {
   const yDoc = prosemirrorJSONToYDoc(
     RECORD_SCHEMA,
     { type: "doc", content: blocks.map(blockToJSON) },
     PROSEMIRROR_XML_FRAGMENT_KEY,
   );
 
-  return Y.encodeStateAsUpdate(yDoc);
+  try {
+    if (preset) {
+      Effect.runSync(
+        Effect.gen(function* () {
+          const attrs = yield* Attrs.Service;
+          yield* attrs.initializePreset({ doc: yDoc, filter: preset.filter });
+          yield* attrs.setPresetDefault({ doc: yDoc, value: preset.default });
+        }).pipe(Effect.provide(Attrs.Service.layer)),
+      );
+    }
+
+    return Y.encodeStateAsUpdate(yDoc);
+  } finally {
+    yDoc.destroy();
+  }
 }
 
 function event(
@@ -61,6 +100,21 @@ const events: Array<GraphBackupSchema.Record> = [];
 for (const [index, [key, page]] of Record.toEntries(PAGES).entries()) {
   const createdAt = DateTime.add(DateTime.subtract(now, { days: 90 }), { seconds: index });
   events.push(event(pageIds[key], "update", buildPayload(page.blocks), createdAt));
+}
+
+for (const [index, preset] of presets.entries()) {
+  const createdAt = DateTime.add(DateTime.subtract(now, { days: 90 }), {
+    seconds: Object.keys(PAGES).length + index,
+  });
+
+  events.push(
+    event(
+      RecordSchema.Id.make(nanoid()),
+      "update",
+      buildPayload([{ h1: preset.title }], preset),
+      createdAt,
+    ),
+  );
 }
 
 // Journal entries: an `update` event plus a `date` event pinning the day.
@@ -93,6 +147,6 @@ if (import.meta.main) {
 
   writeFileSync(outputPath, Effect.runSync(GraphBackupSchema.encodeFile(bundle)));
   console.log(
-    `Wrote ${events.length} events (${Object.keys(PAGES).length} pages, ${ENTRIES.length} entries) to ${outputPath}`,
+    `Wrote ${events.length} events (${Object.keys(PAGES).length} pages, ${ENTRIES.length} entries, ${presets.length} presets) to ${outputPath}`,
   );
 }

@@ -31,7 +31,7 @@ export const PAGES: Record<PageKey, Page> = {
     blocks: [
       { h1: "Korneliusz Łapacz" },
       {
-        p: ["Software engineer. I build ", { backlink: "manotes" }, ", a local-first records app."],
+        p: ["Software engineer. I build ", { backlink: "manotes" }, ", a local-first notes app."],
       },
       {
         p: [
@@ -52,7 +52,12 @@ export const PAGES: Record<PageKey, Page> = {
       { h1: "Manotes" },
       {
         p: [
-          "Manotes is an event-sourced, local-first records app. Notes are materialized from an append-only event log, so a backup is just a replay of every event.",
+          "Manotes is a local-first notes app. Capture thoughts as notes, give a note an H1 heading to make it a page, and follow links between them.",
+        ],
+      },
+      {
+        p: [
+          "Streams are live, filtered views of your notes. The Notes preset shows unarchived notes without a title. The Pages preset shows unarchived notes with a title. Open notes, pages, and streams side by side to keep context as you explore.",
         ],
       },
       { p: ["Open work lives in ", { backlink: "manotesTasks" }, "."] },
