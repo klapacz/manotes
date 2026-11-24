@@ -1,6 +1,6 @@
 import type { ComponentProps } from "@solidjs/web";
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
-import { Effect, Equal, Option, Stream } from "effect";
+import { Effect, Equal, Fiber, Option, Stream } from "effect";
 import {
   Loading,
   Reveal,
@@ -26,6 +26,8 @@ import { PaneEmptyState, PaneShell } from "./shared";
 
 const PRELOAD_EDITOR_COUNT = 12;
 
+const MIN_SWITCH_HOLD = "150 millis";
+
 export function PaneStream(props: ComponentProps<"section">) {
   const pane = PaneCtx.useStream();
   const focus = Focus.use();
@@ -42,6 +44,8 @@ export function PaneStream(props: ComponentProps<"section">) {
 
   const recording = PaneStreamRecording.use();
 
+  let committedQuery: ReturnType<typeof query> | undefined;
+
   // The DB query owns filtering and sorting; the stream only layers the
   // refresh-gated pinned snapshot on top of the matching rows. Each resolved
   // emission has already preloaded and booted the first editor slots.
@@ -50,8 +54,18 @@ export function PaneStream(props: ComponentProps<"section">) {
       const currentQuery = query();
       refreshToken();
 
+      const isSwitch = committedQuery !== undefined && !Equal.equals(committedQuery, currentQuery);
+
       return Stream.unwrap(
         Effect.gen(function* () {
+          // Run the minimum switch hold concurrently with SQL + editor preload
+          // so fast switches let the pending dim and closing picker settle cleanly.
+          const hold = isSwitch
+            ? yield* Effect.forkScoped(Effect.sleep(MIN_SWITCH_HOLD))
+            : undefined;
+
+          const awaitHold = hold ? Fiber.join(hold) : Effect.void;
+
           const changes = yield* RecordStreamCache.Service.use((cache) => {
             return cache.changes(currentQuery);
           });
@@ -62,7 +76,11 @@ export function PaneStream(props: ComponentProps<"section">) {
             // keep resolved state tied to real rows, after the first result is preloaded.
             Stream.drop(1),
             Stream.mapEffect((state) => {
-              return Effect.scoped(pool.preload(preloadRecordIds(state.items))).pipe(
+              return Effect.all(
+                [Effect.scoped(pool.preload(preloadRecordIds(state.items))), awaitHold],
+                { concurrency: "unbounded" },
+              ).pipe(
+                Effect.tap(() => Effect.sync(() => (committedQuery = currentQuery))),
                 Effect.as({ ...state, sort: currentQuery.sort }),
               );
             }),
@@ -237,27 +255,27 @@ export function PaneStream(props: ComponentProps<"section">) {
           </Loading>
           <Loading fallback={null}>
             <EditorPool.Provider pool={pool}>
-              <Show
-                when={rows.length > 0}
-                fallback={
-                  <PaneEmptyState>
-                    {hasSearch() ? "No records match your search." : "No records in this pane."}
-                  </PaneEmptyState>
-                }
+              <div
+                class={[
+                  "flex min-h-0 flex-1 flex-col transition-opacity duration-150 ease-out",
+                  { "opacity-45": isPending(() => stream()) },
+                ]}
               >
-                <div
-                  class={[
-                    "min-h-0 flex-1 transition-opacity duration-150 ease-out",
-                    { "opacity-60": isPending(() => stream()) },
-                  ]}
+                <Show
+                  when={rows.length > 0}
+                  fallback={
+                    <PaneEmptyState>
+                      {hasSearch() ? "No records match your search." : "No records in this pane."}
+                    </PaneEmptyState>
+                  }
                 >
                   <VirtualList.Root data={rows} key={RecordStream.recordId} retained={retained()}>
                     {(item) => (
                       <PaneStreamRow.Root row={item} onClearDraft={recording.clearDraft} />
                     )}
                   </VirtualList.Root>
-                </div>
-              </Show>
+                </Show>
+              </div>
             </EditorPool.Provider>
           </Loading>
         </Reveal>
