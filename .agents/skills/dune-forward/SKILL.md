@@ -26,3 +26,17 @@ List remotes with `jj git remote list`. Dry-run each with `jj git push --remote 
 Report validation results and ask: "Submit dune at <commit> to all configured remotes, <names>?" Wait for approval. If declined, leave dune moved locally.
 
 Before pushing, verify the validated commit and remotes are unchanged. Otherwise revalidate and renew approval. Push only dune to each remote with `jj git push --remote <remote> --bookmark dune`. Stop on failure and report successes and remaining remotes. Do not settle the thread.
+
+## Deploy
+
+Only deploy when the user explicitly requests it.
+
+Before deploying from a secondary JJ workspace, ensure `apps/worker/.env.prod` exists (copy it from the main checkout without printing its contents if missing).
+
+Run:
+
+```sh
+scripts/nix-develop -c vp run worker#deploy --yes --no-input
+```
+
+Pass `--yes` so `alchemy deploy` skips its interactive confirmation prompt (which otherwise hangs non-interactive runs) and `--no-input` to disable TUI spinners and fail fast on unexpected prompts. Do not insert `--` before `--yes` (`vp run` forwards `--` verbatim, causing Alchemy to treat `--yes` as a positional `<config>` path).
