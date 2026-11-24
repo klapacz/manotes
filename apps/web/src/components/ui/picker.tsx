@@ -311,18 +311,6 @@ export function Query<Option extends Choice>(props: QueryProps<Option>) {
                 props.onSelect(choice, event);
               }}
             >
-              <Show when={"selected" in props}>
-                <span class="flex size-4 shrink-0 items-center justify-center">
-                  <Show
-                    when={
-                      props.selected === choice.value ||
-                      (Array.isArray(props.selected) && props.selected.includes(choice.value))
-                    }
-                  >
-                    <SelectedIcon aria-label="Selected" class="size-4" />
-                  </Show>
-                </span>
-              </Show>
               {choice.icon}
               <span
                 class="inline-flex min-w-0 flex-1 items-center gap-1"
@@ -364,6 +352,14 @@ export function Query<Option extends Choice>(props: QueryProps<Option>) {
                 <span class="text-xs text-fg-subtle">{choice.shortcut}</span>
               </Show>
               {choice.suffix}
+              <Show
+                when={
+                  props.selected === choice.value ||
+                  (Array.isArray(props.selected) && props.selected.includes(choice.value))
+                }
+              >
+                <SelectedIcon aria-label="Selected" class="size-4 shrink-0" />
+              </Show>
             </CommandItem>
           </>
         )}
