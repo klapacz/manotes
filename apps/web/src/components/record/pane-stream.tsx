@@ -247,7 +247,7 @@ export function PaneStream(props: ComponentProps<"section">) {
               >
                 <div
                   class={[
-                    "min-h-0 flex-1 transition-opacity duration-150 ease-out starting:opacity-0",
+                    "min-h-0 flex-1 transition-opacity duration-150 ease-out",
                     { "opacity-60": isPending(() => stream()) },
                   ]}
                 >
