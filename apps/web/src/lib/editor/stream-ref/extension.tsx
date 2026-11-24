@@ -4,8 +4,8 @@ import { Link } from "@tanstack/solid-router";
 import { Option, Stream } from "effect";
 import { createFilterLabels, useFilters } from "../../filters";
 import { defineSolidNodeView, type SolidNodeViewProps } from "@manotes/prosekit-solid";
-import { createMemo } from "solid-js";
-import { bindRt, createAtomStore, createSyncedAtom } from "../..";
+import { createMemo, Errored } from "solid-js";
+import { useGraphStream } from "../..";
 import { RecordCache } from "../../record-cache.service";
 import { RecordFormat } from "../../record";
 import { PaneCursor } from "../../record/pane.cursor";
@@ -34,47 +34,40 @@ function StreamRefView(props: SolidNodeViewProps) {
   const input = () => PaneSchema.make.stream(attrs());
 
   return (
-    <Link
-      {...PaneCtx.linkOptions(ctx, PaneCursor.openNext(input()))}
-      data-stream-ref={JSON.stringify(attrs())}
-      contenteditable="false"
-      onClick={(event) => {
-        if (
-          event.button !== 0 ||
-          event.metaKey ||
-          event.ctrlKey ||
-          event.shiftKey ||
-          event.altKey
-        ) {
-          return;
-        }
+    <Errored fallback={null}>
+      <Link
+        {...PaneCtx.linkOptions(ctx, PaneCursor.openNext(input()))}
+        data-stream-ref={JSON.stringify(attrs())}
+        contenteditable="false"
+        onClick={(event) => {
+          if (
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+          ) {
+            return;
+          }
 
-        if (scroll.scrollToPane(input()).found) event.preventDefault();
-      }}
-    >
-      {label()}
-    </Link>
+          if (scroll.scrollToPane(input()).found) event.preventDefault();
+        }}
+      >
+        {label()}
+      </Link>
+    </Errored>
   );
 }
 
 export function createRecordLabel(id: () => RecordSchema.Id | undefined) {
-  const idAtom = createSyncedAtom(id);
+  return useGraphStream(() => {
+    const recordId = id();
 
-  const label = createAtomStore(
-    bindRt((rt) => {
-      return rt.atom((get) => {
-        const recordId = get(idAtom);
+    if (!recordId) return Stream.succeed(undefined);
 
-        if (!recordId) return Stream.succeed(undefined);
-
-        return RecordCache.Service.use((cache) => cache.changes(recordId)).pipe(
-          Stream.unwrap,
-          Stream.map((record) => Option.getOrUndefined(Option.map(record, RecordFormat.label))),
-        );
-      });
-    }),
-    undefined,
-  );
-
-  return () => label.value;
+    return RecordCache.Service.use((cache) => cache.changes(recordId)).pipe(
+      Stream.unwrap,
+      Stream.map((record) => Option.getOrUndefined(Option.map(record, RecordFormat.label))),
+    );
+  });
 }

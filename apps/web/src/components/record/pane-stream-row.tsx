@@ -1,9 +1,7 @@
 import type { RecordRepo } from "@manotes/shared/record.repo";
 import { useAtomValue } from "../../lib/atom-solid";
 import { AsyncResult } from "effect/reactivity";
-import { LiveDoc } from "../../lib/live-doc.service";
-import { LiveDocAtom } from "../../lib/live-doc.atom";
-import { Equal, Option, Stream } from "effect";
+import { Effect, Equal, Option, Stream } from "effect";
 import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import {
   MatchAsyncResult,
@@ -118,16 +116,20 @@ function RecordContent(props: {
   // unmount releases it, and the pool's idle TTL decides eviction.
   const pool = EditorPool.use();
   const poolAtom = createSyncedAtom(pool);
-  const slotAtom = bindRt((rt) => rt.atom((get) => get(poolAtom).get(get(recordIdAtom))));
+
+  const slotAtom = bindRt((rt) => {
+    return rt.atom((get) => {
+      return get(poolAtom)
+        .get(get(recordIdAtom))
+        .pipe(Effect.tap((slot) => slot.ready));
+    });
+  });
+
   const slotResult = useAtomValue(slotAtom);
 
   const listRow = VirtualList.useRow();
 
-  const docState = LiveDocAtom.use({ recordId: () => props.record.id });
-
-  const editorReady = () => {
-    return AsyncResult.isSuccess(slotResult()) && LiveDoc.Doc.$is("Ready")(docState());
-  };
+  const editorReady = () => AsyncResult.isSuccess(slotResult());
 
   const fnode = Focus.createRecordNode(
     () => props.record.id,
@@ -173,6 +175,10 @@ function RecordContent(props: {
           <RecordActions record={props.record} />
           <MatchAsyncResult
             when={slotResult()}
+            // Hold Virtua's estimated itemSize (220px) while an unpreloaded
+            // slot boots off-screen so it doesn't collapse to 0px and pack extra rows.
+            onInitial={() => <div class="min-h-55" />}
+            onFailure={() => <p class="p-4 text-sm text-error-fg">Failed to load record.</p>}
             onSuccess={(slot) => {
               createEffect(
                 () => ({ slot: slot(), ready: listRow.ready() }),

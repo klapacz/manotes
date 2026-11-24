@@ -65,7 +65,5 @@ export function resolveFilterLabels(labels: readonly Filters.DisplayLabel[]) {
 }
 
 export function createFilterLabels(labels: () => readonly Filters.DisplayLabel[]) {
-  const resolved = useGraphStream(() => resolveFilterLabels(labels()));
-
-  return createMemo<readonly string[]>(() => resolved(), { loadingValue: [] });
+  return useGraphStream(() => resolveFilterLabels(labels()));
 }

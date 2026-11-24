@@ -6,9 +6,10 @@ import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
 import type { RecordSchema } from "@manotes/shared/record.schema";
 import { RuleProps } from "@manotes/shared/rule-props";
 import { Option, Record, type Types } from "effect";
-import { For, Show } from "solid-js";
+import { Errored, For, Show } from "solid-js";
 import type * as Y from "yjs";
-import { createAtomResultStore, MatchTag } from "../../lib";
+import { MatchTag } from "../../lib";
+import { useAtomResource } from "../../lib/atom-solid";
 import { LivePropsAtom } from "../../lib/live-props.atom";
 import { RecordLink } from "../../lib/record/link-component";
 import { DescriptionList } from "../ui/description-list";
@@ -21,42 +22,38 @@ import { RecordProps } from "./record-props";
 import { RecordPropsEntries } from "./record-props.entries";
 
 export function Root(props: { readonly recordId: RecordSchema.Id; readonly doc: Y.Doc }) {
-  const state = createAtomResultStore(() => {
-    return LivePropsAtom.byRecord()(props.recordId);
-  });
+  const [result] = useAtomResource(() => LivePropsAtom.byRecord()(props.recordId));
 
   return (
-    <MatchTag
-      when={state}
-      cases={{
-        Error: () => <p class="px-4 pb-4 text-sm text-error-fg">Unable to load props.</p>,
-        Success: (result) => {
-          const groups = () => result().value.groups;
+    <Errored fallback={<p class="px-4 pb-4 text-sm text-error-fg">Unable to load props.</p>}>
+      <Groups groups={result().groups} recordId={props.recordId} doc={props.doc} />
+    </Errored>
+  );
+}
 
-          return (
-            <Show
-              when={
-                !Record.isEmptyReadonlyRecord(groups().top.props) ||
-                Record.some(groups().groups, (group) => !Record.isEmptyReadonlyRecord(group.props))
-              }
-            >
-              <div class="space-y-2 px-4 pb-4">
-                <Group group={groups().top} recordId={props.recordId} doc={props.doc} />
-                <For each={Record.keys(groups().groups)}>
-                  {(ruleId) => (
-                    <Show when={groups().groups[ruleId]}>
-                      {(group) => (
-                        <Group group={group()} recordId={props.recordId} doc={props.doc} />
-                      )}
-                    </Show>
-                  )}
-                </For>
-              </div>
+function Groups(props: {
+  readonly groups: RuleProps.EditorGroups;
+  readonly recordId: RecordSchema.Id;
+  readonly doc: Y.Doc;
+}) {
+  return (
+    <Show
+      when={
+        !Record.isEmptyReadonlyRecord(props.groups.top.props) ||
+        Record.some(props.groups.groups, (group) => !Record.isEmptyReadonlyRecord(group.props))
+      }
+    >
+      <div class="space-y-2 px-4 pb-4">
+        <Group group={props.groups.top} recordId={props.recordId} doc={props.doc} />
+        <For each={Record.keys(props.groups.groups)}>
+          {(ruleId) => (
+            <Show when={props.groups.groups[ruleId]}>
+              {(group) => <Group group={group()} recordId={props.recordId} doc={props.doc} />}
             </Show>
-          );
-        },
-      }}
-    />
+          )}
+        </For>
+      </div>
+    </Show>
   );
 }
 

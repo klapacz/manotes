@@ -9,7 +9,7 @@ import {
   AutocompletePositioner,
   AutocompleteRoot,
 } from "@manotes/prosekit-solid/autocomplete";
-import { For, Show, createMemo, createSignal } from "solid-js";
+import { Errored, For, Loading, Show, createMemo, createSignal } from "solid-js";
 import {
   commandEmptyClass,
   commandItemBaseClass,
@@ -273,7 +273,11 @@ export function StreamRefMenu() {
           <AutocompleteEmpty class={commandEmptyClass}>No matching open panes</AutocompleteEmpty>
           <For each={panes()}>
             {(pane) => (
-              <StreamRefMenuItem pane={pane} query={query()} onSelect={() => onSelect(pane)} />
+              <Errored fallback={null}>
+                <Loading fallback={null}>
+                  <StreamRefMenuItem pane={pane} query={query()} onSelect={() => onSelect(pane)} />
+                </Loading>
+              </Errored>
             )}
           </For>
         </AutocompletePopup>

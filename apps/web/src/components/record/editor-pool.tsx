@@ -6,10 +6,12 @@ import { Data, Deferred, Effect, Exit, RcMap, Scope } from "effect";
 import {
   createContext,
   createRoot,
-  createRenderEffect,
   createSignal,
+  Errored,
   getOwner,
+  Loading,
   onCleanup,
+  onSettled,
   runWithOwner,
   useContext,
   type Accessor,
@@ -18,8 +20,6 @@ import {
 } from "solid-js";
 import { insert } from "@solidjs/web";
 import Editor from "../../editor";
-import { LiveDoc } from "../../lib/live-doc.service";
-import { LiveDocAtom } from "../../lib/live-doc.atom";
 import { Frame } from "../../lib/frame";
 import type { RecordSchema } from "@manotes/shared/record.schema";
 
@@ -131,31 +131,39 @@ function createSlot(recordId: RecordSchema.Id, filter: Accessor<AttrsSchema.Filt
   const ready = Deferred.makeUnsafe<void, EditorBootError>();
 
   return createRoot((dispose) => {
-    const docState = LiveDocAtom.use({ recordId: () => recordId });
-
-    // Readiness must resolve during a pending transition, before ordinary effects settle.
-    createRenderEffect(docState, (state) => {
-      LiveDoc.Doc.$match(state, {
-        Loading: () => undefined,
-        Ready: () => Effect.runSync(Deferred.succeed(ready, undefined)),
-        Error: ({ message }) => {
-          return Effect.runSync(
-            Deferred.fail(ready, new EditorBootError({ recordId: recordId, message })),
-          );
-        },
-      });
-    });
-
     const [attached, setAttached] = createSignal(false);
-
     const container = document.createElement("div");
+
+    const markReady = () => {
+      Effect.runSync(Deferred.succeed(ready, undefined));
+    };
+
+    const markFailed = (message: string) => {
+      Effect.runSync(Deferred.fail(ready, new EditorBootError({ recordId, message })));
+    };
+
+    // Wait for the editor's entire async tree (doc, backlinks, stream refs,
+    // definitions, and property groups) to settle before declaring the slot ready.
     insert(container, () => (
-      <Editor
-        recordId={recordId}
-        attached={attached()}
-        search={Option.getOrUndefined(StreamSettings.firstSearch(filter()))}
-        backlinksTo={Option.getOrUndefined(StreamSettings.firstLinkTo(filter()))}
-      />
+      <Errored
+        fallback={(error) => {
+          const caught = error();
+          markFailed(caught instanceof Error ? caught.message : "Failed to load record.");
+
+          return <p class="p-4 text-sm text-error-fg">Failed to load record.</p>;
+        }}
+      >
+        <Loading fallback={null}>
+          <EditorReady onReady={markReady}>
+            <Editor
+              recordId={recordId}
+              attached={attached()}
+              search={Option.getOrUndefined(StreamSettings.firstSearch(filter()))}
+              backlinksTo={Option.getOrUndefined(StreamSettings.firstLinkTo(filter()))}
+            />
+          </EditorReady>
+        </Loading>
+      </Errored>
     ));
 
     return {
@@ -165,6 +173,12 @@ function createSlot(recordId: RecordSchema.Id, filter: Accessor<AttrsSchema.Filt
       dispose,
     } satisfies PooledSlot;
   });
+}
+
+function EditorReady(props: ParentProps<{ readonly onReady: () => void }>) {
+  onSettled(props.onReady);
+
+  return props.children;
 }
 
 export * as EditorPool from "./editor-pool";

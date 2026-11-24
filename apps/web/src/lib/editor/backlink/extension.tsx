@@ -5,9 +5,9 @@ import { defineClipboardSerializer, definePlugin, union } from "prosekit/core";
 import type { ProseMirrorNode } from "prosekit/pm/model";
 import { Plugin } from "prosekit/pm/state";
 import { defineSolidNodeView, type SolidNodeViewProps } from "@manotes/prosekit-solid";
-import { createEffect, createMemo } from "solid-js";
+import { createEffect, createMemo, Errored } from "solid-js";
 import { RecordCache } from "../../record-cache.service";
-import { bindRt, createAtomStore, createSyncedAtom } from "../..";
+import { useGraphStream } from "../..";
 import { BacklinkSpec } from "@manotes/shared/editor/backlink/spec";
 import { RecordFormat } from "../../record";
 import { RecordLink } from "../../record/link-component";
@@ -17,7 +17,6 @@ import { RecordLink } from "../../record/link-component";
 // ---------------------------------------------------------------------------
 
 type BacklinkLabelEntry = Data.TaggedEnum<{
-  Loading: {};
   Missing: {};
   Resolved: { title: string };
 }>;
@@ -28,56 +27,61 @@ function createBacklinkView(labelSnapshot: Map<RecordSchema.Id, string>) {
   return function BacklinkView(props: SolidNodeViewProps): JSX.Element {
     const attrs = createMemo(() => BacklinkSpec.decodeAttrs(props.node.attrs));
     const recordId = () => attrs().id;
-    const recordIdAtom = createSyncedAtom(recordId);
 
-    const state = createAtomStore(
-      bindRt((rt) => {
-        return rt.atom((get) => {
-          const recordId = get(recordIdAtom);
+    const record = useGraphStream(() => {
+      const id = recordId();
 
-          return RecordCache.Service.use((cache) => cache.changes(recordId)).pipe(
-            Stream.unwrap,
-            Stream.map(
-              Option.match({
-                onSome: (record): BacklinkLabelEntry => {
-                  return BacklinkLabelEntry.Resolved({ title: RecordFormat.label(record) });
-                },
-                onNone: BacklinkLabelEntry.Missing,
-              }),
-            ),
-          );
-        });
-      }),
-      BacklinkLabelEntry.Loading(),
-    );
+      return RecordCache.Service.use((cache) => cache.changes(id)).pipe(Stream.unwrap);
+    });
+
+    const state = createMemo((): BacklinkLabelEntry => {
+      return Option.match(record(), {
+        onSome: (record) => BacklinkLabelEntry.Resolved({ title: RecordFormat.label(record) }),
+        onNone: () => BacklinkLabelEntry.Missing(),
+      });
+    });
 
     createEffect(
-      () => ({ id: recordId(), state: state.value }),
+      () => ({ id: recordId(), state: state() }),
       ({ id, state }) => {
         BacklinkLabelEntry.$match({
-          Loading: () => labelSnapshot.delete(id),
           Resolved: ({ title }) => labelSnapshot.set(id, title),
           Missing: () => labelSnapshot.delete(id),
         })(state);
       },
     );
 
-    const label = BacklinkLabelEntry.$match({
-      Resolved: ({ title }) => title,
-      Missing: () => "[unavailable record]",
-      Loading: () => "",
-    });
+    const label = () => {
+      return BacklinkLabelEntry.$match(state(), {
+        Resolved: ({ title }) => title,
+        Missing: () => "[unavailable record]",
+      });
+    };
 
     return (
-      <RecordLink
-        id={recordId()}
-        data-backlink=""
-        data-backlink-state={state.value._tag}
-        data-backlink-id={recordId()}
-        contenteditable="false"
+      <Errored
+        fallback={
+          <RecordLink
+            id={recordId()}
+            data-backlink=""
+            data-backlink-state="Missing"
+            data-backlink-id={recordId()}
+            contenteditable="false"
+          >
+            [unavailable record]
+          </RecordLink>
+        }
       >
-        {label(state.value)}
-      </RecordLink>
+        <RecordLink
+          id={recordId()}
+          data-backlink=""
+          data-backlink-state={state()._tag}
+          data-backlink-id={recordId()}
+          contenteditable="false"
+        >
+          {label()}
+        </RecordLink>
+      </Errored>
     );
   };
 }

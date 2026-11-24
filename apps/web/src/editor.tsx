@@ -3,7 +3,7 @@ import "./editor.css";
 
 import { createEditor, Priority, union, withPriority } from "prosekit/core";
 import { ProseKit } from "@manotes/prosekit-solid";
-import { createEffect, createMemo, Errored, Loading, onCleanup, Show } from "solid-js";
+import { createEffect, Errored, onCleanup, Show } from "solid-js";
 import * as Y from "yjs";
 import {
   defineYjsCommands,
@@ -14,8 +14,6 @@ import {
   type YjsUndoPluginOptions,
 } from "prosekit/extensions/yjs";
 import { defineAppExtension } from "./editor.extension";
-import { MatchTag } from "./lib";
-import { LiveDoc } from "./lib/live-doc.service";
 import { LiveDocAtom } from "./lib/live-doc.atom";
 import { defineReadonly } from "prosekit/extensions/readonly";
 import { PropertyDef } from "./components/record/property-def";
@@ -43,21 +41,12 @@ type Props = {
 };
 
 export default function Editor(props: Props): JSX.Element {
-  const state = LiveDocAtom.use({ recordId: () => props.recordId });
-  const doc = createMemo(() => LiveDoc.readyDoc(state()));
+  const doc = LiveDocAtom.useDoc({ recordId: () => props.recordId });
 
   return (
-    <>
-      <MatchTag
-        when={state()}
-        cases={{
-          Error: (error) => <p class="mb-3 text-sm text-error-fg">{error().message}</p>,
-        }}
-      />
-      <Show when={doc()} keyed>
-        {(doc) => <ReadyEditor {...props} doc={doc} />}
-      </Show>
-    </>
+    <Show when={doc()} keyed>
+      {(doc) => <ReadyEditor {...props} doc={doc} />}
+    </Show>
   );
 }
 
@@ -125,21 +114,19 @@ function ReadyEditor(props: Props & { readonly doc: Y.Doc }) {
           style={props.style}
         />
         <Errored fallback={null}>
-          <Loading fallback={null}>
-            <Show when={attrs.definition()}>
-              {(definition) => (
-                <PropertyDef.Root recordId={props.recordId} doc={props.doc} attrs={definition()} />
-              )}
-            </Show>
-            <Show when={attrs.rule()}>
-              {(rule) => <RuleDef.Root recordId={props.recordId} doc={props.doc} attrs={rule()} />}
-            </Show>
-            <Show when={attrs.preset()}>
-              {(preset) => (
-                <PresetDef.Root recordId={props.recordId} doc={props.doc} attrs={preset()} />
-              )}
-            </Show>
-          </Loading>
+          <Show when={attrs.definition()}>
+            {(definition) => (
+              <PropertyDef.Root recordId={props.recordId} doc={props.doc} attrs={definition()} />
+            )}
+          </Show>
+          <Show when={attrs.rule()}>
+            {(rule) => <RuleDef.Root recordId={props.recordId} doc={props.doc} attrs={rule()} />}
+          </Show>
+          <Show when={attrs.preset()}>
+            {(preset) => (
+              <PresetDef.Root recordId={props.recordId} doc={props.doc} attrs={preset()} />
+            )}
+          </Show>
         </Errored>
         <RecordPropGroups.Root recordId={props.recordId} doc={props.doc} />
         <BacklinkMenu currentRecordId={props.recordId} />
