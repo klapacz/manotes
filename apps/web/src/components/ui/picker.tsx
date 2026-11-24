@@ -1,10 +1,12 @@
 import {
   createContext,
+  createEffect,
   createMemo,
   createSignal,
   Show,
   For,
   Loading,
+  untrack,
   useContext,
   omit,
 } from "solid-js";
@@ -32,7 +34,8 @@ type PickerContext = {
   open: () => boolean;
   change: (value: boolean) => void;
   trigger?: HTMLElement;
-  afterClose?: () => void;
+  hasAfterClose: () => boolean;
+  setAfterClose: (action?: () => void) => void;
   placement?: string;
 };
 
@@ -55,21 +58,40 @@ export function Root(props: {
 }) {
   const mobile = useIsMobile();
   const [open, setOpen] = createSignal(false);
+  const [afterClose, setAfterClose] = createSignal<(() => void) | undefined>();
+
+  const flushAfterClose = () => {
+    const action = untrack(afterClose);
+
+    if (!action) return;
+
+    setAfterClose(undefined);
+    action();
+  };
 
   const ctx: PickerContext = {
     label: () => props.label,
     mobile,
     open: () => props.open ?? open(),
     change: (v: boolean) => {
-      if (v) ctx.afterClose = undefined;
-
       setOpen(v);
       props.onOpenChange?.(v);
     },
     trigger: undefined,
-    afterClose: undefined,
+    hasAfterClose: () => afterClose() !== undefined,
+    setAfterClose: (action) => setAfterClose(() => action),
     placement: props.placement,
   };
+
+  // Reopening (controlled or uncontrolled) cancels exit completion; flush any
+  // pending close action so an accepted command is never silently dropped.
+  createEffect(
+    ctx.open,
+    (isOpen) => {
+      if (isOpen) flushAfterClose();
+    },
+    { defer: true },
+  );
 
   return (
     <Context value={ctx}>
@@ -77,6 +99,11 @@ export function Root(props: {
         component={mobile() ? Drawer.Drawer : Popover.Popover}
         open={ctx.open()}
         onOpenChange={ctx.change}
+        // Run deferred close actions only after the exit animation finishes so
+        // they don't clash with the closing popover.
+        onOpenChangeComplete={(open: boolean) => {
+          if (!open) flushAfterClose();
+        }}
       >
         {props.children}
       </Dynamic>
@@ -157,20 +184,12 @@ export function Content(props: {
   let content: HTMLDivElement | undefined;
 
   const close = (action?: () => void) => {
-    ctx.afterClose = action;
+    ctx.setAfterClose(action);
     ctx.change(false);
   };
 
   const finalFocus = () => {
     if (ctx.open()) return null;
-    const action = ctx.afterClose;
-    ctx.afterClose = undefined;
-
-    if (action) {
-      queueMicrotask(action);
-
-      return null;
-    }
 
     const event = new Event("closeAutoFocus", { cancelable: true });
     props.onCloseAutoFocus?.(event);
@@ -188,7 +207,8 @@ export function Content(props: {
         ref={(el: HTMLDivElement) => (content = el)}
         aria-label={ctx.label()}
         initialFocus={() => content?.querySelector("input") ?? content}
-        finalFocus={finalFocus}
+        // Suppress trigger refocus when closing for an action (avoids a focus ring flash).
+        finalFocus={ctx.hasAfterClose() ? "none" : finalFocus}
         side={ctx.placement === "left-start" ? "left" : "bottom"}
         align="start"
         sideOffset={4}

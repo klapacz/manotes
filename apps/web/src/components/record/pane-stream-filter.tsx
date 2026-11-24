@@ -65,6 +65,10 @@ export function PaneStreamFilter(props: {
       ...PaneCtx.linkOptions(ctx, StreamSwitch.switchStream(pane(), choice, next)),
       replace: false,
     });
+
+    // Request pane focus synchronously so FocusDOM automatically cancels it if
+    // the user clicks elsewhere, reopens a picker, or navigates again.
+    if (!next) focus.request(fid.pane());
   };
 
   Focus.useNode().registerShortcuts([

@@ -22,6 +22,12 @@ export function StreamSwitcher(props: {
   matched: StreamSwitch.Choice | undefined;
   onSelect: (choice: StreamSwitch.Choice, next: boolean) => void;
 }) {
+  // Freeze the checked item once closing starts so the checkmark doesn't jump
+  // to the newly selected stream during the popover's exit animation.
+  const selected = createMemo<string | undefined>((prev) => {
+    return props.open ? props.matched?.value : prev;
+  });
+
   return (
     <Picker.Root label="Switch stream" open={props.open} onOpenChange={props.onOpenChange}>
       <Picker.Trigger title="Switch stream (S)">
@@ -41,13 +47,16 @@ export function StreamSwitcher(props: {
         {(close) => (
           <StreamSwitcherCommands
             presets={props.presets}
-            selected={props.matched?.value}
+            selected={selected()}
             onSelect={(choice, next) => {
               if (next) {
                 close(() => props.onSelect(choice, true));
               } else {
+                // Pass a no-op action so Picker suppresses trigger refocus, and
+                // navigate immediately while EditorPool.preload yields frame 1
+                // (Frame.next) to the GPU-composited popover exit animation.
+                close(() => {});
                 props.onSelect(choice, false);
-                close();
               }
             }}
           />

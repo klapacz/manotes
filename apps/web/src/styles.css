@@ -12,6 +12,37 @@
 @theme {
   --container-pane: 44rem;
   --breakpoint-pane: 44rem;
+
+  /* Literal opacity/transform keyframes (no var() or filter, unlike tw-animate-css)
+     so Chromium keeps popover open/close on the GPU compositor thread while
+     navigation/preloading runs on the main thread; `forwards` holds opacity 0
+     until unmount so the closing popover never flashes back for a frame. */
+  --animate-popover-in: popover-in 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-popover-out: popover-out 140ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+
+  @keyframes popover-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes popover-out {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    to {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
 }
 
 @theme inline {

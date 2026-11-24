@@ -35,8 +35,9 @@ export const PopoverContent = (props: PopoverContentProps) => {
     <SDK.PopoverContent
       data-slot="popover-content"
       class={cx(
-        "bg-bg-subtle text-fg data-[open]:animate-in data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[open]:fade-in-0 data-[ending-style]:zoom-out-95 data-[open]:zoom-in-95 border-border-subtle z-50 w-72 origin-(--transform-origin) rounded-md border p-4 shadow-md outline-hidden",
-        "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=right]:slide-in-from-left-2 data-[side=left]:slide-in-from-right-2",
+        // Uses GPU-composited @theme keyframes; keep opacity-0 if @ui-sdk strips
+        // data-ending-style before the closed popover unmounts.
+        "bg-bg-subtle text-fg border-border-subtle data-[open]:animate-popover-in data-[ending-style]:animate-popover-out [&[data-closed]:not([data-ending-style])]:opacity-0 will-change-[transform,opacity] motion-reduce:animate-none z-50 w-72 origin-(--transform-origin) rounded-md border p-4 shadow-md outline-hidden",
         props.class,
       )}
       {...rest}
