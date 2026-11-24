@@ -5,7 +5,7 @@ import type { FilterMenu } from "./filter-picker";
 import { StreamDisplay } from "./stream-display";
 import { StreamSwitcher } from "./stream-switcher";
 import { getRouteApi } from "@tanstack/solid-router";
-import { Show, createMemo, createSignal } from "solid-js";
+import { Loading, Show, createMemo, createSignal, isPending } from "solid-js";
 import { usePresets } from "../../lib/filters";
 import { PaneCursor } from "../../lib/record/pane.cursor";
 import { PaneCtx } from "../../lib/record/pane.ctx";
@@ -23,7 +23,6 @@ const route = getRouteApi("/$graph/");
 
 export function PaneStreamFilter(props: {
   dirty: boolean;
-  pending?: boolean;
   onRefresh: () => void;
   onCreate?: () => void;
   record?: RecordControls;
@@ -140,20 +139,22 @@ export function PaneStreamFilter(props: {
               </Show>
               {trigger}
               <StreamDisplay.Menu settings={pane()} onChange={changeDisplay} />
-              <Show when={props.dirty}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="chip"
-                  rounded="full"
-                  onClick={props.onRefresh}
-                  disabled={props.pending}
-                  class="border-warning-border bg-warning-control text-warning-fg hover:bg-warning-control-hover focus-visible:border-warning-border focus-visible:ring-warning-border/30"
-                  title="Refresh records that moved or no longer match the filters"
-                >
-                  Refresh
-                </Button>
-              </Show>
+              <Loading fallback={null}>
+                <Show when={props.dirty}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="chip"
+                    rounded="full"
+                    onClick={props.onRefresh}
+                    disabled={isPending(() => props.dirty)}
+                    class="border-warning-border bg-warning-control text-warning-fg hover:bg-warning-control-hover focus-visible:border-warning-border focus-visible:ring-warning-border/30"
+                    title="Refresh records that moved or no longer match the filters"
+                  >
+                    Refresh
+                  </Button>
+                </Show>
+              </Loading>
             </HorizontalScroll>
           </PaneHeader>
           {filters}

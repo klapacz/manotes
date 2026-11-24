@@ -3,6 +3,7 @@ import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { Effect, Equal, Option, Stream } from "effect";
 import {
   Loading,
+  Reveal,
   Show,
   createEffect,
   createMemo,
@@ -131,6 +132,8 @@ export function PaneStream(props: ComponentProps<"section">) {
       // The Record button may have taken focus from the originating record.
       const id = Focus.recordIn(pane().paneId, focus.activeId()) ?? lastFocused();
 
+      if (!id) return undefined;
+
       return stream().items.find(({ record }) => record.id === id);
     },
   });
@@ -223,36 +226,41 @@ export function PaneStream(props: ComponentProps<"section">) {
   return (
     <Focus.NodeProvider node={fnode}>
       <Focus.Element as={PaneShell} {...props}>
-        <Loading fallback={<PaneStreamFilter dirty={false} onRefresh={refresh} />}>
-          <PaneStreamFilter
-            onCreate={handleCreate}
-            record={record()}
-            dirty={stream().dirty}
-            pending={isPending(() => stream())}
-            onRefresh={refresh}
-          />
-          <EditorPool.Provider pool={pool}>
-            <Show
-              when={rows.length > 0}
-              fallback={
-                <PaneEmptyState>
-                  {hasSearch() ? "No records match your search." : "No records in this pane."}
-                </PaneEmptyState>
-              }
-            >
-              <div
-                class={[
-                  "min-h-0 flex-1 transition-opacity duration-150 ease-out starting:opacity-0",
-                  { "opacity-60": isPending(() => stream()) },
-                ]}
+        <Reveal order="sequential">
+          <Loading fallback={null}>
+            <PaneStreamFilter
+              onCreate={handleCreate}
+              record={record()}
+              dirty={stream().dirty}
+              onRefresh={refresh}
+            />
+          </Loading>
+          <Loading fallback={null}>
+            <EditorPool.Provider pool={pool}>
+              <Show
+                when={rows.length > 0}
+                fallback={
+                  <PaneEmptyState>
+                    {hasSearch() ? "No records match your search." : "No records in this pane."}
+                  </PaneEmptyState>
+                }
               >
-                <VirtualList.Root data={rows} key={RecordStream.recordId} retained={retained()}>
-                  {(item) => <PaneStreamRow.Root row={item} onClearDraft={recording.clearDraft} />}
-                </VirtualList.Root>
-              </div>
-            </Show>
-          </EditorPool.Provider>
-        </Loading>
+                <div
+                  class={[
+                    "min-h-0 flex-1 transition-opacity duration-150 ease-out starting:opacity-0",
+                    { "opacity-60": isPending(() => stream()) },
+                  ]}
+                >
+                  <VirtualList.Root data={rows} key={RecordStream.recordId} retained={retained()}>
+                    {(item) => (
+                      <PaneStreamRow.Root row={item} onClearDraft={recording.clearDraft} />
+                    )}
+                  </VirtualList.Root>
+                </div>
+              </Show>
+            </EditorPool.Provider>
+          </Loading>
+        </Reveal>
       </Focus.Element>
     </Focus.NodeProvider>
   );

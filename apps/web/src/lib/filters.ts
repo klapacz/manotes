@@ -1,13 +1,11 @@
-import { useAtomValue } from "./atom-solid";
-import { AsyncResult } from "effect/reactivity";
+import { useAtomResource } from "./atom-solid";
 import { createMemo } from "solid-js";
 import { Filters } from "@manotes/shared/record/filters";
 import { PresetRecordRepo } from "@manotes/shared/preset-record.repo";
 import { PropDef } from "@manotes/shared/prop-def.service";
 import { EffectStream } from "@manotes/shared/effect/stream";
 import { Array, Effect, Option, Record, Stream } from "effect";
-import { bindRt } from "./rt-atom";
-import { createAtomStore, createSyncedAtom } from "./primitives";
+import { bindRt, useGraphStream } from "./rt-atom";
 import { RecordCache } from "./record-cache.service";
 import { RecordFormat } from "./record";
 
@@ -29,23 +27,15 @@ const registry = bindRt((rt) => {
 });
 
 export function useFilters() {
-  const state = useAtomValue(registry);
+  const [state] = useAtomResource(registry);
 
-  return createMemo(() => {
-    const result = state();
-
-    return AsyncResult.isSuccess(result) ? result.value.filters : Filters.builtin;
-  });
+  return createMemo(() => state().filters);
 }
 
 export function usePresets() {
-  const state = useAtomValue(registry);
+  const [state] = useAtomResource(registry);
 
-  return createMemo((): readonly PresetRecordRepo.Def[] => {
-    const result = state();
-
-    return AsyncResult.isSuccess(result) ? result.value.presets : [];
-  });
+  return createMemo((): readonly PresetRecordRepo.Def[] => state().presets);
 }
 
 export function resolveFilterLabels(labels: readonly Filters.DisplayLabel[]) {
@@ -75,14 +65,7 @@ export function resolveFilterLabels(labels: readonly Filters.DisplayLabel[]) {
 }
 
 export function createFilterLabels(labels: () => readonly Filters.DisplayLabel[]) {
-  const source = createSyncedAtom(labels);
+  const resolved = useGraphStream(() => resolveFilterLabels(labels()));
 
-  const state = createAtomStore(
-    bindRt((rt) => {
-      return rt.atom((get) => resolveFilterLabels(get(source)));
-    }),
-    [],
-  );
-
-  return () => state.value;
+  return createMemo<readonly string[]>(() => resolved(), { loadingValue: [] });
 }
