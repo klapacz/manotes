@@ -1,15 +1,20 @@
 import { AudioMemoWorker } from "./audio-memo/worker";
+import { ScriptRelay } from "./script/relay";
 import { BrowserCrypto, BrowserRuntime, BrowserWorkerRunner } from "@effect/platform-browser";
 import { Socket } from "effect/socket";
 import { Effect, Layer, References, Stream, SubscriptionRef } from "effect";
 import { RpcGroup, RpcServer, RpcWorker } from "effect/rpc";
+import { Attrs } from "@manotes/shared/attrs.service";
+import { ClientRecordRepo } from "@manotes/shared/client-record.repo";
 import { DB } from "@manotes/shared/db.service";
 import { EventRepo } from "@manotes/shared/event.repo";
 import { MaterializationCheckpointRepo } from "@manotes/shared/materialization-checkpoint.repo";
 import { MaterializedEventService } from "./materialized-event.service";
 import { BacklinkService } from "@manotes/shared/materializer/backlink/service";
 import { Materializer } from "@manotes/shared/materializer.service";
+import { PropDef } from "@manotes/shared/prop-def.service";
 import { RecordRepo } from "@manotes/shared/record.repo";
+import { RuleRecord } from "@manotes/shared/rule-record.service";
 import { GraphSync } from "@manotes/shared/graph-sync/service";
 import { GraphSyncContext } from "@manotes/shared/graph-sync/context";
 import { GraphSyncEncryption } from "@manotes/shared/graph-sync/encryption/service";
@@ -109,7 +114,8 @@ function makeRpcHandler(
           GraphSync.Service.layer,
         ).pipe(
           Layer.provideMerge(
-            Layer.merge(
+            Layer.mergeAll(
+              ScriptRelay.layer,
               Layer.succeed(
                 GraphSyncContext.Context,
                 GraphSyncContext.Context.of({
@@ -182,6 +188,10 @@ function buildServiceLayer(opts: {
     DB.Service.layer,
     EventRepo.Service.layer,
     RecordRepo.Service.layer,
+    Attrs.Service.layer,
+    ClientRecordRepo.Service.layer,
+    PropDef.Service.layer,
+    RuleRecord.Service.layer,
     BacklinkService.Service.layer,
     MaterializationCheckpointRepo.Service.layer,
     MaterializedEventService.Service.layer,

@@ -2,10 +2,12 @@
  * Orchestrates socket lifecycle and feeds inputs into the machine runner.
  */
 import { Socket } from "effect/socket";
-import { Effect, Predicate, Queue, Stream, SubscriptionRef } from "effect";
-import { decodeServerMessage } from "../contract/codec";
+import { Effect, Option, Predicate, Queue, Stream, SubscriptionRef } from "effect";
+import { decodeServerMessage, encodeClientMessage } from "../contract/codec";
+import { GraphSyncMessages } from "../contract/messages";
 import { EventRepo } from "../../event.repo";
 import { GraphSyncContext } from "../context";
+import { GraphSyncRelay } from "../relay";
 import { GraphSyncStatus } from "../status";
 import { GraphSyncModel } from "./model";
 import { GraphSyncMachineRunner } from "./runner";
@@ -46,6 +48,7 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
     Effect.forkScoped,
   );
 
+  const relayHandler = yield* Effect.serviceOption(GraphSyncRelay.Handler);
   const socket = yield* createSocket();
   const writer = yield* socket.writer;
 
@@ -61,7 +64,29 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
           Predicate.isString(data) ? new TextEncoder().encode(data) : data,
         );
 
-        if (Predicate.isTagged(message, "RelayRequest")) continue;
+        if (Predicate.isTagged(message, "RelayRequest")) {
+          if (Option.isNone(relayHandler)) continue;
+
+          yield* relayHandler.value.handle(message).pipe(
+            Effect.flatMap(
+              Option.match({
+                onNone: () => Effect.void,
+                onSome: (envelope) => {
+                  return encodeClientMessage(
+                    new GraphSyncMessages.RelayReply({
+                      requestId: message.requestId,
+                      envelope,
+                    }),
+                  ).pipe(Effect.andThen(writer.write));
+                },
+              }),
+            ),
+            Effect.catchCause((cause) => Effect.logWarning("Relay request failed", cause)),
+            Effect.forkScoped,
+          );
+
+          continue;
+        }
 
         yield* Queue.offer(inputQueue, GraphSyncModel.Input.ServerMessage({ message }));
       }
