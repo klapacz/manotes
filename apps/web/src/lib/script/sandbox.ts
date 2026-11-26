@@ -9,7 +9,7 @@ import { Deferred, Effect, Exit, Fiber, Layer, Scope } from "effect";
 import { RpcServer } from "effect/rpc";
 import { Worker as EffectWorker } from "effect/workers";
 import quickjsWasmUrl from "quickjs-wasi/quickjs.wasm?url";
-import type { HostMessage, WorkerMessage } from "./worker";
+import type { ScriptWorkerHostMessage, ScriptWorkerMessage } from "./worker";
 import { ExchangeRpc } from "./rpc";
 
 /** Runs each script VM in its own Web Worker, terminated when the sandbox closes. */
@@ -69,7 +69,7 @@ function connect(scope: Scope.Scope): CodemodeRemote {
 
           yield* Effect.gen(function* () {
             const platform = yield* EffectWorker.WorkerPlatform;
-            const worker = yield* platform.spawn<WorkerMessage, HostMessage>(0);
+            const worker = yield* platform.spawn<ScriptWorkerMessage, ScriptWorkerHostMessage>(0);
             const done = yield* Deferred.make<void>();
 
             const receive = worker.run(() => Deferred.succeed(done, undefined));

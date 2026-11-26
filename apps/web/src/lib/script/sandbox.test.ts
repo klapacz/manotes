@@ -3,7 +3,7 @@ import { Effect, Fiber } from "effect";
 import { WorkerRunner } from "effect/workers";
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 import { ScriptSandbox } from "./sandbox";
-import { ScriptWorker, type HostMessage } from "./worker";
+import { runScriptWorker, type ScriptWorkerHostMessage } from "./worker";
 
 const serve = vi.hoisted(() => {
   return vi.fn<typeof import("@earendil-works/pi-codemode/portable").serveCodemodeRemote>();
@@ -53,14 +53,17 @@ class LocalWorker extends EventTarget {
       }, 0);
     } else {
       this.fiber = Effect.runFork(
-        ScriptWorker.run.pipe(
+        runScriptWorker.pipe(
           Effect.provideService(WorkerRunner.WorkerRunnerPlatform, BrowserWorkerRunner.make(port1)),
         ),
       );
     }
   }
 
-  postMessage(message: WorkerRunner.PlatformMessage<HostMessage>, transfers: Transferable[] = []) {
+  postMessage(
+    message: WorkerRunner.PlatformMessage<ScriptWorkerHostMessage>,
+    transfers: Transferable[] = [],
+  ) {
     this.endpoint.postMessage(message, transfers);
   }
 }

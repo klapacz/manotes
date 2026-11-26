@@ -8,18 +8,18 @@ import { RpcClient } from "effect/rpc";
 import { WorkerRunner } from "effect/workers";
 import { ExchangeRpc } from "./rpc";
 
-export type HostMessage = [
+export type ScriptWorkerHostMessage = [
   "execute",
   request: CodemodeRemoteRequest,
   wasm: WebAssembly.Module,
   port: MessagePort,
 ];
 
-export type WorkerMessage = ["done"];
+export type ScriptWorkerMessage = ["done"];
 
-export const run = Effect.gen(function* () {
+export const runScriptWorker = Effect.gen(function* () {
   const platform = yield* WorkerRunner.WorkerRunnerPlatform;
-  const runner = yield* platform.start<WorkerMessage, HostMessage>();
+  const runner = yield* platform.start<ScriptWorkerMessage, ScriptWorkerHostMessage>();
 
   yield* runner.run((portId, message) => {
     // `port` is the transferred port2; `portId` identifies the separate execute/done channel.
@@ -57,6 +57,6 @@ export const run = Effect.gen(function* () {
   });
 }).pipe(Effect.scoped);
 
-BrowserRuntime.runMain(run.pipe(Effect.provide(BrowserWorkerRunner.layer)));
-
-export * as ScriptWorker from "./worker";
+// Do not self-re-export this module. Vite dev loads the entry with `?worker_file&type=module`.
+// A plain self-import starts a second runner, so each script executes twice.
+BrowserRuntime.runMain(runScriptWorker.pipe(Effect.provide(BrowserWorkerRunner.layer)));
