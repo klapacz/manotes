@@ -1,6 +1,6 @@
 import { useAtom, useAtomSet, useAtomValue } from "../lib/atom-solid";
 import { createFileRoute, Link, Navigate } from "@tanstack/solid-router";
-import { Effect, Schema } from "effect";
+import { Cause, Effect, Schema } from "effect";
 import { AsyncResult, Atom } from "effect/reactivity";
 import { Show, createMemo } from "solid-js";
 import { GraphRegistryContract } from "@manotes/shared/graph-registry/contract";
@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button, buttonVariants } from "../components/ui/button";
 import { AppForm, useAppForm, afterSubmit } from "../components/ui/form";
 import { List, ListItem } from "../components/ui/list";
+import { toast } from "../components/ui/sonner";
 import { MatchAsyncResult, MatchTag } from "../lib";
 import { GraphAccessRuntime } from "../lib/graph-access/runtime";
 import { GraphBackupFile } from "../lib/graph-backup/file";
@@ -85,14 +86,17 @@ function SelectBackupFileForm() {
     <AppForm form={form} AppForm={form.AppForm}>
       <MatchAsyncResult
         when={decodeBackupResult()}
-        onError={() => (
-          <Alert variant="destructive">
+        onFailure={(result) => (
+          <Alert variant="destructive" class="flex items-center justify-between gap-3">
             <AlertDescription>Invalid backup file.</AlertDescription>
-          </Alert>
-        )}
-        onDefect={() => (
-          <Alert variant="destructive">
-            <AlertDescription>Invalid backup file.</AlertDescription>
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={() => copyError(Cause.pretty(result().cause))}
+            >
+              Copy error
+            </Button>
           </Alert>
         )}
       />
@@ -201,5 +205,12 @@ function ImportBackupForm(props: { decodedBackup: DecodedBackup }) {
         </Button>
       </div>
     </AppForm>
+  );
+}
+
+function copyError(value: string) {
+  void navigator.clipboard.writeText(value).then(
+    () => toast.success("Error copied"),
+    () => toast.error("Unable to copy error"),
   );
 }

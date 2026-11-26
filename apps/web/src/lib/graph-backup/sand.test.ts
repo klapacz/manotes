@@ -20,7 +20,7 @@ const cmp = AttrsSchema.makeFilterExpr.cmp;
 const project = AttrsSchema.RecordId.make("project");
 
 type LegacyFilter = {
-  readonly type?: { readonly _tag: string; readonly enum_parent?: string };
+  readonly type?: string | { readonly _tag: string; readonly enum_parent?: string };
   readonly props?: Readonly<Record<string, AttrsSchema.PropVal>>;
   readonly search?: string;
   readonly date?: string;
@@ -52,6 +52,23 @@ describe("temporary sand backup import", () => {
       { type: { _tag: "enum_option", enum_parent: project }, props: {} },
       [Filters.enumOptions.make(project)],
     ],
+    [
+      { type: "notes" },
+      [
+        cmp({ val: ["_tag", "=", "note"] }),
+        cmp({ val: ["title", "exists", false] }),
+        Filters.aliases.unarchived.make(),
+      ],
+    ],
+    [
+      { type: "pages" },
+      [
+        cmp({ val: ["_tag", "=", "note"] }),
+        cmp({ val: ["title", "exists", true] }),
+        Filters.aliases.unarchived.make(),
+      ],
+    ],
+    [{ type: "prop" }, [cmp({ val: ["_tag", "=", "prop"] }), Filters.aliases.unarchived.make()]],
   ] satisfies readonly (readonly [LegacyFilter, AttrsSchema.Filter])[])(
     "converts legacy type and archive defaults %#",
     async (filter, expected) => {
@@ -224,6 +241,55 @@ describe("temporary sand backup import", () => {
       const converted = await read(events);
       Y.applyUpdate(replay, converted.events[0]!.payload);
       expect(settings(replay).filter).toEqual([]);
+    } finally {
+      source.destroy();
+      replay.destroy();
+    }
+  });
+
+  it("imports live sand noteId events with string streamRef types and rejects noteId in v2", async () => {
+    const source = new Y.Doc();
+    const replay = new Y.Doc();
+
+    try {
+      appendReference(source, { type: "pages", search: "hello", backlinksTo: "", linksFrom: "" });
+
+      const encoded = Effect.runSync(
+        GraphBackupSchema.encodeBundle({
+          version: 2,
+          exportedAt,
+          sourceGraphDisplayName: "Friend's graph",
+          events: [update(source, "first")],
+        }),
+      );
+
+      const noteIdEvents = encoded.events.map(({ recordId, ...rest }) => ({
+        ...rest,
+        noteId: recordId,
+      }));
+
+      const v1File = new File(
+        [JSON.stringify({ ...encoded, version: 1, events: noteIdEvents })],
+        "sand.manotes-events.json",
+      );
+
+      const backup = await Effect.runPromise(GraphBackupFile.readBackupFile(v1File));
+      expect(backup.version).toBe(2);
+      expect(backup.events[0]?.recordId).toBe(project);
+      Y.applyUpdate(replay, backup.events[0]!.payload);
+      expect(settings(replay).filter).toEqual([
+        cmp({ val: ["_tag", "=", "note"] }),
+        cmp({ val: ["title", "exists", true] }),
+        cmp({ val: ["body", "contains", "hello"] }),
+        Filters.aliases.unarchived.make(),
+      ]);
+
+      const v2File = new File(
+        [JSON.stringify({ ...encoded, version: 2, events: noteIdEvents })],
+        "v2-invalid.manotes-events.json",
+      );
+
+      await expect(Effect.runPromise(GraphBackupFile.readBackupFile(v2File))).rejects.toThrow();
     } finally {
       source.destroy();
       replay.destroy();
