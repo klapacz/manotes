@@ -96,7 +96,11 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObject<Gra
 
         for (const socket of yield* state.getWebSockets()) {
           if (socket === except) continue;
-          yield* socket.send(encoded);
+          yield* socket
+            .send(encoded)
+            .pipe(
+              Effect.ignoreCause({ log: "Error", message: "Graph sync broadcast send failed" }),
+            );
         }
       });
 
