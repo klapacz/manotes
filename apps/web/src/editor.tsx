@@ -19,6 +19,7 @@ import { defineReadonly } from "prosekit/extensions/readonly";
 import { PropertyDef } from "./components/record/property-def";
 import { RuleDef } from "./components/record/rule-def";
 import { PresetDef } from "./components/record/preset-def";
+import { ClientDef } from "./components/record/client-def";
 import { RecordPropGroups } from "./components/record/record-prop-groups";
 import { getProsemirrorXmlFragment } from "@manotes/shared/prosemirror/yjs";
 import BacklinkMenu, { StreamRefMenu, TabMenu } from "./lib/editor/backlink/menu";
@@ -127,6 +128,7 @@ function ReadyEditor(props: Props & { readonly doc: Y.Doc }) {
               <PresetDef.Root recordId={props.recordId} doc={props.doc} attrs={preset()} />
             )}
           </Show>
+          <Show when={attrs.client()}>{(client) => <ClientDef.Root attrs={client()} />}</Show>
         </Errored>
         <RecordPropGroups.Root recordId={props.recordId} doc={props.doc} />
         <BacklinkMenu currentRecordId={props.recordId} />

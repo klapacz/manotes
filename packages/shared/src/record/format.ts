@@ -50,6 +50,7 @@ export function kindLabel(tag: AttrsSchema.RecordTag): string | undefined {
     Match.when("owned", () => "Owned"),
     Match.when("rule", () => "Rule"),
     Match.when("preset", () => "Preset"),
+    Match.when("client", () => "Agent"),
     Match.exhaustive,
   );
 }

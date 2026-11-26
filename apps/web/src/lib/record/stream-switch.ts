@@ -36,6 +36,11 @@ export const systemStreams = [
     label: "Presets",
     settings: StreamSettings.systemStreams.presets,
   }),
+  Choice.system({
+    value: "system:clients",
+    label: "Agents",
+    settings: StreamSettings.systemStreams.clients,
+  }),
 ] as const;
 
 export function presetChoice(preset: PresetRecordRepo.Def) {

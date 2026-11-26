@@ -13,6 +13,7 @@ import type { Hotkey } from "@tanstack/hotkeys";
 import { ProsemirrorEncode } from "@manotes/shared/prosemirror/encode";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
+import { McpEncryption } from "@manotes/shared/mcp/encryption";
 import { RecordDoc } from "@manotes/shared/record/doc";
 import * as Y from "yjs";
 import type { EditorPool } from "./editor-pool";
@@ -127,6 +128,11 @@ export const prefilledPayload = Effect.fn("ComponentsRecordRecordCreate.prefille
       Match.when("preset", () => {
         return attrs.initializePreset({ doc, filter: StreamSettings.defaultFilter });
       }),
+      Match.when("client", () => {
+        return McpEncryption.generateKey().pipe(
+          Effect.flatMap((key) => attrs.initializeClient({ doc, key })),
+        );
+      }),
       Match.when("owned", () => {
         return Array.findFirst(pane.filter, (expression) => {
           return Filters.enumOptions.match(expression).pipe(Result.getSuccess);
@@ -151,7 +157,7 @@ function needsHeading(comparisons: readonly AttrsSchema.FilterCmp[]): boolean {
   return Array.some(comparisons, (comparison) => {
     return Match.value(comparison).pipe(
       Match.when(["title", "exists", true], () => true),
-      Match.when(["_tag", "=", Match.is("prop", "rule", "owned", "preset")], () => true),
+      Match.when(["_tag", "=", Match.is("prop", "rule", "owned", "preset", "client")], () => true),
       Match.orElse(() => false),
     );
   });

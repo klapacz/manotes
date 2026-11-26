@@ -61,6 +61,7 @@ export class Service extends Context.Service<Service>()("Attrs.Service", {
     initializeEnumOption,
     initializeRule,
     initializePreset,
+    initializeClient,
     setPresetFilter,
     setPresetDefault,
     setRuleStorage,
@@ -509,6 +510,16 @@ const editablePresetAttrs = Effect.fn("Attrs.editablePresetAttrs")(function* (op
     Effect.flatMap(Effect.fromOption),
     Effect.flatMap(YSchema.expect("preset")),
   );
+});
+
+const initializeClient = Effect.fn("Attrs.initializeClient")(function* (opts: {
+  readonly doc: Y.Doc;
+  readonly key: Uint8Array;
+}) {
+  const { attrs } = RecordDoc.fromDoc({ doc: opts.doc });
+  const client = yield* attrs.pipe(YSchema.set("_tag", "client"));
+  yield* client.pipe(YSchema.set("client_key", opts.key));
+  yield* client.pipe(YSchema.upsertMap("props"));
 });
 
 export * as Attrs from "./attrs.service";

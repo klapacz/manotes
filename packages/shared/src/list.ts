@@ -73,9 +73,18 @@ export const ItemPreset = Schema.TaggedStruct("preset", {
 
 export type ItemPreset = typeof ItemPreset.Type;
 
-export const Item = Schema.Union([ItemNote, ItemProp, ItemOwned, ItemRule, ItemPreset]).pipe(
-  Schema.toTaggedUnion("_tag"),
-);
+export const ItemClient = Schema.TaggedStruct("client", commonFields);
+
+export type ItemClient = typeof ItemClient.Type;
+
+export const Item = Schema.Union([
+  ItemNote,
+  ItemProp,
+  ItemOwned,
+  ItemRule,
+  ItemPreset,
+  ItemClient,
+]).pipe(Schema.toTaggedUnion("_tag"));
 
 export type Item = typeof Item.Type;
 
@@ -240,6 +249,7 @@ const readItem = Effect.fn("CliList.readItem")(function* (opts: {
         }),
       );
     }),
+    Match.when("client", () => Effect.succeed(Item.cases.client.make(common))),
     Match.exhaustive,
   );
 });
@@ -407,6 +417,7 @@ function formatSettings(item: Item): string {
         `  Default: ${item.preset_default ? "true" : "false"}`,
       ].join("\n");
     }),
+    Match.tag("client", () => ""),
     Match.exhaustive,
   );
 }

@@ -286,6 +286,7 @@ const kind = comparison({
           { label: "Owned records", value: "owned" },
           { label: "Rules", value: "rule" },
           { label: "Presets", value: "preset" },
+          { label: "Agents", value: "client" },
         ],
       },
     ],

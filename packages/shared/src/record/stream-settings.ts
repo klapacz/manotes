@@ -37,6 +37,11 @@ export const systemStreams = {
     sort: "updated",
     view: "full",
   },
+  clients: {
+    filter: [cmp({ val: ["_tag", "=", "client"] }), Filters.aliases.unarchived.make()],
+    sort: "updated",
+    view: "full",
+  },
 } as const satisfies Record<string, Settings>;
 
 export function enumOptionsPreset(parentId: AttrsSchema.RecordId): Settings {

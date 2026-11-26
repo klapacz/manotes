@@ -62,6 +62,10 @@ describe("StreamSwitch.matchStream", () => {
     expect(StreamSwitch.matchStream(StreamSettings.systemStreams.presets.filter, presets)).toEqual(
       StreamSwitch.systemStreams[2],
     );
+
+    expect(StreamSwitch.matchStream(StreamSettings.systemStreams.clients.filter, presets)).toEqual(
+      StreamSwitch.systemStreams[3],
+    );
   });
 
   it("returns undefined for unmatched filters", () => {

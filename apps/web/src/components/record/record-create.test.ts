@@ -1,7 +1,8 @@
 import { StreamSettings } from "@manotes/shared/record/stream-settings";
 import { Filters } from "@manotes/shared/record/filters";
 import type { RecordRepo } from "@manotes/shared/record.repo";
-import { Data, Effect } from "effect";
+import { Data, Effect, Layer, Predicate } from "effect";
+import { SecureRandom } from "effect/crypto";
 import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
 import { MaterializedEventService } from "../../lib/materialized-event.service";
@@ -68,6 +69,8 @@ vi.mock("../../lib/atom-solid", () => ({
 
 vi.mock("../ui/sonner", () => ({ toast: { promise: <T>(promise: Promise<T>) => promise } }));
 
+const testLayer = Layer.mergeAll(Attrs.Service.layer, SecureRandom.layerWebCrypto);
+
 describe("blank record creation", () => {
   const defaultTargetFilter: AttrsSchema.TargetFilter = [
     AttrsSchema.makeTargetFilterExpr.cmp({ val: ["_tag", "=", "note"] }),
@@ -83,7 +86,7 @@ describe("blank record creation", () => {
           sort: "updated",
           view: "full",
         }),
-      ).pipe(Effect.provide(Attrs.Service.layer)),
+      ).pipe(Effect.provide(testLayer)),
     );
 
     const { doc, attrs } = RecordDoc.make();
@@ -115,7 +118,7 @@ describe("blank record creation", () => {
           sort: "updated",
           view: "full",
         }),
-      ).pipe(Effect.provide(Attrs.Service.layer)),
+      ).pipe(Effect.provide(testLayer)),
     );
 
     const { doc, attrs } = RecordDoc.make();
@@ -136,6 +139,33 @@ describe("blank record creation", () => {
     }
   });
 
+  it("creates a client with a generated 32-byte key and an editable heading", async () => {
+    const payload = await Effect.runPromise(
+      prefilledPayload(
+        PaneSchema.Pane.cases.stream.make({
+          paneId: PaneSchema.Id.make("clients"),
+          filter: [AttrsSchema.makeFilterExpr.cmp({ val: ["_tag", "=", "client"] })],
+          sort: "updated",
+          view: "full",
+        }),
+      ).pipe(Effect.provide(testLayer)),
+    );
+
+    const { doc, attrs } = RecordDoc.make();
+
+    try {
+      Y.applyUpdate(doc, payload);
+      const snapshot = Effect.runSync(YSchema.exportStrict(attrs));
+      expect(Predicate.isTagged(snapshot, "client")).toBe(true);
+      expect(Predicate.isTagged(snapshot, "client") ? snapshot.client_key.length : 0).toBe(32);
+      expect(ProsemirrorMaterializer.yDocToNodeJSON({ yDoc: doc })).toMatchObject({
+        content: [{ type: "heading", attrs: { level: 1 }, content: [{ text: "Untitled" }] }],
+      });
+    } finally {
+      doc.destroy();
+    }
+  });
+
   it("creates an owned enum option with its parent and editable title in one update", () => {
     const enum_parent = RecordSchema.Id.make("priority");
 
@@ -147,7 +177,7 @@ describe("blank record creation", () => {
           sort: "updated",
           view: "full",
         }),
-      ).pipe(Effect.provide(Attrs.Service.layer)),
+      ).pipe(Effect.provide(testLayer)),
     );
 
     const { doc, attrs } = RecordDoc.make();
@@ -178,7 +208,7 @@ describe("blank record creation", () => {
           sort: "updated",
           view: "full",
         }),
-      ).pipe(Effect.provide(Attrs.Service.layer)),
+      ).pipe(Effect.provide(testLayer)),
     );
 
     const { doc, attrs } = RecordDoc.make();
@@ -221,7 +251,7 @@ describe("blank record creation", () => {
             sort: "date",
             view: "full",
           }),
-        ).pipe(Effect.provide(Attrs.Service.layer)),
+        ).pipe(Effect.provide(testLayer)),
       ),
     );
   });
@@ -239,7 +269,7 @@ describe("blank record creation", () => {
           sort: "updated",
           view: "full",
         }),
-      ).pipe(Effect.provide(Attrs.Service.layer)),
+      ).pipe(Effect.provide(testLayer)),
     );
 
     const doc = new Y.Doc();
@@ -275,7 +305,7 @@ describe("blank record creation", () => {
             expr.cmp({ val: [["link", "->", second], "exists", true] }),
           ],
         }),
-      ).pipe(Effect.provide(Attrs.Service.layer)),
+      ).pipe(Effect.provide(testLayer)),
     );
 
     const doc = new Y.Doc();

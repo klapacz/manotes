@@ -67,6 +67,7 @@ const records = Schema.TaggedUnion({
   owned: common,
   rule: common,
   preset: common,
+  client: common,
 });
 
 export const RecordTag = Schema.Literals(Record.keys(records.cases));
@@ -305,6 +306,10 @@ export const Attrs = Schema.Union([
     ...records.cases.preset.fields,
     preset_filter: Filter,
     preset_default: Schema.optionalKey(Schema.Boolean),
+  }),
+  Schema.Struct({
+    ...records.cases.client.fields,
+    client_key: Schema.Uint8ArrayFromBase64,
   }),
 ]);
 
