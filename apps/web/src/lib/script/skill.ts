@@ -7,6 +7,9 @@ const pluginMeta = {
   name: "manotes",
   version: "0.0.0",
   description: "Query, create, and edit Manotes records end-to-end encrypted.",
+  author: {
+    name: "Korneliusz Łapacz",
+  },
   skills: "./skills/",
   mcpServers: "./.mcp.json",
 };
