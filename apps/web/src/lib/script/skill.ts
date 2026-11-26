@@ -48,13 +48,26 @@ export const buildPluginZip = Effect.fn("ScriptSkill.buildPluginZip")(function* 
   });
 
   const manifestJson = formatJson(pluginMeta);
+
+  const codexManifestJson = formatJson({
+    ...pluginMeta,
+    interface: {
+      displayName: "Manotes",
+      shortDescription: "Manage your Manotes records",
+      longDescription: pluginMeta.description,
+      developerName: "Korneliusz Łapacz",
+      category: "Productivity",
+      capabilities: ["Read", "Write"],
+    },
+  });
+
   const portableManifestJson = formatJson({ ...pluginMeta, mcpServers: "./mcp.json" });
 
   return yield* zipFiles([
     Zip.file("manotes-plugin/plugin.json", portableManifestJson),
     Zip.file("manotes-plugin/mcp.json", portableMcpJson),
     Zip.file("manotes-plugin/.claude-plugin/plugin.json", manifestJson),
-    Zip.file("manotes-plugin/.codex-plugin/plugin.json", manifestJson),
+    Zip.file("manotes-plugin/.codex-plugin/plugin.json", codexManifestJson),
     Zip.file("manotes-plugin/.mcp.json", mcpJson),
     Zip.file("manotes-plugin/gemini-extension.json", geminiExtensionJson),
     Zip.file("manotes-plugin/skills/manotes/SKILL.md", skillMd),
