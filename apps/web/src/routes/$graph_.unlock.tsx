@@ -3,6 +3,7 @@ import { createFileRoute, redirect, Navigate } from "@tanstack/solid-router";
 import { Match, Schema } from "effect";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { AppForm, useAppForm, afterSubmit } from "../components/ui/form";
+import { Switch } from "../components/ui/switch";
 import { MatchAsyncResult, MatchTag, createSyncedAtom } from "../lib";
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { GraphAccessCommands } from "../lib/graph-access/commands";
@@ -128,19 +129,18 @@ function RouteComponent() {
         <form.Field name="remember">
           {(field) => (
             <div class="flex items-start gap-3">
-              <input
+              <Switch
                 id="remember-graph"
-                class="mt-1 size-4"
-                type="checkbox"
+                class="mt-1"
                 name={field().name}
                 checked={field().value}
                 aria-describedby="remember-graph-description"
-                onChange={(event) => field().handleChange(event.currentTarget.checked)}
+                onCheckedChange={(checked) => field().handleChange(checked)}
                 onBlur={() => field().handleBlur()}
               />
               <div class="space-y-1">
                 <label for="remember-graph" class="text-sm font-medium">
-                  Remember on this device
+                  Remember password on this device
                 </label>
                 <p id="remember-graph-description" class="text-fg-subtle text-sm">
                   Open without its password on this device. Lock graph forgets it. Anyone with
