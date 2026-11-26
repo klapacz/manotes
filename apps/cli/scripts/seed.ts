@@ -51,7 +51,7 @@ const seed = Effect.gen(function* () {
   const protocol = RpcClient.layerProtocolHttp({
     url: `${origin}/api/rpc/graph-registry`,
     transformClient: HttpClient.mapRequest(HttpClientRequest.bearerToken(session.sessionToken)),
-  }).pipe(Layer.provide(RpcSerialization.layerJson));
+  }).pipe(Layer.provide(RpcSerialization.layerNdjson));
 
   const registry = yield* RpcClient.make(GraphRegistryRpc, { flatten: true }).pipe(
     Effect.provide(protocol),

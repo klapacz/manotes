@@ -38,7 +38,7 @@ function makeLayer(refresh: Effect.Effect<void, never, never>) {
   return RpcClient.layerProtocolHttp({
     url: "/api/rpc/graph-registry",
   }).pipe(
-    Layer.provide(RpcSerialization.layerJson),
+    Layer.provide(RpcSerialization.layerNdjson),
     Layer.provide(httpClientRefreshOnUnauthorized),
   );
 }

@@ -1,5 +1,5 @@
 import { SessionAuth } from "@manotes/shared/session/auth";
-import { Effect, Layer, pipe, Result, Schema } from "effect";
+import { Effect, Layer, Option, pipe, Result, Schema } from "effect";
 import { HttpRouter, HttpServerError, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { AuthSession } from "./auth/session.ts";
 import { SessionRoutes } from "./session/routes.ts";
@@ -16,10 +16,9 @@ export const protectedRoutesLayer = HttpRouter.addAll(
 
     const proxyToGraphRegistry = Effect.fn("Routes.proxyToGraphRegistry")(function* () {
       const session = yield* SessionAuth.Current;
-      const registry = graphRegistryNS.getByName(session.accountId);
       const request = yield* HttpServerRequest.HttpServerRequest;
 
-      return yield* registry.fetch(request);
+      return yield* graphRegistryNS.fetch(session.accountId, request);
     });
 
     const proxyToGraphSync = Effect.fn("Routes.proxyToGraphSync")(function* ({
@@ -28,11 +27,11 @@ export const protectedRoutesLayer = HttpRouter.addAll(
       params: typeof GraphIdParams.Type;
     }) {
       const session = yield* SessionAuth.Current;
-      const registry = graphRegistryNS.getByName(session.accountId);
-      const exists = yield* registry.graphExists(params.graphId).pipe(Effect.orDie);
+      const registry = yield* graphRegistryNS.getByName(session.accountId);
+      const graph = yield* registry.getGraph({ graphId: params.graphId }).pipe(Effect.orDie);
       const request = yield* HttpServerRequest.HttpServerRequest;
 
-      if (exists === false) {
+      if (Option.isNone(graph)) {
         return HttpServerResponse.jsonUnsafe({ error: "Not found" }, { status: 404 });
       }
 

@@ -1,27 +1,34 @@
 import * as Cloudflare from "@alchemy.run/cloudflare";
 import { SqliteClient } from "@effect/sql-sqlite-do";
 import { DisplayNameTakenError, GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
-import { Effect, Layer, Option, Predicate, Scope, Context } from "effect";
-import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import { RpcSerialization, RpcServer } from "effect/rpc";
+import { Effect, Layer, Predicate } from "effect";
 import { GraphRegistryRepo } from "./repo.ts";
 
-// ---------------------------------------------------------------------------
-// RPC HttpApp tag
-// ---------------------------------------------------------------------------
+export default class GraphRegistryDurableObject extends Cloudflare.RpcDurableObject<GraphRegistryDurableObject>()(
+  "GraphRegistryDurableObject",
+  { schema: GraphRegistryRpc },
+  // oxlint-disable-next-line require-yield
+  Effect.gen(function* () {
+    return Effect.gen(function* () {
+      const state = yield* Cloudflare.DurableObjectState;
 
-class RpcHttpApp extends Context.Service<
-  RpcHttpApp,
-  Effect.Effect<
-    HttpServerResponse.HttpServerResponse,
-    never,
-    Scope.Scope | HttpServerRequest.HttpServerRequest
-  >
->()("GraphRegistry.RpcHttpApp") {}
+      const layer = GraphRegistryRepo.Service.layer.pipe(
+        Layer.provideMerge(
+          SqliteClient.layer({
+            db: state.storage.sql.raw,
+            spanAttributes: { durableObject: "GraphRegistryDurableObject" },
+          }),
+        ),
+      );
 
-// ---------------------------------------------------------------------------
-// RPC handler implementations
-// ---------------------------------------------------------------------------
+      yield* state.blockConcurrencyWhile(() => {
+        return GraphRegistryRepo.migrate.pipe(Effect.provide(layer), Effect.orDie);
+      });
+
+      return HandlersLayer.pipe(Layer.provide(layer));
+    });
+  }),
+) {}
 
 const HandlersLayer = GraphRegistryRpc.toLayer(
   Effect.gen(function* () {
@@ -49,61 +56,6 @@ const HandlersLayer = GraphRegistryRpc.toLayer(
     };
   }),
 );
-
-// ---------------------------------------------------------------------------
-// Layer that creates the long-lived RPC HttpApp
-// ---------------------------------------------------------------------------
-
-const RpcHttpAppLayer = Layer.effect(RpcHttpApp, RpcServer.toHttpEffect(GraphRegistryRpc));
-
-// ---------------------------------------------------------------------------
-// Durable Object
-// ---------------------------------------------------------------------------
-
-export default class GraphRegistryDurableObject extends Cloudflare.DurableObject<GraphRegistryDurableObject>()(
-  "GraphRegistryDurableObject",
-  // oxlint-disable-next-line require-yield
-  Effect.gen(function* () {
-    return Effect.gen(function* () {
-      const state = yield* Cloudflare.DurableObjectState;
-
-      const layer = RpcHttpAppLayer.pipe(
-        Layer.provide(HandlersLayer),
-        Layer.provide(RpcSerialization.layerJson),
-        Layer.provideMerge(GraphRegistryRepo.Service.layer),
-        Layer.provideMerge(
-          SqliteClient.layer({
-            db: state.storage.sql.raw,
-            spanAttributes: { durableObject: "GraphRegistryDurableObject" },
-          }),
-        ),
-      );
-
-      yield* state.blockConcurrencyWhile(() => {
-        return GraphRegistryRepo.migrate.pipe(Effect.provide(layer), Effect.orDie);
-      });
-
-      return {
-        fetch: Effect.gen(function* () {
-          const httpApp = yield* RpcHttpApp;
-
-          return yield* httpApp;
-        }).pipe(Effect.scoped, Effect.provide(layer)),
-
-        graphExists: Effect.fn(function* (graphId: string) {
-          const repo = yield* GraphRegistryRepo.Service;
-          const graph = yield* repo.getGraph({ graphId });
-
-          return Option.isSome(graph);
-        }, Effect.provide(layer)),
-      };
-    });
-  }),
-) {}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 /**
  * Keep `DisplayNameTakenError` in the error channel and turn every other
