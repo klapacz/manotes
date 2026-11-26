@@ -1,7 +1,11 @@
 import { McpToken } from "@manotes/shared/mcp/token";
+import { Effect } from "effect";
 import { Base64 } from "effect/encoding";
 import { createMemo, Show } from "solid-js";
+import { bindRt } from "../../lib";
+import { useAtom } from "../../lib/atom-solid";
 import { GraphRuntimeContext } from "../../lib/graph-access/graph-runtime/context";
+import { ScriptSkill } from "../../lib/script/skill";
 import { Button } from "../ui/button";
 import { DescriptionList } from "../ui/description-list";
 import { toast } from "../ui/sonner";
@@ -15,6 +19,8 @@ export type Snapshot = {
 export function Root(props: { attrs: Snapshot }) {
   const focus = Focus.useNode();
   const graph = GraphRuntimeContext.use();
+  const [skillDownload, downloadSkill] = useAtom(DownloadSkill);
+  const [pluginDownload, downloadPlugin] = useAtom(DownloadPlugin);
 
   const encodedKey = createMemo(() => {
     const key = props.attrs.client_key;
@@ -81,11 +87,65 @@ export function Root(props: { attrs: Snapshot }) {
               </Show>
             </DescriptionList.Details>
           </DescriptionList.Row>
+          <Show when={encodedKey()}>
+            {(key) => (
+              <DescriptionList.Row>
+                <DescriptionList.Term>Install</DescriptionList.Term>
+                <DescriptionList.Details>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      disabled={skillDownload().waiting}
+                      onClick={() => downloadSkill(key())}
+                    >
+                      Download skill (claude.ai)
+                    </Button>
+                    <Show when={mcpUrl()}>
+                      {(url) => (
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          disabled={pluginDownload().waiting}
+                          onClick={() => downloadPlugin({ encodedKey: key(), mcpUrl: url() })}
+                        >
+                          Download plugin (Claude Code, Codex, Gemini CLI, Cursor)
+                        </Button>
+                      )}
+                    </Show>
+                  </div>
+                </DescriptionList.Details>
+              </DescriptionList.Row>
+            )}
+          </Show>
         </DescriptionList.Root>
       </Surface.Root>
     </div>
   );
 }
+
+const DownloadSkill = bindRt((rt) => {
+  return rt.fn(
+    Effect.fn("ComponentsRecordClientDef.downloadSkill")(function* (encodedKey: string) {
+      yield* ScriptSkill.downloadSkillZip(encodedKey).pipe(
+        Effect.tapError(() => Effect.sync(() => toast.error("Unable to build skill zip"))),
+      );
+    }),
+  );
+});
+
+const DownloadPlugin = bindRt((rt) => {
+  return rt.fn(
+    Effect.fn("ComponentsRecordClientDef.downloadPlugin")(function* (opts: {
+      readonly encodedKey: string;
+      readonly mcpUrl: string;
+    }) {
+      yield* ScriptSkill.downloadPluginZip(opts).pipe(
+        Effect.tapError(() => Effect.sync(() => toast.error("Unable to build plugin zip"))),
+      );
+    }),
+  );
+});
 
 function maskKey(key: string): string {
   if (key.length <= 12) return key;
