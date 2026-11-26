@@ -20,8 +20,7 @@ export class DedicatedWorkerHealth extends Schema.Class<DedicatedWorkerHealth>(
   lastFailure: Schema.String,
 }) {}
 
-/** External RPC surface (main thread -> SharedWorker). */
-export class GraphSharedWorkerRpc extends RpcGroup.make(
+const GraphCommonRpc = RpcGroup.make(
   Rpc.make("audioMemoStatusStream", {
     payload: {},
     success: Schema.NullOr(Schema.String),
@@ -38,6 +37,16 @@ export class GraphSharedWorkerRpc extends RpcGroup.make(
     error: Schema.Never,
     payload: {},
   }),
+  Rpc.make("syncStatusStream", {
+    payload: {},
+    success: SyncStatus,
+    error: Schema.Never,
+    stream: true,
+  }),
+);
+
+/** External RPC surface (main thread -> SharedWorker). */
+export class GraphSharedWorkerRpc extends RpcGroup.make(
   Rpc.make("updateMessagePort", {
     payload: {
       port: Transferable.MessagePort,
@@ -51,39 +60,10 @@ export class GraphSharedWorkerRpc extends RpcGroup.make(
     error: Schema.Never,
     stream: true,
   }),
-  Rpc.make("syncStatusStream", {
-    payload: {},
-    success: SyncStatus,
-    error: Schema.Never,
-    stream: true,
-  }),
-) {}
+).merge(GraphCommonRpc) {}
 
 /** Internal RPC surface (SharedWorker -> Dedicated Worker via MessagePort). */
-export class GraphDedicatedRpc extends RpcGroup.make(
-  Rpc.make("audioMemoStatusStream", {
-    payload: {},
-    success: Schema.NullOr(Schema.String),
-    error: Schema.Never,
-    stream: true,
-  }),
-  Rpc.make("removeAudioMemo", {
-    payload: { path: Schema.String },
-    success: Schema.Void,
-    error: Schema.String,
-  }),
-  Rpc.make("placeholder", {
-    payload: {},
-    success: Schema.Void,
-    error: Schema.Never,
-  }),
-  Rpc.make("syncStatusStream", {
-    payload: {},
-    success: SyncStatus,
-    error: Schema.Never,
-    stream: true,
-  }),
-) {}
+export class GraphDedicatedRpc extends RpcGroup.make().merge(GraphCommonRpc) {}
 
 /** Initial message for the dedicated worker (not RPC). */
 export class GraphDedicatedInitialMessage extends Schema.Class<GraphDedicatedInitialMessage>(
