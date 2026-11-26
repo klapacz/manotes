@@ -123,7 +123,7 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObject<Gra
           // Only accept sync WebSocket upgrades on the authenticated `/api/sync/` path.
           if (
             request.headers.upgrade?.toLowerCase() === "websocket" &&
-            new URL(request.url).pathname.startsWith("/api/sync/")
+            new URL(request.url, "http://localhost").pathname.startsWith("/api/sync/")
           ) {
             const [response] = yield* Cloudflare.upgrade();
 
