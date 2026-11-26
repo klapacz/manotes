@@ -1,6 +1,6 @@
 import { RecordSchema } from "../../record.schema";
 import { Data, Effect, Layer, Context } from "effect";
-import { castArray } from "../../graph-encryption";
+import { Aead, Mac, SecureRandom } from "effect/crypto";
 import { GraphSyncContext } from "../context";
 import { GraphSyncEncryptionSchema } from "./schema";
 
@@ -19,37 +19,23 @@ export class InvalidEncryptedEventError extends Data.TaggedError(
 export class Service extends Context.Service<Service>()("GraphSyncEncryption.Service", {
   make: Effect.gen(function* () {
     const context = yield* GraphSyncContext.Context;
-    const graphKey = castArray(context.graphKey);
+    const aead = yield* Aead.Aead;
+    const mac = yield* Mac.Mac;
+    const random = yield* SecureRandom.SecureRandom;
 
-    const streamRefKey = yield* Effect.tryPromise({
-      try: () => {
-        return crypto.subtle.importKey(
-          "raw",
-          graphKey,
-          {
-            name: "HMAC",
-            hash: "SHA-256",
-          },
-          false,
-          ["sign"],
-        );
-      },
-      catch: (cause) => new StreamRefDerivationError({ cause }),
-    });
+    const streamRefKey = yield* Mac.key(Mac.hmacSha256, context.graphKey).pipe(
+      Effect.mapError((cause) => new StreamRefDerivationError({ cause })),
+    );
 
-    const eventEncryptionKey = yield* Effect.tryPromise({
-      try: () => crypto.subtle.importKey("raw", graphKey, "AES-GCM", false, ["encrypt", "decrypt"]),
-      catch: (cause) => new EventEncryptionError({ cause }),
-    });
+    const eventEncryptionKey = yield* Aead.key(Aead.aes256Gcm, context.graphKey).pipe(
+      Effect.mapError((cause) => new EventEncryptionError({ cause })),
+    );
 
     const deriveRecordStreamRef = Effect.fn("GraphSyncEncryptionService.deriveRecordStreamRef")(
       function* (recordId: RecordSchema.Id) {
-        const signature = yield* Effect.tryPromise({
-          try: () => crypto.subtle.sign("HMAC", streamRefKey, encodeStreamRefInput(recordId)),
-          catch: (cause) => new StreamRefDerivationError({ cause }),
-        });
-
-        return new Uint8Array(signature);
+        return yield* mac
+          .sign(streamRefKey, encodeStreamRefInput(recordId))
+          .pipe(Effect.mapError((cause) => new StreamRefDerivationError({ cause })));
       },
     );
 
@@ -72,7 +58,7 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
         GraphSyncEncryptionSchema.encodeAuthenticatedMetadata({
           version: 0,
           id,
-          streamRef: castArray(streamRef),
+          streamRef,
           createdAt,
         }),
         (cause) => new EventEncryptionError({ cause }),
@@ -87,27 +73,19 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
         (cause) => new EventEncryptionError({ cause }),
       );
 
-      const iv = crypto.getRandomValues(new Uint8Array(EVENT_IV_LENGTH));
+      const iv = yield* random.randomBytes(EVENT_IV_LENGTH);
 
-      const ciphertext = yield* Effect.tryPromise({
-        try: () => {
-          return crypto.subtle.encrypt(
-            {
-              name: "AES-GCM",
-              iv,
-              additionalData: castArray(authenticatedMetadata),
-            },
-            eventEncryptionKey,
-            castArray(body),
-          );
-        },
-        catch: (cause) => new EventEncryptionError({ cause }),
-      });
+      const ciphertext = yield* aead
+        .encrypt(eventEncryptionKey, body, {
+          nonce: iv,
+          aad: authenticatedMetadata,
+        })
+        .pipe(Effect.mapError((cause) => new EventEncryptionError({ cause })));
 
       return {
         version: 0,
         iv,
-        ciphertext: new Uint8Array(ciphertext),
+        ciphertext,
       } satisfies GraphSyncEncryptionSchema.Envelope;
     });
 
@@ -126,29 +104,21 @@ export class Service extends Context.Service<Service>()("GraphSyncEncryption.Ser
         GraphSyncEncryptionSchema.encodeAuthenticatedMetadata({
           version: envelope.version,
           id,
-          streamRef: castArray(streamRef),
+          streamRef,
           createdAt,
         }),
         (cause) => new InvalidEncryptedEventError({ cause }),
       );
 
-      const decrypted = yield* Effect.tryPromise({
-        try: () => {
-          return crypto.subtle.decrypt(
-            {
-              name: "AES-GCM",
-              iv: castArray(envelope.iv),
-              additionalData: castArray(authenticatedMetadata),
-            },
-            eventEncryptionKey,
-            castArray(envelope.ciphertext),
-          );
-        },
-        catch: (cause) => new InvalidEncryptedEventError({ cause }),
-      });
+      const decrypted = yield* aead
+        .decrypt(eventEncryptionKey, envelope.ciphertext, {
+          nonce: envelope.iv,
+          aad: authenticatedMetadata,
+        })
+        .pipe(Effect.mapError((cause) => new InvalidEncryptedEventError({ cause })));
 
       return yield* remapError(
-        GraphSyncEncryptionSchema.decodeBody(new Uint8Array(decrypted)),
+        GraphSyncEncryptionSchema.decodeBody(decrypted),
         (cause) => new InvalidEncryptedEventError({ cause }),
       );
     });

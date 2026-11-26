@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import dedent from "dedent";
 import { DateTime, Effect, Layer } from "effect";
 import { Reactivity } from "effect/reactivity";
@@ -160,8 +160,7 @@ describe("CLI local workflow", () => {
           "http://127.0.0.1:1",
           "--token",
           "test-token",
-          "--graph-id",
-          "test-graph",
+          "--graph-id=-test-graph",
           "--graph-key",
           graphKey,
           ...(autoSync ? ["--auto-sync"] : []),
@@ -175,7 +174,7 @@ describe("CLI local workflow", () => {
           {
             origin: "http://127.0.0.1:1",
             token: "test-token",
-            graphId: "test-graph",
+            graphId: "-test-graph",
             graphKey,
             autoSync,
           },
@@ -367,6 +366,7 @@ async function seedWorkspace(databasePath: string) {
       Effect.provide(CliRuntime.layer),
       Effect.provide(configLayer),
       Effect.provide(NodeServices.layer),
+      Effect.provide(NodeCrypto.layer),
       Effect.provide(Reactivity.layer),
       Effect.scoped,
     ),

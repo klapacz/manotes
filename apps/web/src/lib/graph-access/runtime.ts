@@ -1,3 +1,4 @@
+import { BrowserCrypto } from "@effect/platform-browser";
 import { Layer, ManagedRuntime } from "effect";
 import { Atom, AtomRegistry } from "effect/reactivity";
 import { GraphAccessCommandsDelete } from "./commands/delete";
@@ -24,7 +25,10 @@ const GraphAccessLayer = Layer.mergeAll(
   GraphAccessCommandsRename.Service.layer,
   GraphAccessCommandsSync.Service.layer,
   GraphAccessCommandsUnlock.Service.layer,
-).pipe(Layer.provideMerge(Layer.succeed(AtomRegistry.AtomRegistry, registry)));
+).pipe(
+  Layer.provideMerge(Layer.succeed(AtomRegistry.AtomRegistry, registry)),
+  Layer.provideMerge(BrowserCrypto.layer),
+);
 
 const memoMap = Layer.makeMemoMapUnsafe();
 

@@ -1,5 +1,5 @@
 import { RecordSchema } from "@manotes/shared/record.schema";
-import { NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { DB } from "@manotes/shared/db.service";
 import { EventRepo } from "@manotes/shared/event.repo";
@@ -417,6 +417,7 @@ function runIntegration(
       Effect.provide(MaterializerAttrs.Service.layer.pipe(Layer.provideMerge(CliRuntime.layer))),
       Effect.provide(Layer.succeed(DB.Config, { localGraphId: "test", databasePath: ":memory:" })),
       Effect.provide(NodeServices.layer),
+      Effect.provide(NodeCrypto.layer),
       Effect.provide(Reactivity.layer),
       Effect.scoped,
     ),

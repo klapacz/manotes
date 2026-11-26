@@ -12,7 +12,7 @@ export type Resolution = Data.TaggedEnum<{
   CloudLocked: { record: LocalRegistry.Schema.CloudRecord };
   CloudUnlocked: {
     record: LocalRegistry.Schema.CloudRecord;
-    graphKey: Uint8Array<ArrayBuffer>;
+    graphKey: Uint8Array;
   };
 }>;
 

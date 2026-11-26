@@ -7,7 +7,7 @@ import { CliSetup } from "./cli-setup";
 
 const graph: LocalRegistrySchema.CloudRecord = {
   localGraphId: "local-id",
-  graphId: "cloud'id; $(printf wrong)",
+  graphId: "-cloud'id; $(printf wrong)",
   displayName: "My graph",
   accountId: "account-id",
   mode: "cloud",
@@ -28,7 +28,7 @@ const graphKey = new Uint8Array(32).fill(7);
 afterEach(() => vi.unstubAllGlobals());
 
 describe("CliSetup.prepare", () => {
-  it("uses the in-memory key and cloud ID, quotes arguments, and only requests a token", async () => {
+  it("quotes a leading-hyphen cloud ID and uses the in-memory key without sending it", async () => {
     const fetch = vi
       .fn<typeof globalThis.fetch>()
       .mockResolvedValue(Response.json({ apiKey: "cli-token" }));
@@ -46,7 +46,7 @@ describe("CliSetup.prepare", () => {
     expect(getKey).toHaveBeenCalledExactlyOnceWith(graph.graphKeyEnvelope);
     expect(command).toBe(
       " manotes init --auto-sync --origin 'https://manotes.example' --token 'cli-token' " +
-        "--graph-id 'cloud'\\''id; $(printf wrong)' " +
+        "--graph-id='-cloud'\\''id; $(printf wrong)' " +
         `--graph-key '${Buffer.from(graphKey).toString("base64")}'`,
     );
     expect(fetch).toHaveBeenCalledTimes(1);

@@ -1,3 +1,4 @@
+import { SecureRandom } from "effect/crypto";
 import * as Cloudflare from "@alchemy.run/cloudflare";
 import { Context, Data, Duration, Effect, Layer, Schema } from "effect";
 
@@ -16,11 +17,12 @@ const SESSION_TTL = Duration.days(30);
 
 export class SessionKvService extends Context.Service<SessionKvService>()("Auth.SessionKvService", {
   make: Effect.gen(function* () {
+    const random = yield* SecureRandom.SecureRandom;
     const SESSION_KV = yield* Cloudflare.KV.Namespace("SESSION_KV");
     const kv = yield* Cloudflare.KV.ReadWriteNamespace(SESSION_KV);
 
     const create = Effect.fn("AuthSessionKv.create")(function* (email: string, accountId: string) {
-      const token = crypto.randomUUID();
+      const token = yield* random.uuidV4();
       const encoded = yield* encodeSession({ email, accountId });
       yield* kv
         .put(token, encoded, {

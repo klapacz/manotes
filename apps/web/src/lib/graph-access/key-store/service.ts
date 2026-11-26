@@ -6,7 +6,7 @@ import { GraphAccessLocalRegistryLayer } from "../local-registry/layer";
 
 type GraphKeyId = string;
 
-type UnwrappedGraphKey = Uint8Array<ArrayBuffer>;
+type UnwrappedGraphKey = Uint8Array;
 
 const encodeWrappedGraphKey = Schema.encodeEffect(Schema.Uint8ArrayFromBase64);
 
@@ -42,9 +42,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.KeyStore.Se
 
       return yield* LocalRegistry.Repo.findRememberedKey({ envelope }).pipe(
         Effect.provideService(SqlClient.SqlClient, sql),
-        Effect.map(
-          Option.map(({ rememberedGraphKey }) => GraphEncryption.castArray(rememberedGraphKey)),
-        ),
+        Effect.map(Option.map(({ rememberedGraphKey }) => rememberedGraphKey)),
       );
     });
 
@@ -76,9 +74,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.KeyStore.Se
 
       const saved = LocalRegistry.Repo.findRememberedKeyReactive({ envelope }).pipe(
         Stream.provideService(SqlClient.SqlClient, sql),
-        Stream.map(
-          Option.map(({ rememberedGraphKey }) => GraphEncryption.castArray(rememberedGraphKey)),
-        ),
+        Stream.map(Option.map(({ rememberedGraphKey }) => rememberedGraphKey)),
       );
 
       return Stream.zipLatest(memory, saved).pipe(

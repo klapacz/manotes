@@ -1,5 +1,5 @@
 import { AudioMemoWorker } from "./audio-memo/worker";
-import { BrowserRuntime, BrowserWorkerRunner } from "@effect/platform-browser";
+import { BrowserCrypto, BrowserRuntime, BrowserWorkerRunner } from "@effect/platform-browser";
 import { Socket } from "effect/socket";
 import { Effect, Layer, References, Stream, SubscriptionRef } from "effect";
 import { RpcGroup, RpcServer, RpcWorker } from "effect/rpc";
@@ -66,6 +66,7 @@ const BootstrapRunner = Layer.unwrap(bootstrapEffect);
 
 BrowserRuntime.runMain(
   Effect.scoped(Layer.launch(BootstrapRunner)).pipe(
+    Effect.provide(BrowserCrypto.layer),
     Effect.tapCause((error) => {
       return Effect.logError("Dedicated worker fatal error", error);
     }),

@@ -1,4 +1,4 @@
-import { NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
@@ -770,6 +770,7 @@ function runIntegration(program: Effect.Effect<void, unknown, Services>) {
       Effect.provide(services),
       Effect.provide(Layer.succeed(DB.Config, { localGraphId: "test", databasePath: ":memory:" })),
       Effect.provide(NodeServices.layer),
+      Effect.provide(NodeCrypto.layer),
       Effect.provide(Reactivity.layer),
       Effect.scoped,
     ),

@@ -1,3 +1,4 @@
+import { BrowserCrypto } from "@effect/platform-browser";
 import { Effect, Layer, References } from "effect";
 import { LiveDoc } from "../../live-doc.service";
 import { EventRepo } from "@manotes/shared/event.repo";
@@ -63,7 +64,7 @@ export const makeLayer = (opts: SetupOpts) => {
         Layer.provideMerge(sessionServiceLayer),
       );
     }),
-  );
+  ).pipe(Layer.provideMerge(BrowserCrypto.layer));
 };
 
 export type AppLayer = ReturnType<typeof makeLayer>;

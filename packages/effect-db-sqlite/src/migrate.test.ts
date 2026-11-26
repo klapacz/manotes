@@ -1,11 +1,15 @@
-import { Effect, Exit } from "effect";
+import { NodeCrypto } from "@effect/platform-node";
+import { createHash } from "node:crypto";
+import { Effect, Exit, Layer } from "effect";
 import { SqlClient } from "effect/sql";
 import { SqliteClient } from "@effect/sql-sqlite-node";
 import { describe, expect, it } from "vite-plus/test";
 import { EffectDbSqliteMigrate } from "./migrate";
 import { EffectDbSqliteScript } from "./script";
 
-const database = SqliteClient.layer({ filename: ":memory:" });
+const database = SqliteClient.layer({ filename: ":memory:" }).pipe(
+  Layer.provideMerge(NodeCrypto.layerDigest),
+);
 
 const script = (...statements: string[]) => {
   return statements.join(`;\n${EffectDbSqliteScript.statementSeparator}\n`) + ";";
@@ -26,6 +30,14 @@ describe("effect-db SQLite runner", () => {
         yield* EffectDbSqliteMigrate.migrate([initial]);
         expect(yield* sql`SELECT * FROM sample`).toEqual([{ value: 1 }]);
         expect(yield* sql`SELECT name FROM __effectdb_migrations`).toEqual([{ name: initial.tag }]);
+        const checksum = yield* sql`SELECT checksum FROM __effectdb_migrations`;
+        expect(checksum).toEqual([
+          { checksum: `sha256:${createHash("sha256").update(initial.sql).digest("hex")}` },
+        ]);
+        yield* EffectDbSqliteMigrate.migrate([
+          { ...initial, sql: initial.sql.replaceAll("\n", "\r\n") },
+        ]);
+        expect(yield* sql`SELECT checksum FROM __effectdb_migrations`).toEqual(checksum);
         expect(
           Exit.isFailure(
             yield* Effect.exit(

@@ -1,4 +1,5 @@
 import { Data, Effect, Option, Schema } from "effect";
+import { Digest } from "effect/crypto";
 import { SqlClient, SqlSchema } from "effect/sql";
 import { EffectDbSqliteScript } from "./script";
 
@@ -71,13 +72,10 @@ const listApplied = SqlSchema.findAll({
 });
 
 const createChecksum = Effect.fn("EffectDbSqliteMigrate.createChecksum")(function* (sql: string) {
+  const digest = yield* Digest.Digest;
   const bytes = new TextEncoder().encode(sql.replaceAll("\r\n", "\n"));
-  const digest = yield* Effect.promise(() => crypto.subtle.digest("SHA-256", bytes));
 
-  return (
-    "sha256:" +
-    Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")
-  );
+  return "sha256:" + (yield* digest.digestHex(Digest.sha256, bytes));
 });
 
 export * as EffectDbSqliteMigrate from "./migrate";

@@ -6,7 +6,7 @@ import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import dedent from "dedent";
 import { Console, DateTime, Effect, type FileSystem, Layer, Result } from "effect";
 import { Query } from "effect-qb";
@@ -1531,6 +1531,7 @@ async function runIntegration(
         Effect.provide(CliRuntime.layer),
         Effect.provide(configLayer),
         Effect.provide(NodeServices.layer),
+        Effect.provide(NodeCrypto.layer),
         Effect.provide(Reactivity.layer),
         Effect.scoped,
       ),

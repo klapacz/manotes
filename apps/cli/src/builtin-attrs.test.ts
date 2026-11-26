@@ -1,5 +1,5 @@
 import { Query } from "effect-qb";
-import { NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { Attrs } from "@manotes/shared/attrs.service";
 import { PropDef } from "@manotes/shared/prop-def.service";
@@ -933,6 +933,7 @@ function makeDevice() {
     ),
     Layer.provide(Layer.succeed(DB.Config, { localGraphId: "graph", databasePath: ":memory:" })),
     Layer.provide(NodeServices.layer),
+    Layer.provide(NodeCrypto.layer),
     Layer.provide(Reactivity.layer),
     Layer.fresh,
   );

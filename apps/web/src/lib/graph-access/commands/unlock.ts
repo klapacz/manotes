@@ -18,20 +18,9 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Un
       password,
       remember,
     }: UnlockCloudGraphInput) {
-      const graphKey = yield* Effect.tryPromise({
-        try: () => {
-          return GraphEncryption.unwrapGraphKey({
-            password,
-            envelope: graph.graphKeyEnvelope,
-          });
-        },
-        catch: (cause) => {
-          return cause instanceof GraphEncryption.InvalidPasswordError
-            ? cause
-            : cause instanceof Error
-              ? cause
-              : new Error("Failed to unlock graph.");
-        },
+      const graphKey = yield* GraphEncryption.unwrapGraphKey({
+        password,
+        envelope: graph.graphKeyEnvelope,
       });
 
       if (remember) {

@@ -3,7 +3,7 @@ import path from "node:path";
 import { Console, Effect, Option, Redacted, Result, Schema, flow } from "effect";
 import { Reactivity } from "effect/reactivity";
 import { Argument, CliError, Command, Flag } from "effect/cli";
-import { NodeRuntime, NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeRuntime, NodeServices } from "@effect/platform-node";
 import { CliConfig } from "./cli.config";
 import { CliPaths } from "./cli.paths";
 import { CliUrl } from "./url";
@@ -239,6 +239,7 @@ const cli = Command.make("manotes").pipe(
 const runnable = Command.run(cli, { version: "0.0.0" }).pipe(
   Effect.scoped,
   Effect.provide(NodeServices.layer),
+  Effect.provide(NodeCrypto.layer),
   Effect.provide(Reactivity.layer),
 );
 

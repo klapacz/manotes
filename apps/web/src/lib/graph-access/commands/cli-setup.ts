@@ -30,7 +30,7 @@ export const prepare = Effect.fn("GraphAccessCommandsCliSetup.prepare")(function
     "--auto-sync",
     `--origin ${shellQuote(input.origin)}`,
     `--token ${shellQuote(apiKey)}`,
-    `--graph-id ${shellQuote(input.graph.graphId)}`,
+    `--graph-id=${shellQuote(input.graph.graphId)}`,
     `--graph-key ${shellQuote(graphKey)}`,
   ].join(" ");
 });

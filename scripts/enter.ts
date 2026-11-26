@@ -1,5 +1,7 @@
-import { createHash, X509Certificate } from "node:crypto";
-import { NodeRuntime, NodeServices } from "@effect/platform-node";
+import { X509Certificate } from "node:crypto";
+import { Base64 } from "effect/encoding";
+import { Digest } from "effect/crypto";
+import { NodeCrypto, NodeRuntime, NodeServices } from "@effect/platform-node";
 import { Console, Effect, Redacted, Stream } from "effect";
 import { Argument, Command } from "effect/cli";
 import { Playwright, chromium } from "effect-playwright";
@@ -9,10 +11,12 @@ export const run = Effect.fn("Enter.run")(
   function* (entry: DevEntry.Entry) {
     const playwright = yield* Playwright.Playwright;
 
+    const certificate = yield* certificateArgs(entry.caCertificate);
+
     const browser = yield* playwright.launchScoped(chromium, {
       headless: false,
       // HTTP/1 limits concurrent Vite module requests through Portless.
-      args: ["--disable-http2", ...certificateArgs(entry.caCertificate)],
+      args: ["--disable-http2", ...certificate],
     });
 
     const context = yield* browser.newContext();
@@ -71,13 +75,14 @@ export const run = Effect.fn("Enter.run")(
   ),
 );
 
-function certificateArgs(pem: string | undefined) {
+const certificateArgs = Effect.fn("Enter.certificateArgs")(function* (pem: string | undefined) {
   if (!pem) return [];
   const key = new X509Certificate(pem).publicKey.export({ type: "spki", format: "der" });
-  const fingerprint = createHash("sha256").update(key).digest("base64");
+  const digest = yield* Digest.Digest;
+  const fingerprint = Base64.encode(yield* digest.digest(Digest.sha256, key));
 
   return [`--ignore-certificate-errors-spki-list=${fingerprint}`];
-}
+});
 
 const cli = Command.make(
   "enter",
@@ -92,6 +97,7 @@ if (import.meta.main) {
     Command.run(cli, { version: "0.0.0" }).pipe(
       Effect.scoped,
       Effect.provide(NodeServices.layer),
+      Effect.provide(NodeCrypto.layer),
       Effect.provide(Playwright.layer),
     ),
   );

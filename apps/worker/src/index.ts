@@ -1,3 +1,4 @@
+import { SecureRandom } from "effect/crypto";
 import { DevEnv } from "@manotes/shared/dev-env";
 import { PortSchema } from "@manotes/shared/schema/port";
 import * as Alchemy from "alchemy";
@@ -21,6 +22,7 @@ const layerAppServices = AuthService.layer.pipe(
   Layer.provide(Layer.mergeAll(EmailService.layer, OtpService.layer)),
   Layer.provideMerge(SessionKvService.layer),
   Layer.provide(layerCloudflareBindings),
+  Layer.provide(SecureRandom.layerWebCrypto),
 );
 
 const corsMiddleware = HttpMiddleware.cors({

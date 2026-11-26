@@ -1,7 +1,7 @@
 import { Server } from "node:net";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { NodeServices, NodeSocketServer } from "@effect/platform-node";
+import { NodeCrypto, NodeServices, NodeSocketServer } from "@effect/platform-node";
 import { ConfigProvider, Deferred, Effect, Fiber, Record, Runtime, Stdio, Schema } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { RouteConflictError, RouteStore } from "portless";
@@ -190,6 +190,7 @@ describe("main", () => {
           run([flag]).pipe(
             Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
             Effect.provide(NodeServices.layer),
+            Effect.provide(NodeCrypto.layer),
           ),
         ),
       ).rejects.toThrow();
@@ -206,6 +207,7 @@ describe("main", () => {
       run(["--help"]).pipe(
         Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
         Effect.provide(NodeServices.layer),
+        Effect.provide(NodeCrypto.layer),
       ),
     );
     expect(spawner.string).not.toHaveBeenCalled();
@@ -275,6 +277,7 @@ describe("main", () => {
         run(extension ? ["--extension"] : []).pipe(
           Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
           Effect.provide(NodeServices.layer),
+          Effect.provide(NodeCrypto.layer),
         ),
       );
       expect(spawner.string).toHaveBeenCalledOnce();
@@ -298,6 +301,7 @@ describe("main", () => {
           Effect.flip,
           Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
           Effect.provide(NodeServices.layer),
+          Effect.provide(NodeCrypto.layer),
         ),
       );
 

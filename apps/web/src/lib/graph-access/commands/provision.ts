@@ -41,7 +41,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Pr
       displayName,
       password,
     }: CreateSyncedInput) {
-      const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(password));
+      const wrapped = yield* GraphEncryption.createGraphKey(password);
       const session = yield* SessionService.Service.use((svc) => svc.get);
       const client = yield* RemoteRegistryService.Service;
 

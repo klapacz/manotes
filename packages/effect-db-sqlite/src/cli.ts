@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { existsSync } from "node:fs";
-import { NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { SqliteClient } from "@effect/sql-sqlite-node";
 import { Command, Flag } from "effect/cli";
 import { Console, Effect, Option, Path } from "effect";
@@ -75,6 +75,7 @@ export async function runIfSqlite(args: readonly string[]): Promise<boolean> {
   await Effect.runPromise(
     Command.runWith(root, { version: "0.24.1-sqlite" })(args).pipe(
       Effect.provide(NodeServices.layer),
+      Effect.provide(NodeCrypto.layer),
     ),
   );
 

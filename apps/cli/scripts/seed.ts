@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
-import { NodeRuntime, NodeServices } from "@effect/platform-node";
+import { SecureRandom } from "effect/crypto";
+import { NodeCrypto, NodeRuntime, NodeServices } from "@effect/platform-node";
 import { DevEnv } from "@manotes/shared/dev-env";
 import { GraphEncryption } from "@manotes/shared/graph-encryption";
 import { GraphRegistryRpc } from "@manotes/shared/graph-registry/contract";
@@ -43,11 +43,10 @@ const seed = Effect.gen(function* () {
       Effect.flatMap(decodeSession),
     );
 
-  const graphPassword = Redacted.make(randomUUID());
+  const random = yield* SecureRandom.SecureRandom;
+  const graphPassword = Redacted.make(yield* random.uuidV4());
 
-  const key = yield* Effect.tryPromise(() => {
-    return GraphEncryption.createGraphKey(Redacted.value(graphPassword));
-  });
+  const key = yield* GraphEncryption.createGraphKey(Redacted.value(graphPassword));
 
   const protocol = RpcClient.layerProtocolHttp({
     url: `${origin}/api/rpc/graph-registry`,
@@ -108,6 +107,7 @@ NodeRuntime.runMain(
       );
     }),
     Effect.provide(NodeServices.layer),
+    Effect.provide(NodeCrypto.layer),
     Effect.provide(Reactivity.layer),
     Effect.provide(FetchHttpClient.layer),
   ),

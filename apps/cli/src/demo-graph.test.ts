@@ -1,4 +1,4 @@
-import { NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { DB } from "@manotes/shared/db.service";
 import { EventRepo } from "@manotes/shared/event.repo";
@@ -49,6 +49,7 @@ it("imports untitled Notes and titled Pages presets with Notes as default", asyn
       Effect.provide(PresetRecordRepo.Service.layer.pipe(Layer.provideMerge(CliRuntime.layer))),
       Effect.provideService(DB.Config, { localGraphId: "demo-test", databasePath: ":memory:" }),
       Effect.provide(NodeServices.layer),
+      Effect.provide(NodeCrypto.layer),
       Effect.provide(Reactivity.layer),
       Effect.scoped,
     ),

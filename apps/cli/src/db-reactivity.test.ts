@@ -1,5 +1,5 @@
 import { RecordSchema } from "@manotes/shared/record.schema";
-import { NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { AttrsSchema } from "@manotes/shared/attrs.schema";
 import { BuiltinAttrs } from "@manotes/shared/builtin-attrs";
 import { DB } from "@manotes/shared/db.service";
@@ -17,6 +17,7 @@ type CheckpointUpdate = Pick<Tables.MaterializationCheckpoint, "lastAppliedLocal
 const database = CliDB.layer.pipe(
   Layer.provide(Layer.succeed(DB.Config, { localGraphId: "graph", databasePath: ":memory:" })),
   Layer.provide(NodeServices.layer),
+  Layer.provide(NodeCrypto.layer),
   Layer.provide(Reactivity.layer),
 );
 

@@ -23,7 +23,7 @@ export class Service extends Context.Service<Service>()("GraphAccess.Commands.Sy
       localGraphId,
       password,
     }: UploadInput) {
-      const wrapped = yield* Effect.tryPromise(() => GraphEncryption.createGraphKey(password));
+      const wrapped = yield* GraphEncryption.createGraphKey(password);
       const session = yield* SessionService.Service.use((svc) => svc.get);
       const client = yield* RemoteRegistryService.Service;
       const originalLocalGraph = yield* LocalRegistry.Repo.findGraph({ localGraphId });

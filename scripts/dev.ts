@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
-import { randomBytes, randomUUID } from "node:crypto";
-import { NodeRuntime, NodeServices } from "@effect/platform-node";
+import { Base64Url } from "effect/encoding";
+import { SecureRandom } from "effect/crypto";
+import { NodeCrypto, NodeRuntime, NodeServices } from "@effect/platform-node";
 import { Effect, Option } from "effect";
 import { Command, Flag } from "effect/cli";
 // Bootstrap must load before the shared package has been built.
@@ -36,6 +37,7 @@ const launch = Effect.fn("Dev.launch")(function* (
   }
 
   const ports = yield* DevPorts.reservePorts();
+  const random = yield* SecureRandom.SecureRandom;
 
   const env = {
     ...process.env,
@@ -44,8 +46,10 @@ const launch = Effect.fn("Dev.launch")(function* (
     [DevEnv.names.apiPort]: String(ports.api),
     [DevEnv.names.extensionPort]: String(ports.extension),
     [DevEnv.names.seedType]: Option.getOrElse(seedType, () => ""),
-    [DevEnv.names.seedId]: randomUUID(),
-    [DevEnv.names.seedSecret]: Option.isSome(seedType) ? randomBytes(32).toString("base64url") : "",
+    [DevEnv.names.seedId]: yield* random.uuidV4(),
+    [DevEnv.names.seedSecret]: Option.isSome(seedType)
+      ? Base64Url.encode(yield* random.randomBytes(32))
+      : "",
   };
 
   const packages = [
@@ -83,4 +87,8 @@ const launch = Effect.fn("Dev.launch")(function* (
 
 export const main = Command.run(cli, { version: "0.0.0" });
 
-if (import.meta.main) NodeRuntime.runMain(main.pipe(Effect.provide(NodeServices.layer)));
+if (import.meta.main) {
+  NodeRuntime.runMain(
+    main.pipe(Effect.provide(NodeServices.layer), Effect.provide(NodeCrypto.layer)),
+  );
+}
