@@ -54,6 +54,10 @@ function RouteComponent() {
         <p class="text-fg-subtle">Create a new local graph from an exported event backup.</p>
       </header>
 
+      <Alert>
+        <AlertDescription>Supports backups exported from Sand and Dune.</AlertDescription>
+      </Alert>
+
       <Show when={decodedBackup()} fallback={<SelectBackupFileForm />} keyed>
         {(decodedBackup) => <ImportBackupForm decodedBackup={decodedBackup} />}
       </Show>
