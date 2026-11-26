@@ -57,7 +57,10 @@ export default class Api extends Cloudflare.Worker<Api>()(
     routes: Output.fromEffect(
       Alchemy.Stage.useSync((stage) => {
         return stage === "dune"
-          ? [{ pattern: "dune.manotes.dev/api*", zoneName: "manotes.dev" }]
+          ? [
+              { pattern: "dune.manotes.dev/api*", zoneName: "manotes.dev" },
+              { pattern: "dune.manotes.dev/mcp*", zoneName: "manotes.dev" },
+            ]
           : undefined;
       }),
     ),

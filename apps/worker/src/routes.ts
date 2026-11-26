@@ -2,6 +2,7 @@ import { SessionAuth } from "@manotes/shared/session/auth";
 import { Effect, Layer, Option, pipe, Result, Schema } from "effect";
 import { HttpRouter, HttpServerError, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { AuthSession } from "./auth/session.ts";
+import { McpRoutes } from "./mcp/routes.ts";
 import { SessionRoutes } from "./session/routes.ts";
 import GraphRegistryDurableObject from "./graph-registry/durable-object.ts";
 import GraphSyncDurableObject from "./graph-sync/durable-object.ts";
@@ -85,6 +86,7 @@ export const layer = Layer.mergeAll(
   HttpRouter.add("GET", "/api/health", HttpServerResponse.jsonUnsafe({ ok: true })),
   HttpRouter.add("*", "/*", HttpServerResponse.empty({ status: 404 })),
   SessionRoutes.layer,
+  McpRoutes.layer,
   protectedRoutesLayer,
 );
 

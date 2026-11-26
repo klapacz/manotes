@@ -8,7 +8,7 @@ import { GraphSyncMessages } from "../contract/messages";
 export type Input = Data.TaggedEnum<{
   SocketOpened: {};
   PendingEvents: {};
-  ServerMessage: { message: GraphSyncMessages.ServerMessage };
+  ServerMessage: { message: GraphSyncMessages.SyncServerMessage };
 }>;
 
 export const Input = Data.taggedEnum<Input>();

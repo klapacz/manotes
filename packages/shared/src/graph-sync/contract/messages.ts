@@ -61,9 +61,32 @@ export class Committed extends Schema.TaggedClass<Committed>("manotes/graph-sync
   },
 ) {}
 
-export const ClientMessage = Schema.Union([Connect, Commit]);
+export class RelayRequest extends Schema.TaggedClass<RelayRequest>(
+  "manotes/graph-sync/RelayRequest",
+)("RelayRequest", {
+  requestId: Schema.NonEmptyString,
+  envelope: Schema.NonEmptyString,
+}) {}
 
-export const ServerMessage = Schema.Union([Replay, ReplayDone, CommitAck, Committed]);
+export class RelayReply extends Schema.TaggedClass<RelayReply>("manotes/graph-sync/RelayReply")(
+  "RelayReply",
+  {
+    requestId: Schema.NonEmptyString,
+    envelope: Schema.NonEmptyString,
+  },
+) {}
+
+export const SyncClientMessage = Schema.Union([Connect, Commit]);
+
+export const SyncServerMessage = Schema.Union([Replay, ReplayDone, CommitAck, Committed]);
+
+export const ClientMessage = Schema.Union([...SyncClientMessage.members, RelayReply]);
+
+export const ServerMessage = Schema.Union([...SyncServerMessage.members, RelayRequest]);
+
+export type SyncClientMessage = typeof SyncClientMessage.Type;
+
+export type SyncServerMessage = typeof SyncServerMessage.Type;
 
 export type ClientMessage = typeof ClientMessage.Type;
 

@@ -17,6 +17,10 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
+      "/mcp": {
+        target: `http://127.0.0.1:${PortSchema.decode(process.env[DevEnv.names.apiPort]) ?? 3000}`,
+        changeOrigin: true,
+      },
     },
   },
   build: {

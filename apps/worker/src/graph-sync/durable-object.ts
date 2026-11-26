@@ -1,5 +1,6 @@
 import * as Cloudflare from "@alchemy.run/cloudflare";
 import { SqliteClient } from "@effect/sql-sqlite-do";
+import { RuntimeContext } from "alchemy/RuntimeContext";
 import { Boolean, Cause, Effect, Exit, Predicate } from "effect";
 
 import { GraphSyncCodec } from "@manotes/shared/graph-sync/contract/codec";
@@ -7,6 +8,7 @@ import { GraphSyncMessages } from "@manotes/shared/graph-sync/contract/messages"
 import { GraphSyncProtocol } from "./protocol.ts";
 import { GraphSyncRepo } from "./repo.ts";
 import { GraphSyncErrors } from "./errors.ts";
+import { RelayCalls } from "./relay-calls.ts";
 import { webSocketMessageToUint8Array } from "./websocket-message.ts";
 
 export default class GraphSyncDurableObject extends Cloudflare.DurableObject<GraphSyncDurableObject>()(
@@ -15,6 +17,12 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObject<Gra
   Effect.gen(function* () {
     return Effect.gen(function* () {
       const state = yield* Cloudflare.DurableObjectState;
+      const runtime = yield* RuntimeContext;
+
+      // Capture RuntimeContext so `state.getWebSockets()` works when called from the `relaySend` RPC.
+      const relayCalls = yield* RelayCalls.make(
+        state.getWebSockets().pipe(Effect.provideService(RuntimeContext, runtime)),
+      );
 
       const layer = SqliteClient.layer({
         db: state.storage.sql.raw,
@@ -64,7 +72,7 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObject<Gra
       });
 
       const executeWebSocketMessage = Effect.fn(function* (
-        message: GraphSyncMessages.ClientMessage,
+        message: GraphSyncMessages.SyncClientMessage,
       ) {
         const plan = GraphSyncProtocol.getExecutionPlan(message);
 
@@ -105,6 +113,15 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObject<Gra
       });
 
       return {
+        relaySend: (input: { readonly requestId: string; readonly envelope: string }) => {
+          return relayCalls.send(input).pipe(
+            Effect.match({
+              onSuccess: (envelope) => ({ status: "answered", envelope }) as const,
+              onFailure: ({ reason }) => ({ status: "refused", reason }) as const,
+            }),
+          );
+        },
+
         fetch: Effect.gen(function* () {
           const [response] = yield* Cloudflare.upgrade();
 
@@ -118,6 +135,12 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObject<Gra
 
           if (Exit.isFailure(messageExit)) {
             yield* handleWebSocketFailure(socket, messageExit.cause);
+
+            return;
+          }
+
+          if (Predicate.isTagged(messageExit.value, "RelayReply")) {
+            yield* relayCalls.reply(messageExit.value);
 
             return;
           }
@@ -144,6 +167,7 @@ export default class GraphSyncDurableObject extends Cloudflare.DurableObject<Gra
           code: number,
           reason: string,
         ) {
+          yield* relayCalls.disconnect(ws);
           // Complete the closing handshake so clients do not wait for a socket timeout.
           yield* ws.close(1000, "");
           yield* Effect.logWarning("Graph sync websocket closed", { code, reason });

@@ -61,6 +61,8 @@ export const run = Effect.fn("GraphSyncMachineSession.run")(function* () {
           Predicate.isString(data) ? new TextEncoder().encode(data) : data,
         );
 
+        if (Predicate.isTagged(message, "RelayRequest")) continue;
+
         yield* Queue.offer(inputQueue, GraphSyncModel.Input.ServerMessage({ message }));
       }
     }
